@@ -96,20 +96,21 @@ class AdminDashboardController extends Controller
         $data = $query->orderBy('nomor_tank')->get()->map(function ($p) {
             $scoring = $p->scorings->first();
 
-            return [
-                'id'              => $p->id,
-                'nama_peserta'    => $p->nama_peserta,
-                'kategori'        => $p->kategori,
-                'kelas'           => $scoring?->kelas ?? '—',
-                'nomor_tank'      => $p->nomor_tank,
-                'juri_nama'       => $scoring?->juri?->name ?? '—',
-                'grand_juri_nama' => $scoring?->grandJuri?->name ?? null,
-                'total_nilai'     => $scoring?->total_nilai ?? 0,
-                'nilai_detail'    => $scoring?->nilai_detail ?? null,
-                'status'          => $scoring
-                                        ? ($scoring->edited_by_grand_juri ? 'Grand Juri Edit' : 'Sudah Dinilai')
-                                        : 'Belum Dinilai',
-            ];
+        return [
+            'id'              => $p->id,
+            'nama_peserta'    => $p->nama_peserta,
+            'kategori'        => $p->kategori,
+            'kelas'           => $scoring?->kelas ?? '—',
+            'nomor_tank'      => $p->nomor_tank,
+            'detail_anggota'  => $p->detail_anggota ?? '—',
+            'juri_nama'       => $scoring?->juri?->name ?? '—',
+            'grand_juri_nama' => $scoring?->grandJuri?->name ?? null,
+            'total_nilai'     => $scoring?->total_nilai ?? 0,
+            'nilai_detail'    => $scoring?->nilai_detail ?? null,
+            'status'          => $scoring
+            ? ($scoring->edited_by_grand_juri ? 'Grand Juri Edit' : 'Sudah Dinilai')
+            : 'Belum Dinilai',
+        ];
         })->toArray();
 
         /* Filter status di PHP (karena status dihitung dari relasi) */
@@ -174,6 +175,26 @@ class AdminDashboardController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Role "' . $user->name . '" diubah dari ' . strtoupper($oldRole) . ' menjadi ' . strtoupper(str_replace('_', ' ', $request->new_role)) . '.',
+        ]);
+    }
+    public function deleteUser(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $user = User::find($request->user_id);
+
+        if ($user->id === auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Tidak bisa menghapus akun sendiri.'], 403);
+        }
+
+        $name = $user->name;
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User "' . $name . '" berhasil dihapus.',
         ]);
     }
 }

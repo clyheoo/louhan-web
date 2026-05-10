@@ -89,7 +89,7 @@
         .table-wrap{overflow-x:auto;max-height:520px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;}
         .table-wrap::-webkit-scrollbar{width:5px;height:5px;}
         .table-wrap::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
-        .data-table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px;}
+        .data-table{width:100%;border-collapse:collapse;font-size:12px;min-width:1050px;}
         .data-table th{background:#f8fafc;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2;}
         .data-table td{padding:10px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
         .data-table tr:hover td{background:#fafbfd;}
@@ -183,7 +183,85 @@
 
         /* ── RESPONSIVE ── */
         @media(max-width:1200px){.stats-row{grid-template-columns:repeat(3,1fr);}.charts-row{grid-template-columns:1fr 1fr;}.main-row{grid-template-columns:1fr;}}
-        @media(max-width:768px){.stats-row{grid-template-columns:1fr 1fr;}.charts-row{grid-template-columns:1fr;}.old-grid{grid-template-columns:1fr;}.nav-actions{gap:5px;}.nav-btn span{display:none;}}
+        @media(max-width:768px){.stats-row{grid-template-columns:1fr 1fr;}.charts-row{grid-template-columns:1fr;}.old-grid{grid-template-columns:1fr;}.nav-actions{gap:5px;}.nav-btn span{display:none;}
+        }
+            /* ═══════════════════════════════════════════════
+        POPUP ANIMASI (SAMA DENGAN REGISTER)
+        ═══════════════════════════════════════════════ */
+        .popup-overlay {
+            position:fixed;inset:0;background:rgba(15,23,42,.4);
+            backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+            z-index:99999;display:flex;align-items:center;justify-content:center;
+            opacity:0;pointer-events:none;transition:opacity .4s ease;
+        }
+        .popup-overlay.show{opacity:1;pointer-events:all;}
+        .popup-card{
+            background:var(--card);border-radius:24px;padding:48px 40px 36px;
+            text-align:center;max-width:380px;width:90%;
+            box-shadow:0 25px 60px rgba(0,0,0,.15);
+            transform:scale(.8) translateY(20px);
+            transition:transform .4s cubic-bezier(.16,1,.3,1);
+        }
+        .popup-overlay.show .popup-card{transform:scale(1) translateY(0);}
+        .popup-icon{
+            width:80px;height:80px;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            margin:0 auto 24px;
+        }
+        .popup-icon i{font-size:36px;color:#fff;animation:iconPop .5s .3s cubic-bezier(.16,1,.3,1) both;}
+        @keyframes iconPop{0%{transform:scale(0) rotate(-45deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+        .popup-icon.success{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 8px 24px rgba(34,197,94,.3);}
+        .popup-icon.danger{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 8px 24px rgba(239,68,68,.3);}
+        .popup-icon.warning{background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 8px 24px rgba(245,158,11,.3);}
+        .popup-icon.info{background:linear-gradient(135deg,var(--primary),var(--primary-dk));box-shadow:0 8px 24px rgba(37,99,235,.3);}
+        .popup-title{font-size:20px;font-weight:800;color:var(--text);margin-bottom:8px;}
+        .popup-desc{font-size:13.5px;color:var(--muted);line-height:1.6;margin-bottom:24px;}
+        .popup-btn{
+            display:inline-flex;align-items:center;gap:8px;
+            padding:12px 28px;border:none;border-radius:14px;
+            font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;
+            cursor:pointer;transition:all .3s ease;text-decoration:none;color:#fff;
+        }
+        .popup-btn:hover{transform:translateY(-1px);}
+        .popup-btn.success{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 12px rgba(34,197,94,.25);}
+        .popup-btn.danger{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 12px rgba(239,68,68,.25);}
+        .popup-btn.warning{background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 12px rgba(245,158,11,.25);}
+        .popup-btn.info{background:linear-gradient(135deg,var(--primary),var(--primary-dk));box-shadow:0 4px 12px rgba(37,99,235,.25);}
+        .popup-btn.cancel{background:var(--bg);color:var(--muted);border:1px solid var(--border);box-shadow:none;}
+        .popup-btn.cancel:hover{background:var(--border);color:var(--text);}
+        .popup-btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+        .popup-detail{font-size:12px;color:var(--muted);text-align:left;background:var(--bg);padding:12px;border-radius:10px;margin-bottom:16px;line-height:1.6;max-height:120px;overflow-y:auto;
+        }
+        /* ═══════════════════════════════════════════════
+    PASSWORD VALIDATION (MODAL CREATE USER)
+    ═══════════════════════════════════════════════ */
+    .input-wrapper{position:relative;}
+    .input-wrapper i.input-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--light);transition:color .3s;pointer-events:none;z-index:1;}
+    .form-input-modal{width:100%;padding:10px 40px 10px 38px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);outline:none;transition:all .3s;}
+    .form-input-modal::placeholder{color:var(--light);}
+    .form-input-modal:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+    .form-input-modal:focus~i.input-icon{color:var(--primary);}
+    .form-input-modal.input-error{border-color:var(--danger);box-shadow:0 0 0 3px rgba(239,68,68,.1);}
+    .form-input-modal.input-error~i.input-icon{color:var(--danger);}
+    .form-input-modal.input-success{border-color:var(--success);box-shadow:0 0 0 3px rgba(34,197,94,.1);}
+    .form-input-modal.input-success~i.input-icon{color:var(--success);}
+    .pwd-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--light);font-size:13px;padding:4px 5px;z-index:2;transition:color .2s;}
+    .pwd-toggle:hover{color:var(--primary);}
+    .pwd-error-msg{font-size:11px;color:var(--danger);margin-top:4px;display:none;align-items:center;gap:4px;}
+    .pwd-error-msg i{font-size:10px;}
+    .str-bar{display:flex;gap:3px;margin-top:6px;}
+    .str-seg{flex:1;height:3px;border-radius:3px;background:var(--border);transition:background .3s;}
+    .str-seg.w{background:var(--danger);}
+    .str-seg.m{background:var(--warning);}
+    .str-seg.s{background:var(--success);}
+    .str-text{font-size:10px;font-weight:700;margin-top:3px;text-transform:uppercase;letter-spacing:.5px;transition:color .3s;}
+    .str-text.w{color:var(--danger);}
+    .str-text.m{color:var(--warning);}
+    .str-text.s{color:var(--success);}
+    .match-ind{font-size:11px;font-weight:600;margin-top:4px;display:none;align-items:center;gap:4px;}
+    .match-ind.ok{color:var(--success);display:flex;}
+    .match-ind.no{color:var(--danger);display:flex;
+    }
     </style>
 </head>
 <body>
@@ -231,62 +309,78 @@
         </div>
     </div>
 
-    <!-- ── KONTEN UTAMA ── -->
-    <div class="main-row">
+<!-- ── KONTEN UTAMA ── -->
+<div class="main-row">
 
-        <!-- KOLOM KIRI: DATA PENILAIAN -->
-        <div class="section-card">
-            <div class="section-head">
-                <div class="section-title"><i class="fas fa-table-list"></i> Data Penilaian Keseluruhan</div>
-                <span style="font-size:10px;color:var(--light);">Menampilkan semua input dari Juri & Grand Juri</span>
-            </div>
-            <div class="section-body">
-                <div class="filter-bar">
-                    <div class="search-box"><i class="fas fa-search"></i><input type="text" id="filterSearch" placeholder="Cari nama peserta..."></div>
+    <!-- KOLOM KIRI: DATA PENILAIAN -->
+    <div class="section-card">
+        <div class="section-head">
+            <div class="section-title"><i class="fas fa-table-list"></i> Data Penilaian Keseluruhan</div>
+            <span style="font-size:10px;color:var(--light);">Menampilkan semua input dari Juri & Grand Juri</span>
+        </div>
+        <div class="section-body">
+            <div class="filter-bar">
+                <div class="search-box"><i class="fas fa-search"></i><input type="text" id="filterSearch" placeholder="Cari nama peserta..."></div>
                     <select class="filter-select" id="filterKategori">
                         <option value="">Semua Kategori</option>
-                        <option>Overall</option><option>Head</option><option>Face</option><option>Body</option><option>Marking</option><option>Pearl</option><option>Color</option><option>Finnage</option>
+                        <option>Cencu</option>
+                        <option>Chginwa</option>
+                        <option>Freemarking</option>
+                        <option>Goldenbase</option>
+                        <option>Klasik</option>
+                        <option>Bonsai</option>
+                        <option>Jumbo</option>
                     </select>
-                    <select class="filter-select" id="filterStatus">
-                        <option value="">Semua Status</option>
-                        <option value="dinilai">Sudah Dinilai</option>
-                        <option value="grand">Grand Juri Edit</option>
-                        <option value="belum">Belum Dinilai</option>
-                    </select>
-                </div>
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>#</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>TANK</th>
-                                <th>DINILAI OLEH</th><th>TOTAL NILAI</th><th>STATUS</th><th>AKSI</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tBody"><tr><td colspan="9"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat data...</p></div></td></tr></tbody>
-                    </table>
-                </div>
+                <select class="filter-select" id="filterStatus">
+                    <option value="">Semua Status</option>
+                    <option value="dinilai">Sudah Dinilai</option>
+                    <option value="grand">Grand Juri Edit</option>
+                    <option value="belum">Belum Dinilai</option>
+                </select>
             </div>
-        </div>
-
-        <!-- KOLOM KANAN: KELOLA USER -->
-        <div class="section-card">
-            <div class="section-head">
-                <div class="section-title"><i class="fas fa-users-gear"></i> Kelola User</div>
-            </div>
-            <div class="section-body">
-                <div class="user-panel-head">
-                    <span style="font-size:11px;color:var(--muted);font-weight:600;" id="userCount">0 user</span>
-                    <button class="btn-xs blue" onclick="openModal('modalCreate')"><i class="fas fa-plus"></i> Tambah User</button>
-                </div>
-                <div class="user-list" id="userList">
-                    <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
-                </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>TANK</th><th>ASAL / TEAM</th>
+                            <th>DINILAI OLEH</th><th>TOTAL NILAI</th><th>STATUS</th><th>AKSI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tBody"><tr><td colspan="10"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat data...</p></div></td></tr></tbody>
+                </table>
             </div>
         </div>
     </div>
+
+    <!-- KOLOM KANAN: KELOLA USER -->
+    <div class="section-card">
+        <div class="section-head">
+            <div class="section-title"><i class="fas fa-users-gear"></i> Kelola User</div>
+        </div>
+        <div class="section-body">
+            <div class="user-panel-head">
+                <span style="font-size:11px;color:var(--muted);font-weight:600;" id="userCount">0 user</span>
+                <div style="display:flex;gap:6px;">
+                    <div style="position:relative;">
+                        <i class="fas fa-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--light);pointer-events:none;"></i>
+                        <input type="text" id="searchUser" placeholder="Cari user..." style="padding:5px 8px 5px 26px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:11px;outline:none;width:140px;background:var(--bg);transition:all .2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+                    </div>
+                    <button class="btn-xs blue" onclick="openModal('modalCreate')"><i class="fas fa-plus"></i> Tambah User</button>
+                </div>
+            </div>
+            <div class="user-list" id="userList">
+                <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
-<!-- ═══ MODAL: DETAIL NILAI ═══ -->
+<!-- ═══════════════════════════════════════════════
+     SEMUA MODAL — TARUH DI LUAR main-row
+     ═══════════════════════════════════════════════ -->
+
+<!-- MODAL: DETAIL NILAI -->
 <div class="modal-bg" id="modalDetail" style="--mw:750px;">
     <div class="modal-box">
         <div class="modal-head"><h3><i class="fas fa-eye"></i> Detail Nilai Peserta</h3><button class="modal-close" onclick="closeModal('modalDetail')"><i class="fas fa-xmark"></i></button></div>
@@ -295,18 +389,57 @@
     </div>
 </div>
 
-<!-- ═══ MODAL: TAMBAH USER ═══ -->
+<!-- MODAL: TAMBAH USER -->
 <div class="modal-bg" id="modalCreate">
-    <div class="modal-box" style="--mw:440px;">
-        <div class="modal-head"><h3><i class="fas fa-user-plus"></i> Tambah User Baru</h3><button class="modal-close" onclick="closeModal('modalCreate')"><i class="fas fa-xmark"></i></button></div>
+    <div class="modal-box" style="--mw:460px;">
+        <div class="modal-head">
+            <h3><i class="fas fa-user-plus"></i> Tambah User Baru</h3>
+            <button class="modal-close" onclick="closeModal('modalCreate')"><i class="fas fa-xmark"></i></button>
+        </div>
         <div class="modal-body">
             <form id="formCreateUser">
-                <div class="form-group"><label class="form-label">Nama Lengkap</label><input type="text" name="name" class="form-control" required></div>
-                <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required></div>
-                <div class="form-group"><label class="form-label">Password</label><input type="text" name="password" class="form-control" placeholder="Min. 8 karakter" required></div>
+                <div class="form-group">
+                    <label class="form-label">Nama Lengkap</label>
+                    <div class="input-wrapper">
+                        <input type="text" name="name" id="createName" class="form-input-modal" placeholder="Masukkan nama lengkap" required>
+                        <i class="fas fa-user input-icon"></i>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <div class="input-wrapper">
+                        <input type="email" name="email" id="createEmail" class="form-input-modal" placeholder="nama@email.com" required>
+                        <i class="fas fa-envelope input-icon"></i>
+                    </div>
+                    <div class="pwd-error-msg" id="createEmailErr"><i class="fas fa-circle-exclamation"></i><span></span></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" name="password" id="createPwd" class="form-input-modal" placeholder="Min.8: besar, kecil, angka, simbol" required>
+                        <i class="fas fa-lock input-icon"></i>
+                        <button type="button" class="pwd-toggle" id="toggleCreatePwd"><i class="fas fa-eye"></i></button>
+                    </div>
+                    <div class="pwd-error-msg" id="createPwdErr"><i class="fas fa-circle-exclamation"></i><span>Wajib: min.8 karakter, huruf besar, kecil, angka, simbol</span></div>
+                    <div class="str-bar" id="createStrBar" style="display:none;">
+                        <div class="str-seg" id="cSeg1"></div><div class="str-seg" id="cSeg2"></div>
+                        <div class="str-seg" id="cSeg3"></div><div class="str-seg" id="cSeg4"></div><div class="str-seg" id="cSeg5"></div>
+                    </div>
+                    <div class="str-text" id="createStrText" style="display:none;"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Konfirmasi Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="createPwdConf" class="form-input-modal" placeholder="Ulangi password" required>
+                        <i class="fas fa-lock input-icon"></i>
+                        <button type="button" class="pwd-toggle" id="toggleCreatePwdConf"><i class="fas fa-eye"></i></button>
+                    </div>
+                    <div class="match-ind no" id="createMatchNo"><i class="fas fa-circle-exclamation"></i><span>Password tidak cocok</span></div>
+                    <div class="match-ind ok" id="createMatchOk"><i class="fas fa-circle-check"></i><span>Password cocok</span></div>
+                </div>
                 <div class="form-group">
                     <label class="form-label">Role</label>
-                    <select name="role" class="form-control" required>
+                    <select name="role" id="createRole" class="form-control" required>
                         <option value="">— Pilih Role —</option>
                         <option value="juri">Juri</option>
                         <option value="grand_juri">Grand Juri</option>
@@ -323,7 +456,7 @@
     </div>
 </div>
 
-<!-- ═══ MODAL: GANTI PASSWORD ═══ -->
+<!-- MODAL: GANTI PASSWORD -->
 <div class="modal-bg" id="modalPwd">
     <div class="modal-box" style="--mw:380px;">
         <div class="modal-head"><h3><i class="fas fa-key"></i> Ganti Password</h3><button class="modal-close" onclick="closeModal('modalPwd')"><i class="fas fa-xmark"></i></button></div>
@@ -339,7 +472,7 @@
     </div>
 </div>
 
-<!-- ═══ MODAL: MODUL LAMA ═══ -->
+<!-- MODAL: MODUL LAMA -->
 <div class="modal-bg" id="modalOld" style="--mw:1100px;">
     <div class="modal-box">
         <div class="modal-head"><h3><i class="fas fa-box-archive"></i> Modul Registrasi & Undian Tank</h3><button class="modal-close" onclick="closeModal('modalOld')"><i class="fas fa-xmark"></i></button></div>
@@ -373,6 +506,49 @@
     </div>
 </div>
 
+<!-- POPUP: SUKSES -->
+<div class="popup-overlay" id="popupSuccess">
+    <div class="popup-card">
+        <div class="popup-icon success"><i class="fas fa-check"></i></div>
+        <h2 class="popup-title" id="popupSuccessTitle">Berhasil!</h2>
+        <p class="popup-desc" id="popupSuccessDesc">Aksi berhasil dilakukan.</p>
+        <button class="popup-btn success" onclick="hidePopup('popupSuccess')"><i class="fas fa-circle-check"></i> OK</button>
+    </div>
+</div>
+
+<!-- POPUP: ERROR -->
+<div class="popup-overlay" id="popupError">
+    <div class="popup-card">
+        <div class="popup-icon danger"><i class="fas fa-triangle-exclamation"></i></div>
+        <h2 class="popup-title" id="popupErrorTitle">Gagal!</h2>
+        <p class="popup-desc" id="popupErrorDesc">Terjadi kesalahan.</p>
+        <button class="popup-btn danger" onclick="hidePopup('popupError')"><i class="fas fa-rotate-right"></i> Tutup</button>
+    </div>
+</div>
+
+<!-- POPUP: KONFIRMASI -->
+<div class="popup-overlay" id="popupConfirm">
+    <div class="popup-card">
+        <div class="popup-icon warning"><i class="fas fa-question"></i></div>
+        <h2 class="popup-title" id="popupConfirmTitle">Konfirmasi</h2>
+        <p class="popup-desc" id="popupConfirmDesc">Apakah Anda yakin?</p>
+        <div class="popup-btn-row">
+            <button class="popup-btn cancel" onclick="cancelConfirm()"><i class="fas fa-xmark"></i> Batal</button>
+            <button class="popup-btn warning" id="popupConfirmBtn" onclick="executeConfirm()"><i class="fas fa-check"></i> Ya, Lanjutkan</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP: INFO -->
+<div class="popup-overlay" id="popupInfo">
+    <div class="popup-card">
+        <div class="popup-icon info"><i class="fas fa-circle-info"></i></div>
+        <h2 class="popup-title" id="popupInfoTitle">Informasi</h2>
+        <p class="popup-desc" id="popupInfoDesc">Detail informasi.</p>
+        <button class="popup-btn info" onclick="hidePopup('popupInfo')"><i class="fas fa-check"></i> OK</button>
+    </div>
+</div>
+
 <script>
 /* ═══════════════════════════════════════════════
    HELPERS & STATE
@@ -388,6 +564,37 @@ document.querySelectorAll('.modal-bg').forEach(function(m){
 
 var allScoringData=[];
 var chartKat,chartStat,chartTop;
+var _confirmCallback=null;
+
+/* ═══════════════════════════════════════════════
+   POPUP SYSTEM
+   ═══════════════════════════════════════════════ */
+function showPopup(id){document.getElementById(id).classList.add('show');}
+function hidePopup(id){document.getElementById(id).classList.remove('show');}
+function popupSuccess(title,desc){
+    document.getElementById('popupSuccessTitle').textContent=title||'Berhasil!';
+    document.getElementById('popupSuccessDesc').innerHTML=desc||'';
+    showPopup('popupSuccess');
+}
+function popupError(title,desc){
+    document.getElementById('popupErrorTitle').textContent=title||'Gagal!';
+    document.getElementById('popupErrorDesc').innerHTML=desc||'';
+    showPopup('popupError');
+}
+function popupInfo(title,desc){
+    document.getElementById('popupInfoTitle').textContent=title||'Informasi';
+    document.getElementById('popupInfoDesc').innerHTML=desc||'';
+    showPopup('popupInfo');
+}
+function popupConfirm(title,desc,btnText,callback){
+    document.getElementById('popupConfirmTitle').textContent=title||'Konfirmasi';
+    document.getElementById('popupConfirmDesc').innerHTML=desc||'';
+    document.getElementById('popupConfirmBtn').innerHTML='<i class="fas fa-check"></i> '+(btnText||'Ya, Lanjutkan');
+    _confirmCallback=callback;
+    showPopup('popupConfirm');
+}
+function executeConfirm(){hidePopup('popupConfirm');if(typeof _confirmCallback==='function')_confirmCallback();_confirmCallback=null;}
+function cancelConfirm(){hidePopup('popupConfirm');_confirmCallback=null;}
 
 var formFields={
     overall:[{id:'impression',label:'Impression',max:100}],
@@ -398,6 +605,81 @@ var formFields={
     pearl:[{id:'shining',label:'Shining',max:45},{id:'fullness',label:'Fullness',max:35},{id:'bentuk',label:'Bentuk',max:20}],
     color:[{id:'komposisi',label:'Komposisi',max:45},{id:'kecerahan',label:'Kecerahan',max:35},{id:'fullness',label:'Fullness',max:20}],
     finnage:[{id:'bentuk',label:'Bentuk Sirip & Ekor',max:75},{id:'kecerahan',label:'Kecerahan',max:25}]
+};
+
+/* ═══════════════════════════════════════════════
+   PASSWORD VALIDATION (CREATE USER MODAL)
+   ═══════════════════════════════════════════════ */
+var cPwd=document.getElementById('createPwd');
+var cConf=document.getElementById('createPwdConf');
+var cSegs=[document.getElementById('cSeg1'),document.getElementById('cSeg2'),document.getElementById('cSeg3'),document.getElementById('cSeg4'),document.getElementById('cSeg5')];
+
+function validateCreatePwd(){
+    var val=cPwd.value;
+    var errEl=document.getElementById('createPwdErr');
+    var barEl=document.getElementById('createStrBar');
+    var txtEl=document.getElementById('createStrText');
+    for(var i=0;i<cSegs.length;i++)cSegs[i].className='str-seg';
+    txtEl.className='str-text';txtEl.style.display='none';
+    barEl.style.display='none';errEl.style.display='none';
+    cPwd.classList.remove('input-error','input-success');
+    if(val.length===0){checkCreateMatch();return;}
+    barEl.style.display='flex';txtEl.style.display='block';
+    var hasL=/[a-z]/.test(val),hasU=/[A-Z]/.test(val),hasN=/[0-9]/.test(val),hasS=/[^A-Za-z0-9]/.test(val);
+    var str=0;if(val.length>=8)str++;if(hasL)str++;if(hasU)str++;if(hasN)str++;if(hasS)str++;
+    if(val.length<8||!hasL||!hasU||!hasN||!hasS){
+        errEl.style.display='flex';cPwd.classList.add('input-error');
+        txtEl.textContent='Belum memenuhi syarat';txtEl.classList.add('w');
+        if(str>0)cSegs[0].classList.add('w');
+    } else {
+        cPwd.classList.add('input-success');
+        if(str<=3){cSegs[0].classList.add('m');cSegs[1].classList.add('m');txtEl.textContent='Cukup';txtEl.classList.add('m');cPwd.classList.remove('input-success');}
+        else if(str===4){for(var a=0;a<4;a++)cSegs[a].classList.add('s');txtEl.textContent='Kuat';txtEl.classList.add('s');}
+        else{for(var b=0;b<5;b++)cSegs[b].classList.add('s');txtEl.textContent='Sangat kuat';txtEl.classList.add('s');}
+    }
+    checkCreateMatch();
+}
+
+function checkCreateMatch(){
+    var p=cPwd.value,c=cConf.value;
+    var noEl=document.getElementById('createMatchNo'),okEl=document.getElementById('createMatchOk');
+    noEl.style.display='none';okEl.style.display='none';
+    cConf.classList.remove('input-error','input-success');
+    if(c.length===0)return;
+    if(p!==c){noEl.style.display='flex';cConf.classList.add('input-error');}
+    else{okEl.style.display='flex';cConf.classList.add('input-success');}
+}
+
+cPwd.addEventListener('input',validateCreatePwd);
+cConf.addEventListener('input',checkCreateMatch);
+
+/* Toggle password visibility */
+document.getElementById('toggleCreatePwd').addEventListener('click',function(){
+    var ic=this.querySelector('i');
+    if(cPwd.type==='password'){cPwd.type='text';ic.classList.replace('fa-eye','fa-eye-slash');}
+    else{cPwd.type='password';ic.classList.replace('fa-eye-slash','fa-eye');}
+});
+document.getElementById('toggleCreatePwdConf').addEventListener('click',function(){
+    var ic=this.querySelector('i');
+    if(cConf.type==='password'){cConf.type='text';ic.classList.replace('fa-eye','fa-eye-slash');}
+    else{cConf.type='password';ic.classList.replace('fa-eye-slash','fa-eye');}
+});
+
+/* Reset form saat modal buka */
+var origOpenCreate=openModal;
+openModal=function(id){
+    origOpenCreate(id);
+    if(id==='modalCreate'){
+        document.getElementById('formCreateUser').reset();
+        cPwd.classList.remove('input-error','input-success');cConf.classList.remove('input-error','input-success');
+        document.getElementById('createPwdErr').style.display='none';
+        document.getElementById('createStrBar').style.display='none';
+        document.getElementById('createStrText').style.display='none';
+        document.getElementById('createEmailErr').style.display='none';
+        document.getElementById('createMatchNo').style.display='none';
+        document.getElementById('createMatchOk').style.display='none';
+        for(var i=0;i<cSegs.length;i++)cSegs[i].className='str-seg';
+    }
 };
 
 /* ═══════════════════════════════════════════════
@@ -416,8 +698,7 @@ function loadDashboard(){
         renderChartKategori(d.per_kategori||{});
         renderChartStatus(d.sudah_dinilai||0,d.grand_edited||0,d.belum_dinilai||0);
         renderChartTop(d.top_10||[]);
-    })
-    .catch(function(){});
+    }).catch(function(){});
 }
 
 function renderChartKategori(data){
@@ -425,8 +706,7 @@ function renderChartKategori(data){
     var colors=['#2563eb','#7c3aed','#10b981','#f59e0b','#ef4444','#14b8a6','#f97316','#6366f1'];
     if(chartKat)chartKat.destroy();
     chartKat=new Chart(document.getElementById('chartKategori'),{
-        type:'bar',
-        data:{labels:labels,datasets:[{data:vals,backgroundColor:colors.slice(0,labels.length),borderRadius:6,borderSkipped:false}]},
+        type:'bar',data:{labels:labels,datasets:[{data:vals,backgroundColor:colors.slice(0,labels.length),borderRadius:6,borderSkipped:false}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}},x:{ticks:{font:{size:10}}}}}
     });
 }
@@ -434,8 +714,7 @@ function renderChartKategori(data){
 function renderChartStatus(dinilai,grand,belum){
     if(chartStat)chartStat.destroy();
     chartStat=new Chart(document.getElementById('chartStatus'),{
-        type:'doughnut',
-        data:{labels:['Sudah Dinilai','Grand Juri Edit','Belum Dinilai'],datasets:[{data:[dinilai,grand,belum],backgroundColor:['#10b981','#7c3aed','#f59e0b'],borderWidth:0,spacing:2}]},
+        type:'doughnut',data:{labels:['Sudah Dinilai','Grand Juri Edit','Belum Dinilai'],datasets:[{data:[dinilai,grand,belum],backgroundColor:['#10b981','#7c3aed','#f59e0b'],borderWidth:0,spacing:2}]},
         options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}}}
     });
 }
@@ -445,8 +724,7 @@ function renderChartTop(data){
     for(var i=0;i<data.length;i++){labels.push(data[i].nama);vals.push(data[i].total);}
     if(chartTop)chartTop.destroy();
     chartTop=new Chart(document.getElementById('chartTop'),{
-        type:'bar',
-        data:{labels:labels,datasets:[{data:vals,backgroundColor:'#2563eb',borderRadius:4,borderSkipped:false}]},
+        type:'bar',data:{labels:labels,datasets:[{data:vals,backgroundColor:'#2563eb',borderRadius:4,borderSkipped:false}]},
         options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{font:{size:10}}},y:{ticks:{font:{size:9,family:'Plus Jakarta Sans'}}}}}
     });
 }
@@ -459,56 +737,55 @@ function loadScoringData(){
     var s=document.getElementById('filterSearch').value;
     var k=document.getElementById('filterKategori').value;
     var st=document.getElementById('filterStatus').value;
-    if(s)params.set('search',s);
-    if(k)params.set('kategori',k);
-    if(st)params.set('status',st);
-
+    if(s)params.set('search',s);if(k)params.set('kategori',k);if(st)params.set('status',st);
     fetch('/api/admin/scoring-data?'+params.toString(),{headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
-    .then(function(data){
-        allScoringData=data;
-        renderTable(data);
-    })
+    .then(function(data){allScoringData=data;renderTable(data);})
     .catch(function(){});
 }
 
 function renderTable(data){
-    var tb=document.getElementById('tBody');
-    tb.innerHTML='';
-    if(!data||data.length===0){
-        tb.innerHTML='<tr><td colspan="9"><div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada data ditemukan.</p></div></td></tr>';
-        return;
-    }
+    var tb=document.getElementById('tBody');tb.innerHTML='';
+    if(!data||data.length===0){tb.innerHTML='<tr><td colspan="10"><div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada data.</p></div></td></tr>';return;}
     for(var i=0;i<data.length;i++){
-        var p=data[i];
-        var tr=document.createElement('tr');
-        var juriHtml='<span style="color:var(--light);font-size:11px;">—</span>';
+        var p=data[i],tr=document.createElement('tr');
+
+        /* Kolom: Juri */
+        var jh='<span style="color:var(--light);font-size:11px;">—</span>';
         if(p.juri_nama&&p.juri_nama!=='—'){
-            juriHtml='<div class="juri-info"><i class="fas fa-user-pen" style="font-size:9px;color:var(--primary);"></i> <span class="j-name">'+esc(p.juri_nama)+'</span>';
-            if(p.grand_juri_nama) juriHtml+='<br><i class="fas fa-crown" style="font-size:9px;"></i> <span class="g-name">'+esc(p.grand_juri_nama)+'</span>';
-            juriHtml+='</div>';
+            jh='<div class="juri-info"><i class="fas fa-user-pen" style="font-size:9px;color:var(--primary);"></i> <span class="j-name">'+esc(p.juri_nama)+'</span>';
+            if(p.grand_juri_nama)jh+='<br><i class="fas fa-crown" style="font-size:9px;"></i> <span class="g-name">'+esc(p.grand_juri_nama)+'</span>';
+            jh+='</div>';
         }
-        var statusCls=p.grand_juri_nama?'s-grand':(p.status==='Sudah Dinilai'?'s-dinilai':'s-belum');
-        var statusTxt=p.grand_juri_nama?'GRAND EDIT':(p.status==='Sudah Dinilai'?'DINILAI':'BELUM');
-        var totalHtml=p.total_nilai>0?'<span class="total-val">'+p.total_nilai+'</span>':'<span class="total-val zero">—</span>';
+
+        /* Kolom: Status & Total */
+        var sc=p.grand_juri_nama?'s-grand':(p.status==='Sudah Dinilai'?'s-dinilai':'s-belum');
+        var st=p.grand_juri_nama?'GRAND EDIT':(p.status==='Sudah Dinilai'?'DINILAI':'BELUM');
+        var tv=p.total_nilai>0?'<span class="total-val">'+p.total_nilai+'</span>':'<span class="total-val zero">—</span>';
+
+        /* Kolom: ASAL/TEAM */
+        var asalHtml='<span style="color:var(--light);font-size:11px;">—</span>';
+        if(p.detail_anggota&&p.detail_anggota!=='—'){
+            asalHtml='<div style="font-size:11px;color:var(--text-muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(p.detail_anggota)+'"><i class="fas fa-building" style="font-size:9px;color:var(--primary);margin-right:3px;"></i>'+esc(p.detail_anggota)+'</div>';
+        }
+
         tr.innerHTML=
             '<td style="font-weight:700;color:var(--light);font-size:11px;">'+(i+1)+'</td>'+
             '<td style="font-weight:700;">'+esc(p.nama_peserta)+'</td>'+
             '<td style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;">'+esc(p.kategori)+'</td>'+
             '<td style="font-size:11px;color:var(--muted);">'+esc(p.kelas)+'</td>'+
             '<td style="font-weight:700;color:var(--primary);">Tank '+(p.nomor_tank||'—')+'</td>'+
-            '<td>'+juriHtml+'</td>'+
-            '<td>'+totalHtml+'</td>'+
-            '<td><span class="status-badge '+statusCls+'">'+statusTxt+'</span></td>'+
+            '<td>'+asalHtml+'</td>'+
+            '<td>'+jh+'</td>'+
+            '<td>'+tv+'</td>'+
+            '<td><span class="status-badge '+sc+'">'+st+'</span></td>'+
             '<td><button class="btn-xs blue" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i></button></td>';
         tb.appendChild(tr);
     }
 }
 
 var filterT;
-document.getElementById('filterSearch').addEventListener('input',function(){
-    clearTimeout(filterT);filterT=setTimeout(loadScoringData,300);
-});
+document.getElementById('filterSearch').addEventListener('input',function(){clearTimeout(filterT);filterT=setTimeout(loadScoringData,300);});
 document.getElementById('filterKategori').addEventListener('change',loadScoringData);
 document.getElementById('filterStatus').addEventListener('change',loadScoringData);
 
@@ -529,34 +806,18 @@ function openDetail(id){
 
 function renderDetailView(p){
     var nd=p.nilai_detail;
-    var html='<div class="detail-banner"><div><h4>'+esc(p.nama_peserta)+'</h4><div class="meta">'+
-        '<span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span>'+
-        '<span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - '+esc(p.kelas)+'</span>';
-    if(p.juri_nama&&p.juri_nama!=='—') html+='<span><i class="fas fa-user-pen"></i> '+esc(p.juri_nama)+'</span>';
-    if(p.grand_juri_nama) html+='<span style="color:var(--purple);"><i class="fas fa-crown"></i> '+esc(p.grand_juri_nama)+'</span>';
+    var html='<div class="detail-banner"><div><h4>'+esc(p.nama_peserta)+'</h4><div class="meta"><span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span><span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - '+esc(p.kelas)+'</span>';
+    if(p.juri_nama&&p.juri_nama!=='—')html+='<span><i class="fas fa-user-pen"></i> '+esc(p.juri_nama)+'</span>';
+    if(p.grand_juri_nama)html+='<span style="color:var(--purple);"><i class="fas fa-crown"></i> '+esc(p.grand_juri_nama)+'</span>';
     html+='</div></div><div class="detail-total-chip"><i class="fas fa-star" style="margin-right:4px;"></i>'+p.total_nilai+'</div></div>';
-
-    if(p.grand_juri_nama){
-        html+='<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:11px;color:#92400e;margin-bottom:14px;display:flex;gap:6px;align-items:flex-start;"><i class="fas fa-circle-info" style="margin-top:1px;"></i><span>Nilai final setelah diperbarui oleh <b>'+esc(p.grand_juri_nama)+'</b>.</span></div>';
-    }
-
-    if(!nd||typeof nd!=='object'){
-        html+='<div class="empty-state" style="padding:30px;"><i class="fas fa-clipboard-list"></i><p>Belum ada nilai.</p></div>';
-        document.getElementById('detailBody').innerHTML=html;return;
-    }
-
+    if(p.grand_juri_nama)html+='<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:11px;color:#92400e;margin-bottom:14px;display:flex;gap:6px;align-items:flex-start;"><i class="fas fa-circle-info" style="margin-top:1px;"></i><span>Nilai final oleh <b>'+esc(p.grand_juri_nama)+'</b>.</span></div>';
+    if(!nd||typeof nd!=='object'){html+='<div class="empty-state" style="padding:30px;"><i class="fas fa-clipboard-list"></i><p>Belum ada nilai.</p></div>';document.getElementById('detailBody').innerHTML=html;return;}
     var kats=Object.keys(formFields);
     for(var ki=0;ki<kats.length;ki++){
-        var kat=kats[ki];
-        var fields=formFields[kat],katNilai=nd[kat]||{},sub=0;
-        for(var fi=0;fi<fields.length;fi++){
-            if(katNilai[fields[fi].id]!=null&&katNilai[fields[fi].id]!=='') sub+=parseInt(katNilai[fields[fi].id])||0;
-        }
+        var kat=kats[ki],fields=formFields[kat],kn=nd[kat]||{},sub=0;
+        for(var fi=0;fi<fields.length;fi++){if(kn[fields[fi].id]!=null&&kn[fields[fi].id]!=='')sub+=parseInt(kn[fields[fi].id])||0;}
         html+='<div class="detail-kat"><div class="detail-kat-head"><span class="detail-kat-title"><i class="fas fa-layer-group" style="margin-right:4px;"></i>'+kat.charAt(0).toUpperCase()+kat.slice(1)+'</span><span class="detail-kat-sub">Subtotal: '+sub+'</span></div><div class="detail-kat-body">';
-        for(var fj=0;fj<fields.length;fj++){
-            var f=fields[fj],v=katNilai[f.id],has=(v!=null&&v!=='');
-            html+='<div class="detail-row"><div><div class="label">'+f.label+'</div><div class="meta">Maks '+f.max+'</div></div><span class="val-chip '+(has?'has':'no')+'">'+(has?v:'N/A')+'</span></div>';
-        }
+        for(var fj=0;fj<fields.length;fj++){var f=fields[fj],v=kn[f.id],has=(v!=null&&v!=='');html+='<div class="detail-row"><div><div class="label">'+f.label+'</div><div class="meta">Maks '+f.max+'</div></div><span class="val-chip '+(has?'has':'no')+'">'+(has?v:'N/A')+'</span></div>';}
         html+='</div></div>';
     }
     document.getElementById('detailBody').innerHTML=html;
@@ -573,214 +834,257 @@ function loadUsers(){
     var c=document.getElementById('userList');
     c.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
     fetch('{{ route("api.list.users") }}',{headers:{'Accept':'application/json'}})
-    .then(function(r){
-        if(!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-    })
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
     .then(function(data){
-        c.innerHTML='';
-        /* Cek apakah response benar-benar array */
         if(!Array.isArray(data)){
-            console.error('API list-users bukan array:', data);
-            c.innerHTML='<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i><p style="color:var(--danger);font-weight:600;">Error: Response bukan array</p><p style="font-size:10px;margin-top:4px;">Cek Console (F12) untuk detail.</p></div>';
-            document.getElementById('userCount').textContent='Error';
-            return;
+            c.innerHTML='<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i><p style="color:var(--danger);">Error</p></div>';
+            document.getElementById('userCount').textContent='Error';return;
         }
-        document.getElementById('userCount').textContent=data.length+' user';
-        if(!data.length){
-            c.innerHTML='<div class="empty-state"><i class="fas fa-user-slash"></i><p>Belum ada user.</p></div>';
-            return;
-        }
-        for(var i=0;i<data.length;i++){
-            var u=data[i];
-            var role=u.role||'user';
-            var isMe={{ auth()->id() }}===u.id;
-            var div=document.createElement('div');
-            div.className='user-card';
-            div.innerHTML=
-                '<div style="display:flex;align-items:center;flex:1;min-width:0;">'+
-                    '<div class="user-avatar" style="background:'+roleColors[role]+';">'+esc(u.name.charAt(0).toUpperCase())+'</div>'+
-                    '<div class="user-card-body"><h4>'+esc(u.name)+'</h4><span>'+esc(u.email)+'</span></div>'+
-                '</div>'+
-                '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">'+
-                    '<span class="role-badge '+roleBadgeCls[role]+'">'+roleLabels[role]+'</span>'+
-                    '<div class="user-card-actions">'+
-                        (!isMe?'<button class="btn-xs green" onclick="openRoleMenu(event,'+u.id+',\''+esc(u.name).replace(/'/g,"\\'")+'\',\''+role+'\')" title="Ubah Role"><i class="fas fa-arrows-rotate"></i></button>':'')+
-                        '<button class="btn-xs blue" onclick="openPwdModal('+u.id+',\''+esc(u.name).replace(/'/g,"\\'")+'\')" title="Ganti Password"><i class="fas fa-key"></i></button>'+
-                    '</div>'+
-                '</div>';
-            c.appendChild(div);
-        }
+        allUsersCache=data;
+        document.getElementById('searchUser').value='';
+        filterUsers('');
     })
     .catch(function(err){
-        console.error('Fetch list-users error:', err);
-        c.innerHTML='<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i><p style="color:var(--danger);font-weight:600;">Gagal memuat user</p><p style="font-size:10px;margin-top:4px;">'+esc(err.message)+'</p></div>';
+        c.innerHTML='<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i><p style="color:var(--danger);">'+esc(err.message)+'</p></div>';
         document.getElementById('userCount').textContent='Error';
     });
 }
 
+/* ★ CREATE USER — validasi password lengkap */
 function submitCreateUser(){
     var form=document.getElementById('formCreateUser');
-    var fd=new FormData(form);
-    fd.append('_token',getCsrf());
-    var name=fd.get('name'),email=fd.get('email'),pw=fd.get('password'),role=fd.get('role');
-    if(!name||!email||!pw||!role){alert('Semua field wajib diisi!');return;}
-    if(pw.length<8){alert('Password minimal 8 karakter!');return;}
+    var fd=new FormData(form);fd.append('_token',getCsrf());
+    var name=fd.get('name'),email=fd.get('email'),pw=cPwd.value,conf=cConf.value,role=fd.get('role');
+
+    if(!name||!email||!pw||!conf||!role){popupError('Form Tidak Lengkap','Semua field wajib diisi.');return;}
+
+    /* Validasi password sama seperti register */
+    var hasL=/[a-z]/.test(pw),hasU=/[A-Z]/.test(pw),hasN=/[0-9]/.test(pw),hasS=/[^A-Za-z0-9]/.test(pw);
+    if(pw.length<8||!hasL||!hasU||!hasN||!hasS){
+        document.getElementById('createPwdErr').style.display='flex';
+        cPwd.classList.add('input-error');cPwd.focus();
+        popupError('Password Tidak Valid','Password wajib mengandung:<br><div style="text-align:left;margin-top:6px;line-height:1.8;">• Min. <strong>8 karakter</strong><br>• Huruf <strong>kecil</strong> (a-z)<br>• Huruf <strong>besar</strong> (A-Z)<br>• <strong>Angka</strong> (0-9)<br>• <strong>Simbol</strong> (!@#$% dll)</div>');
+        return;
+    }
+    if(pw!==conf){
+        document.getElementById('createMatchNo').style.display='flex';
+        cConf.classList.add('input-error');cConf.focus();
+        popupError('Password Tidak Cocok','Konfirmasi password tidak sesuai dengan password utama.');return;
+    }
+
     fetch('/api/admin/create-user',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
     .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
     .then(function(d){
-        if(d.success){closeModal('modalCreate');form.reset();loadUsers();alert('User berhasil ditambahkan!');}
-        else alert(d.message||'Gagal.');
+        if(d.success){closeModal('modalCreate');form.reset();loadUsers();popupSuccess('User Berhasil Ditambahkan!','User <strong>'+esc(name)+'</strong> didaftarkan sebagai <strong>'+esc(roleLabels[role])+'</strong>.');}
+        else popupError('Gagal',d.message||'Terjadi kesalahan.');
     })
-    .catch(function(e){if(e.errors)alert(Object.values(e.errors).join('\n'));else alert('Gagal menyimpan.');});
+    .catch(function(e){
+        if(e.errors){var msg='';var keys=Object.keys(e.errors);for(var i=0;i<keys.length;i++)msg+='<div style="margin-bottom:4px;">• '+esc(e.errors[keys[i]][0])+'</div>';popupError('Validasi Gagal',msg);}
+        else popupError('Kesalahan Jaringan','Gagal menyimpan.');
+    });
 }
 
+/* ★ DELETE USER */
+function deleteUser(uid,name){
+    popupConfirm(
+        'Hapus User',
+        'Yakin ingin menghapus <strong>'+esc(name)+'</strong>?<br><span style="font-size:11px;color:var(--danger);">Tindakan ini tidak dapat dibatalkan.</span>',
+        'Ya, Hapus',
+        function(){
+            var fd=new FormData();fd.append('_token',getCsrf());fd.append('user_id',uid);
+            fetch('/api/admin/delete-user',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+            .then(function(r){return r.json();})
+            .then(function(d){
+                if(d.success){loadUsers();popupSuccess('User Dihapus','<strong>'+esc(name)+'</strong> berhasil dihapus dari sistem.');}
+                else popupError('Gagal Menghapus',d.message||'Terjadi kesalahan.');
+            })
+            .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');});
+        }
+    );
+}
+
+/* ★ CHANGE PASSWORD */
 function openPwdModal(id,name){
     document.getElementById('pwdUserId').value=id;
     document.getElementById('pwdTarget').textContent=name;
     document.getElementById('pwdNew').value='';
     openModal('modalPwd');
 }
-
 function submitPwd(){
     var pw=document.getElementById('pwdNew').value;
-    if(pw.length<8){alert('Min 8 karakter!');return;}
-    var fd=new FormData();
-    fd.append('_token',getCsrf());
-    fd.append('user_id',document.getElementById('pwdUserId').value);
-    fd.append('new_password',pw);
+    if(pw.length<8){popupError('Password Terlalu Pendek','Password minimal <strong>8 karakter</strong>.');return;}
+    var fd=new FormData();fd.append('_token',getCsrf());fd.append('user_id',document.getElementById('pwdUserId').value);fd.append('new_password',pw);
     fetch('{{ route("api.update.password") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
     .then(function(r){return r.json();})
-    .then(function(d){if(d.success){closeModal('modalPwd');loadUsers();alert(d.message);}else alert('Gagal.');})
-    .catch(function(){alert('Error.');});
+    .then(function(d){if(d.success){closeModal('modalPwd');loadUsers();popupSuccess('Password Diubah','Password berhasil diperbarui.');}else popupError('Gagal','Tidak dapat mengubah password.');})
+    .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');});
 }
 
+/* ★ CHANGE ROLE — dropdown tidak terpotong layar */
 var activeRoleMenu=null;
 function openRoleMenu(e,uid,name,currentRole){
-    e.stopPropagation();
-    closeRoleMenu();
-    var menu=document.createElement('div');
-    menu.id='roleMenuDropdown';
-    menu.style.cssText='position:fixed;z-index:9999;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);padding:6px;min-width:150px;';
-    menu.style.left=e.clientX+'px';
-    menu.style.top=e.clientY+'px';
-    var roles=[
-        {key:'admin',label:'Admin',color:'#2563eb'},
-        {key:'juri',label:'Juri',color:'#16a34a'},
-        {key:'grand_juri',label:'Grand Juri',color:'#7c3aed'},
-        {key:'user',label:'User Biasa',color:'#94a3b8'}
-    ];
+    e.stopPropagation();closeRoleMenu();
+    var menu=document.createElement('div');menu.id='roleMenuDropdown';
+    menu.style.cssText='position:fixed;z-index:99999;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);padding:6px;min-width:160px;visibility:hidden;';
+    var roles=[{key:'admin',label:'Admin',color:'#2563eb'},{key:'juri',label:'Juri',color:'#16a34a'},{key:'grand_juri',label:'Grand Juri',color:'#7c3aed'},{key:'user',label:'User Biasa',color:'#94a3b8'}];
     for(var i=0;i<roles.length;i++){
         (function(r){
             var isActive=r.key===currentRole;
             var btn=document.createElement('button');
-            btn.style.cssText='display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:'+(isActive?'800':'600')+';cursor:pointer;background:'+(isActive?'#f1f5f9':'transparent')+';color:var(--text);';
-            btn.innerHTML='<span style="width:8px;height:8px;border-radius:50%;background:'+r.color+';"></span>'+r.label+(isActive?' <i class="fas fa-check" style="margin-left:auto;font-size:10px;color:var(--primary);"></i>':'');
+            btn.style.cssText='display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:'+(isActive?'800':'600')+';cursor:pointer;background:'+(isActive?'#f1f5f9':'transparent')+';color:var(--text);white-space:nowrap;';
+            btn.innerHTML='<span style="width:8px;height:8px;border-radius:50%;background:'+r.color+';flex-shrink:0;"></span>'+r.label+(isActive?' <i class="fas fa-check" style="margin-left:auto;font-size:10px;color:var(--primary);"></i>':'');
             btn.onmouseover=function(){if(!isActive)this.style.background='#f8fafc';};
             btn.onmouseout=function(){if(!isActive)this.style.background='transparent';};
-            btn.onclick=function(ev){ev.stopPropagation();changeRole(uid,name,r.key);closeRoleMenu();};
+            btn.onclick=function(ev){
+                ev.stopPropagation();closeRoleMenu();
+                if(r.key===currentRole){popupInfo('Tidak Ada Perubahan','User sudah memiliki role <strong>'+roleLabels[r.key]+'</strong>.');return;}
+                changeRole(uid,name,r.key);
+            };
             menu.appendChild(btn);
         })(roles[i]);
     }
     document.body.appendChild(menu);
+
+    /* ★ SMART POSITIONING — tidak terpotong layar */
+    menu.style.visibility='hidden';
+    menu.style.left='0px';menu.style.top='0px';
+    var mRect=menu.getBoundingClientRect();
+    var vw=window.innerWidth,vh=window.innerHeight;
+    var left=e.clientX,top=e.clientY;
+    if(left+mRect.width>vw-12)left=vw-mRect.width-12;
+    if(top+mRect.height>vh-12)top=vh-mRect.height-12;
+    if(left<12)left=12;if(top<12)top=12;
+    menu.style.left=left+'px';menu.style.top=top+'px';
+    menu.style.visibility='visible';
+
     activeRoleMenu=menu;
     setTimeout(function(){document.addEventListener('click',closeRoleMenu,{once:true});},10);
 }
-
 function closeRoleMenu(){var m=document.getElementById('roleMenuDropdown');if(m)m.remove();activeRoleMenu=null;}
 
 function changeRole(uid,name,newRole){
-    if(!confirm('Ubah role "'+name+'" menjadi '+roleLabels[newRole]+'?'))return;
-    var fd=new FormData();
-    fd.append('_token',getCsrf());
-    fd.append('user_id',uid);
-    fd.append('new_role',newRole);
-    fetch('/api/admin/change-role',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-    .then(function(r){return r.json();})
-    .then(function(d){if(d.success){loadUsers();}else alert(d.message||'Gagal.');})
-    .catch(function(){alert('Error.');});
+    popupConfirm(
+        'Ubah Role User',
+        'Ubah role <strong>'+esc(name)+'</strong> menjadi <strong style="color:'+roleColors[newRole]+';">'+roleLabels[newRole]+'</strong>?',
+        'Ya, Ubah Role',
+        function(){
+            var fd=new FormData();fd.append('_token',getCsrf());fd.append('user_id',uid);fd.append('new_role',newRole);
+            fetch('/api/admin/change-role',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+            .then(function(r){return r.json();})
+            .then(function(d){if(d.success){loadUsers();popupSuccess('Role Diubah','<strong>'+esc(name)+'</strong> → <strong>'+roleLabels[newRole]+'</strong>');}else popupError('Gagal',d.message||'Terjadi kesalahan.');})
+            .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');});
+        }
+    );
 }
 
 /* ═══════════════════════════════════════════════
    EXPORT CSV
    ═══════════════════════════════════════════════ */
 function exportCSV(){
-    if(!allScoringData.length){alert('Tidak ada data untuk diexport.');return;}
-    var header='No,Nama Peserta,Kategori,Kelas,No Tank,Juri,Grand Juri,Total Nilai,Status\n';
-    var rows='';
+    if(!allScoringData.length){popupInfo('Tidak Ada Data','Tidak ada data penilaian untuk diexport.');return;}
+    var header='No,Nama Peserta,Kategori,Kelas,No Tank,Juri,Grand Juri,Total Nilai,Status\n',rows='';
     for(var i=0;i<allScoringData.length;i++){
         var p=allScoringData[i];
-        rows+=(i+1)+','+
-            '"'+(p.nama_peserta||'')+'",'+
-            '"'+(p.kategori||'')+'",'+
-            '"'+(p.kelas||'')+'",'+
-            '"'+(p.nomor_tank||'')+'",'+
-            '"'+(p.juri_nama||'')+'",'+
-            '"'+(p.grand_juri_nama||'')+'",'+
-            (p.total_nilai||0)+','+
-            '"'+(p.grand_juri_nama?'Grand Juri Edit':p.status)+'"\n';
+        rows+=(i+1)+',"'+(p.nama_peserta||'')+'","'+(p.kategori||'')+'","'+(p.kelas||'')+'","'+(p.nomor_tank||'')+'","'+(p.juri_nama||'')+'","'+(p.grand_juri_nama||'')+'",'+(p.total_nilai||0)+',"'+(p.grand_juri_nama?'Grand Juri Edit':p.status)+'"\n';
     }
     var blob=new Blob(['\uFEFF'+header+rows],{type:'text/csv;charset=utf-8;'});
     var url=URL.createObjectURL(blob);
     var a=document.createElement('a');a.href=url;a.download='LCI_Penilaian_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
     URL.revokeObjectURL(url);
+    popupSuccess('Export Berhasil','File CSV (<strong>'+allScoringData.length+' data</strong>) berhasil didownload.');
 }
 
 /* ═══════════════════════════════════════════════
-   MODUL LAMA (UNDIAN & REGISTRASI)
+   MODUL LAMA
    ═══════════════════════════════════════════════ */
 function loadPesertaOld(){
     fetch('{{ route("api.peserta.belum.tank") }}',{headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
     .then(function(data){
-        var sel=document.getElementById('pesertaSelectOld');
-        sel.innerHTML='<option value="" disabled selected>Pilih Peserta</option>';
+        var sel=document.getElementById('pesertaSelectOld');sel.innerHTML='<option value="" disabled selected>Pilih Peserta</option>';
         if(!data.length){sel.innerHTML+='<option disabled>Kosong</option>';return;}
-        for(var i=0;i<data.length;i++){
-            var o=document.createElement('option');
-            o.value=data[i].id;
-            o.textContent=data[i].nama_peserta+' - '+data[i].kategori;
-            sel.appendChild(o);
-        }
+        for(var i=0;i<data.length;i++){var o=document.createElement('option');o.value=data[i].id;o.textContent=data[i].nama_peserta+' - '+data[i].kategori;sel.appendChild(o);}
     });
 }
 loadPesertaOld();
 
 document.getElementById('btnAcakOld').addEventListener('click',function(){
     if(!document.getElementById('pesertaSelectOld').value)return;
-    var display=document.getElementById('numberDisplayOld');
-    display.style.color='#60a5fa';
-    this.disabled=true;
-    var c=0;
-    var iv=setInterval(function(){
+    var display=document.getElementById('numberDisplayOld');display.style.color='#60a5fa';this.disabled=true;
+    var c=0,iv=setInterval(function(){
         display.textContent=Math.floor(Math.random()*100)+1;
-        if(c++>15){
-            clearInterval(iv);
-            var fd=new FormData();
-            fd.append('_token',getCsrf());
-            fd.append('peserta_id',document.getElementById('pesertaSelectOld').value);
-            fd.append('range_min',1);
-            fd.append('range_max',100);
+        if(c++>15){clearInterval(iv);
+            var fd=new FormData();fd.append('_token',getCsrf());fd.append('peserta_id',document.getElementById('pesertaSelectOld').value);fd.append('range_min',1);fd.append('range_max',100);
             fetch('{{ route("api.acak.tank.admin") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
             .then(function(r){return r.json();})
-            .then(function(d){
-                if(d.success){display.textContent=d.nomor_tank;display.style.color='#22c55e';setTimeout(loadPesertaOld,2000);}
-                else throw new Error(d.message);
-            })
-            .catch(function(e){display.textContent='--';display.style.color='#fff';alert(e.message);document.getElementById('btnAcakOld').disabled=false;});
+            .then(function(d){if(d.success){display.textContent=d.nomor_tank;display.style.color='#22c55e';setTimeout(loadPesertaOld,2000);}else throw new Error(d.message);})
+            .catch(function(e){display.textContent='--';display.style.color='#fff';popupError('Undian Gagal',esc(e.message));document.getElementById('btnAcakOld').disabled=false;});
         }
     },60);
 });
 
 document.getElementById('regFormOld').addEventListener('submit',function(e){
-    e.preventDefault();
-    var fd=new FormData(this);
-    fd.append('_token',getCsrf());
+    e.preventDefault();var fd=new FormData(this);fd.append('_token',getCsrf());
     fetch('{{ route("store.registrasi") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
     .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
-    .then(function(d){if(d.success){document.getElementById('regFormOld').reset();alert('Berhasil didaftarkan!');loadPesertaOld();}})
-    .catch(function(e){if(e.errors)alert(Object.values(e.errors).join('\n'));else alert('Gagal menyimpan.');});
+    .then(function(d){if(d.success){document.getElementById('regFormOld').reset();popupSuccess('Berhasil Didaftarkan!','Peserta baru berhasil ditambahkan.');loadPesertaOld();}})
+    .catch(function(e){if(e.errors){var msg='';var keys=Object.keys(e.errors);for(var i=0;i<keys.length;i++)msg+='<div style="margin-bottom:4px;">• '+esc(e.errors[keys[i]][0])+'</div>';popupError('Validasi Gagal',msg);}else popupError('Gagal','Terjadi kesalahan.');});
 });
+
+/* ═══════════════════════════════════════════════
+   SEARCH USER
+   ═══════════════════════════════════════════════ */
+var allUsersCache=[];
+
+var searchUserT;
+document.getElementById('searchUser').addEventListener('input',function(){
+    clearTimeout(searchUserT);
+    var q=this.value;
+    searchUserT=setTimeout(function(){filterUsers(q);},200);
+});
+
+function filterUsers(q){
+    q=q.toLowerCase().trim();
+    var c=document.getElementById('userList');c.innerHTML='';
+    var filtered=[];
+    if(!q){filtered=allUsersCache;}
+    else{
+        for(var i=0;i<allUsersCache.length;i++){
+            var u=allUsersCache[i];
+            if(u.name.toLowerCase().indexOf(q)!==-1||u.email.toLowerCase().indexOf(q)!==-1||(roleLabels[u.role]||'').toLowerCase().indexOf(q)!==-1){
+                filtered.push(u);
+            }
+        }
+    }
+    document.getElementById('userCount').textContent=filtered.length+' user';
+    if(!filtered.length){c.innerHTML='<div class="empty-state"><i class="fas fa-user-slash"></i><p>Tidak ada user ditemukan.</p></div>';return;}
+    renderUserList(filtered);
+}
+
+function renderUserList(data){
+    var c=document.getElementById('userList');c.innerHTML='';
+    for(var i=0;i<data.length;i++){
+        var u=data[i],role=u.role||'user',isMe={{ auth()->id() }}===u.id;
+        var div=document.createElement('div');div.className='user-card';
+        var safeName=esc(u.name).replace(/'/g,"\\'");
+        var actions='';
+        if(!isMe){
+            actions+='<button class="btn-xs green" onclick="openRoleMenu(event,'+u.id+',\''+safeName+'\',\''+role+'\')" title="Ubah Role"><i class="fas fa-arrows-rotate"></i></button>';
+            actions+='<button class="btn-xs red" onclick="deleteUser('+u.id+',\''+safeName+'\')" title="Hapus User"><i class="fas fa-trash-can"></i></button>';
+        }
+        actions+='<button class="btn-xs blue" onclick="openPwdModal('+u.id+',\''+safeName+'\')" title="Ganti Password"><i class="fas fa-key"></i></button>';
+        div.innerHTML=
+            '<div style="display:flex;align-items:center;flex:1;min-width:0;">'+
+                '<div class="user-avatar" style="background:'+roleColors[role]+';">'+esc(u.name.charAt(0).toUpperCase())+'</div>'+
+                '<div class="user-card-body"><h4>'+esc(u.name)+'</h4><span>'+esc(u.email)+'</span></div>'+
+            '</div>'+
+            '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">'+
+                '<span class="role-badge '+roleBadgeCls[role]+'">'+roleLabels[role]+'</span>'+
+                '<div class="user-card-actions">'+actions+'</div>'+
+            '</div>';
+        c.appendChild(div);
+    }
+}
 
 /* ═══════════════════════════════════════════════
    INIT

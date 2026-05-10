@@ -60,4 +60,5 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/scoring-data', [AdminDashboardController::class, 'getScoringData']);
     Route::post('/api/admin/create-user', [AdminDashboardController::class, 'createUser']);
     Route::post('/api/admin/change-role', [AdminDashboardController::class, 'changeRole']);
+    Route::post('/api/admin/delete-user', [AdminDashboardController::class, 'deleteUser']);
 });
