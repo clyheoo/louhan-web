@@ -611,7 +611,7 @@ function showDetail(id) {
         html += '<tr style="background:#eff6ff;"><td colspan="2" style="text-align:right; font-weight:700; font-size:12px; padding:10px;">Subtotal ' + kat.toUpperCase() + '</td><td style="text-align:center; font-weight:800; color:var(--primary); font-size:13px; padding:10px;">' + subTotal + '</td></tr>';
     });
 
-    html += '</tbody></table><div class="grand-total">TOTAL NILAI SELURUH KATEGORI: ' + data.total + '</div>';
+    html += '</tbody></table><div class="grand-total">TOTAL NILAI: ' + data.total + '</div>';
     document.getElementById('modalBodyContent').innerHTML = html;
     document.getElementById('modalDetail').classList.add('show');
 }
