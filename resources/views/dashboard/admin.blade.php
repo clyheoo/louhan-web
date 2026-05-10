@@ -573,11 +573,24 @@ function loadUsers(){
     var c=document.getElementById('userList');
     c.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
     fetch('{{ route("api.list.users") }}',{headers:{'Accept':'application/json'}})
-    .then(function(r){return r.json();})
+    .then(function(r){
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
     .then(function(data){
         c.innerHTML='';
+        /* Cek apakah response benar-benar array */
+        if(!Array.isArray(data)){
+            console.error('API list-users bukan array:', data);
+            c.innerHTML='<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i><p style="color:var(--danger);font-weight:600;">Error: Response bukan array</p><p style="font-size:10px;margin-top:4px;">Cek Console (F12) untuk detail.</p></div>';
+            document.getElementById('userCount').textContent='Error';
+            return;
+        }
         document.getElementById('userCount').textContent=data.length+' user';
-        if(!data.length){c.innerHTML='<div class="empty-state"><i class="fas fa-user-slash"></i><p>Belum ada user.</p></div>';return;}
+        if(!data.length){
+            c.innerHTML='<div class="empty-state"><i class="fas fa-user-slash"></i><p>Belum ada user.</p></div>';
+            return;
+        }
         for(var i=0;i<data.length;i++){
             var u=data[i];
             var role=u.role||'user';
@@ -599,7 +612,11 @@ function loadUsers(){
             c.appendChild(div);
         }
     })
-    .catch(function(){document.getElementById('userList').innerHTML='<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Gagal memuat.</p></div>';});
+    .catch(function(err){
+        console.error('Fetch list-users error:', err);
+        c.innerHTML='<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i><p style="color:var(--danger);font-weight:600;">Gagal memuat user</p><p style="font-size:10px;margin-top:4px;">'+esc(err.message)+'</p></div>';
+        document.getElementById('userCount').textContent='Error';
+    });
 }
 
 function submitCreateUser(){
