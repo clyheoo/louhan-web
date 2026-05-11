@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Scoring;
 use App\Models\Peserta;
+use App\Models\Ikan;
 use App\Models\GrandJuriEdit;
 
 class GrandJuriController extends Controller
@@ -15,21 +16,25 @@ class GrandJuriController extends Controller
     }
 
     /* ═══════════════════════════════════════════
-       STATS
+       STATS (UPDATE KE TABEL IKANS)
        ═══════════════════════════════════════════ */
     public function getStats()
     {
-        $totalTank    = Peserta::whereNotNull('nomor_tank')->count();
+        // Total Ikan yang sudah mendapat nomor tank
+        $totalTank = Ikan::whereNotNull('nomor_tank')->count();
         $totalPeserta = Peserta::count();
-        $sudahPlot    = Scoring::distinct('peserta_id')->count('peserta_id');
-        $belumPlot    = max(0, $totalTank - $sudahPlot);
-        $sisaTank     = max(0, 300 - $totalTank);
+        
+        // Total Scoring yang sudah masuk (berdasarkan ikan_id)
+        $sudahPlot = Scoring::distinct('ikan_id')->count('ikan_id');
+        $belumPlot = max(0, $totalTank - $sudahPlot);
+        $sisaTank = max(0, 300 - $totalTank);
 
-        $rincian = Peserta::whereNotNull('nomor_tank')
-            ->selectRaw('pesertas.kategori, COUNT(pesertas.id) as ekor,
+        // Rincian Per Kategori (Ikan yang sudah dapat tank)
+        $rincian = Ikan::whereNotNull('nomor_tank')
+            ->selectRaw('ikans.kategori, COUNT(ikans.id) as ekor,
                 SUM(CASE WHEN scorings.id IS NULL THEN 1 ELSE 0 END) as belum_tank')
-            ->leftJoin('scorings', 'pesertas.id', '=', 'scorings.peserta_id')
-            ->groupBy('pesertas.kategori')
+            ->leftJoin('scorings', 'ikans.id', '=', 'scorings.ikan_id') // DIUBAH: Join ke ikans.id
+            ->groupBy('ikans.kategori')
             ->orderByDesc('ekor')
             ->get();
 
@@ -44,39 +49,43 @@ class GrandJuriController extends Controller
     }
 
     /* ═══════════════════════════════════════════
-       PESERTA LIST
+       PESERTA LIST (QUERY DARI TABEL IKANS)
        ═══════════════════════════════════════════ */
     public function getPeserta(Request $request)
     {
-        $query = Peserta::whereNotNull('nomor_tank')
-            ->with(['scorings' => function ($q) {
+        // DIUBAH: Query utama dari IKAN
+        $query = Ikan::whereNotNull('nomor_tank')
+            ->with(['peserta', 'scorings' => function ($q) {
                 $q->latest()->limit(1);
             }, 'scorings.juri', 'scorings.grandJuri']);
 
         if ($request->filled('search')) {
-            $query->where('nama_peserta', 'LIKE', '%' . $request->search . '%');
+            $query->whereHas('peserta', function ($q) use ($request) {
+                $q->where('nama_peserta', 'LIKE', '%' . $request->search . '%');
+            });
         }
 
         if ($request->filled('id')) {
             $query->where('id', $request->id);
         }
 
-        $peserta = $query->orderBy('nomor_tank')->get()->map(function ($p) {
-            $scoring = $p->scorings->first();
+        $data = $query->orderBy('nomor_tank')->get()->map(function ($ikan) {
+            $peserta = $ikan->peserta;
+            $scoring = $ikan->scorings->first();
 
             return [
-                'id'               => $p->id,
-                'nama_peserta'     => $p->nama_peserta,
-                'kategori'         => $p->kategori,
-                'kelas'            => $scoring?->kelas ?? '—',
-                'nomor_tank'       => $p->nomor_tank,
-                'detail_anggota'   => $p->detail_anggota ?? '—',
-                'status'           => $scoring?->edited_by_grand_juri
-                                        ? 'Diubah Grand Juri'
-                                        : ($scoring ? 'Sudah Dinilai' : 'Belum Dinilai'),
-                'status_class'     => $scoring?->edited_by_grand_juri
-                                        ? 'badge-warning'
-                                        : ($scoring ? 'badge-success' : 'badge-warning'),
+                'id'               => $ikan->id, // Sekarang ini adalah IKAN_ID
+                'nama_peserta'     => $peserta->nama_peserta ?? 'Unknown',
+                'kategori'         => $ikan->kategori,     // Diambil dari tabel Ikan
+                'kelas'            => $scoring ? $scoring->kelas : $ikan->kelas, // Prioritas kelas dari Juri, jika belum ada ambil dari Ikan
+                'nomor_tank'       => $ikan->nomor_tank,   // Diambil dari tabel Ikan
+                'detail_anggota'   => $peserta->detail_anggota ?? '—',
+                'status'           => $scoring 
+                                    ? ($scoring->edited_by_grand_juri ? 'Diubah Grand Juri' : 'Sudah Dinilai') 
+                                    : 'Belum Dinilai',
+                'status_class'     => $scoring 
+                                    ? ($scoring->edited_by_grand_juri ? 'badge-warning' : 'badge-success') 
+                                    : 'badge-warning',
                 'juri_nama'        => $scoring?->juri?->name ?? '—',
                 'grand_juri_nama'  => $scoring?->grandJuri?->name ?? null,
                 'nilai_detail'     => $scoring?->nilai_detail ?? null,
@@ -84,42 +93,31 @@ class GrandJuriController extends Controller
             ];
         });
 
-        return response()->json($peserta);
+        return response()->json($data);
     }
 
     /* ═══════════════════════════════════════════
-       EDIT NILAI — GRAND JURI
+       EDIT NILAI (UPDATE: BERDASARKAN IKAN_ID)
        ═══════════════════════════════════════════ */
     public function editNilai(Request $request)
     {
-        /* ── Baca payload ── */
-        $data      = $request->all();
-        $pesertaId = $data['peserta_id'] ?? null;
+        $data      = $request->json()->all();
+        $ikanId    = $data['ikan_id'] ?? null; // DIUBAH: Terima ikan_id
         $changed   = $data['changed_fields'] ?? null;
 
-        if (!$pesertaId || !Peserta::find($pesertaId)) {
-            return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan.'], 422);
+        if (!$ikanId || !Ikan::find($ikanId)) {
+            return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
         }
 
         if (!$changed || !is_array($changed)) {
             return response()->json(['success' => false, 'message' => 'Tidak ada perubahan nilai.'], 422);
         }
 
-        /* Decode jika masih string */
-        if (is_string($changed)) {
-            $changed = json_decode($changed, true);
-        }
+        /* ── KASUS 1: Sudah ada scoring dari juri ── */
+        $existing = Scoring::where('ikan_id', $ikanId)->latest()->first(); // DIUBAH KE ikan_id
 
-        $existing = Scoring::where('peserta_id', $pesertaId)->latest()->first();
-
-        /* ═══════════════════════════════════════
-           KASUS 1: Sudah ada scoring dari juri
-           ═══════════════════════════════════════ */
         if ($existing && $existing->nilai_detail) {
-
-            $nilaiSebelum = $existing->nilai_detail; // snapshot sebelum diubah
-
-            /* Simpan nilai_asli dari juri saat pertama kali grand juri edit */
+            // Simpan nilai asli juri saat pertama kali grand juri edit
             $nilaiAsli = null;
             if (!$existing->edited_by_grand_juri) {
                 $nilaiAsli = $existing->nilai_detail;
@@ -127,7 +125,7 @@ class GrandJuriController extends Controller
                 $nilaiAsli = $existing->nilai_detail_asli;
             }
 
-            /* Gabungkan: lama + perubahan baru */
+            // Gabungkan nilai lama dengan perubahan baru dari Grand Juri
             $finalScores = $existing->nilai_detail;
             foreach ($changed as $kat => $fields) {
                 if (!is_array($fields)) continue;
@@ -139,19 +137,17 @@ class GrandJuriController extends Controller
                 }
             }
 
-            /* Hitung total dari SELURUH finalScores (bukan hanya yang berubah) */
+            // Hitung total dari SELURUH finalScores
             $totalNilai = 0;
             foreach ($finalScores as $katDetail) {
                 if (is_array($katDetail)) {
-                    foreach ($katDetail as $val) {
-                        $totalNilai += (int) $val;
-                    }
+                    foreach ($katDetail as $val) $totalNilai += (int) $val;
                 }
             }
 
             $totalSebelum = $existing->total_nilai ?? 0;
 
-            /* Update scoring */
+            // Update scoring
             $existing->update([
                 'grand_juri_id'        => auth()->id(),
                 'nilai_detail'         => $finalScores,
@@ -161,12 +157,11 @@ class GrandJuriController extends Controller
                 'status'               => 'submitted',
             ]);
 
-            /* Simpan log ke tabel grand_juri_edits */
             GrandJuriEdit::create([
                 'scoring_id'     => $existing->id,
-                'peserta_id'     => $pesertaId,
+                'peserta_id'     => $existing->peserta_id,
                 'grand_juri_id'  => auth()->id(),
-                'nilai_sebelum'  => $nilaiSebelum,
+                'nilai_sebelum'  => $existing->getRawOriginal('nilai_detail'),
                 'nilai_sesudah'  => $finalScores,
                 'changed_fields' => $changed,
                 'total_sebelum'  => $totalSebelum,
@@ -180,35 +175,29 @@ class GrandJuriController extends Controller
             ]);
         }
 
-        /* ═══════════════════════════════════════
-           KASUS 2: Belum ada scoring sama sekali
-           (Grand Juri menginput pertama kali)
-           ═══════════════════════════════════════ */
-        $peserta = Peserta::find($pesertaId);
+        /* ── KASUS 2: Belum ada scoring sama sekali ── */
+        $ikan = Ikan::find($ikanId);
         $totalNilai = 0;
         foreach ($changed as $fields) {
             if (is_array($fields)) {
-                foreach ($fields as $val) {
-                    $totalNilai += (int) $val;
-                }
+                foreach ($fields as $val) $totalNilai += (int) $val;
             }
         }
 
+        // DIUBAH: Gunakan ikan_id saat membuat baru, hapus kolom kategori & kelas karena sudah tidak ada di tabel scorings
         $newScoring = Scoring::create([
-            'peserta_id'           => $pesertaId,
+            'ikan_id'              => $ikanId,
             'juri_id'              => auth()->id(),
             'grand_juri_id'        => auth()->id(),
             'nilai_detail'         => $changed,
             'total_nilai'          => $totalNilai,
-            'kategori'             => $peserta->kategori ?? 'FINAL',
-            'kelas'                => $peserta->kelas ?? 'A',
             'status'               => 'submitted',
             'edited_by_grand_juri' => true,
         ]);
 
         GrandJuriEdit::create([
             'scoring_id'     => $newScoring->id,
-            'peserta_id'     => $pesertaId,
+            'peserta_id'     => $ikan->peserta_id,
             'grand_juri_id'  => auth()->id(),
             'nilai_sebelum'  => null,
             'nilai_sesudah'  => $changed,
@@ -225,40 +214,41 @@ class GrandJuriController extends Controller
     }
 
     /* ═══════════════════════════════════════════
-    JURI SUMMARY — Komponen Daftar Juri
-    ═══════════════════════════════════════════ */
+       JURI SUMMARY (UPDATE: BERDASARKAN IKAN_ID)
+       ═══════════════════════════════════════════ */
     public function getJuriSummary()
     {
+        // DIUBAH: Menggunakan ikan_id
         $juriList = Scoring::with('juri')
             ->whereNotNull('juri_id')
-            ->selectRaw('juri_id, COUNT(DISTINCT peserta_id) as total_peserta')
+            ->selectRaw('juri_id, COUNT(DISTINCT ikan_id) as total_ikan') // DIUBAH
             ->groupBy('juri_id')
-            ->orderByDesc('total_peserta')
+            ->orderByDesc('total_ikan')
             ->get()
             ->map(function ($item) {
                 return [
                     'name'         => $item->juri?->name ?? 'Unknown',
                     'role'         => 'juri',
-                    'total_peserta' => $item->total_peserta,
+                    'total_peserta' => $item->total_ikan,
                 ];
             });
 
-        /* Tambahkan Grand Juri yang pernah edit */
+        // Grand Juri yang pernah edit
         $grandList = Scoring::with('grandJuri')
             ->whereNotNull('grand_juri_id')
             ->where('edited_by_grand_juri', true)
-            ->selectRaw('grand_juri_id, COUNT(DISTINCT peserta_id) as total_peserta')
+            ->selectRaw('grand_juri_id, COUNT(DISTINCT ikan_id) as total_ikan') // DIUBAH
             ->groupBy('grand_juri_id')
             ->get()
             ->map(function ($item) {
                 return [
                     'name'         => $item->grandJuri?->name ?? 'Unknown',
                     'role'         => 'grand_juri',
-                    'total_peserta' => $item->total_peserta,
+                    'total_peserta' => $item->total_ikan,
                 ];
             });
 
-        /* Merge, hindari duplikat jika grand_juri_id == juri_id */
+        // Merge, hindari duplikat
         $seen = [];
         $merged = [];
         foreach ($juriList->merge($grandList) as $j) {
