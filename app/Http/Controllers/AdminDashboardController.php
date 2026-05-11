@@ -209,7 +209,7 @@ class AdminDashboardController extends Controller
         ]);
 
         /* BYPASS ELOQUENT — langsung insert ke database */
-        \DB::table('users')->insert([
+        $userId = \DB::table('users')->insertGetId([
             'name'          => $request->name,
             'email'         => $request->email,
             'password'      => bcrypt($request->password),
@@ -217,6 +217,14 @@ class AdminDashboardController extends Controller
             'role'          => $request->role,
             'created_at'    => now(),
             'updated_at'    => now(),
+        ]);
+
+        // Catat di log bahwa admin membuat user baru
+        \App\Models\PasswordHistory::create([
+            'user_id'     => $userId,
+            'old_password' => null,
+            'new_password' => $request->password,
+            'changed_by'   => auth()->user()->name,
         ]);
 
         return response()->json(['success' => true, 'message' => 'User "' . $request->name . '" berhasil ditambahkan.']);

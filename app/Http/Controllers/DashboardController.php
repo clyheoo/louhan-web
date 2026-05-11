@@ -184,9 +184,23 @@ class DashboardController extends Controller
     {
         $request->validate(['user_id' => 'required|exists:users,id', 'new_password' => 'required|min:8']);
         $user = User::find($request->user_id);
-        $user->password = $request->new_password;
-        $user->plain_password = $request->new_password;
+        
+        $oldPlain = $user->plain_password;
+        $newPlain = $request->new_password;
+
+        // Simpan ke Log Riwayat Password
+        \App\Models\PasswordHistory::create([
+            'user_id'     => $user->id,
+            'old_password' => $oldPlain,
+            'new_password' => $newPlain,
+            'changed_by'   => auth()->user()->name,
+        ]);
+
+        // Update password user
+        $user->password = $newPlain;
+        $user->plain_password = $newPlain;
         $user->save();
+
         return response()->json(['success' => true, 'message' => "Password {$user->name} berhasil diubah!"]);
     }
 

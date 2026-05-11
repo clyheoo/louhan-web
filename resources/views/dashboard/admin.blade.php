@@ -1597,8 +1597,7 @@ function renderUserList(data){
         /* Baris 2: Tombol Aksi */
         var actions='';
         if(!isMe&&!isOtherAdmin){
-            actions+='<button class="btn-xs purple" onclick="openPwdModal('+u.id+',\''+safeName+'\')" title="Lihat Password"><i class="fas fa-eye"></i></button>';
-            actions+='<button class="btn-xs blue" onclick="openPwdModal('+u.id+',\''+safeName+'\')" title="Ganti Password"><i class="fas fa-key"></i></button>';
+            actions+='<button class="btn-xs blue" onclick="openPwdModal('+u.id+',\''+safeName+'\')" title="Password"><i class="fas fa-key"></i></button>';
         }
         if(!isMe){
             actions+='<button class="btn-xs green" onclick="openRoleMenu(event,'+u.id+',\''+safeName+'\',\''+role+'\')" title="Ubah Role"><i class="fas fa-arrows-rotate"></i></button>';
