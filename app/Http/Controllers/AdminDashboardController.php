@@ -237,7 +237,27 @@ class AdminDashboardController extends Controller
         $user = User::find($request->user_id);
         if ($user->id === auth()->id()) return response()->json(['success' => false, 'message' => 'Tidak bisa menghapus akun sendiri.'], 403);
         $name = $user->name;
+
+        // 1. Hapus data scoring jika user pernah menjadi Juri
+        \App\Models\Scoring::where('juri_id', $user->id)->delete();
+
+        // 2. Hapus data scoring jika user pernah menjadi Grand Juri
+        \App\Models\Scoring::where('grand_juri_id', $user->id)->delete();
+
+        // 3. Hapus data peserta & ikan jika user adalah peserta biasa
+        $peserta = \App\Models\Peserta::where('user_id', $user->id)->first();
+        if ($peserta) {
+            $ikanIds = \App\Models\Ikan::where('peserta_id', $peserta->id)->pluck('id');
+            if ($ikanIds->isNotEmpty()) {
+                \App\Models\Scoring::whereIn('ikan_id', $ikanIds)->delete();
+                \App\Models\Ikan::whereIn('id', $ikanIds)->delete();
+            }
+            $peserta->delete();
+        }
+
+        // 4. Baru hapus user-nya
         $user->delete();
+
         return response()->json(['success' => true, 'message' => 'User "' . $name . '" berhasil dihapus.']);
     }
         public function deleteIkan(Request $request)

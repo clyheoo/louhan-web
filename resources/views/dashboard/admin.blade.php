@@ -422,16 +422,10 @@
         <div class="modal-body">
             <form id="formCreateUser">
                 <div class="form-group">
-                    <label class="form-label">Nama Peserta</label>
-                    <input type="hidden" name="nama_peserta" id="admNamaPeserta" required>
-                    <input type="hidden" name="user_id_peserta" id="admUserIdPeserta">
-                    <div class="search-dropdown" id="admPesertaDropdown">
-                        <div class="input-wrapper">
-                            <input type="text" id="admPesertaSearch" class="form-input-modal" placeholder="Ketik nama untuk mencari..." autocomplete="off">
-                            <i class="fas fa-search input-icon"></i>
-                            <i class="fas fa-xmark" id="admPesertaClear" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--light);font-size:13px;display:none;padding:4px;"></i>
-                        </div>
-                        <div class="dropdown-list" id="admPesertaList"></div>
+                    <label class="form-label">Nama Lengkap</label>
+                    <div class="input-wrapper">
+                        <input type="text" name="name" id="createName" class="form-input-modal" placeholder="Masukkan nama lengkap" required>
+                        <i class="fas fa-user input-icon"></i>
                     </div>
                 </div>
                 <div class="form-group">
@@ -1187,7 +1181,19 @@ function submitPwd(){
     .then(function(d){
         if(d.success){
             closeModal('modalPwd');
-            loadUsers();
+            
+            // UPDATE CACHE LANGSUNG agar tidak perlu menunggu loadUsers selesai
+            var uid = document.getElementById('pwdUserId').value;
+            var newPw = document.getElementById('pwdNew').value;
+            for(var i=0; i<allUsersCache.length; i++){
+                if(allUsersCache[i].id == uid){
+                    allUsersCache[i].plain_password = newPw;
+                    break;
+                }
+            }
+            plainPwdMap[uid] = newPw;
+            
+            loadUsers(); // Tetap jalankan untuk sync ulang data user
             popupSuccess('Password Diubah', 'Password user berhasil diperbarui.');
         } else {
             popupError('Gagal', d.message || 'Tidak dapat mengubah password.');
