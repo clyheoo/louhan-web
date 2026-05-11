@@ -11,7 +11,7 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $fillable = [
-        'name', 'email', 'password', 'role', // Hapus is_admin, ganti role
+        'name', 'email', 'password', 'role', 'plain_password',
     ];
 
     public function isAdmin() { return $this->role === 'admin'; }

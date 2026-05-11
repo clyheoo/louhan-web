@@ -122,13 +122,14 @@
         .user-list{max-height:460px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
         .user-list::-webkit-scrollbar{width:4px;}
         .user-list::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
-        .user-card{display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--border);border-radius:10px;transition:all .2s;background:#fff;}
-        .user-card:hover{border-color:#c7d2fe;box-shadow:0 2px 8px rgba(37,99,235,.06);}
-        .user-avatar{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;margin-right:10px;flex-shrink:0;}
-        .user-card-body{flex:1;min-width:0;}
-        .user-card-body h4{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-        .user-card-body span{font-size:10px;color:var(--light);display:block;}
-        .user-card-actions{display:flex;gap:4px;flex-shrink:0;}
+.user-card{display:flex;flex-direction:column;align-items:stretch;padding:12px;border:1px solid var(--border);border-radius:10px;transition:all .2s;background:#fff;}
+.user-card:hover{border-color:#c7d2fe;box-shadow:0 2px 8px rgba(37,99,235,.06);}
+.user-card-top{display:flex;align-items:center;gap:10px;min-width:0;}
+.user-avatar{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+.user-card-body{flex:1;min-width:0;}
+.user-card-body h4{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-card-body span{font-size:10px;color:var(--light);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-card-bottom{display:flex;justify-content:flex-end;align-items:center;gap:4px;margin-top:8px;padding-left:44px;flex-wrap:wrap;}
 
         /* ── MODALS ── */
         .modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:99;display:none;place-items:center;}
@@ -261,6 +262,29 @@
     .match-ind{font-size:11px;font-weight:600;margin-top:4px;display:none;align-items:center;gap:4px;}
     .match-ind.ok{color:var(--success);display:flex;}
     .match-ind.no{color:var(--danger);display:flex;
+    }
+    /* ── TOGGLE GROUP (dari user.blade) ── */
+    .toggle-group{display:flex;background:var(--bg);border-radius:12px;padding:4px;border:1px solid var(--border);}
+    .toggle-option{flex:1;text-align:center;}
+    .toggle-option input{display:none;}
+    .toggle-option label{display:block;padding:9px;border-radius:10px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .3s;}
+    .toggle-option input:checked+label{background:var(--card);color:var(--primary-dk);box-shadow:0 2px 8px rgba(0,0,0,.05);
+    }
+    .search-dropdown{position:relative;}
+    .dropdown-list{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-top:4px;max-height:200px;overflow-y:auto;display:none;z-index:100;box-shadow:0 10px 25px rgba(0,0,0,.1);}
+    .dropdown-list::-webkit-scrollbar{width:4px;}
+    .dropdown-list::-webkit-scrollbar-thumb{background:var(--gray-300);border-radius:10px;}
+    .dropdown-list.show{display:block;}
+    .dropdown-item{padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;transition:background .15s;border-bottom:1px solid #f1f5f9;}
+    .dropdown-item:last-child{border-bottom:none;}
+    .dropdown-item:hover{background:var(--primary-lt);}
+    .dropdown-item.active{background:var(--primary-lt);color:var(--primary-dk);}
+    .dropdown-item .di-avatar{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;}
+    .dropdown-item .di-info{flex:1;min-width:0;}
+    .dropdown-item .di-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .dropdown-item .di-email{font-size:10px;color:var(--light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .dropdown-item .di-role{font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;flex-shrink:0;}
+    .dropdown-empty{padding:20px;text-align:center;font-size:12px;color:var(--light);
     }
     </style>
 </head>
@@ -399,10 +423,16 @@
         <div class="modal-body">
             <form id="formCreateUser">
                 <div class="form-group">
-                    <label class="form-label">Nama Lengkap</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="name" id="createName" class="form-input-modal" placeholder="Masukkan nama lengkap" required>
-                        <i class="fas fa-user input-icon"></i>
+                    <label class="form-label">Nama Peserta</label>
+                    <input type="hidden" name="nama_peserta" id="admNamaPeserta" required>
+                    <input type="hidden" name="user_id_peserta" id="admUserIdPeserta">
+                    <div class="search-dropdown" id="admPesertaDropdown">
+                        <div class="input-wrapper">
+                            <input type="text" id="admPesertaSearch" class="form-input-modal" placeholder="Ketik nama untuk mencari..." autocomplete="off">
+                            <i class="fas fa-search input-icon"></i>
+                            <i class="fas fa-xmark" id="admPesertaClear" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--light);font-size:13px;display:none;padding:4px;"></i>
+                        </div>
+                        <div class="dropdown-list" id="admPesertaList"></div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -456,18 +486,48 @@
     </div>
 </div>
 
-<!-- MODAL: GANTI PASSWORD -->
+<!-- MODAL: LIHAT & GANTI PASSWORD -->
 <div class="modal-bg" id="modalPwd">
-    <div class="modal-box" style="--mw:380px;">
-        <div class="modal-head"><h3><i class="fas fa-key"></i> Ganti Password</h3><button class="modal-close" onclick="closeModal('modalPwd')"><i class="fas fa-xmark"></i></button></div>
+    <div class="modal-box" style="--mw:420px;">
+        <div class="modal-head">
+            <h3><i class="fas fa-key"></i> Password User</h3>
+            <button class="modal-close" onclick="closeModal('modalPwd')"><i class="fas fa-xmark"></i></button>
+        </div>
         <div class="modal-body">
             <p style="font-size:12px;margin-bottom:14px;">User: <b id="pwdTarget"></b></p>
             <input type="hidden" id="pwdUserId">
-            <div class="form-group"><label class="form-label">Password Baru</label><input type="text" id="pwdNew" class="form-control" placeholder="Min. 8 karakter"></div>
+
+            <!-- CURRENT PASSWORD -->
+            <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:12px;padding:16px;margin-bottom:18px;">
+                <div style="font-size:10px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+                    <span><i class="fas fa-eye"></i> Password Saat Ini</span>
+                    <button type="button" id="togglePwdView" onclick="toggleCurrentPwd()" style="background:none;border:none;cursor:pointer;color:#15803d;font-size:13px;padding:2px 4px;display:flex;align-items:center;gap:4px;">
+                        <span id="togglePwdLabel" style="font-size:9px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;">TUTUP</span>
+                        <i id="togglePwdIcon" class="fas fa-eye-slash"></i>
+                    </button>
+                </div>
+                <div id="pwdCurrentDisplay" style="font-size:20px;font-weight:900;color:#166534;letter-spacing:1px;word-break:break-all;user-select:none;">
+                    ••••••••
+                </div>
+                <div id="pwdNoData" style="display:none;font-size:12px;color:#16a34a;margin-top:4px;">
+                    <i class="fas fa-info-circle"></i> Belum pernah diset oleh admin
+                </div>
+            </div>
+
+            <!-- CHANGE PASSWORD -->
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+                <i class="fas fa-pen"></i> Ganti Password Baru
+            </div>
+            <div class="form-group" style="position:relative;margin-bottom:0;">
+                <input type="password" id="pwdNew" class="form-control" placeholder="Masukkan password baru (min. 8 karakter)" style="font-size:14px;font-weight:700;letter-spacing:.5px;padding-right:42px;">
+                <button type="button" class="pwd-toggle" id="toggleNewPwd" onclick="toggleNewPwdInput()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
         </div>
         <div class="modal-foot">
-            <button class="btn-cancel" onclick="closeModal('modalPwd')">Batal</button>
-            <button class="btn-primary" onclick="submitPwd()"><i class="fas fa-save"></i> Simpan</button>
+            <button class="btn-cancel" onclick="closeModal('modalPwd')">Tutup</button>
+            <button class="btn-primary" onclick="submitPwd()"><i class="fas fa-save"></i> Simpan Password Baru</button>
         </div>
     </div>
 </div>
@@ -478,69 +538,90 @@
         <div class="modal-head"><h3><i class="fas fa-box-archive"></i> Modul Registrasi Ikan & Undian Tank</h3><button class="modal-close" onclick="closeModal('modalOld')"><i class="fas fa-xmark"></i></button></div>
         <div class="modal-body">
             <p style="text-align:center;color:var(--light);margin-bottom:16px;font-size:12px;">Fitur pendukung kontes (Sistem Multi-Ikan)</p>
-                <div class="old-grid">
-
-                    <!-- REGISTRASI USER BARU -->
-                    <div class="old-card">
-                        <div class="section-head">
-                            <div class="section-title" style="font-size:13px;"><i class="fas fa-user-plus"></i> Registrasi User Baru</div>
-                        </div>
-                        <div class="section-body">
-                            <form id="regUserCard">
-                                <div class="form-group">
-                                    <label class="form-label">Nama Lengkap</label>
-                                    <div class="input-wrapper">
-                                        <input type="text" name="name" class="form-input-modal" placeholder="Masukkan nama lengkap" required>
-                                        <i class="fas fa-user input-icon"></i>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Email</label>
-                                    <div class="input-wrapper">
-                                        <input type="email" name="email" class="form-input-modal" placeholder="nama@email.com" required>
-                                        <i class="fas fa-envelope input-icon"></i>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Password</label>
-                                    <div class="input-wrapper">
-                                        <input type="password" name="password" class="form-input-modal" placeholder="Min. 8 karakter" required>
-                                        <i class="fas fa-lock input-icon"></i>
-                                        <button type="button" class="pwd-toggle" id="toggleCardPwd"><i class="fas fa-eye"></i></button>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Role</label>
-                                    <select name="role" class="form-control" required>
-                                        <option value="">— Pilih Role —</option>
-                                        <option value="juri">Juri</option>
-                                        <option value="grand_juri">Grand Juri</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="user">User Biasa</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="btn-primary" style="width:100%;justify-content:center;">
-                                    <i class="fas fa-user-plus"></i> Daftarkan User
-                                </button>
-                            </form>
+            <div class="old-grid">
+                <!-- REGISTRASI PESERTA & IKAN (style user.blade) -->
+                <div class="old-card" style="background:linear-gradient(135deg,#f8fafc,#fff);border:none;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,.04);">
+                    <div class="section-head" style="border-bottom:1px solid var(--border);padding:18px 24px;">
+                        <div class="section-title" style="font-size:15px;color:var(--text);">
+                            <i class="fas fa-user-plus" style="color:var(--primary);margin-right:8px;"></i>Registrasi Peserta & Ikan Baru
                         </div>
                     </div>
-
-                    <!-- UNDIAN TANK -->
-                    <div class="old-card" style="background:#1e293b;color:#fff;">
-                        <div class="section-head" style="border-color:rgba(255,255,255,.1);">
-                            <div class="section-title" style="color:#fff;font-size:13px;"><i class="fas fa-dice"></i> Undian Nomor Tank</div>
-                        </div>
-                        <div class="section-body" style="text-align:center;">
-                            <select id="pesertaSelectOld" class="form-control" style="background:rgba(0,0,0,.3);color:#fff;border-color:rgba(255,255,255,.1);margin-bottom:14px;"></select>
-                            <div id="tankCounter" style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px;">Memuat...</div>
-                            <div style="font-size:56px;font-weight:900;margin:12px 0;letter-spacing:2px;transition:color .3s;" id="numberDisplayOld">--</div>
-                            <button class="btn-primary" id="btnAcakOld" style="width:100%;justify-content:center;background:#3b82f6;">
-                                <i class="fas fa-shuffle"></i> Acak Nomor Tank
+                    <div class="section-body" style="padding:24px;">
+                        <form id="regPesertaIkanForm">
+                            <div class="form-group">
+                                <label class="form-label">Nama Peserta</label>
+                                <input type="hidden" name="nama_peserta" id="admRegNama" required>
+                                <div class="search-dropdown" id="admRegDropdown">
+                                    <div class="input-wrapper">
+                                        <input type="text" id="admRegSearch" class="form-input-modal" placeholder="Ketik nama untuk mencari..." autocomplete="off">
+                                        <i class="fas fa-search input-icon"></i>
+                                        <i class="fas fa-xmark" id="admRegClear" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--light);font-size:13px;display:none;padding:4px;"></i>
+                                    </div>
+                                    <div class="dropdown-list" id="admRegList"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Jenis Keanggotaan</label>
+                                <div class="toggle-group">
+                                    <div class="toggle-option">
+                                        <input type="radio" name="jenis_keanggotaan" id="admPerorangan" value="perorangan" checked>
+                                        <label for="admPerorangan"><i class="fas fa-user" style="margin-right:4px;"></i>Perorangan</label>
+                                    </div>
+                                    <div class="toggle-option">
+                                        <input type="radio" name="jenis_keanggotaan" id="admTeam" value="team">
+                                        <label for="admTeam"><i class="fas fa-users" style="margin-right:4px;"></i>Team / Club</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" id="admLabelDetail">Kota Asal</label>
+                                <div class="input-wrapper">
+                                    <input type="text" name="detail_anggota" id="admInputDetail" class="form-input-modal" placeholder="Contoh: Jakarta" required>
+                                    <i class="fas fa-city input-icon" id="admIconDetail"></i>
+                                </div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label class="form-label">Kategori</label>
+                                    <div class="input-wrapper">
+                                        <select name="kategori" class="form-input-modal" required style="padding-left:14px;cursor:pointer;">
+                                            <option value="" disabled selected>Pilih Kategori</option>
+                                            <option>Cencu</option><option>Chginwa</option><option>Freemarking</option>
+                                            <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label class="form-label">Kelas</label>
+                                    <div class="input-wrapper">
+                                        <select name="kelas" class="form-input-modal" required style="padding-left:14px;cursor:pointer;">
+                                            <option value="" disabled selected>Pilih Kelas</option>
+                                            <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary" style="width:100%;justify-content:center;margin-top:18px;padding:13px;">
+                                <i class="fas fa-fish" style="margin-right:6px;"></i> DAFTARKAN PESERTA & IKAN
                             </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
+                <!-- UNDIAN TANK (TIDAK DIUBAH) -->
+                <div class="old-card" style="background:#1e293b;color:#fff;">
+                    <div class="section-head" style="border-color:rgba(255,255,255,.1);">
+                        <div class="section-title" style="color:#fff;font-size:13px;"><i class="fas fa-dice"></i> Undian Nomor Tank</div>
+                    </div>
+                    <div class="section-body" style="text-align:center;">
+                        <select id="pesertaSelectOld" class="form-control" style="background:rgba(0,0,0,.3);color:#fff;border-color:rgba(255,255,255,.1);margin-bottom:14px;"></select>
+                        <div id="tankCounter" style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px;">Memuat...</div>
+                        <div style="font-size:56px;font-weight:900;margin:12px 0;letter-spacing:2px;transition:color .3s;" id="numberDisplayOld">--</div>
+                        <button class="btn-primary" id="btnAcakOld" style="width:100%;justify-content:center;background:#3b82f6;">
+                            <i class="fas fa-shuffle"></i> Acak Nomor Tank
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -1011,21 +1092,137 @@ function deleteUser(uid,name){
     );
 }
 
-/* ★ CHANGE PASSWORD */
+var currentPwdVisible = false;
+
 function openPwdModal(id,name){
     document.getElementById('pwdUserId').value=id;
     document.getElementById('pwdTarget').textContent=name;
     document.getElementById('pwdNew').value='';
+
+    /* Reset toggle ke posisi TUTUP */
+    currentPwdVisible = false;
+    document.getElementById('togglePwdIcon').className = 'fas fa-eye-slash';
+    document.getElementById('togglePwdLabel').textContent = 'TUTUP';
+
+    var plainPwd = plainPwdMap[id] || '';
+    var display = document.getElementById('pwdCurrentDisplay');
+    var noData = document.getElementById('pwdNoData');
+    var toggleBtn = document.getElementById('togglePwdView');
+
+    if(plainPwd !== ''){
+        display.textContent = '••••••••';
+        display.style.display = 'block';
+        noData.style.display = 'none';
+        toggleBtn.style.display = 'flex';
+    } else {
+        display.textContent = '—';
+        display.style.display = 'block';
+        noData.style.display = 'block';
+        toggleBtn.style.display = 'none';
+    }
+
+    /* Reset toggle input baru */
+    var newInput = document.getElementById('pwdNew');
+    newInput.type = 'password';
+    document.getElementById('toggleNewPwd').querySelector('i').className = 'fas fa-eye';
+
     openModal('modalPwd');
 }
+
+function toggleCurrentPwd(){
+    var id = document.getElementById('pwdUserId').value;
+    var plainPwd = plainPwdMap[id] || '';
+    var display = document.getElementById('pwdCurrentDisplay');
+
+    currentPwdVisible = !currentPwdVisible;
+
+    if(currentPwdVisible){
+        display.textContent = plainPwd;
+        document.getElementById('togglePwdIcon').className = 'fas fa-eye';
+        document.getElementById('togglePwdLabel').textContent = 'LIHAT';
+    } else {
+        display.textContent = '••••••••';
+        document.getElementById('togglePwdIcon').className = 'fas fa-eye-slash';
+        document.getElementById('togglePwdLabel').textContent = 'TUTUP';
+    }
+}
+
+function toggleNewPwdInput(){
+    var input = document.getElementById('pwdNew');
+    var icon = document.getElementById('toggleNewPwd').querySelector('i');
+    if(input.type === 'password'){
+        input.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
 function submitPwd(){
-    var pw=document.getElementById('pwdNew').value;
-    if(pw.length<8){popupError('Password Terlalu Pendek','Password minimal <strong>8 karakter</strong>.');return;}
-    var fd=new FormData();fd.append('_token',getCsrf());fd.append('user_id',document.getElementById('pwdUserId').value);fd.append('new_password',pw);
-    fetch('{{ route("api.update.password") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-    .then(function(r){return r.json();})
-    .then(function(d){if(d.success){closeModal('modalPwd');loadUsers();popupSuccess('Password Diubah','Password berhasil diperbarui.');}else popupError('Gagal','Tidak dapat mengubah password.');})
-    .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');});
+    var pw = document.getElementById('pwdNew').value;
+
+    if(!pw){
+        popupError('Password Kosong','Masukkan password baru terlebih dahulu.');
+        return;
+    }
+
+    var hasL = /[a-z]/.test(pw);
+    var hasU = /[A-Z]/.test(pw);
+    var hasN = /[0-9]/.test(pw);
+    var hasS = /[^A-Za-z0-9]/.test(pw);
+
+    if(pw.length < 8 || !hasL || !hasU || !hasN || !hasS){
+        var missing = [];
+        if(pw.length < 8) missing.push('Min. <strong>8 karakter</strong>');
+        if(!hasL) missing.push('Huruf <strong>kecil</strong> (a-z)');
+        if(!hasU) missing.push('Huruf <strong>besar</strong> (A-Z)');
+        if(!hasN) missing.push('<strong>Angka</strong> (0-9)');
+        if(!hasS) missing.push('<strong>Simbol</strong> (!@#$% dll)');
+
+        var detail = '';
+        for(var i = 0; i < missing.length; i++){
+            detail += '<div style="margin-bottom:3px;">• ' + missing[i] + '</div>';
+        }
+
+        popupError(
+            'Password Tidak Valid',
+            'Password baru tidak memenuhi syarat:<br><div style="text-align:left;margin-top:6px;line-height:1.8;">' + detail + '</div>'
+        );
+        return;
+    }
+
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('user_id', document.getElementById('pwdUserId').value);
+    fd.append('new_password', pw);
+
+    var btn = document.querySelector('#modalPwd .btn-primary');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+    fetch('{{ route("api.update.password") }}', {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'},
+        body: fd
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d.success){
+            closeModal('modalPwd');
+            loadUsers();
+            popupSuccess('Password Diubah', 'Password user berhasil diperbarui.');
+        } else {
+            popupError('Gagal', d.message || 'Tidak dapat mengubah password.');
+        }
+    })
+    .catch(function(){
+        popupError('Kesalahan Jaringan', 'Gagal menghubungi server.');
+    })
+    .finally(function(){
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Simpan Password Baru';
+    });
 }
 
 /* ★ CHANGE ROLE — dropdown tidak terpotong layar */
@@ -1152,37 +1349,154 @@ openModal = function(id){
     }
 };
 
-// Toggle password di card registrasi user
-document.getElementById('toggleCardPwd').addEventListener('click',function(){
-    var inp=this.parentElement.querySelector('input');
-    var ic=this.querySelector('i');
-    if(inp.type==='password'){inp.type='text';ic.classList.replace('fa-eye','fa-eye-slash');}
-    else{inp.type='password';ic.classList.replace('fa-eye-slash','fa-eye');}
-});
+// ── SEARCHABLE DROPDOWN PESERTA (modalOld) ──
+var admRegUserCache = [];
+var admRegSelected = false;
 
-// Submit Registrasi User dari card
-document.getElementById('regUserCard').addEventListener('submit',function(e){
+var admRegSearchEl = document.getElementById('admRegSearch');
+var admRegListEl = document.getElementById('admRegList');
+var admRegClearEl = document.getElementById('admRegClear');
+var admRegHiddenName = document.getElementById('admRegNama');
+
+if(admRegSearchEl){
+    admRegSearchEl.addEventListener('focus', function(){
+        if(admRegUserCache.length===0) loadAdmRegUsers();
+        admRegListEl.classList.add('show');
+    });
+    admRegSearchEl.addEventListener('input', function(){
+        var q = this.value.toLowerCase().trim();
+        admRegClearEl.style.display = q ? 'block' : 'none';
+        if(!q){ renderAdmRegList(admRegUserCache); return; }
+        var filtered = [];
+        for(var i=0;i<admRegUserCache.length;i++){
+            var u=admRegUserCache[i];
+            if(u.name.toLowerCase().indexOf(q)!==-1 || u.email.toLowerCase().indexOf(q)!==-1) filtered.push(u);
+        }
+        renderAdmRegList(filtered);
+    });
+    admRegClearEl.addEventListener('click', function(){
+        admRegSearchEl.value='';
+        admRegClearEl.style.display='none';
+        admRegHiddenName.value='';
+        admRegSelected=false;
+        admRegSearchEl.classList.remove('input-success');
+        renderAdmRegList(admRegUserCache);
+        admRegSearchEl.focus();
+    });
+    document.addEventListener('click', function(e){
+        if(!e.target.closest('#admRegDropdown')) admRegListEl.classList.remove('show');
+    });
+}
+
+function loadAdmRegUsers(){
+    fetch('{{ route("api.list.users") }}',{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(data){
+        admRegUserCache = data.filter(function(u){ return u.role==='user'; });
+        renderAdmRegList(admRegUserCache);
+    })
+    .catch(function(){});
+}
+
+function renderAdmRegList(list){
+    if(!admRegListEl) return;
+    admRegListEl.innerHTML='';
+    if(!list.length){
+        admRegListEl.innerHTML='<div class="dropdown-empty"><i class="fas fa-user-slash" style="font-size:16px;display:block;margin-bottom:4px;opacity:.4;"></i>Tidak ditemukan</div>';
+        return;
+    }
+    for(var i=0;i<list.length;i++){
+        (function(u){
+            var div=document.createElement('div');
+            div.className='dropdown-item';
+            div.innerHTML=
+                '<div class="di-avatar" style="background:#94a3b8;">'+esc(u.name.charAt(0).toUpperCase())+'</div>'+
+                '<div class="di-info"><div class="di-name">'+esc(u.name)+'</div><div class="di-email">'+esc(u.email)+'</div></div>'+
+                '<span class="di-role role-user">USER</span>';
+            div.addEventListener('click',function(){
+                admRegSearchEl.value=u.name;
+                admRegHiddenName.value=u.name;
+                admRegSelected=true;
+                admRegSearchEl.classList.add('input-success');
+                admRegListEl.classList.remove('show');
+            });
+            admRegListEl.appendChild(div);
+        })(list[i]);
+    }
+}
+
+// ── TOGGLE PERORANGAN/TEAM ──
+function updateAdmToggle(){
+    var label=document.getElementById('admLabelDetail');
+    var input=document.getElementById('admInputDetail');
+    var icon=document.getElementById('admIconDetail');
+    if(!label||!input||!icon) return;
+    var isTeam=document.getElementById('admTeam')&&document.getElementById('admTeam').checked;
+    if(isTeam){
+        label.textContent='Nama Team / Club';
+        input.placeholder='Contoh: Louhan Fanatic Jakarta';
+        icon.classList.remove('fa-city');icon.classList.add('fa-shield-halved');
+    } else {
+        label.textContent='Kota Asal';
+        input.placeholder='Contoh: Jakarta';
+        icon.classList.remove('fa-shield-halved');icon.classList.add('fa-city');
+    }
+}
+var _admP=document.getElementById('admPerorangan');
+var _admT=document.getElementById('admTeam');
+if(_admP) _admP.addEventListener('change',updateAdmToggle);
+if(_admT) _admT.addEventListener('change',updateAdmToggle);
+
+// ── SUBMIT REGISTRASI PESERTA & IKAN ──
+var _regForm=document.getElementById('regPesertaIkanForm');
+if(_regForm) _regForm.addEventListener('submit',function(e){
     e.preventDefault();
     var form=this;
+    var btn=form.querySelector('.btn-primary');
+
+    if(!admRegSelected){
+        popupError('Peserta Belum Dipilih','Silakan pilih nama peserta dari dropdown terlebihkan dahulu.');
+        return;
+    }
+
+    btn.disabled=true;
+    btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> MEMPROSES...';
+
     var fd=new FormData(form);
     fd.append('_token',getCsrf());
-    var name=fd.get('name'),email=fd.get('email'),pw=fd.get('password'),role=fd.get('role');
 
-    if(!name||!email||!pw||!role){popupError('Form Tidak Lengkap','Semua field wajib diisi.');return;}
-    if(pw.length<8){popupError('Password Terlalu Pendek','Password minimal <strong>8 karakter</strong>.');return;}
-
-    fetch('/api/admin/create-user',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-    .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
+    fetch('/api/admin/register-peserta-ikan',{
+        method:'POST',
+        headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
+        body:fd
+    })
+    .then(function(r){if(!r.ok) return r.json().then(function(d){throw d;}); return r.json();})
     .then(function(d){
         if(d.success){
             form.reset();
-            loadUsers();
-            popupSuccess('User Berhasil Didaftarkan!','<strong>'+esc(name)+'</strong> terdaftar sebagai <strong>'+esc(roleLabels[role]||role)+'</strong>.');
+            if(_admP){_admP.checked=true;updateAdmToggle();}
+            admSearchEl.value='';
+            admSearchEl.classList.remove('input-success');
+            admClearEl.style.display='none';
+            admHiddenName.value='';
+            admHiddenId.value='';
+            admPesertaSelected=false;
+            loadPesertaOld();
+            popupSuccess('Berhasil Didaftarkan!','Peserta baru beserta ikan berhasil ditambahkan ke sistem.');
         }
     })
     .catch(function(e){
-        if(e.errors){var msg='';var keys=Object.keys(e.errors);for(var i=0;i<keys.length;i++)msg+='<div style="margin-bottom:4px;">• '+esc(e.errors[keys[i]][0])+'</div>';popupError('Validasi Gagal',msg);}
-        else popupError('Gagal','Terjadi kesalahan.');
+        if(e.errors){
+            var msg='';var keys=Object.keys(e.errors);
+            for(var i=0;i<keys.length;i++) msg+='<div style="margin-bottom:4px;">• '+esc(e.errors[keys[i]][0])+'</div>';
+            popupError('Validasi Gagal',msg);
+        } else {
+            popupError('Gagal',e.message||'Terjadi kesalahan.');
+        }
+    })
+    .finally(function(){
+        btn.disabled=false;
+        btn.innerHTML='<i class="fas fa-fish" style="margin-right:6px;"></i> DAFTARKAN PESERTA & IKAN';
     });
 });
 
@@ -1240,6 +1554,7 @@ document.getElementById('btnAcakOld').addEventListener('click',function(){
    SEARCH USER
    ═══════════════════════════════════════════════ */
 var allUsersCache=[];
+var plainPwdMap={};
 
 var searchUserT;
 document.getElementById('searchUser').addEventListener('input',function(){
@@ -1252,6 +1567,13 @@ function filterUsers(q){
     q=q.toLowerCase().trim();
     var c=document.getElementById('userList');c.innerHTML='';
     var filtered=[];
+
+    /* Populate password map dari data lengkap */
+    plainPwdMap={};
+    for(var i=0;i<allUsersCache.length;i++){
+        plainPwdMap[allUsersCache[i].id]=allUsersCache[i].plain_password||'';
+    }
+
     if(!q){filtered=allUsersCache;}
     else{
         for(var i=0;i<allUsersCache.length;i++){
@@ -1268,25 +1590,37 @@ function filterUsers(q){
 
 function renderUserList(data){
     var c=document.getElementById('userList');c.innerHTML='';
+    var myId={{ auth()->id() }};
     for(var i=0;i<data.length;i++){
-        var u=data[i],role=u.role||'user',isMe={{ auth()->id() }}===u.id;
+        var u=data[i],role=u.role||'user',isMe=myId===u.id,isOtherAdmin=(role==='admin'&&!isMe);
         var div=document.createElement('div');div.className='user-card';
         var safeName=esc(u.name).replace(/'/g,"\\'");
+
+        /* Baris 1: Avatar + Nama + Email + Role Badge */
+        var topHtml=
+            '<div class="user-card-top">'+
+                '<div class="user-avatar" style="background:'+roleColors[role]+';">'+esc(u.name.charAt(0).toUpperCase())+'</div>'+
+                '<div class="user-card-body"><h4>'+esc(u.name)+'</h4><span>'+esc(u.email)+'</span></div>'+
+                '<span class="role-badge '+roleBadgeCls[role]+'" style="flex-shrink:0;">'+roleLabels[role]+'</span>'+
+            '</div>';
+
+        /* Baris 2: Tombol Aksi */
         var actions='';
+        if(!isMe&&!isOtherAdmin){
+            actions+='<button class="btn-xs purple" onclick="openPwdModal('+u.id+',\''+safeName+'\')" title="Lihat Password"><i class="fas fa-eye"></i></button>';
+            actions+='<button class="btn-xs blue" onclick="openPwdModal('+u.id+',\''+safeName+'\')" title="Ganti Password"><i class="fas fa-key"></i></button>';
+        }
         if(!isMe){
             actions+='<button class="btn-xs green" onclick="openRoleMenu(event,'+u.id+',\''+safeName+'\',\''+role+'\')" title="Ubah Role"><i class="fas fa-arrows-rotate"></i></button>';
             actions+='<button class="btn-xs red" onclick="deleteUser('+u.id+',\''+safeName+'\')" title="Hapus User"><i class="fas fa-trash-can"></i></button>';
         }
-        actions+='<button class="btn-xs blue" onclick="openPwdModal('+u.id+',\''+safeName+'\')" title="Ganti Password"><i class="fas fa-key"></i></button>';
-        div.innerHTML=
-            '<div style="display:flex;align-items:center;flex:1;min-width:0;">'+
-                '<div class="user-avatar" style="background:'+roleColors[role]+';">'+esc(u.name.charAt(0).toUpperCase())+'</div>'+
-                '<div class="user-card-body"><h4>'+esc(u.name)+'</h4><span>'+esc(u.email)+'</span></div>'+
-            '</div>'+
-            '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">'+
-                '<span class="role-badge '+roleBadgeCls[role]+'">'+roleLabels[role]+'</span>'+
-                '<div class="user-card-actions">'+actions+'</div>'+
-            '</div>';
+
+        var bottomHtml='';
+        if(actions){
+            bottomHtml='<div class="user-card-bottom">'+actions+'</div>';
+        }
+
+        div.innerHTML=topHtml+bottomHtml;
         c.appendChild(div);
     }
 }

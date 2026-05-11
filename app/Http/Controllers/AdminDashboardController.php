@@ -45,6 +45,35 @@ class AdminDashboardController extends Controller
         return response()->json(['success' => true, 'message' => 'Ikan berhasil didaftarkan ke peserta.']);
     }
 
+    public function registerPesertaIkan(Request $request)
+    {
+        $request->validate([
+            'nama_peserta'      => 'required|string|max:255',
+            'jenis_keanggotaan' => 'required|in:perorangan,team',
+            'detail_anggota'    => 'required|string|max:255',
+            'kategori'          => 'required|string|max:255',
+            'kelas'             => 'required|string|max:10',
+        ]);
+
+        $peserta = Peserta::create([
+            'user_id'           => null,
+            'nama_peserta'      => $request->nama_peserta,
+            'jenis_keanggotaan' => $request->jenis_keanggotaan,
+            'detail_anggota'    => $request->detail_anggota,
+        ]);
+
+        Ikan::create([
+            'peserta_id' => $peserta->id,
+            'kategori'   => $request->kategori,
+            'kelas'      => $request->kelas,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Peserta dan ikan berhasil didaftarkan.',
+        ]);
+    }
+
     /* ═══════════════════════════════════════════
        DASHBOARD STATS + CHART DATA
        ═══════════════════════════════════════════ */
@@ -177,14 +206,18 @@ class AdminDashboardController extends Controller
             'role'     => 'required|in:admin,juri,grand_juri,user',
         ]);
 
-        $user = User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'password' => bcrypt($request->password),
-            'role'     => $request->role,
+        /* BYPASS ELOQUENT — langsung insert ke database */
+        \DB::table('users')->insert([
+            'name'          => $request->name,
+            'email'         => $request->email,
+            'password'      => bcrypt($request->password),
+            'plain_password'=> $request->password,
+            'role'          => $request->role,
+            'created_at'    => now(),
+            'updated_at'    => now(),
         ]);
 
-        return response()->json(['success' => true, 'message' => 'User "' . $user->name . '" berhasil ditambahkan.']);
+        return response()->json(['success' => true, 'message' => 'User "' . $request->name . '" berhasil ditambahkan.']);
     }
 
     public function changeRole(Request $request)

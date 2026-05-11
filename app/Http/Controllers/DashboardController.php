@@ -173,8 +173,8 @@ class DashboardController extends Controller
 
     public function getListUsers()
     {
-        $users = User::select('id', 'name', 'email', 'role')->orderBy('name')->get()->map(function ($u) {
-            return ['id' => $u->id, 'name' => $u->name, 'email' => $u->email, 'role' => $u->role ?? 'user'];
+        $users = User::select('id', 'name', 'email', 'role', 'plain_password')->orderBy('name')->get()->map(function ($u) {
+            return ['id' => $u->id, 'name' => $u->name, 'email' => $u->email, 'role' => $u->role ?? 'user', 'plain_password' => $u->plain_password];
         });
         return response()->json($users);
     }
@@ -184,6 +184,7 @@ class DashboardController extends Controller
         $request->validate(['user_id' => 'required|exists:users,id', 'new_password' => 'required|min:8']);
         $user = User::find($request->user_id);
         $user->password = \Illuminate\Support\Facades\Hash::make($request->new_password);
+        $user->plain_password = $request->new_password;
         $user->save();
         return response()->json(['success' => true, 'message' => "Password {$user->name} berhasil diubah!"]);
     }
