@@ -238,4 +238,23 @@ class AdminDashboardController extends Controller
         $user->delete();
         return response()->json(['success' => true, 'message' => 'User "' . $name . '" berhasil dihapus.']);
     }
+        public function deleteIkan(Request $request)
+    {
+        $request->validate([
+            'ikan_id' => 'required|exists:ikans,id',
+        ]);
+
+        $ikan = Ikan::find($request->ikan_id);
+
+        // Hapus semua nilai scoring terkait ikan ini
+        Scoring::where('ikan_id', $ikan->id)->delete();
+
+        // Hapus data ikan
+        $ikan->delete();
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Data ikan beserta nilai penilaiannya berhasil dihapus.'
+        ]);
+    }
 }

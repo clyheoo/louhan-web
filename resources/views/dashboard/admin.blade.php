@@ -387,8 +387,7 @@
                 <div style="display:flex;gap:6px;">
                     <div style="position:relative;">
                         <i class="fas fa-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--light);pointer-events:none;"></i>
-                        <input type="text" id="searchUser" placeholder="Cari user..." style="padding:5px 8px 5px 26px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:11px;outline:none;width:140px;background:var(--bg);transition:all .2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-                    </div>
+                        <input type="text" id="searchUser" placeholder="Cari user..." autocomplete="off" readonly style="padding:5px 8px 5px 26px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:11px;outline:none;width:140px;background:var(--bg);transition:all .2s;cursor:text;" onfocus="this.removeAttribute('readonly');this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">                    </div>
                     <button class="btn-xs blue" onclick="openModal('modalCreate')"><i class="fas fa-plus"></i> Tambah User</button>
                 </div>
             </div>
@@ -968,8 +967,7 @@ function renderTable(data){
             '<td>'+jh+'</td>'+
             '<td>'+tv+'</td>'+
             '<td><span class="status-badge '+sc+'">'+st+'</span></td>'+
-            '<td><button class="btn-xs blue" onclick="openDetail('+i+')"><i class="fas fa-eye"></i></button></td>';
-        tb.appendChild(tr);
+            '<td><button class="btn-xs blue" onclick="openDetail('+i+')"><i class="fas fa-eye"></i></button> <button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button></td>';        tb.appendChild(tr);
     }
 }
 
@@ -1278,6 +1276,37 @@ function changeRole(uid,name,newRole){
             .then(function(r){return r.json();})
             .then(function(d){if(d.success){loadUsers();popupSuccess('Role Diubah','<strong>'+esc(name)+'</strong> → <strong>'+roleLabels[newRole]+'</strong>');}else popupError('Gagal',d.message||'Terjadi kesalahan.');})
             .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');});
+        }
+    );
+}
+
+function deleteIkan(ikanId, nama){
+    popupConfirm(
+        'Hapus Data Penilaian',
+        'Yakin ingin menghapus data ikan milik <strong>'+esc(nama)+'</strong>?<br><span style="font-size:11px;color:var(--danger);">Semua nilai penilaian terkait juga akan dihapus permanen.</span>',
+        'Ya, Hapus Permanen',
+        function(){
+            var fd = new FormData();
+            fd.append('_token', getCsrf());
+            fd.append('ikan_id', ikanId);
+            fetch('/api/admin/delete-ikan', {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'},
+                body: fd
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if(d.success){
+                    loadScoringData();
+                    loadDashboard();
+                    popupSuccess('Berhasil Dihapus', 'Data milik <strong>'+esc(nama)+'</strong> berhasil dihapus dari sistem.');
+                } else {
+                    popupError('Gagal Menghapus', d.message || 'Terjadi kesalahan.');
+                }
+            })
+            .catch(function(){
+                popupError('Kesalahan Jaringan', 'Gagal menghubungi server.');
+            });
         }
     );
 }
