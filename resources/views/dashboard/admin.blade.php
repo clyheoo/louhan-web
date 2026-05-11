@@ -285,7 +285,7 @@
 
     <!-- ── STATISTIK ── -->
     <div class="stats-row">
-        <div class="stat-card c-blue"><div class="stat-icon blue"><i class="fas fa-fish"></i></div><div class="stat-num" id="sTotal">0</div><div class="stat-lbl">Total Peserta</div></div>
+        <div class="stat-card c-blue"><div class="stat-icon blue"><i class="fas fa-fish"></i></div><div class="stat-num" id="sTotal">0</div><div class="stat-lbl">Total Ikan Terdaftar</div></div>
         <div class="stat-card c-green"><div class="stat-icon green"><i class="fas fa-check-double"></i></div><div class="stat-num" id="sDinilai">0</div><div class="stat-lbl">Sudah Dinilai</div></div>
         <div class="stat-card c-purple"><div class="stat-icon purple"><i class="fas fa-crown"></i></div><div class="stat-num" id="sGrand">0</div><div class="stat-lbl">Grand Juri Edit</div></div>
         <div class="stat-card c-red"><div class="stat-icon red"><i class="fas fa-clock"></i></div><div class="stat-num" id="sBelum">0</div><div class="stat-lbl">Belum Dinilai</div></div>
@@ -475,26 +475,34 @@
 <!-- MODAL: MODUL LAMA -->
 <div class="modal-bg" id="modalOld" style="--mw:1100px;">
     <div class="modal-box">
-        <div class="modal-head"><h3><i class="fas fa-box-archive"></i> Modul Registrasi & Undian Tank</h3><button class="modal-close" onclick="closeModal('modalOld')"><i class="fas fa-xmark"></i></button></div>
+        <div class="modal-head"><h3><i class="fas fa-box-archive"></i> Modul Registrasi Ikan & Undian Tank</h3><button class="modal-close" onclick="closeModal('modalOld')"><i class="fas fa-xmark"></i></button></div>
         <div class="modal-body">
-            <p style="text-align:center;color:var(--light);margin-bottom:16px;font-size:12px;">Fitur pendukung kontes</p>
+            <p style="text-align:center;color:var(--light);margin-bottom:16px;font-size:12px;">Fitur pendukung kontes (Sistem Multi-Ikan)</p>
             <div class="old-grid">
+                <!-- REGISTRASI IKAN -->
                 <div class="old-card">
-                    <div class="section-head"><div class="section-title" style="font-size:13px;"><i class="fas fa-user-plus"></i> Registrasi Peserta</div></div>
+                    <div class="section-head"><div class="section-title" style="font-size:13px;"><i class="fas fa-fish"></i> Registrasi Ikan Baru</div></div>
                     <div class="section-body">
                         <form id="regFormOld">
                             @csrf
-                            <div class="form-group"><label class="form-label">Nama Peserta</label><input type="text" name="nama_peserta" class="form-control" required></div>
+                            <div class="form-group">
+                                <label class="form-label">Pilih Peserta</label>
+                                <select name="peserta_id" id="selectPesertaAdmin" class="form-control" required>
+                                    <option value="" disabled selected>Memuat daftar peserta...</option>
+                                </select>
+                            </div>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                                 <div class="form-group"><label class="form-label">Kategori</label><select name="kategori" class="form-control" required><option value="" disabled selected>Pilih</option><option>Cencu</option><option>Chginwa</option><option>Freemarking</option><option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option></select></div>
                                 <div class="form-group"><label class="form-label">Kelas</label><select name="kelas" class="form-control" required><option value="" disabled selected>Pilih</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select></div>
                             </div>
-                            <button type="submit" class="btn-primary" style="width:100%;justify-content:center;"><i class="fas fa-plus"></i> Daftar</button>
+                            <button type="submit" class="btn-primary" style="width:100%;justify-content:center;"><i class="fas fa-plus"></i> Tambahkan Ikan</button>
                         </form>
                     </div>
                 </div>
+                
+                <!-- UNDIAN TANK -->
                 <div class="old-card" style="background:#1e293b;color:#fff;">
-                    <div class="section-head" style="border-color:rgba(255,255,255,.1);"><div class="section-title" style="color:#fff;font-size:13px;"><i class="fas fa-dice"></i> Undian Tank</div></div>
+                    <div class="section-head" style="border-color:rgba(255,255,255,.1);"><div class="section-title" style="color:#fff;font-size:13px;"><i class="fas fa-dice"></i> Undian Tank (Per Ikan)</div></div>
                     <div class="section-body" style="text-align:center;">
                         <select id="pesertaSelectOld" class="form-control" style="background:rgba(0,0,0,.3);color:#fff;border-color:rgba(255,255,255,.1);margin-bottom:14px;"></select>
                         <div style="font-size:48px;font-weight:900;margin:16px 0;" id="numberDisplayOld">--</div>
@@ -779,7 +787,7 @@ function renderTable(data){
             '<td>'+jh+'</td>'+
             '<td>'+tv+'</td>'+
             '<td><span class="status-badge '+sc+'">'+st+'</span></td>'+
-            '<td><button class="btn-xs blue" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i></button></td>';
+            '<td><button class="btn-xs blue" onclick="openDetail('+p.peserta_id+')"><i class="fas fa-eye"></i></button></td>';
         tb.appendChild(tr);
     }
 }
@@ -985,7 +993,7 @@ function exportCSV(){
     var header='No,Nama Peserta,Kategori,Kelas,No Tank,Juri,Grand Juri,Total Nilai,Status\n',rows='';
     for(var i=0;i<allScoringData.length;i++){
         var p=allScoringData[i];
-        rows+=(i+1)+',"'+(p.nama_peserta||'')+'","'+(p.kategori||'')+'","'+(p.kelas||'')+'","'+(p.nomor_tank||'')+'","'+(p.juri_nama||'')+'","'+(p.grand_juri_nama||'')+'",'+(p.total_nilai||0)+',"'+(p.grand_juri_nama?'Grand Juri Edit':p.status)+'"\n';
+        rows+=(i+1)+',"'+(p.nama_peserta||'')+'","'+(p.kategori||'')+'","'+(p.kelas||'')+'","'+(p.nomor_tank||'')+'","'+(p.detail_anggota||'')+'","'+(p.juri_nama||'')+'","'+(p.grand_juri_nama||'')+'",'+(p.total_nilai||0)+',"'+(p.grand_juri_nama?'Grand Juri Edit':p.status)+'"\n';
     }
     var blob=new Blob(['\uFEFF'+header+rows],{type:'text/csv;charset=utf-8;'});
     var url=URL.createObjectURL(blob);
@@ -995,40 +1003,105 @@ function exportCSV(){
 }
 
 /* ═══════════════════════════════════════════════
-   MODUL LAMA
+   MODUL LAMA (UPDATE UNTUK MULTI-IKAN)
    ═══════════════════════════════════════════════ */
+
+// 1. Load Dropdown Peserta untuk Form Registrasi Admin
+function loadPesertaForAdmin(){
+    fetch('{{ route("admin.list.pesertas") }}',{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(data){
+        var sel=document.getElementById('selectPesertaAdmin');
+        sel.innerHTML='<option value="" disabled selected>Pilih Peserta</option>';
+        if(!data.length){sel.innerHTML+='<option disabled>Belum ada peserta terdaftar</option>';return;}
+        for(var i=0;i<data.length;i++){
+            var o=document.createElement('option');
+            o.value=data[i].id;
+            o.textContent=data[i].text;
+            sel.appendChild(o);
+        }
+    });
+}
+
+// 2. Load Dropdown Ikan yang belum dapat tank (Untuk Undian)
 function loadPesertaOld(){
     fetch('{{ route("api.peserta.belum.tank") }}',{headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
     .then(function(data){
-        var sel=document.getElementById('pesertaSelectOld');sel.innerHTML='<option value="" disabled selected>Pilih Peserta</option>';
-        if(!data.length){sel.innerHTML+='<option disabled>Kosong</option>';return;}
-        for(var i=0;i<data.length;i++){var o=document.createElement('option');o.value=data[i].id;o.textContent=data[i].nama_peserta+' - '+data[i].kategori;sel.appendChild(o);}
+        var sel=document.getElementById('pesertaSelectOld');
+        sel.innerHTML='<option value="" disabled selected>Pilih Ikan yang belum diundi</option>';
+        if(!data.length){sel.innerHTML+='<option disabled>Semua ikan sudah mendapat nomor</option>';return;}
+        for(var i=0;i<data.length;i++){
+            var o=document.createElement('option');
+            o.value=data[i].id; // Sekarang ID-nya adalah ID IKAN
+            o.textContent=data[i].nama_peserta+' - '+data[i].kategori+' ('+data[i].kelas+')';
+            sel.appendChild(o);
+        }
     });
 }
-loadPesertaOld();
 
-document.getElementById('btnAcakOld').addEventListener('click',function(){
-    if(!document.getElementById('pesertaSelectOld').value)return;
-    var display=document.getElementById('numberDisplayOld');display.style.color='#60a5fa';this.disabled=true;
-    var c=0,iv=setInterval(function(){
-        display.textContent=Math.floor(Math.random()*100)+1;
-        if(c++>15){clearInterval(iv);
-            var fd=new FormData();fd.append('_token',getCsrf());fd.append('peserta_id',document.getElementById('pesertaSelectOld').value);fd.append('range_min',1);fd.append('range_max',100);
-            fetch('{{ route("api.acak.tank.admin") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-            .then(function(r){return r.json();})
-            .then(function(d){if(d.success){display.textContent=d.nomor_tank;display.style.color='#22c55e';setTimeout(loadPesertaOld,2000);}else throw new Error(d.message);})
-            .catch(function(e){display.textContent='--';display.style.color='#fff';popupError('Undian Gagal',esc(e.message));document.getElementById('btnAcakOld').disabled=false;});
+// Trigger saat modal dibuka
+var origOpenModal2 = openModal;
+openModal = function(id){
+    origOpenModal2(id);
+    if(id==='modalOld'){
+        loadPesertaForAdmin();
+        loadPesertaOld();
+    }
+};
+
+// 3. Submit Registrasi Ikan oleh Admin
+document.getElementById('regFormOld').addEventListener('submit',function(e){
+    e.preventDefault();
+    var fd=new FormData(this);
+    fd.append('_token',getCsrf());
+    
+    fetch('{{ route("admin.tambah.ikan") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+    .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
+    .then(function(d){
+        if(d.success){
+            document.getElementById('regFormOld').reset();
+            popupSuccess('Berhasil!','Ikan baru berhasil didaftarkan.');
+            loadPesertaOld(); // Refresh dropdown undian
         }
-    },60);
+    })
+    .catch(function(e){
+        if(e.errors){var msg='';var keys=Object.keys(e.errors);for(var i=0;i<keys.length;i++)msg+='<div style="margin-bottom:4px;">• '+esc(e.errors[keys[i]][0])+'</div>';popupError('Validasi Gagal',msg);}
+        else popupError('Gagal','Terjadi kesalahan.');
+    });
 });
 
-document.getElementById('regFormOld').addEventListener('submit',function(e){
-    e.preventDefault();var fd=new FormData(this);fd.append('_token',getCsrf());
-    fetch('{{ route("store.registrasi") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-    .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
-    .then(function(d){if(d.success){document.getElementById('regFormOld').reset();popupSuccess('Berhasil Didaftarkan!','Peserta baru berhasil ditambahkan.');loadPesertaOld();}})
-    .catch(function(e){if(e.errors){var msg='';var keys=Object.keys(e.errors);for(var i=0;i<keys.length;i++)msg+='<div style="margin-bottom:4px;">• '+esc(e.errors[keys[i]][0])+'</div>';popupError('Validasi Gagal',msg);}else popupError('Gagal','Terjadi kesalahan.');});
+// 4. Aksi Undian Tank Admin
+document.getElementById('btnAcakOld').addEventListener('click',function(){
+    if(!document.getElementById('pesertaSelectOld').value)return;
+    var display=document.getElementById('numberDisplayOld');
+    display.style.color='#60a5fa';this.disabled=true;
+    var c=0,iv=setInterval(function(){
+        display.textContent=Math.floor(Math.random()*100)+1;
+        if(c++>15){
+            clearInterval(iv);
+            var fd=new FormData();
+            fd.append('_token',getCsrf());
+            fd.append('ikan_id', document.getElementById('pesertaSelectOld').value); // DIUBAH: Kirim ikan_id
+            fd.append('range_min',1);
+            fd.append('range_max',100);
+            
+            fetch('{{ route("api.acak.tank.admin") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+            .then(function(r){return r.json();})
+            .then(function(d){
+                if(d.success){
+                    display.textContent=d.nomor_tank;
+                    display.style.color='#22c55e';
+                    setTimeout(loadPesertaOld, 2000); // Refresh daftar ikan yang belum diundi
+                } else throw new Error(d.message);
+            })
+            .catch(function(e){
+                display.textContent='--';display.style.color='#fff';
+                popupError('Undian Gagal',esc(e.message));
+                document.getElementById('btnAcakOld').disabled=false;
+            });
+        }
+    },60);
 });
 
 /* ═══════════════════════════════════════════════

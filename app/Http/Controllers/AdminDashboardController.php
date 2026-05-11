@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Scoring;
 use App\Models\Peserta;
+use App\Models\Ikan;
 use App\Models\User;
 
 class AdminDashboardController extends Controller
@@ -14,12 +15,44 @@ class AdminDashboardController extends Controller
         return view('dashboard.admin', ['user' => auth()->user()->fresh()]);
     }
 
+    // LIST PESERTA UNTUK DROPDOWN ADMIN
+    public function getListPesertas()
+    {
+        $pesertas = Peserta::orderBy('nama_peserta')->get()->map(function ($p) {
+            $detail = $p->jenis_keanggotaan == 'team' ? $p->detail_anggota : $p->detail_anggota;
+            return [
+                'id' => $p->id,
+                'text' => $p->nama_peserta . ' (' . $detail . ')'
+            ];
+        });
+        return response()->json($pesertas);
+    }
+
+    // TAMBAH IKAN DARI ADMIN
+    public function storeIkanAdmin(Request $request)
+    {
+        $request->validate([
+            'peserta_id' => 'required|exists:pesertas,id',
+            'kategori'   => 'required|string|max:255',
+            'kelas'      => 'required|string|max:10',
+        ]);
+
+        Ikan::create([
+            'peserta_id' => $request->peserta_id,
+            'kategori'   => $request->kategori,
+            'kelas'      => $request->kelas,
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Ikan berhasil didaftarkan ke peserta.']);
+    }
+
     /* ═══════════════════════════════════════════
        DASHBOARD STATS + CHART DATA
        ═══════════════════════════════════════════ */
     public function getDashboardStats()
     {
-        $totalPeserta = Peserta::whereNotNull('nomor_tank')->count();
+        // Diubah: Menghitung total IKAN yang sudah mendapat tank, bukan peserta
+        $totalIkan = Ikan::whereNotNull('nomor_tank')->count();
 
         /* Hitung per peserta: ambil scoring terbaru tiap peserta */
         $latestScores = Scoring::selectRaw('peserta_id, MAX(id) as latest_id')
@@ -30,18 +63,13 @@ class AdminDashboardController extends Controller
 
         $sudahDinilai = $scorings->where('edited_by_grand_juri', false)->count();
         $grandEdited  = $scorings->where('edited_by_grand_juri', true)->count();
-        $belumDinilai = max(0, $totalPeserta - $scorings->count());
+        $belumDinilai = max(0, $totalIkan - $scorings->count());
 
-        $juriAktif = Scoring::whereNotNull('juri_id')
-            ->distinct('juri_id')
-            ->count('juri_id');
+        $juriAktif = Scoring::whereNotNull('juri_id')->distinct('juri_id')->count('juri_id');
+        $avgScore = $scorings->count() > 0 ? round($scorings->avg('total_nilai')) : 0;
 
-        $avgScore = $scorings->count() > 0
-            ? round($scorings->avg('total_nilai'))
-            : 0;
-
-        /* Per kategori */
-        $perKategori = Peserta::whereNotNull('nomor_tank')
+        /* Diubah: Per kategori diambil dari tabel IKANS */
+        $perKategori = Ikan::whereNotNull('nomor_tank')
             ->selectRaw('kategori, COUNT(*) as total')
             ->groupBy('kategori')
             ->orderByDesc('total')
@@ -49,22 +77,14 @@ class AdminDashboardController extends Controller
             ->toArray();
 
         /* Top 10 */
-        $top10 = Scoring::with('peserta')
-            ->whereIn('id', $latestScores)
-            ->whereNotNull('total_nilai')
-            ->orderByDesc('total_nilai')
-            ->limit(10)
-            ->get()
-            ->map(function ($s) {
-                return [
-                    'nama'  => $s->peserta?->nama_peserta ?? 'Unknown',
-                    'total' => $s->total_nilai,
-                ];
-            })
-            ->toArray();
+        $top10 = Scoring::with('peserta')->whereIn('id', $latestScores)
+            ->whereNotNull('total_nilai')->orderByDesc('total_nilai')->limit(10)
+            ->get()->map(function ($s) {
+                return ['nama' => $s->peserta?->nama_peserta ?? 'Unknown', 'total' => $s->total_nilai];
+            })->toArray();
 
         return response()->json([
-            'total_peserta'  => $totalPeserta,
+            'total_peserta'  => $totalIkan, // Label di frontend bisa "Total Ikan"
             'sudah_dinilai'  => $sudahDinilai,
             'grand_edited'   => $grandEdited,
             'belum_dinilai'  => $belumDinilai,
@@ -80,40 +100,42 @@ class AdminDashboardController extends Controller
        ═══════════════════════════════════════════ */
     public function getScoringData(Request $request)
     {
-        $query = Peserta::whereNotNull('nomor_tank')
-            ->with(['scorings' => function ($q) {
+        // Diubah: Query utama sekarang dari IKAN (yang sudah punya tank)
+        $query = Ikan::whereNotNull('nomor_tank')
+            ->with(['peserta', 'peserta.scorings' => function ($q) {
                 $q->latest()->limit(1);
-            }, 'scorings.juri', 'scorings.grandJuri']);
+            }, 'peserta.scorings.juri', 'peserta.scorings.grandJuri']);
 
         if ($request->filled('search')) {
-            $query->where('nama_peserta', 'LIKE', '%' . $request->search . '%');
+            $query->whereHas('peserta', function ($q) use ($request) {
+                $q->where('nama_peserta', 'LIKE', '%' . $request->search . '%');
+            });
         }
 
         if ($request->filled('kategori')) {
             $query->where('kategori', $request->kategori);
         }
 
-        $data = $query->orderBy('nomor_tank')->get()->map(function ($p) {
-            $scoring = $p->scorings->first();
+        $data = $query->orderBy('nomor_tank')->get()->map(function ($ikan) {
+            $peserta = $ikan->peserta;
+            $scoring = $peserta ? $peserta->scorings->first() : null;
 
-        return [
-            'id'              => $p->id,
-            'nama_peserta'    => $p->nama_peserta,
-            'kategori'        => $p->kategori,
-            'kelas'           => $scoring?->kelas ?? '—',
-            'nomor_tank'      => $p->nomor_tank,
-            'detail_anggota'  => $p->detail_anggota ?? '—',
-            'juri_nama'       => $scoring?->juri?->name ?? '—',
-            'grand_juri_nama' => $scoring?->grandJuri?->name ?? null,
-            'total_nilai'     => $scoring?->total_nilai ?? 0,
-            'nilai_detail'    => $scoring?->nilai_detail ?? null,
-            'status'          => $scoring
-            ? ($scoring->edited_by_grand_juri ? 'Grand Juri Edit' : 'Sudah Dinilai')
-            : 'Belum Dinilai',
-        ];
+            return [
+                'id'              => $ikan->id,
+                'peserta_id'      => $ikan->peserta_id, // Dibutuhkan untuk modal detail
+                'nama_peserta'    => $peserta->nama_peserta ?? 'Unknown',
+                'kategori'        => $ikan->kategori,   // Diambil dari Ikan
+                'kelas'           => $ikan->kelas,      // Diambil dari Ikan
+                'nomor_tank'      => $ikan->nomor_tank, // Diambil dari Ikan
+                'detail_anggota'  => $peserta->detail_anggota ?? '—',
+                'juri_nama'       => $scoring?->juri?->name ?? '—',
+                'grand_juri_nama' => $scoring?->grandJuri?->name ?? null,
+                'total_nilai'     => $scoring?->total_nilai ?? 0,
+                'nilai_detail'    => $scoring?->nilai_detail ?? null,
+                'status'          => $scoring ? ($scoring->edited_by_grand_juri ? 'Grand Juri Edit' : 'Sudah Dinilai') : 'Belum Dinilai',
+            ];
         })->toArray();
 
-        /* Filter status di PHP (karena status dihitung dari relasi) */
         if ($request->filled('status')) {
             $filter = $request->status;
             $data = array_filter($data, function ($item) use ($filter) {
@@ -129,7 +151,7 @@ class AdminDashboardController extends Controller
     }
 
     /* ═══════════════════════════════════════════
-       CREATE USER
+       CREATE USER, CHANGE ROLE, DELETE
        ═══════════════════════════════════════════ */
     public function createUser(Request $request)
     {
@@ -147,54 +169,25 @@ class AdminDashboardController extends Controller
             'role'     => $request->role,
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User "' . $user->name . '" berhasil ditambahkan sebagai ' . strtoupper(str_replace('_', ' ', $user->role)) . '.',
-        ]);
+        return response()->json(['success' => true, 'message' => 'User "' . $user->name . '" berhasil ditambahkan.']);
     }
 
-    /* ═══════════════════════════════════════════
-       CHANGE ROLE (INLINE)
-       ═══════════════════════════════════════════ */
     public function changeRole(Request $request)
     {
-        $request->validate([
-            'user_id'  => 'required|exists:users,id',
-            'new_role' => 'required|in:admin,juri,grand_juri,user',
-        ]);
-
+        $request->validate(['user_id' => 'required|exists:users,id', 'new_role' => 'required|in:admin,juri,grand_juri,user']);
         $user = User::find($request->user_id);
-
-        if ($user->id === auth()->id()) {
-            return response()->json(['success' => false, 'message' => 'Tidak bisa mengubah role sendiri.'], 403);
-        }
-
-        $oldRole = $user->role;
+        if ($user->id === auth()->id()) return response()->json(['success' => false, 'message' => 'Tidak bisa mengubah role sendiri.'], 403);
         $user->update(['role' => $request->new_role]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Role "' . $user->name . '" diubah dari ' . strtoupper($oldRole) . ' menjadi ' . strtoupper(str_replace('_', ' ', $request->new_role)) . '.',
-        ]);
+        return response()->json(['success' => true, 'message' => 'Role berhasil diubah.']);
     }
+
     public function deleteUser(Request $request)
     {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-        ]);
-
+        $request->validate(['user_id' => 'required|exists:users,id']);
         $user = User::find($request->user_id);
-
-        if ($user->id === auth()->id()) {
-            return response()->json(['success' => false, 'message' => 'Tidak bisa menghapus akun sendiri.'], 403);
-        }
-
+        if ($user->id === auth()->id()) return response()->json(['success' => false, 'message' => 'Tidak bisa menghapus akun sendiri.'], 403);
         $name = $user->name;
         $user->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'User "' . $name . '" berhasil dihapus.',
-        ]);
+        return response()->json(['success' => true, 'message' => 'User "' . $name . '" berhasil dihapus.']);
     }
 }

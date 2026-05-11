@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\Peserta;
+use App\Models\Ikan;
 use App\Models\User;
 
 class DashboardController extends Controller
@@ -15,127 +16,155 @@ class DashboardController extends Controller
         $user = Auth::user()->fresh();
         Auth::setUser($user);
 
-        if ($user->role === 'admin') {
-            return view('dashboard.admin', ['user' => $user]);
-        } elseif ($user->role === 'grand_juri') {
-            return view('dashboard.grand-juri', ['user' => $user]);
-        } elseif ($user->role === 'juri') {
-            return view('dashboard.juri', ['user' => $user]);
-        }
+        if ($user->role === 'admin') return view('dashboard.admin', ['user' => $user]);
+        if ($user->role === 'grand_juri') return view('dashboard.grand-juri', ['user' => $user]);
+        if ($user->role === 'juri') return view('dashboard.juri', ['user' => $user]);
 
-        $pesertaSaya = Peserta::where('user_id', $user->id)->whereNotNull('nomor_tank')->first();
-        return view('dashboard.user', ['user' => $user, 'pesertaSaya' => $pesertaSaya]);
+        $pesertaSaya = Peserta::where('user_id', $user->id)->first();
+        // Ambil semua ikan milik peserta ini
+        $ikansSaya = $pesertaSaya ? $pesertaSaya->ikans()->orderBy('created_at', 'desc')->get() : collect();
+
+        return view('dashboard.user', [
+            'user' => $user, 
+            'pesertaSaya' => $pesertaSaya,
+            'ikansSaya' => $ikansSaya
+        ]);
     }
 
+    // SIMPAN PROFIL PESERTA (Hanya Nama, Jenis, Kota/Team)
     public function storePeserta(Request $request)
     {
         $request->validate([
             'nama_peserta'      => 'required|string|max:255',
-            'kategori'          => 'required|string|max:255',
-            'kelas'             => 'required|string|max:10',
             'jenis_keanggotaan' => 'required|in:perorangan,team',
             'detail_anggota'    => 'required|string|max:255',
         ]);
 
-        /* Cegah duplikat: 1 user hanya boleh 1 peserta */
-        $exists = Peserta::where('user_id', Auth::id())->exists();
-        if ($exists) {
-            return response()->json([
-                'success' => false,
-                'errors'  => ['nama_peserta' => ['Anda sudah terdaftar sebagai peserta.']]
-            ], 422);
+        // Update atau Buat profil baru
+        Peserta::updateOrCreate(
+            ['user_id' => Auth::id()],
+            [
+                'nama_peserta'      => $request->nama_peserta,
+                'jenis_keanggotaan' => $request->jenis_keanggotaan,
+                'detail_anggota'    => $request->detail_anggota,
+            ]
+        );
+
+        return response()->json(['success' => true, 'message' => 'Profil berhasil disimpan!']);
+    }
+
+    // SIMPAN DATA IKAN (Dipanggil dari Popup)
+    public function storeIkan(Request $request)
+    {
+        $request->validate([
+            'kategori' => 'required|string|max:255',
+            'kelas'    => 'required|string|max:10',
+        ]);
+
+        $peserta = Peserta::where('user_id', Auth::id())->first();
+        if (!$peserta) {
+            return response()->json(['success' => false, 'message' => 'Silakan isi profil terlebih dahulu.'], 400);
         }
 
-        Peserta::create([
-            'user_id'           => Auth::id(),
-            'nama_peserta'      => $request->nama_peserta,
-            'kategori'          => $request->kategori,
-            'kelas'             => $request->kelas,
-            'jenis_keanggotaan' => $request->jenis_keanggotaan,
-            'detail_anggota'    => $request->detail_anggota,
+        $ikan = Ikan::create([
+            'peserta_id' => $peserta->id,
+            'kategori'   => $request->kategori,
+            'kelas'      => $request->kelas,
         ]);
 
         return response()->json([
-            'success' => true,
-            'message' => 'Berhasil mendaftar!'
+            'success' => true, 
+            'message' => 'Ikan berhasil ditambahkan!',
+            'ikan'    => $ikan
         ]);
     }
 
-    public function getPesertaBelumDapatTank()
+    // UNDIAN USER (Sekarang berdasarkan ID Ikan)
+    public function acakNomorTankUser(Request $request)
     {
-        $pesertas = Peserta::whereNull('nomor_tank')->orderBy('nama_peserta')->get();
-        return response()->json($pesertas);
-    }
+        $request->validate(['ikan_id' => 'required|exists:ikans,id']);
 
-    // UNDIAN ADMIN (Bisa atur range & pilih peserta)
-    public function acakNomorTankAdmin(Request $request)
-    {
-        $request->validate([
-            'peserta_id' => 'required|exists:pesertas,id',
-            'range_min'  => 'required|integer|min:1',
-            'range_max'  => 'required|integer|min:1',
-        ]);
+        // Cari ikan yang belum dapat nomor DAN milik user yang login
+        $ikan = Ikan::where('id', $request->ikan_id)
+            ->whereHas('peserta', fn($q) => $q->where('user_id', Auth::id()))
+            ->whereNull('nomor_tank')
+            ->first();
 
-        if ($request->range_max < $request->range_min) {
-            return response()->json(['success' => false, 'message' => 'Range maksimal harus lebih besar dari minimal.'], 400);
-        }
-
-        $peserta = Peserta::find($request->peserta_id);
-
-        try {
-            DB::transaction(function () use ($peserta, $request) {
-                $assignedNumbers = Peserta::whereNotNull('nomor_tank')->lockForUpdate()->pluck('nomor_tank')->toArray();
-                $allNumbers = range($request->range_min, $request->range_max);
-                $availableNumbers = array_diff($allNumbers, $assignedNumbers);
-
-                if (empty($availableNumbers)) throw new \Exception('Semua nomor dalam range tersebut sudah terisi habis!');
-
-                $randomNumber = array_values($availableNumbers)[array_rand($availableNumbers)];
-                $peserta->nomor_tank = $randomNumber;
-                $peserta->save();
-            });
-
-            return response()->json([
-                'success'     => true, 
-                'nomor_tank'  => $peserta->fresh()->nomor_tank,
-                'nama_peserta'=> $peserta->nama_peserta
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
-        }
-    }
-
-    // --- FUNGSI USER ---
-    // UNDIAN USER (Otomatis untuk dirinya sendiri, tanpa input range)
-    public function acakNomorTankUser()
-    {
-        // Cari peserta yang dimiliki user ini dan belum dapat nomor
-        $peserta = Peserta::where('user_id', Auth::id())->whereNull('nomor_tank')->first();
-
-        if (!$peserta) {
-            return response()->json(['success' => false, 'message' => 'Anda belum terdaftar sebagai peserta atau sudah mendapat nomor undian.'], 400);
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan, bukan milik Anda, atau sudah mendapat nomor.'], 400);
         }
 
         try {
-            DB::transaction(function () use ($peserta) {
-                // Range default untuk user adalah 1 - 100 (Bisa diubah sesuai kebutuhan)
-                $min = 1; 
-                $max = 100; 
-
-                $assignedNumbers = Peserta::whereNotNull('nomor_tank')->lockForUpdate()->pluck('nomor_tank')->toArray();
+            DB::transaction(function () use ($ikan) {
+                $min = 1; $max = 100; 
+                // Cek nomor yang sudah dipakai di seluruh tabel IKANS
+                $assignedNumbers = Ikan::whereNotNull('nomor_tank')->lockForUpdate()->pluck('nomor_tank')->toArray();
                 $allNumbers = range($min, $max);
                 $availableNumbers = array_diff($allNumbers, $assignedNumbers);
 
                 if (empty($availableNumbers)) throw new \Exception('Maaf, seluruh nomor tank sudah habis terisi.');
 
                 $randomNumber = array_values($availableNumbers)[array_rand($availableNumbers)];
-                $peserta->nomor_tank = $randomNumber;
-                $peserta->save();
+                $ikan->nomor_tank = $randomNumber;
+                $ikan->save();
             });
 
             return response()->json([
                 'success' => true, 
-                'nomor_tank' => $peserta->fresh()->nomor_tank
+                'nomor_tank' => $ikan->fresh()->nomor_tank,
+                'ikan_id' => $ikan->id
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+    }
+
+    // --- FUNGSI ADMIN (SUDAH DISESUAIKAN DENGAN TABEL IKANS) ---
+    public function getPesertaBelumDapatTank()
+    {
+        $ikans = Ikan::with('peserta')->whereNull('nomor_tank')->orderBy('created_at', 'desc')->get()
+            ->map(function($ikan) {
+                return [
+                    'id' => $ikan->id,
+                    'nama_peserta' => $ikan->peserta->nama_peserta,
+                    'kategori' => $ikan->kategori,
+                    'kelas' => $ikan->kelas,
+                ];
+            });
+        return response()->json($ikans);
+    }
+
+    public function acakNomorTankAdmin(Request $request)
+    {
+        $request->validate([
+            'ikan_id'   => 'required|exists:ikans,id', // Diubah dari peserta_id
+            'range_min' => 'required|integer|min:1',
+            'range_max' => 'required|integer|min:1',
+        ]);
+
+        if ($request->range_max < $request->range_min) {
+            return response()->json(['success' => false, 'message' => 'Range maksimal harus lebih besar dari minimal.'], 400);
+        }
+
+        $ikan = Ikan::find($request->ikan_id);
+
+        try {
+            DB::transaction(function () use ($ikan, $request) {
+                $assignedNumbers = Ikan::whereNotNull('nomor_tank')->lockForUpdate()->pluck('nomor_tank')->toArray();
+                $allNumbers = range($request->range_min, $request->range_max);
+                $availableNumbers = array_diff($allNumbers, $assignedNumbers);
+
+                if (empty($availableNumbers)) throw new \Exception('Semua nomor dalam range tersebut sudah terisi habis!');
+
+                $randomNumber = array_values($availableNumbers)[array_rand($availableNumbers)];
+                $ikan->nomor_tank = $randomNumber;
+                $ikan->save();
+            });
+
+            return response()->json([
+                'success'     => true, 
+                'nomor_tank'  => $ikan->fresh()->nomor_tank,
+                'nama_peserta'=> $ikan->peserta->nama_peserta
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
@@ -144,62 +173,28 @@ class DashboardController extends Controller
 
     public function getListUsers()
     {
-        $users = User::select('id', 'name', 'email', 'role')
-            ->orderBy('name')
-            ->get()
-            ->map(function ($u) {
-                return [
-                    'id'    => $u->id,
-                    'name'  => $u->name,
-                    'email' => $u->email,
-                    'role'  => $u->role ?? ($u->is_admin ? 'admin' : 'user'),
-                ];
-            });
-
+        $users = User::select('id', 'name', 'email', 'role')->orderBy('name')->get()->map(function ($u) {
+            return ['id' => $u->id, 'name' => $u->name, 'email' => $u->email, 'role' => $u->role ?? 'user'];
+        });
         return response()->json($users);
     }
 
-    // PROSES GANTI PASSWORD OLEH ADMIN
     public function updatePasswordUser(Request $request)
     {
-        $request->validate([
-            'user_id'   => 'required|exists:users,id',
-            'new_password' => 'required|min:8',
-        ]);
-
-        $user = \App\Models\User::find($request->user_id);
+        $request->validate(['user_id' => 'required|exists:users,id', 'new_password' => 'required|min:8']);
+        $user = User::find($request->user_id);
         $user->password = \Illuminate\Support\Facades\Hash::make($request->new_password);
         $user->save();
-
-        return response()->json([
-            'success' => true, 
-            'message' => "Password untuk user {$user->name} berhasil diubah!"
-        ]);
+        return response()->json(['success' => true, 'message' => "Password {$user->name} berhasil diubah!"]);
     }
-        // UBAH ROLE USER (ADMIN <-> USER BIASA)
+
     public function toggleRoleUser(Request $request)
     {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-        ]);
-
-        $user = \App\Models\User::find($request->user_id);
-        
-        // Cegah jika admin mencoba menurunkan dirinya sendiri (Opsional, tapi aman)
-        if ($user->id === auth()->id()) {
-            return response()->json(['success' => false, 'message' => 'Anda tidak bisa mengubah role diri sendiri!'], 403);
-        }
-
-        // Toggle status: kalau sekarang true jadi false, kalau false jadi true
+        $request->validate(['user_id' => 'required|exists:users,id']);
+        $user = User::find($request->user_id);
+        if ($user->id === auth()->id()) return response()->json(['success' => false, 'message' => 'Tidak bisa ubah role sendiri!'], 403);
         $user->is_admin = !$user->is_admin;
         $user->save();
-
-        $statusText = $user->is_admin ? 'Admin' : 'User Biasa';
-
-        return response()->json([
-            'success' => true, 
-            'message' => "Role {$user->name} berhasil diubah menjadi {$statusText}.",
-            'new_role' => $user->is_admin
-        ]);
+        return response()->json(['success' => true, 'message' => "Role {$user->name} diubah menjadi " . ($user->is_admin ? 'Admin' : 'User Biasa') . ".", 'new_role' => $user->is_admin]);
     }
 }

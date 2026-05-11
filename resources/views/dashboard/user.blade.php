@@ -41,30 +41,25 @@
         .btn-logout:hover { background: var(--red-500); color: white; border-color: var(--red-500); }
 
         .main-content { flex: 1; padding: 32px; }
-        
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1400px; margin: 0 auto; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; max-width: 1400px; margin: 0 auto; }
 
-        .glass-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(59,130,246,0.08); border-radius: 24px; box-shadow: 0 20px 40px -8px rgba(59,130,246,0.08), 0 0 0 1px rgba(255,255,255,0.8) inset; position: relative; overflow: hidden; animation: cardEntry 0.8s 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+        .glass-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); border: 1px solid rgba(59,130,246,0.08); border-radius: 24px; box-shadow: 0 20px 40px -8px rgba(59,130,246,0.08); position: relative; overflow: hidden; animation: cardEntry 0.8s 0.3s cubic-bezier(0.16,1,0.3,1) both; }
         @keyframes cardEntry { from { opacity:0; transform: translateY(30px) scale(0.97); } to { opacity:1; transform: translateY(0) scale(1); } }
         @keyframes textFadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
         
-        .card-header { padding: 24px 32px 0; }
+        .card-header { padding: 24px 32px 0; display: flex; justify-content: space-between; align-items: flex-start; }
         .card-title { font-size: 18px; font-weight: 800; color: var(--gray-900); }
         .card-subtitle { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
         .card-body { padding: 24px 32px 32px; }
 
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-        .form-grid.full { grid-template-columns: 1fr; }
-        .form-group { display: flex; flex-direction: column; animation: textFadeIn 0.6s 0.4s both; }
+        .form-group { display: flex; flex-direction: column; margin-bottom: 16px; animation: textFadeIn 0.6s 0.4s both; }
         .form-label { font-size: 11px; font-weight: 700; color: var(--gray-600); margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
         .input-wrapper { position: relative; }
         .input-wrapper i.input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--gray-400); pointer-events: none; z-index: 1; transition: color 0.3s; }
         .form-input, .form-select { width: 100%; padding: 11px 14px 11px 38px; border: 1.5px solid var(--gray-200); border-radius: 12px; background: var(--white); font-family: inherit; font-size: 13px; color: var(--gray-800); outline: none; transition: all 0.3s ease; appearance: none; }
         .form-select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
         .form-input:focus, .form-select:focus { border-color: var(--blue-400); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-        .form-input:focus ~ i.input-icon, .form-select:focus ~ i.input-icon { color: var(--blue-500); }
-        .form-input.input-error, .form-select.input-error { border-color: var(--red-500); }
-        .input-error-msg { font-size: 11px; color: var(--red-500); margin-top: 4px; font-weight: 500; display: none; }
+        .form-input:read-only { background: var(--gray-100); color: var(--gray-700); cursor: not-allowed; }
         
         .toggle-group { display: flex; background: var(--gray-100); border-radius: 12px; padding: 4px; border: 1px solid var(--gray-200); }
         .toggle-option { flex: 1; text-align: center; }
@@ -72,52 +67,71 @@
         .toggle-option label { display: block; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 600; color: var(--gray-500); cursor: pointer; transition: all 0.3s ease; }
         .toggle-option input:checked + label { background: var(--white); color: var(--blue-700); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
-        .submit-btn { width: 100%; padding: 12px; border: none; border-radius: 14px; background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-700) 100%); color: var(--white); font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer; transition: all 0.3s cubic-bezier(0.16,1,0.3,1); box-shadow: 0 4px 15px rgba(37,99,235,0.3); margin-top: 8px; animation: textFadeIn 0.6s 0.5s both; }
+        .submit-btn { width: 100%; padding: 12px; border: none; border-radius: 14px; background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-700) 100%); color: var(--white); font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer; transition: all 0.3s cubic-bezier(0.16,1,0.3,1); box-shadow: 0 4px 15px rgba(37,99,235,0.3); margin-top: 8px; }
         .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37,99,235,0.4); }
         .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+        .btn-green { background: linear-gradient(135deg, var(--green-500), var(--green-600)); box-shadow: 0 4px 15px rgba(34,197,94,0.3); }
+        .btn-green:hover { box-shadow: 0 8px 25px rgba(34,197,94,0.4); }
 
-        /* MESIN UNDIAN TANK */
+        .input-error-msg { font-size: 11px; color: var(--red-500); margin-top: 4px; font-weight: 500; display: none; }
+
+        /* MESIN UNDIAN & LIST IKAN */
         .machine-card { background: var(--dark-bg); border: 1px solid rgba(255,255,255,0.05); }
-        .machine-card .card-header { border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .machine-card .card-header { border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px; }
         .machine-card .card-title { color: var(--white); display: flex; align-items: center; gap: 8px; }
         .machine-card .card-title i { color: var(--blue-400); }
         
-        .status-badge { font-size: 10px; font-weight: 700; background: rgba(148,163,184,0.2); color: var(--gray-400); padding: 4px 10px; border-radius: 20px; letter-spacing: 1px; }
+        .status-badge { font-size: 10px; font-weight: 700; background: rgba(148,163,184,0.2); color: var(--gray-400); padding: 4px 10px; border-radius: 20px; letter-spacing: 1px; white-space: nowrap;}
         .status-badge.success { background: rgba(34,197,94,0.2); color: var(--green-500); }
 
         .machine-body { padding: 32px; display: flex; flex-direction: column; align-items: center; }
-        .lcd-screen { width: 100%; background: var(--dark-surface); border-radius: 16px; padding: 30px; margin-bottom: 24px; border: 2px solid rgba(255,255,255,0.05); position: relative; overflow: hidden; text-align: center; }
+        .lcd-screen { width: 100%; background: var(--dark-surface); border-radius: 16px; padding: 24px; margin-bottom: 24px; border: 2px solid rgba(255,255,255,0.05); position: relative; overflow: hidden; text-align: center; }
         .lcd-screen::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 50%); pointer-events: none; }
-        .lcd-label { font-size: 11px; color: var(--gray-500); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+        .lcd-label { font-size: 11px; color: var(--gray-500); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
         .number-display { font-size: 80px; font-weight: 900; color: var(--white); line-height: 1; text-shadow: 0 0 20px rgba(59,130,246,0.5); transition: all 0.1s; font-variant-numeric: tabular-nums; }
         .number-display.rolling { color: var(--blue-400); animation: glitch 0.1s infinite; }
         .number-display.final { color: var(--blue-400); text-shadow: 0 0 30px rgba(59,130,246,0.8); transform: scale(1.1); }
         @keyframes glitch { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
 
-        .btn-acak { width: 100%; padding: 14px; border: none; border-radius: 14px; background: linear-gradient(135deg, var(--blue-600), var(--blue-800)); color: white; font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 20px rgba(37,99,235,0.4); letter-spacing: 0.5px; }
-        .btn-acak:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(37,99,235,0.6); }
-        .btn-acak:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+        .ikan-list-wrapper { width: 100%; max-height: 280px; overflow-y: auto; padding-right: 5px; }
+        .ikan-list-wrapper::-webkit-scrollbar { width: 4px; }
+        .ikan-list-wrapper::-webkit-scrollbar-thumb { background: var(--gray-600); border-radius: 10px; }
+        
+        .ikan-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; transition: all 0.2s; }
+        .ikan-item:hover { background: rgba(255,255,255,0.06); }
+        .ikan-item-info h4 { font-size: 12px; font-weight: 700; color: var(--white); }
+        .ikan-item-info p { font-size: 10px; color: var(--gray-400); margin-top: 2px; }
+        .ikan-item-right { display: flex; align-items: center; gap: 12px; }
+        .tank-num { font-size: 16px; font-weight: 800; min-width: 30px; text-align: right; }
+        .tank-num.empty { color: var(--gray-600); }
+        .tank-num.filled { color: var(--blue-400); }
+        
+        .btn-acak-kecil { background: var(--blue-600); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px; }
+        .btn-acak-kecil:hover { background: var(--blue-700); transform: scale(1.05); }
+        .btn-acak-kecil:disabled { background: var(--gray-600); cursor: not-allowed; transform: none; }
 
-        .machine-error { color: var(--red-500); font-size: 12px; margin-top: 12px; font-weight: 600; display: none; text-align: center; width: 100%; }
-        .machine-success { color: var(--green-500); font-size: 12px; margin-top: 12px; font-weight: 600; display: none; text-align: center; width: 100%; }
+        .ikan-empty-state { text-align: center; color: var(--gray-500); font-size: 13px; padding: 20px; width: 100%; }
 
-        /* Modal */
+        /* Modals */
         .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(6px); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
         .modal-overlay.show { opacity: 1; pointer-events: all; }
-        .modal-card { background: var(--white); border-radius: 24px; padding: 48px 40px; text-align: center; max-width: 380px; width: 90%; box-shadow: 0 25px 60px rgba(0,0,0,0.2); transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.16,1,0.3,1); }
+        .modal-card { background: var(--white); border-radius: 24px; padding: 40px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 25px 60px rgba(0,0,0,0.2); transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.16,1,0.3,1); }
         .modal-overlay.show .modal-card { transform: scale(1); }
-        .modal-icon { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--green-500), var(--green-600)); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; box-shadow: 0 8px 24px rgba(34,197,94,0.3); }
-        .modal-icon i { font-size: 36px; color: white; }
+        .modal-icon { width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+        .modal-icon i { font-size: 32px; color: white; }
+        .modal-icon.blue { background: linear-gradient(135deg, var(--blue-500), var(--blue-700)); box-shadow: 0 8px 24px rgba(37,99,235,0.3); }
+        .modal-icon.green { background: linear-gradient(135deg, var(--green-500), var(--green-600)); box-shadow: 0 8px 24px rgba(34,197,94,0.3); }
         .modal-title { font-size: 20px; font-weight: 800; color: var(--gray-900); margin-bottom: 8px; }
-        .modal-desc { font-size: 13.5px; color: var(--gray-500); margin-bottom: 28px; line-height: 1.6; }
-        .modal-close-btn { padding: 12px 28px; border: none; border-radius: 14px; background: var(--gray-100); color: var(--gray-700); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .modal-desc { font-size: 13.5px; color: var(--gray-500); margin-bottom: 24px; line-height: 1.6; }
+        .modal-form { text-align: left; margin-bottom: 20px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+        .modal-close-btn { padding: 12px 24px; border: none; border-radius: 14px; background: var(--gray-100); color: var(--gray-700); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .modal-close-btn:hover { background: var(--gray-200); }
 
         @media (max-width: 1024px) { .dashboard-grid { grid-template-columns: 1fr; } }
         @media (max-width: 640px) {
             .navbar { padding: 16px; }
             .main-content { padding: 16px; }
-            .form-grid { grid-template-columns: 1fr; }
             .card-body, .card-header { padding-left: 20px; padding-right: 20px; }
             .number-display { font-size: 60px; }
         }
@@ -151,136 +165,159 @@
         <main class="main-content">
             <div class="dashboard-grid">
                 
-                <!-- KOLOM KIRI: FORM REGISTRASI USER -->
+                <!-- KOLOM KIRI: PROFIL PESERTA -->
                 <div class="glass-card">
                     <div class="card-header">
                         <div>
-                            <h2 class="card-title"><i class="fas fa-clipboard-list" style="color:var(--blue-500); margin-right:8px;"></i>Registrasi Saya</h2>
-                            <p class="card-subtitle">Daftarkan diri Anda untuk mengikuti kontes.</p>
+                            <h2 class="card-title"><i class="fas fa-user-circle" style="color:var(--blue-500); margin-right:8px;"></i>Profil Saya</h2>
+                            <p class="card-subtitle">Lengkapi data diri Anda terlebih dahulu.</p>
                         </div>
                     </div>
                     <div class="card-body">
                         <form id="regForm">
                             @csrf
-                            <div class="form-grid full" style="margin-top:16px;">
-                                <div class="form-group">
-                                    <label class="form-label">Nama Peserta</label>
-                                    <div class="input-wrapper">
-                                        <input type="text" name="nama_peserta" id="namaPeserta" class="form-input" placeholder="Masukkan nama lengkap" value="{{ $user->name }}" required>
-                                        <i class="fas fa-user input-icon"></i>
-                                    </div>
-                                    <div class="input-error-msg" id="errNama"></div>
+                            <div class="form-group">
+                                <label class="form-label">Nama Peserta</label>
+                                <div class="input-wrapper">
+                                    <input type="text" name="nama_peserta" id="namaPeserta" class="form-input" value="{{ $user->name }}" readonly>
+                                    <i class="fas fa-lock input-icon" style="font-size:12px;"></i>
                                 </div>
                             </div>
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label class="form-label">Kategori</label>
-                                    <div class="input-wrapper">
-                                        <select name="kategori" class="form-select" required>
-                                            <option value="" disabled selected>Pilih Kategori</option>
-                                            <option value="Cencu">Cencu</option><option value="Chginwa">Chginwa</option><option value="Freemarking">Freemarking</option><option value="Goldenbase">Goldenbase</option><option value="Klasik">Klasik</option><option value="Bonsai">Bonsai</option><option value="Jumbo">Jumbo</option>
-                                        </select>
-                                        <i class="fas fa-fish input-icon"></i>
+                            <div class="form-group">
+                                <label class="form-label">Jenis Keanggotaan</label>
+                                <div class="toggle-group">
+                                    <div class="toggle-option">
+                                        <input type="radio" name="jenis_keanggotaan" id="perorangan" value="perorangan" {{ !$pesertaSaya || $pesertaSaya->jenis_keanggotaan == 'perorangan' ? 'checked' : '' }}>
+                                        <label for="perorangan"><i class="fas fa-user" style="margin-right:4px"></i>Perorangan</label>
                                     </div>
-                                    <div class="input-error-msg" id="errKategori"></div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Kelas</label>
-                                    <div class="input-wrapper">
-                                        <select name="kelas" class="form-select" required>
-                                            <option value="" disabled selected>Pilih Kelas</option>
-                                            <option value="A">Kelas A</option><option value="B">Kelas B</option><option value="C">Kelas C</option><option value="D">Kelas D</option><option value="E">Kelas E</option>
-                                        </select>
-                                        <i class="fas fa-layer-group input-icon"></i>
-                                    </div>
-                                    <div class="input-error-msg" id="errKelas"></div>
-                                </div>
-                            </div>
-                            <div class="form-grid full">
-                                <div class="form-group">
-                                    <label class="form-label">Jenis Keanggotaan</label>
-                                    <div class="toggle-group">
-                                        <div class="toggle-option">
-                                            <input type="radio" name="jenis_keanggotaan" id="perorangan" value="perorangan" checked>
-                                            <label for="perorangan"><i class="fas fa-user" style="margin-right:4px"></i>Perorangan</label>
-                                        </div>
-                                        <div class="toggle-option">
-                                            <input type="radio" name="jenis_keanggotaan" id="team" value="team">
-                                            <label for="team"><i class="fas fa-users" style="margin-right:4px"></i>Team / Club</label>
-                                        </div>
+                                    <div class="toggle-option">
+                                        <input type="radio" name="jenis_keanggotaan" id="team" value="team" {{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'checked' : '' }}>
+                                        <label for="team"><i class="fas fa-users" style="margin-right:4px"></i>Team / Club</label>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-grid full">
-                                <div class="form-group">
-                                    <label class="form-label" id="labelDetail">Kota Asal</label>
-                                    <div class="input-wrapper">
-                                        <input type="text" name="detail_anggota" id="inputDetail" class="form-input" placeholder="Contoh: Jakarta" required>
-                                        <i class="fas fa-city input-icon" id="iconDetail"></i>
-                                    </div>
-                                    <div class="input-error-msg" id="errDetail"></div>
+                            <div class="form-group">
+                                <label class="form-label" id="labelDetail">{{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'Nama Team / Club' : 'Kota Asal' }}</label>
+                                <div class="input-wrapper">
+                                    <input type="text" name="detail_anggota" id="inputDetail" class="form-input" placeholder="Contoh: Jakarta" value="{{ $pesertaSaya->detail_anggota ?? '' }}" required>
+                                    <i class="fas {{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'fa-shield-halved' : 'fa-city' }} input-icon" id="iconDetail"></i>
                                 </div>
+                                <div class="input-error-msg" id="errDetail"></div>
                             </div>
-                            <button type="submit" class="submit-btn" id="submitBtn"><i class="fas fa-paper-plane" style="margin-right:8px;"></i>DAFTARKAN DIRI SAYA</button>
+                            
+                            <button type="submit" class="submit-btn" id="submitBtn">
+                                <i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN PROFIL
+                            </button>
                         </form>
+                        
+                        <button class="submit-btn btn-green" style="margin-top: 12px;" onclick="document.getElementById('modalIkan').classList.add('show')">
+                            <i class="fas fa-plus" style="margin-right:8px;"></i>MASUKKAN DATA IKAN
+                        </button>
                     </div>
                 </div>
 
-                <!-- KOLOM KANAN: MESIN UNDIAN USER -->
+                <!-- KOLOM KANAN: MESIN UNDIAN & LIST IKAN -->
                 <div class="glass-card machine-card">
                     <div class="card-header">
                         <h2 class="card-title"><i class="fas fa-dice"></i>Undian Tank Saya</h2>
-                        
-                        {{-- LOGIKA: Badge berubah sesuai status --}}
-                        @if($pesertaSaya)
-                            <div class="status-badge success">SUDAH TERDAFTAR</div>
-                        @else
-                            <div class="status-badge" id="statusBadge">MENUNGGU UNDIAN</div>
-                        @endif
+                        <div class="status-badge {{ $ikansSaya->count() > 0 ? 'success' : '' }}">
+                            {{ $ikansSaya->count() > 0 ? $ikansSaya->whereNotNull('nomor_tank')->count() . '/' . $ikansSaya->count() . ' DIUNDI' : 'MENUNGGU IKAN' }}
+                        </div>
                     </div>
                     
                     <div class="machine-body">
                         <div class="lcd-screen">
-                            <div class="lcd-label">Nomor Aquarium Anda</div>
-                            
-                            {{-- LOGIKA: Jika sudah ada nomor, tampilkan langsung. Jika belum, tampilkan "--" --}}
-                            @if($pesertaSaya)
-                                <div class="number-display final">{{ $pesertaSaya->nomor_tank }}</div>
-                            @else
-                                <div class="number-display" id="numberDisplay">--</div>
-                            @endif
+                            <div class="lcd-label">Nomor Aquarium</div>
+                            <div class="number-display" id="numberDisplay">--</div>
+                            <div style="font-size:11px; color:var(--gray-500); margin-top:8px;" id="lcdInfo">Pilih ikan untuk diundi</div>
                         </div>
 
-                        {{-- LOGIKA: Jika sudah ada nomor, tampilkan pesan sukses. Jika belum, tampilkan error (untuk JS nanti) --}}
-                        @if($pesertaSaya)
-                            <div class="machine-success" style="display: block;">
-                                <i class="fas fa-circle-check" style="margin-right:4px;"></i> 
-                                Anda terdaftar pada Tank Nomor <b>{{ $pesertaSaya->nomor_tank }}</b> ({{ $pesertaSaya->kategori }} - Kelas {{ $pesertaSaya->kelas }})
-                            </div>
-                        @else
-                            <div class="machine-error" id="machineError"></div>
-                            <div class="machine-success" id="machineSuccess"></div>
-                            
-                            {{-- Tombol hanya muncul jika BELUM dapat nomor --}}
-                            <button class="btn-acak" id="btnAcak">
-                                <i class="fas fa-shuffle"></i> ACAK NOMOR SAYA
-                            </button>
-                        @endif
+                        <div class="ikan-list-wrapper" id="ikanListWrapper">
+                            @if($ikansSaya->count() > 0)
+                                <div class="ikan-list" id="ikanListContainer">
+                                    @foreach($ikansSaya as $index => $ikan)
+                                        <div class="ikan-item" id="ikan-item-{{ $ikan->id }}">
+                                            <div class="ikan-item-info">
+                                                <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #{{ $loop->iteration }}</h4>
+                                                <p>{{ $ikan->kategori }} - Kelas {{ $ikan->kelas }}</p>
+                                            </div>
+                                            <div class="ikan-item-right">
+                                                <div class="tank-num {{ $ikan->nomor_tank ? 'filled' : 'empty' }}" id="tank-num-{{ $ikan->id }}">
+                                                    {{ $ikan->nomor_tank ?? '--' }}
+                                                </div>
+                                                @if(!$ikan->nomor_tank)
+                                                    <button class="btn-acak-kecil" onclick="mulaiAcak({{ $ikan->id }}, this)">
+                                                        <i class="fas fa-shuffle"></i> ACAK
+                                                    </button>
+                                                @else
+                                                    <span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="ikan-empty-state">
+                                    <i class="fas fa-fish" style="font-size:24px; margin-bottom:8px; display:block; opacity:0.5;"></i>
+                                    Belum ada ikan yang didaftarkan.<br>Silakan klik tombol "Masukkan Data Ikan".
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
+            </div>
+        </main>
+    </div>
 
-    <!-- Modal Sukses Registrasi -->
+    <!-- MODAL TAMBAH IKAN -->
+    <div class="modal-overlay" id="modalIkan">
+        <div class="modal-card">
+            <div class="modal-icon blue"><i class="fas fa-fish"></i></div>
+            <h2 class="modal-title">Masukkan Data Ikan</h2>
+            <p class="modal-desc">Isi kategori dan kelas untuk ikan yang akan dilombakan.</p>
+            
+            <form id="formIkan">
+                @csrf
+                <div class="modal-form">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Kategori</label>
+                        <div class="input-wrapper">
+                            <select name="kategori" class="form-select" required style="padding-left:14px;">
+                                <option value="" disabled selected>Pilih Kategori</option>
+                                <option value="Cencu">Cencu</option><option value="Chginwa">Chginwa</option><option value="Freemarking">Freemarking</option><option value="Goldenbase">Goldenbase</option><option value="Klasik">Klasik</option><option value="Bonsai">Bonsai</option><option value="Jumbo">Jumbo</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Kelas</label>
+                        <div class="input-wrapper">
+                            <select name="kelas" class="form-select" required style="padding-left:14px;">
+                                <option value="" disabled selected>Pilih Kelas</option>
+                                <option value="A">Kelas A</option><option value="B">Kelas B</option><option value="C">Kelas C</option><option value="D">Kelas D</option><option value="E">Kelas E</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="modal-close-btn" onclick="document.getElementById('modalIkan').classList.remove('show')">Batal</button>
+                    <button type="submit" class="submit-btn" style="width:auto; padding: 12px 28px; margin-top:0; font-size:13px;">Simpan Ikan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL SUKSES PROFIL -->
     <div class="modal-overlay" id="successModal">
         <div class="modal-card">
-            <div class="modal-icon"><i class="fas fa-check"></i></div>
-            <h2 class="modal-title">Berhasil Terdaftar!</h2>
-            <p class="modal-desc">Data Anda sudah masuk. Sekarang silakan tekan tombol di sebelah kanan untuk mengacak nomor tank.</p>
+            <div class="modal-icon green"><i class="fas fa-check"></i></div>
+            <h2 class="modal-title">Berhasil Disimpan!</h2>
+            <p class="modal-desc">Profil Anda sudah diperbarui. Sekarang silakan masukkan data ikan yang akan dilombakan.</p>
             <button class="modal-close-btn" onclick="document.getElementById('successModal').classList.remove('show')">Mengerti</button>
         </div>
     </div>
 
     <script>
-        // --- LOGIC REGISTRASI ---
+        // --- LOGIC PROFIL ---
         const radioPerorangan = document.getElementById('perorangan');
         const radioTeam = document.getElementById('team');
         const labelDetail = document.getElementById('labelDetail');
@@ -297,53 +334,95 @@
                 inputDetail.placeholder = 'Contoh: Jakarta';
                 iconDetail.classList.replace('fa-shield-halved', 'fa-city');
             }
-            inputDetail.value = '';
         }
         radioPerorangan.addEventListener('change', updateToggleUI);
         radioTeam.addEventListener('change', updateToggleUI);
-
-        function clearErrors() { document.querySelectorAll('.input-error-msg').forEach(el => el.style.display = 'none'); document.querySelectorAll('.form-input, .form-select').forEach(el => el.classList.remove('input-error')); }
-        function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; el.previousElementSibling.querySelector('input, select').classList.add('input-error'); }
 
         const regForm = document.getElementById('regForm');
         const submitBtn = document.getElementById('submitBtn');
 
         regForm.addEventListener('submit', function(e) {
-            e.preventDefault(); clearErrors();
+            e.preventDefault();
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>MEMPROSES...';
             
-            // CSRF TOKEN DITAMBAHKAN SECARA MANUAL
             const formData = new FormData(regForm);
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
 
             fetch('{{ route("store.registrasi") }}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
             .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
             .then(data => { 
-                if (data.success) { 
-                    regForm.reset(); 
-                    updateToggleUI(); 
-                    document.getElementById('namaPeserta').value = "{{ $user->name }}"; // Isi kembali nama user
-                    document.getElementById('successModal').classList.add('show'); 
-                } 
+                if (data.success) document.getElementById('successModal').classList.add('show'); 
             })
-            .catch(err => { if (err.errors) { if (err.errors.nama_peserta) showError('errNama', err.errors.nama_peserta[0]); if (err.errors.kategori) showError('errKategori', err.errors.kategori[0]); if (err.errors.kelas) showError('errKelas', err.errors.kelas[0]); if (err.errors.detail_anggota) showError('errDetail', err.errors.detail_anggota[0]); } else { alert('Terjadi kesalahan pada server.'); } })
-            .finally(() => { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>DAFTARKAN DIRI SAYA'; });
+            .catch(err => { 
+                const errEl = document.getElementById('errDetail');
+                if (err.errors && err.errors.detail_anggota) {
+                    errEl.textContent = err.errors.detail_anggota[0]; errEl.style.display = 'block'; 
+                } else { alert('Terjadi kesalahan pada server.'); }
+            })
+            .finally(() => { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN PROFIL'; });
         });
 
-        // --- LOGIC MESIN UNDIAN USER ---
-        const btnAcak = document.getElementById('btnAcak');
-        const numberDisplay = document.getElementById('numberDisplay');
-        const statusBadge = document.getElementById('statusBadge');
-        const machineError = document.getElementById('machineError');
-        const machineSuccess = document.getElementById('machineSuccess');
+        // --- LOGIC TAMBAH IKAN ---
+        const formIkan = document.getElementById('formIkan');
+        formIkan.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btnSubmit = formIkan.querySelector('.submit-btn');
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
 
-        btnAcak.addEventListener('click', function() {
-            machineError.style.display = 'none';
-            machineSuccess.style.display = 'none';
-            btnAcak.disabled = true;
-            statusBadge.textContent = 'ROLLING...';
-            statusBadge.className = 'status-badge';
+            const formData = new FormData(formIkan);
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+            fetch('{{ route("store.ikan") }}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
+            .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('modalIkan').classList.remove('show');
+                    formIkan.reset();
+                    
+                    // Tambahkan ke list tanpa reload
+                    let listContainer = document.getElementById('ikanListContainer');
+                    let emptyState = document.querySelector('.ikan-empty-state');
+                    
+                    if(emptyState) emptyState.remove();
+                    if(!listContainer) {
+                        listContainer = document.createElement('div');
+                        listContainer.className = 'ikan-list';
+                        listContainer.id = 'ikanListContainer';
+                        document.getElementById('ikanListWrapper').appendChild(listContainer);
+                    }
+                    
+                    const currentCount = listContainer.children.length;
+                    const newEl = document.createElement('div');
+                    newEl.className = 'ikan-item';
+                    newEl.id = `ikan-item-${data.ikan.id}`;
+                    newEl.innerHTML = `
+                        <div class="ikan-item-info">
+                            <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #${currentCount + 1}</h4>
+                            <p>${data.ikan.kategori} - Kelas ${data.ikan.kelas}</p>
+                        </div>
+                        <div class="ikan-item-right">
+                            <div class="tank-num empty" id="tank-num-${data.ikan.id}">--</div>
+                            <button class="btn-acak-kecil" onclick="mulaiAcak(${data.ikan.id}, this)">
+                                <i class="fas fa-shuffle"></i> ACAK
+                            </button>
+                        </div>`;
+                    listContainer.prepend(newEl);
+                }
+            })
+            .catch(err => { alert(err.message || 'Gagal menambahkan ikan.'); })
+            .finally(() => { btnSubmit.disabled = false; btnSubmit.innerHTML = 'Simpan Ikan'; });
+        });
+
+        // --- LOGIC MESIN UNDIAN PER IKAN ---
+        const numberDisplay = document.getElementById('numberDisplay');
+        const lcdInfo = document.getElementById('lcdInfo');
+
+        function mulaiAcak(ikanId, btnElement) {
+            btnElement.disabled = true;
+            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            lcdInfo.textContent = 'Sedang mengundi...';
             numberDisplay.classList.add('rolling');
             numberDisplay.classList.remove('final');
 
@@ -356,9 +435,9 @@
                 if (rollCount >= maxRolls) {
                     clearInterval(rollInterval);
                     
-                    // CSRF TOKEN DITAMBAHKAN SECARA MANUAL
                     const formData = new FormData();
                     formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+                    formData.append('ikan_id', ikanId);
 
                     fetch('{{ route("api.acak.tank.user") }}', {
                         method: 'POST',
@@ -371,16 +450,15 @@
                             numberDisplay.textContent = data.nomor_tank;
                             numberDisplay.classList.remove('rolling');
                             numberDisplay.classList.add('final');
-                            statusBadge.textContent = 'SUDAH TERDAFTAR';
-                            statusBadge.classList.add('success');
-                            machineSuccess.textContent = 'Selamat! Anda mendapat Tank Nomor ' + data.nomor_tank;
-                            machineSuccess.style.display = 'block';
+                            lcdInfo.textContent = 'Berhasil!';
                             
-                            // Disable tombol jika sudah mendapat nomor
-                            btnAcak.disabled = true;
-                            btnAcak.innerHTML = '<i class="fas fa-check-circle"></i> ANDA SUDAH MENDAPAT NOMOR';
-                            btnAcak.style.background = 'var(--green-500)';
-                            btnAcak.style.boxShadow = '0 4px 20px rgba(34,197,94,0.4)';
+                            // Update UI List Ikan
+                            const tankNumEl = document.getElementById(`tank-num-${ikanId}`);
+                            tankNumEl.textContent = data.nomor_tank;
+                            tankNumEl.classList.remove('empty');
+                            tankNumEl.classList.add('filled');
+                            
+                            btnElement.outerHTML = '<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>';
                         } else {
                             throw new Error(data.message);
                         }
@@ -388,14 +466,13 @@
                     .catch(err => {
                         numberDisplay.textContent = '--';
                         numberDisplay.classList.remove('rolling');
-                        statusBadge.textContent = 'GAGAL';
-                        machineError.textContent = err.message;
-                        machineError.style.display = 'block';
-                        btnAcak.disabled = false;
+                        lcdInfo.textContent = 'Gagal: ' + err.message;
+                        btnElement.disabled = false;
+                        btnElement.innerHTML = '<i class="fas fa-shuffle"></i> ACAK';
                     });
                 }
             }, 60);
-        });
+        }
     </script>
 </body>
 </html>

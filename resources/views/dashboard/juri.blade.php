@@ -223,14 +223,26 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="form-row">
+                <!-- GANTI DENGAN: -->
+                <div class="form-row" style="grid-template-columns: 2fr 1fr 0.8fr 1fr 1.5fr;">
                     <div class="form-group">
                         <label class="form-label">Nomor Tank (Ikan)</label>
-                        <select id="selectTank" class="form-control"><option value="" disabled selected>-- Memuat Data --</option></select>
+                        <select id="selectTank" class="form-control"><option value="" disabled selected>-- Pilih Ikan Berdasarkan Tank --</option></select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Kelas</label>
-                        <select id="selectKelas" class="form-control"><option>Kelas A</option><option>Kelas B</option><option>Kelas C</option><option>Kelas D</option><option>Kelas E</option></select>
+                        <label class="form-label">Kelas Penilaian</label>
+                        <select id="selectKelas" class="form-control">
+                            <option value="" disabled selected>- Pilih -</option>
+                            <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Kategori</label>
+                        <input type="text" id="inputKategori" class="form-control" value="- Pilih Ikan -" disabled style="font-weight: 700; text-transform: uppercase;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Kelas Asli</label>
+                        <input type="text" id="inputKelas" class="form-control" value="- Pilih Ikan -" disabled style="font-weight: 700;">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Identitas Juri</label>
@@ -388,11 +400,7 @@ function changeKat(kat) {
 
 function renderFormInputs(kat) {
     if(!formFields[kat]) return;
-    
-    // FIX: Pastikan object untuk kategori ini selalu ada
-    if(!memoryScores[kat]) { 
-        memoryScores[kat] = {}; 
-    }
+    if(!memoryScores[kat]) { memoryScores[kat] = {}; }
     
     let html = '';
     formFields[kat].forEach(function(field) {
@@ -404,11 +412,7 @@ function renderFormInputs(kat) {
 
 function updateMemory() {
     if(!formFields[currentTab]) return;
-    
-    // FIX: Pastikan object untuk kategori ini selalu ada
-    if(!memoryScores[currentTab]) { 
-        memoryScores[currentTab] = {}; 
-    }
+    if(!memoryScores[currentTab]) { memoryScores[currentTab] = {}; }
     
     formFields[currentTab].forEach(function(field) {
         const el = document.getElementById('input-' + field.id);
@@ -422,11 +426,7 @@ function updateMemory() {
 
 function saveCurrentTabToMemory() {
     if(!formFields[currentTab]) return;
-    
-    // FIX: Pastikan object untuk kategori ini selalu ada
-    if(!memoryScores[currentTab]) { 
-        memoryScores[currentTab] = {}; 
-    }
+    if(!memoryScores[currentTab]) { memoryScores[currentTab] = {}; }
     
     formFields[currentTab].forEach(function(field) {
         const el = document.getElementById('input-' + field.id);
@@ -438,11 +438,7 @@ function updateFilledBadges() {
     Object.keys(formFields).forEach(function(kat) {
         const btn = document.getElementById('btn-' + kat);
         if(!btn) return;
-        
-        // FIX: Pastikan object untuk kategori ini selalu ada
-        if(!memoryScores[kat]) { 
-            memoryScores[kat] = {}; 
-        }
+        if(!memoryScores[kat]) { memoryScores[kat] = {}; }
         
         let isFilled = true;
         formFields[kat].forEach(function(f) { 
@@ -463,14 +459,10 @@ function submitAllScores() {
     let grandTotal = 0;
 
     Object.keys(formFields).forEach(function(kat) {
-        
-        // FIX: Pastikan object untuk kategori ini selalu ada
-        if(!memoryScores[kat]) { 
-            memoryScores[kat] = {}; 
-        }
+        if(!memoryScores[kat]) { memoryScores[kat] = {}; }
 
         formFields[kat].forEach(function(field) {
-            const val = memoryScores[kat][field.id]; // <-- Baris ini tidak akan error lagi
+            const val = memoryScores[kat][field.id];
             const namaKat = kat.charAt(0).toUpperCase() + kat.slice(1);
             
             if(val === "" || val === null || val === undefined) {
@@ -491,13 +483,23 @@ function submitAllScores() {
     const btn = document.getElementById('btnSaveAll');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> MEMPROSES...';
 
+    // Cegah error jika elemen tidak ditemukan
+    const dropdownKelas = document.getElementById('selectKelas');
+    const elKelasAsli = document.getElementById('inputKelasAsli');
+    
+    let kelasAkhir = 'A'; // Nilai default darurat
+    if (dropdownKelas && dropdownKelas.value) {
+        kelasAkhir = dropdownKelas.value;
+    } else if (elKelasAsli && elKelasAsli.value) {
+        kelasAkhir = elKelasAsli.value.replace('Kelas ', '');
+    }
+
     const payload = {
         _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        peserta_id: document.getElementById('selectTank').value,
-        kelas: document.getElementById('selectKelas').value,
+        ikan_id: document.getElementById('selectTank').value,
+        kelas: kelasAkhir, 
         all_scores: memoryScores 
     };
-
     fetch('/api/juri/simpan-nilai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -534,32 +536,69 @@ function loadJuriData() {
         sel.innerHTML = '<option value="" disabled selected>-- Pilih Ikan Berdasarkan Tank --</option>';
         sel.disabled = false; 
         
-        let dataLamaPerTank = {};
+        // 1. Simpan data lama yang sudah di-submit berdasarkan ikan_id
+        let dataLamaPerIkan = {};
         if(data.my_scores && data.my_scores.length > 0) {
             data.my_scores.forEach(function(s) {
-                dataLamaPerTank[s.peserta_id] = { kelas: s.kelas, nilai: s.nilai_detail };
+                // Pastikan kelas yang disimpan juri yang diambil
+                dataLamaPerIkan[s.ikan_id] = { 
+                    kelas: s.kelas, // Ini adalah kelas yang dipilih juri saat submit
+                    nilai: s.nilai_detail 
+                };
             });
         }
 
+        // 2. Isi Dropdown Tank
         data.available_tanks.forEach(function(t) {
             const opt = document.createElement('option');
-            opt.value = t.id;
-            opt.textContent = 'Tank ' + t.nomor_tank + ' - ' + t.nama_peserta + ' (' + t.kategori + ')';
+            opt.value = t.id; 
+            opt.setAttribute('data-kategori', t.kategori); 
+            opt.setAttribute('data-kelas', t.kelas); // Ini kelas asli dari user
+            opt.textContent = 'Tank ' + t.nomor_tank + ' - ' + t.peserta.nama_peserta;
             sel.appendChild(opt);
         });
 
+        // 3. Event Jika Dropdown Tank Diganti
         sel.onchange = function() {
             const selectedId = this.value;
-            const dataLama = dataLamaPerTank[selectedId];
+            const selectedOpt = this.options[this.selectedIndex];
+            
+            const elKategori = document.getElementById('inputKategori');
+            const elKelasAsli = document.getElementById('inputKelas');
+            const dropdownKelas = document.getElementById('selectKelas');
+            
+            // Set Kategori
+            if(elKategori) elKategori.value = selectedOpt.getAttribute('data-kategori');
+            
+            // Set Dropdown Kelas Penilaian (Default mengikuti kelas asli user)
+            if(dropdownKelas) {
+                dropdownKelas.value = selectedOpt.getAttribute('data-kelas') || '';
+                if(dropdownKelas.value === "") dropdownKelas.selectedIndex = 1;
+            }
+
+            const dataLama = dataLamaPerIkan[selectedId];
             const btn = document.getElementById('btnSaveAll');
 
             if(dataLama) {
                 memoryScores = JSON.parse(JSON.stringify(dataLama.nilai));
-                document.getElementById('selectKelas').value = dataLama.kelas;
+                
+                // LOGIKA PENTING: Jika sudah pernah disubmit, GANTI kelas asli dan dropdown 
+                // dengan kelas yang sudah disimpan juri sebelumnya
+                if(dataLama.kelas) {
+                    if(dropdownKelas) dropdownKelas.value = dataLama.kelas;
+                    if(elKelasAsli) elKelasAsli.value = 'Kelas ' + dataLama.kelas;
+                }
+                
                 btn.innerHTML = '<i class="fas fa-pen-to-square"></i> PERBAUI NILAI';
                 isEditing = true;
             } else {
                 memoryScores = { overall: {}, head: {}, face: {}, body: {}, marking: {}, pearl: {}, color: {}, finnage: {} };
+                
+                // Jika BELUM pernah disubmit, Kelas Asli tetap menampilkan kelas bawaan user
+                if(elKelasAsli) {
+                    elKelasAsli.value = selectedOpt.getAttribute('data-kelas') ? 'Kelas ' + selectedOpt.getAttribute('data-kelas') : '- Pilih Ikan -';
+                }
+                
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> SIMPAN SELURUH NILAI';
                 isEditing = false;
             }
@@ -567,6 +606,7 @@ function loadJuriData() {
             updateFilledBadges();
         };
 
+        // 4. Isi Tabel Riwayat Penilaian
         const tbody = document.getElementById('tbody-scores');
         tbody.innerHTML = '';
         detailDataStorage = {};
@@ -577,9 +617,25 @@ function loadJuriData() {
         }
 
         data.my_scores.forEach(function(s) {
-            detailDataStorage[s.peserta_id] = { tank: s.peserta.nomor_tank, nama: s.peserta.nama_peserta, nilai: s.nilai_detail, total: s.total_nilai };
+            detailDataStorage[s.ikan_id] = { 
+                tank: s.ikan.nomor_tank, 
+                nama: s.ikan.peserta.nama_peserta, 
+                kategori: s.ikan.kategori, 
+                nilai: s.nilai_detail, 
+                total: s.total_nilai 
+            };
+            
             const tr = document.createElement('tr');
-            tr.innerHTML = '<td style="font-weight:700; color:var(--primary);">Tank ' + s.peserta.nomor_tank + '</td><td>' + s.peserta.nama_peserta + '</td><td>Kelas ' + s.kelas + '</td><td style="font-weight:800; font-size:15px;">' + s.total_nilai + '</td><td><span class="badge-success">SUBMITTED</span></td><td><button class="btn-view" onclick="showDetail(' + s.peserta_id + ')"><i class="fas fa-eye"></i> Lihat Detail</button></td>';
+            
+            // PENTING: Kolom kelas di riwayat mengambil s.kelas (kelas yang dipilih juri saat submit)
+            tr.innerHTML = 
+                '<td style="font-weight:700; color:var(--primary);">Tank ' + s.ikan.nomor_tank + ' <span style="font-size:10px;color:var(--text-light);">(' + s.ikan.kategori + ')</span></td>' +
+                '<td>' + s.ikan.peserta.nama_peserta + '</td>' +
+                '<td>Kelas ' + s.kelas + '</td>' + // <-- INI YANG MEMPERBAIKI RIWAYAT
+                '<td style="font-weight:800; font-size:15px;">' + s.total_nilai + '</td>' +
+                '<td><span class="badge-success">SUBMITTED</span></td>' +
+                '<td><button class="btn-view" onclick="showDetail(' + s.ikan_id + ')"><i class="fas fa-eye"></i> Lihat Detail</button></td>';
+                
             tbody.appendChild(tr);
         });
     })
@@ -592,7 +648,7 @@ function loadJuriData() {
 function showDetail(id) {
     const data = detailDataStorage[id];
     if(!data) return;
-    document.getElementById('modalTitle').innerText = 'Detail Nilai: Tank ' + data.tank + ' - ' + data.nama;
+    document.getElementById('modalTitle').innerText = 'Detail Nilai: Tank ' + data.tank + ' - ' + data.nama + ' (' + data.kategori + ')';
     
     let html = '<table class="detail-table"><thead><tr><th style="width:25%;">KOMPONEN</th><th style="width:15%;">SKALA</th><th style="text-align:center; width:15%;">NILAI</th></tr></thead><tbody>';
     let grandTotal = 0;

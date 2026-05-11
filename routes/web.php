@@ -21,6 +21,7 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('aut
    API REGISTRASI & UNDIAN (DashboardController)
    ═══════════════════════════════════════════ */
 Route::post('/api/registrasi-peserta', [DashboardController::class, 'storePeserta'])->middleware('auth')->name('store.registrasi');
+Route::post('/api/tambah-ikan', [DashboardController::class, 'storeIkan'])->middleware('auth')->name('store.ikan');
 Route::get('/api/peserta-belum-tidak', [DashboardController::class, 'getPesertaBelumDapatTank'])->middleware('auth')->name('api.peserta.belum.tank');
 Route::post('/api/acak-nomor-tank-admin', [DashboardController::class, 'acakNomorTankAdmin'])->middleware('auth')->name('api.acak.tank.admin');
 Route::post('/api/acak-nomor-tank-user', [DashboardController::class, 'acakNomorTankUser'])->middleware('auth')->name('api.acak.tank.user');
@@ -29,6 +30,8 @@ Route::post('/api/acak-nomor-tank-user', [DashboardController::class, 'acakNomor
    KELOLA USER (Hanya Admin)
    ═══════════════════════════════════════════ */
 Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/api/admin/list-pesertas', [AdminDashboardController::class, 'getListPesertas'])->name('admin.list.pesertas');
+    Route::post('/api/admin/tambah-ikan', [AdminDashboardController::class, 'storeIkanAdmin'])->name('admin.tambah.ikan');
     Route::get('/api/list-users', [DashboardController::class, 'getListUsers'])->name('api.list.users');
     Route::post('/api/update-password', [DashboardController::class, 'updatePasswordUser'])->name('api.update.password');
     Route::post('/api/toggle-role', [DashboardController::class, 'toggleRoleUser'])->name('api.toggle.role');

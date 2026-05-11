@@ -9,18 +9,20 @@ class Peserta extends Model
 {
     use HasFactory;
 
-    // Wajib diisi agar data bisa disimpan menggunakan Peserta::create()
     protected $fillable = [
         'user_id',
         'nama_peserta',
-        'kategori',
-        'kelas',
         'jenis_keanggotaan',
         'detail_anggota',
     ];
 
-    // Tambahkan di dalam class Peserta
+    public function ikans()
+    {
+        return $this->hasMany(Ikan::class);
+    }
+    
+    // Deprecated: pindah ke Ikan (sisipkan dulu agar tidak error di file lain sementara)
     public function scorings() {
         return $this->hasMany(Scoring::class);
     }
-}
+}               

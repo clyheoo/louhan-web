@@ -4,18 +4,20 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Scoring;
-use App\Models\Peserta;
+use App\Models\Ikan;
 
 class JuriController extends Controller
 {
     public function getJuriData()
     {
-        $availableTanks = Peserta::whereNotNull('nomor_tank')
+        // Mengambil data IKAN yang sudah mendapat nomor tank
+        $availableTanks = Ikan::whereNotNull('nomor_tank')
+            ->with('peserta')
             ->orderBy('nomor_tank')
             ->get();
 
         $myScores = Scoring::where('juri_id', auth()->id())
-            ->with('peserta')
+            ->with('ikan', 'ikan.peserta')
             ->orderByDesc('created_at')
             ->get();
 
@@ -27,24 +29,21 @@ class JuriController extends Controller
 
     public function simpanNilai(Request $request)
     {
-        // Paksa baca sebagai JSON
         $data = $request->json()->all();
 
-        $pesertaId = $data['peserta_id'] ?? null;
+        $ikanId    = $data['ikan_id'] ?? null;
         $kelas     = $data['kelas'] ?? null;
         $allScores = $data['all_scores'] ?? null;
 
-        // Validasi manual
-        if (!$pesertaId || !$kelas || !$allScores) {
-            return response()->json(['success' => false, 'message' => 'Data tidak lengkap.'], 422);
+        if (!$ikanId || !$kelas || !$allScores) {
+            return response()->json(['success' => false, 'message' => 'Data tidak lengkap (Kelas wajib dipilih).'], 422);
         }
 
-        // Pastikan peserta ada
-        if (!\App\Models\Peserta::find($pesertaId)) {
-            return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan.'], 422);
+        $ikan = Ikan::find($ikanId);
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
         }
 
-        // Decode jika masih string
         if (is_string($allScores)) {
             $allScores = json_decode($allScores, true);
         }
@@ -63,10 +62,9 @@ class JuriController extends Controller
             }
         }
 
-        // CEK: Sudah pernah submit untuk tank ini?
-        $existingScore = Scoring::where('peserta_id', $pesertaId)
+        // Cegah duplikat nilai dari juri yang sama untuk ikan yang sama
+        $existingScore = Scoring::where('ikan_id', $ikanId)
                         ->where('juri_id', auth()->id())
-                        ->where('status', 'submitted')
                         ->first();
 
         if ($existingScore) {
@@ -77,10 +75,9 @@ class JuriController extends Controller
         }
 
         Scoring::create([
-            'peserta_id'   => $pesertaId,
+            'ikan_id'      => $ikanId,
             'juri_id'      => auth()->id(),
-            'kategori'     => 'FINAL',
-            'kelas'        => $kelas,
+            'kelas'        => $kelas, // PASTIKAN INI ADA
             'nilai_detail' => $allScores,
             'total_nilai'  => $totalNilai,
             'status'       => 'submitted'
