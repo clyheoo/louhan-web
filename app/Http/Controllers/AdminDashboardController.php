@@ -19,10 +19,9 @@ class AdminDashboardController extends Controller
     public function getListPesertas()
     {
         $pesertas = Peserta::orderBy('nama_peserta')->get()->map(function ($p) {
-            $detail = $p->jenis_keanggotaan == 'team' ? $p->detail_anggota : $p->detail_anggota;
             return [
                 'id' => $p->id,
-                'text' => $p->nama_peserta . ' (' . $detail . ')'
+                'text' => $p->nama_peserta . ' (' . $p->detail_anggota . ')'
             ];
         });
         return response()->json($pesertas);
@@ -51,12 +50,11 @@ class AdminDashboardController extends Controller
        ═══════════════════════════════════════════ */
     public function getDashboardStats()
     {
-        // Diubah: Menghitung total IKAN yang sudah mendapat tank, bukan peserta
         $totalIkan = Ikan::whereNotNull('nomor_tank')->count();
 
-        /* Hitung per peserta: ambil scoring terbaru tiap peserta */
-        $latestScores = Scoring::selectRaw('peserta_id, MAX(id) as latest_id')
-            ->groupBy('peserta_id')
+        /* DIPERBAIKI: Menggunakan ikan_id (BUKAN peserta_id) */
+        $latestScores = Scoring::selectRaw('ikan_id, MAX(id) as latest_id')
+            ->groupBy('ikan_id')
             ->pluck('latest_id');
 
         $scorings = Scoring::whereIn('id', $latestScores)->get();
@@ -68,7 +66,6 @@ class AdminDashboardController extends Controller
         $juriAktif = Scoring::whereNotNull('juri_id')->distinct('juri_id')->count('juri_id');
         $avgScore = $scorings->count() > 0 ? round($scorings->avg('total_nilai')) : 0;
 
-        /* Diubah: Per kategori diambil dari tabel IKANS */
         $perKategori = Ikan::whereNotNull('nomor_tank')
             ->selectRaw('kategori, COUNT(*) as total')
             ->groupBy('kategori')
@@ -76,15 +73,22 @@ class AdminDashboardController extends Controller
             ->pluck('total', 'kategori')
             ->toArray();
 
-        /* Top 10 */
-        $top10 = Scoring::with('peserta')->whereIn('id', $latestScores)
-            ->whereNotNull('total_nilai')->orderByDesc('total_nilai')->limit(10)
-            ->get()->map(function ($s) {
-                return ['nama' => $s->peserta?->nama_peserta ?? 'Unknown', 'total' => $s->total_nilai];
+        /* DIPERBAIKI: Relasi Scoring -> Ikan -> Peserta */
+        $top10 = Scoring::with('ikan.peserta')
+            ->whereIn('id', $latestScores)
+            ->whereNotNull('total_nilai')
+            ->orderByDesc('total_nilai')
+            ->limit(10)
+            ->get()
+            ->map(function ($s) {
+                return [
+                    'nama'  => $s->ikan?->peserta?->nama_peserta ?? 'Unknown',
+                    'total' => $s->total_nilai,
+                ];
             })->toArray();
 
         return response()->json([
-            'total_peserta'  => $totalIkan, // Label di frontend bisa "Total Ikan"
+            'total_peserta'  => $totalIkan, 
             'sudah_dinilai'  => $sudahDinilai,
             'grand_edited'   => $grandEdited,
             'belum_dinilai'  => $belumDinilai,
@@ -100,11 +104,11 @@ class AdminDashboardController extends Controller
        ═══════════════════════════════════════════ */
     public function getScoringData(Request $request)
     {
-        // Diubah: Query utama sekarang dari IKAN (yang sudah punya tank)
+        /* DIPERBAIKI: Query langsung relasi milik IKAN (BUKAN peserta.scorings) */
         $query = Ikan::whereNotNull('nomor_tank')
-            ->with(['peserta', 'peserta.scorings' => function ($q) {
+            ->with(['peserta', 'scorings' => function ($q) {
                 $q->latest()->limit(1);
-            }, 'peserta.scorings.juri', 'peserta.scorings.grandJuri']);
+            }, 'scorings.juri', 'scorings.grandJuri']);
 
         if ($request->filled('search')) {
             $query->whereHas('peserta', function ($q) use ($request) {
@@ -118,15 +122,16 @@ class AdminDashboardController extends Controller
 
         $data = $query->orderBy('nomor_tank')->get()->map(function ($ikan) {
             $peserta = $ikan->peserta;
-            $scoring = $peserta ? $peserta->scorings->first() : null;
+            // DIPERBAIKI: Ambil scoring langsung dari $ikan->scorings
+            $scoring = $ikan->scorings->first();
 
             return [
                 'id'              => $ikan->id,
-                'peserta_id'      => $ikan->peserta_id, // Dibutuhkan untuk modal detail
+                'peserta_id'      => $ikan->peserta_id, 
                 'nama_peserta'    => $peserta->nama_peserta ?? 'Unknown',
-                'kategori'        => $ikan->kategori,   // Diambil dari Ikan
-                'kelas'           => $ikan->kelas,      // Diambil dari Ikan
-                'nomor_tank'      => $ikan->nomor_tank, // Diambil dari Ikan
+                'kategori'        => $ikan->kategori,   
+                'kelas'           => $scoring ? $scoring->kelas : $ikan->kelas, // Ambil kelas dari penilaian juri jika ada, jika tidak dari data ikan
+                'nomor_tank'      => $ikan->nomor_tank, 
                 'detail_anggota'  => $peserta->detail_anggota ?? '—',
                 'juri_nama'       => $scoring?->juri?->name ?? '—',
                 'grand_juri_nama' => $scoring?->grandJuri?->name ?? null,

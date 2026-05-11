@@ -787,7 +787,7 @@ function renderTable(data){
             '<td>'+jh+'</td>'+
             '<td>'+tv+'</td>'+
             '<td><span class="status-badge '+sc+'">'+st+'</span></td>'+
-            '<td><button class="btn-xs blue" onclick="openDetail('+p.peserta_id+')"><i class="fas fa-eye"></i></button></td>';
+            '<td><button class="btn-xs blue" onclick="openDetail('+i+')"><i class="fas fa-eye"></i></button></td>';
         tb.appendChild(tr);
     }
 }
@@ -798,28 +798,28 @@ document.getElementById('filterKategori').addEventListener('change',loadScoringD
 document.getElementById('filterStatus').addEventListener('change',loadScoringData);
 
 /* ═══════════════════════════════════════════════
-   DETAIL NILAI MODAL
+   DETAIL NILAI MODAL (UPDATE: LANGSUNG DARI DATA TABEL)
    ═══════════════════════════════════════════════ */
-function openDetail(id){
-    document.getElementById('detailBody').innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
+function openDetail(idx){
     openModal('modalDetail');
-    fetch('/api/grand-juri/peserta?id='+id,{headers:{'Accept':'application/json'}})
-    .then(function(r){return r.json();})
-    .then(function(data){
-        var p=Array.isArray(data)?data[0]:data;
-        if(!p){document.getElementById('detailBody').innerHTML='<div class="empty-state">Tidak ditemukan.</div>';return;}
-        renderDetailView(p);
-    });
+    var p = allScoringData[idx];
+    if(!p){document.getElementById('detailBody').innerHTML='<div class="empty-state">Data tidak ditemukan.</div>';return;}
+    renderDetailView(p);
 }
 
 function renderDetailView(p){
     var nd=p.nilai_detail;
-    var html='<div class="detail-banner"><div><h4>'+esc(p.nama_peserta)+'</h4><div class="meta"><span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span><span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - '+esc(p.kelas)+'</span>';
+    var html='<div class="detail-banner"><div><h4>'+esc(p.nama_peserta)+'</h4><div class="meta"><span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span><span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - Kelas '+esc(p.kelas)+'</span>';
+    
     if(p.juri_nama&&p.juri_nama!=='—')html+='<span><i class="fas fa-user-pen"></i> '+esc(p.juri_nama)+'</span>';
     if(p.grand_juri_nama)html+='<span style="color:var(--purple);"><i class="fas fa-crown"></i> '+esc(p.grand_juri_nama)+'</span>';
+    
     html+='</div></div><div class="detail-total-chip"><i class="fas fa-star" style="margin-right:4px;"></i>'+p.total_nilai+'</div></div>';
+    
     if(p.grand_juri_nama)html+='<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:11px;color:#92400e;margin-bottom:14px;display:flex;gap:6px;align-items:flex-start;"><i class="fas fa-circle-info" style="margin-top:1px;"></i><span>Nilai final oleh <b>'+esc(p.grand_juri_nama)+'</b>.</span></div>';
+    
     if(!nd||typeof nd!=='object'){html+='<div class="empty-state" style="padding:30px;"><i class="fas fa-clipboard-list"></i><p>Belum ada nilai.</p></div>';document.getElementById('detailBody').innerHTML=html;return;}
+    
     var kats=Object.keys(formFields);
     for(var ki=0;ki<kats.length;ki++){
         var kat=kats[ki],fields=formFields[kat],kn=nd[kat]||{},sub=0;

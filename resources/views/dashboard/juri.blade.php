@@ -249,6 +249,11 @@
                         <input type="text" class="form-control" value="{{ $user->name }}" disabled>
                     </div>
                 </div>
+                <!-- BANNER PERINGATAN PERUBAHAN KELAS -->
+                <div id="warningKelasBox" style="display: none; margin-bottom: 20px; padding: 12px 16px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 10px; color: #92400e; font-size: 12.5px; font-weight: 600; align-items: center; gap: 8px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 14px; color: #d97706;"></i>
+                    <span id="warningKelasText">Perhatian: Anda mengubah kelas penilaian.</span>
+                </div>
                 <div class="content-grid">
                     <div class="kategori-list" id="katListContainer"></div>
                     <div>
@@ -334,15 +339,11 @@
 </div>
 
 <script>
-// Jebakan Error: Jika ada masalah, akan muncul di F12 -> Console
 window.onerror = function(msg, url, lineNo, columnNo, error) {
     alert("ERROR DI BARIS: " + lineNo + "\nDetail: " + msg);
     return false;
 };
 
-// ==========================================
-// DATA PEDOMAN
-// ==========================================
 const pedomanData = {
     overall: { title: "Pedoman: OVERALL IMPRESSION", list: `<li>IMPRESSION (100%): Menarik perhatian pada pandangan pertama.</li><li>Memiliki keistimewaan yang menarik.</li><li>MENTAL: Ikan tidak takut, aktif berinteraksi, menguasai area.</li><li>KESEHATAN: Tidak terkena penyakit, tidak luka, performa bagus.</li>` }, 
     head: { title: "Pedoman: HEAD (KEPALA)", list: `<li>SIZE (60%): Ukuran kepala menjadi prioritas utama.</li><li>BENTUK (40%):<ul><li>Kepala Bulat Bola (Nilai 85 - 95)</li><li>Kepala Swan Head (Nilai 70 - 80)</li><li>Kepala Tidak Simetris (Nilai 60 - 70)</li></ul></li>` }, 
@@ -386,13 +387,10 @@ function renderKategoriList() {
 function changeKat(kat) {
     saveCurrentTabToMemory(); 
     currentTab = kat;
-    
     const allBtns = document.querySelectorAll('.kat-btn');
     for(let i=0; i < allBtns.length; i++) { allBtns[i].classList.remove('active'); }
-    
     const activeBtn = document.getElementById('btn-' + kat);
     if(activeBtn) activeBtn.classList.add('active');
-    
     document.getElementById('pedoman-title').innerText = pedomanData[kat].title;
     document.getElementById('pedoman-list').innerHTML = pedomanData[kat].list;
     renderFormInputs(kat);
@@ -401,7 +399,6 @@ function changeKat(kat) {
 function renderFormInputs(kat) {
     if(!formFields[kat]) return;
     if(!memoryScores[kat]) { memoryScores[kat] = {}; }
-    
     let html = '';
     formFields[kat].forEach(function(field) {
         const val = memoryScores[kat][field.id] || '';
@@ -413,13 +410,9 @@ function renderFormInputs(kat) {
 function updateMemory() {
     if(!formFields[currentTab]) return;
     if(!memoryScores[currentTab]) { memoryScores[currentTab] = {}; }
-    
     formFields[currentTab].forEach(function(field) {
         const el = document.getElementById('input-' + field.id);
-        if(el) {
-            memoryScores[currentTab][field.id] = el.value;
-            el.classList.remove('error-input');
-        }
+        if(el) { memoryScores[currentTab][field.id] = el.value; el.classList.remove('error-input'); }
     });
     updateFilledBadges();
 }
@@ -427,7 +420,6 @@ function updateMemory() {
 function saveCurrentTabToMemory() {
     if(!formFields[currentTab]) return;
     if(!memoryScores[currentTab]) { memoryScores[currentTab] = {}; }
-    
     formFields[currentTab].forEach(function(field) {
         const el = document.getElementById('input-' + field.id);
         if(el) memoryScores[currentTab][field.id] = el.value;
@@ -439,19 +431,14 @@ function updateFilledBadges() {
         const btn = document.getElementById('btn-' + kat);
         if(!btn) return;
         if(!memoryScores[kat]) { memoryScores[kat] = {}; }
-        
         let isFilled = true;
-        formFields[kat].forEach(function(f) { 
-            if(!memoryScores[kat][f.id] && memoryScores[kat][f.id] !== 0) isFilled = false; 
-        });
-        
+        formFields[kat].forEach(function(f) { if(!memoryScores[kat][f.id] && memoryScores[kat][f.id] !== 0) isFilled = false; });
         if(isFilled) btn.classList.add('filled'); else btn.classList.remove('filled');
     });
 }
 
 function submitAllScores() {
     saveCurrentTabToMemory(); 
-    
     if(!document.getElementById('checkConfirm').checked) { showWarningModal([{ type: 'checkbox', msg: 'Checkbox konfirmasi belum dicentang.' }]); return; }
     if(!document.getElementById('selectTank').value) { showWarningModal([{ type: 'select', msg: 'Anda belum memilih Nomor Tank.' }]); return; }
 
@@ -460,20 +447,12 @@ function submitAllScores() {
 
     Object.keys(formFields).forEach(function(kat) {
         if(!memoryScores[kat]) { memoryScores[kat] = {}; }
-
         formFields[kat].forEach(function(field) {
             const val = memoryScores[kat][field.id];
             const namaKat = kat.charAt(0).toUpperCase() + kat.slice(1);
-            
-            if(val === "" || val === null || val === undefined) {
-                errors.push({ type: 'empty', msg: 'Menu <b>' + namaKat + '</b>, kolom: <b>' + field.label + '</b>' });
-            } 
-            else if(parseInt(val) < 0) {
-                errors.push({ type: 'minus', msg: 'Menu <b>' + namaKat + '</b>, kolom: <b>' + field.label + '</b> (Tidak boleh minus)' });
-            }
-            else if(parseInt(val) > field.max) {
-                errors.push({ type: 'limit', msg: 'Menu <b>' + namaKat + '</b>, kolom: <b>' + field.label + '</b> (Maks ' + field.max + ')' });
-            }
+            if(val === "" || val === null || val === undefined) { errors.push({ type: 'empty', msg: 'Menu <b>' + namaKat + '</b>, kolom: <b>' + field.label + '</b>' }); } 
+            else if(parseInt(val) < 0) { errors.push({ type: 'minus', msg: 'Menu <b>' + namaKat + '</b>, kolom: <b>' + field.label + '</b> (Tidak boleh minus)' }); }
+            else if(parseInt(val) > field.max) { errors.push({ type: 'limit', msg: 'Menu <b>' + namaKat + '</b>, kolom: <b>' + field.label + '</b> (Maks ' + field.max + ')' }); }
             else { grandTotal += parseInt(val); }
         });
     });
@@ -483,16 +462,11 @@ function submitAllScores() {
     const btn = document.getElementById('btnSaveAll');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> MEMPROSES...';
 
-    // Cegah error jika elemen tidak ditemukan
     const dropdownKelas = document.getElementById('selectKelas');
-    const elKelasAsli = document.getElementById('inputKelasAsli');
-    
-    let kelasAkhir = 'A'; // Nilai default darurat
-    if (dropdownKelas && dropdownKelas.value) {
-        kelasAkhir = dropdownKelas.value;
-    } else if (elKelasAsli && elKelasAsli.value) {
-        kelasAkhir = elKelasAsli.value.replace('Kelas ', '');
-    }
+    const elKelasAsli = document.getElementById('inputKelas');
+    let kelasAkhir = 'A'; 
+    if (dropdownKelas && dropdownKelas.value) { kelasAkhir = dropdownKelas.value; } 
+    else if (elKelasAsli && elKelasAsli.value) { kelasAkhir = elKelasAsli.value.replace('Kelas ', ''); }
 
     const payload = {
         _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -500,6 +474,7 @@ function submitAllScores() {
         kelas: kelasAkhir, 
         all_scores: memoryScores 
     };
+
     fetch('/api/juri/simpan-nilai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -536,29 +511,22 @@ function loadJuriData() {
         sel.innerHTML = '<option value="" disabled selected>-- Pilih Ikan Berdasarkan Tank --</option>';
         sel.disabled = false; 
         
-        // 1. Simpan data lama yang sudah di-submit berdasarkan ikan_id
         let dataLamaPerIkan = {};
         if(data.my_scores && data.my_scores.length > 0) {
             data.my_scores.forEach(function(s) {
-                // Pastikan kelas yang disimpan juri yang diambil
-                dataLamaPerIkan[s.ikan_id] = { 
-                    kelas: s.kelas, // Ini adalah kelas yang dipilih juri saat submit
-                    nilai: s.nilai_detail 
-                };
+                dataLamaPerIkan[s.ikan_id] = { kelas: s.kelas, nilai: s.nilai_detail };
             });
         }
 
-        // 2. Isi Dropdown Tank
         data.available_tanks.forEach(function(t) {
             const opt = document.createElement('option');
             opt.value = t.id; 
             opt.setAttribute('data-kategori', t.kategori); 
-            opt.setAttribute('data-kelas', t.kelas); // Ini kelas asli dari user
+            opt.setAttribute('data-kelas', t.kelas); 
             opt.textContent = 'Tank ' + t.nomor_tank + ' - ' + t.peserta.nama_peserta;
             sel.appendChild(opt);
         });
 
-        // 3. Event Jika Dropdown Tank Diganti
         sel.onchange = function() {
             const selectedId = this.value;
             const selectedOpt = this.options[this.selectedIndex];
@@ -566,14 +534,26 @@ function loadJuriData() {
             const elKategori = document.getElementById('inputKategori');
             const elKelasAsli = document.getElementById('inputKelas');
             const dropdownKelas = document.getElementById('selectKelas');
+            const warningBox = document.getElementById('warningKelasBox');
             
-            // Set Kategori
             if(elKategori) elKategori.value = selectedOpt.getAttribute('data-kategori');
             
-            // Set Dropdown Kelas Penilaian (Default mengikuti kelas asli user)
+            const kelasAsliUser = selectedOpt.getAttribute('data-kelas') || ''; 
+            if(dropdownKelas) dropdownKelas.value = kelasAsliUser;
+            if(elKelasAsli) elKelasAsli.value = kelasAsliUser ? 'Kelas ' + kelasAsliUser : '- Pilih Ikan -';
+            if(dropdownKelas && dropdownKelas.value === "") dropdownKelas.selectedIndex = 1;
+
             if(dropdownKelas) {
-                dropdownKelas.value = selectedOpt.getAttribute('data-kelas') || '';
-                if(dropdownKelas.value === "") dropdownKelas.selectedIndex = 1;
+                dropdownKelas.onchange = function() {
+                    if(this.value !== kelasAsliUser) {
+                        if(warningBox) {
+                            warningBox.style.display = 'flex';
+                            document.getElementById('warningKelasText').innerHTML = '<b>Perhatian:</b> Anda mengubah kelas penilaian menjadi <b>Kelas ' + this.value + '</b> (Kelas asli terdaftar: Kelas ' + kelasAsliUser + '). Pastikan ini sudah sesuai keputusan panitia.';
+                        }
+                    } else {
+                        if(warningBox) warningBox.style.display = 'none';
+                    }
+                };
             }
 
             const dataLama = dataLamaPerIkan[selectedId];
@@ -581,32 +561,24 @@ function loadJuriData() {
 
             if(dataLama) {
                 memoryScores = JSON.parse(JSON.stringify(dataLama.nilai));
-                
-                // LOGIKA PENTING: Jika sudah pernah disubmit, GANTI kelas asli dan dropdown 
-                // dengan kelas yang sudah disimpan juri sebelumnya
                 if(dataLama.kelas) {
                     if(dropdownKelas) dropdownKelas.value = dataLama.kelas;
                     if(elKelasAsli) elKelasAsli.value = 'Kelas ' + dataLama.kelas;
                 }
-                
+                if(warningBox) warningBox.style.display = 'none';
                 btn.innerHTML = '<i class="fas fa-pen-to-square"></i> PERBAUI NILAI';
                 isEditing = true;
             } else {
                 memoryScores = { overall: {}, head: {}, face: {}, body: {}, marking: {}, pearl: {}, color: {}, finnage: {} };
-                
-                // Jika BELUM pernah disubmit, Kelas Asli tetap menampilkan kelas bawaan user
-                if(elKelasAsli) {
-                    elKelasAsli.value = selectedOpt.getAttribute('data-kelas') ? 'Kelas ' + selectedOpt.getAttribute('data-kelas') : '- Pilih Ikan -';
-                }
-                
+                if(warningBox) warningBox.style.display = 'none';
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> SIMPAN SELURUH NILAI';
                 isEditing = false;
             }
+            
             renderFormInputs(currentTab);
             updateFilledBadges();
         };
 
-        // 4. Isi Tabel Riwayat Penilaian
         const tbody = document.getElementById('tbody-scores');
         tbody.innerHTML = '';
         detailDataStorage = {};
@@ -617,25 +589,15 @@ function loadJuriData() {
         }
 
         data.my_scores.forEach(function(s) {
-            detailDataStorage[s.ikan_id] = { 
-                tank: s.ikan.nomor_tank, 
-                nama: s.ikan.peserta.nama_peserta, 
-                kategori: s.ikan.kategori, 
-                nilai: s.nilai_detail, 
-                total: s.total_nilai 
-            };
-            
+            detailDataStorage[s.ikan_id] = { tank: s.ikan.nomor_tank, nama: s.ikan.peserta.nama_peserta, kategori: s.ikan.kategori, nilai: s.nilai_detail, total: s.total_nilai };
             const tr = document.createElement('tr');
-            
-            // PENTING: Kolom kelas di riwayat mengambil s.kelas (kelas yang dipilih juri saat submit)
             tr.innerHTML = 
                 '<td style="font-weight:700; color:var(--primary);">Tank ' + s.ikan.nomor_tank + ' <span style="font-size:10px;color:var(--text-light);">(' + s.ikan.kategori + ')</span></td>' +
                 '<td>' + s.ikan.peserta.nama_peserta + '</td>' +
-                '<td>Kelas ' + s.kelas + '</td>' + // <-- INI YANG MEMPERBAIKI RIWAYAT
+                '<td>Kelas ' + s.kelas + '</td>' +
                 '<td style="font-weight:800; font-size:15px;">' + s.total_nilai + '</td>' +
                 '<td><span class="badge-success">SUBMITTED</span></td>' +
                 '<td><button class="btn-view" onclick="showDetail(' + s.ikan_id + ')"><i class="fas fa-eye"></i> Lihat Detail</button></td>';
-                
             tbody.appendChild(tr);
         });
     })
@@ -649,24 +611,19 @@ function showDetail(id) {
     const data = detailDataStorage[id];
     if(!data) return;
     document.getElementById('modalTitle').innerText = 'Detail Nilai: Tank ' + data.tank + ' - ' + data.nama + ' (' + data.kategori + ')';
-    
     let html = '<table class="detail-table"><thead><tr><th style="width:25%;">KOMPONEN</th><th style="width:15%;">SKALA</th><th style="text-align:center; width:15%;">NILAI</th></tr></thead><tbody>';
     let grandTotal = 0;
-
     Object.keys(formFields).forEach(function(kat) {
         let subTotal = 0;
         html += '<tr style="background:#f8fafc;"><td colspan="3" style="font-weight:800; text-transform:uppercase; font-size:12px; color:var(--primary); letter-spacing:1px; padding:12px;"><i class="fas fa-tag" style="margin-right:6px;"></i>' + kat.toUpperCase() + '</td></tr>';
-
         formFields[kat].forEach(function(field) {
             const val = data.nilai[kat] ? (data.nilai[kat][field.id] || 0) : 0;
             subTotal += parseInt(val);
             html += '<tr><td style="padding-left:20px; font-weight:600;">' + field.label + '</td><td style="font-size:12px; color:var(--text-light);">' + field.desc + '</td><td style="text-align:center; font-weight:800; font-size:15px; color:var(--text-main);">' + val + '</td></tr>';
         });
-
         grandTotal += subTotal;
         html += '<tr style="background:#eff6ff;"><td colspan="2" style="text-align:right; font-weight:700; font-size:12px; padding:10px;">Subtotal ' + kat.toUpperCase() + '</td><td style="text-align:center; font-weight:800; color:var(--primary); font-size:13px; padding:10px;">' + subTotal + '</td></tr>';
     });
-
     html += '</tbody></table><div class="grand-total">TOTAL NILAI: ' + data.total + '</div>';
     document.getElementById('modalBodyContent').innerHTML = html;
     document.getElementById('modalDetail').classList.add('show');
