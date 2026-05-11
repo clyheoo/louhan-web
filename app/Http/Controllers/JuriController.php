@@ -10,7 +10,6 @@ class JuriController extends Controller
 {
     public function getJuriData()
     {
-        // Mengambil data IKAN yang sudah mendapat nomor tank
         $availableTanks = Ikan::whereNotNull('nomor_tank')
             ->with('peserta')
             ->orderBy('nomor_tank')
@@ -21,16 +20,40 @@ class JuriController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
+        // ★ BARU: Ambil semua ikan yang SUDAH DINILAI oleh siapapun
+        $allScored = Scoring::with(['juri', 'grandJuri'])
+            ->select('ikan_id', 'juri_id', 'grand_juri_id', 'edited_by_grand_juri')
+            ->get()
+            ->groupBy('ikan_id')
+            ->map(function ($items) {
+                $first = $items->first();
+                $scorerName = 'Juri lain';
+                $isGrand = false;
+
+                if ($first->edited_by_grand_juri && $first->grandJuri) {
+                    $scorerName = $first->grandJuri->name;
+                    $isGrand = true;
+                } elseif ($first->juri) {
+                    $scorerName = $first->juri->name;
+                }
+
+                return [
+                    'scorer_name' => $scorerName,
+                    'is_grand'    => $isGrand,
+                    'is_mine'     => ($first->juri_id === auth()->id()),
+                ];
+            });
+
         return response()->json([
             'available_tanks' => $availableTanks,
-            'my_scores' => $myScores
+            'my_scores'       => $myScores,
+            'all_scored'      => $allScored,
         ]);
     }
 
     public function simpanNilai(Request $request)
     {
-        $data = $request->json()->all();
-
+        $data      = $request->json()->all();
         $ikanId    = $data['ikan_id'] ?? null;
         $kelas     = $data['kelas'] ?? null;
         $allScores = $data['all_scores'] ?? null;
@@ -52,7 +75,6 @@ class JuriController extends Controller
             return response()->json(['success' => false, 'message' => 'Format all_scores tidak valid.'], 422);
         }
 
-        // Hitung total nilai
         $totalNilai = 0;
         foreach ($allScores as $detailNilai) {
             if (is_array($detailNilai)) {
@@ -62,22 +84,20 @@ class JuriController extends Controller
             }
         }
 
-        // Cegah duplikat nilai dari juri yang sama untuk ikan yang sama
-        $existingScore = Scoring::where('ikan_id', $ikanId)
-                        ->where('juri_id', auth()->id())
-                        ->first();
+        // ★ DIUBAH: Cek apakah ikan ini SUDAH DINILAI oleh siapapun
+        $anyExisting = Scoring::where('ikan_id', $ikanId)->first();
 
-        if ($existingScore) {
+        if ($anyExisting) {
             return response()->json([
                 'success' => false,
-                'message' => 'ANDA TIDAK DAPAT MENGUBAH NILAI. Data sudah dikunci karena sudah disubmit.'
+                'message' => 'PESERTA INI SUDAH DINILAI. Nilai tidak dapat diubah atau diinput ulang.'
             ]);
         }
 
         Scoring::create([
             'ikan_id'      => $ikanId,
             'juri_id'      => auth()->id(),
-            'kelas'        => $kelas, // PASTIKAN INI ADA
+            'kelas'        => $kelas,
             'nilai_detail' => $allScores,
             'total_nilai'  => $totalNilai,
             'status'       => 'submitted'

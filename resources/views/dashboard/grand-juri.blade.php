@@ -35,7 +35,7 @@
         .card-body { padding:20px; }
 
         .stats-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:15px; }
-        .stat-card { padding:20px; border-radius:14px; border:2px solid var(--border); background:white; text-align:center; position:relative; overflow:hidden; }
+        .stat-card { padding:20px; border-radius:14px; border:2px solid var(--border); background:white; text-align:center; position:relative; overflow:hidden; transition:all .25s; }
         .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; }
         .stat-card.blue::before { background:var(--primary); }
         .stat-card.green::before { background:var(--success); }
@@ -44,23 +44,35 @@
         .stat-card.purple::before { background:var(--purple); }
         .stat-number { font-size:28px; font-weight:900; line-height:1; margin-bottom:4px; }
         .stat-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+        .stat-click-hint { font-size:9px; color:var(--text-muted); margin-top:6px; opacity:0; transition:opacity .25s; display:flex; align-items:center; justify-content:center; gap:3px; }
+        .stat-card.clickable { cursor:pointer; }
+        .stat-card.clickable:hover { transform:translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,.1); }
+        .stat-card.clickable:hover .stat-click-hint { opacity:1; }
 
         .rincian-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
-        .rincian-card { background:white; border:1px solid var(--border); border-radius:10px; padding:16px; display:flex; justify-content:space-between; align-items:center; }
-        .rincian-cat { font-size:13px; font-weight:800; }
+        .rincian-card { background:white; border:1px solid var(--border); border-radius:10px; padding:16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all .2s; }
+        .rincian-card:hover { border-color:var(--purple); box-shadow:0 4px 12px rgba(124,58,237,.08); transform:translateY(-2px); }
+        .rincian-cat { font-size:13px; font-weight:800; display:flex; align-items:center; gap:6px; }
+        .rincian-cat i { font-size:10px; color:var(--purple); opacity:0; transition:opacity .2s; }
+        .rincian-card:hover .rincian-cat i { opacity:1; }
         .rincian-data { text-align:right; }
         .rincian-ekor { font-size:18px; font-weight:900; }
         .rincian-belum { font-size:11px; color:var(--danger); font-weight:700; }
 
         /* ── KOMPONEN JURI ── */
         .juri-chip-list { display:flex; flex-wrap:wrap; gap:8px; }
-        .juri-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:700; border:1px solid; }
+        .juri-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:700; border:1px solid; cursor:pointer; transition:all .2s; }
+        .juri-chip:hover { transform:translateY(-1px); box-shadow:0 4px 10px rgba(0,0,0,.08); }
         .juri-chip.juri-awal { background:#eff6ff; color:#2563eb; border-color:#bfdbfe; }
+        .juri-chip.juri-awal:hover { background:#dbeafe; }
         .juri-chip.juri-awal i { color:#2563eb; }
         .juri-chip.juri-grand { background:var(--purple-light); color:var(--purple); border-color:#c4b5fd; }
+        .juri-chip.juri-grand:hover { background:#ede9fe; }
         .juri-chip.juri-grand i { color:var(--purple); }
         .juri-chip .chip-role { font-size:9px; opacity:.7; text-transform:uppercase; letter-spacing:.3px; font-weight:800; }
         .juri-chip .chip-count { opacity:.5; font-size:11px; }
+        .juri-chip .chip-arrow { font-size:9px; opacity:0; transition:opacity .2s; margin-left:2px; }
+        .juri-chip:hover .chip-arrow { opacity:.6; }
 
         /* ── TABLE ── */
         .toolbar { display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
@@ -109,6 +121,8 @@
         .detail-total-badge { background:var(--purple); color:white; padding:7px 16px; border-radius:8px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:6px; white-space:nowrap; }
         .detail-note { background:#fef9c3; border:1px solid #fde68a; border-radius:8px; padding:10px 14px; font-size:12px; color:#92400e; margin-bottom:14px; display:flex; gap:8px; align-items:flex-start; }
         .detail-note i { color:#d97706; margin-top:1px; flex-shrink:0; }
+        .detail-note.purple-note { background:var(--purple-light); border-color:#ddd6fe; color:#4c1d95; }
+        .detail-note.purple-note i { color:var(--purple); }
         .detail-kat-section { margin-bottom:14px; }
         .detail-kat-header { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--purple-light); border:1px solid #ddd6fe; border-radius:8px 8px 0 0; }
         .detail-kat-title { font-size:12px; font-weight:800; color:var(--purple); text-transform:uppercase; letter-spacing:.5px; }
@@ -153,6 +167,35 @@
         .btn-blue:hover { background:#1d4ed8; transform:translateY(-1px); }
         .empty-state { text-align:center; padding:30px; color:var(--text-muted); }
 
+        /* ── GENERIC TABLE (inside modals) ── */
+        .gen-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .gen-table th { background:var(--bg-main); padding:9px 12px; text-align:left; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); white-space:nowrap; }
+        .gen-table td { padding:10px 12px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+        .gen-table tbody tr:hover td { background:#fafbfc; }
+        .gen-table .g-total { font-weight:900; color:var(--purple); font-size:14px; }
+        .gen-table .g-tank { font-weight:800; color:var(--purple); }
+        .gen-table .g-juri { font-size:11px; color:var(--text-muted); }
+        .gen-count-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:800; }
+        .gen-count-badge.green { background:#dcfce7; color:#16a34a; }
+        .gen-count-badge.red { background:#fee2e2; color:#dc2626; }
+
+        /* ── SPLIT VIEW (Rincian Detail) ── */
+        .split-view { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .split-panel { border-radius:12px; border:1px solid var(--border); overflow:hidden; }
+        .split-panel-head { padding:12px 16px; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:space-between; }
+        .split-panel-head.sudah { background:linear-gradient(135deg,#dcfce7,#bbf7d0); color:#15803d; border-bottom:1px solid #86efac; }
+        .split-panel-head.belum { background:linear-gradient(135deg,#fee2e2,#fecaca); color:#dc2626; border-bottom:1px solid #fca5a5; }
+        .split-panel-body { max-height:420px; overflow-y:auto; }
+        .split-item { padding:10px 16px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:10px; font-size:12px; transition:background .15s; }
+        .split-item:last-child { border-bottom:none; }
+        .split-item:hover { background:#fafbfc; }
+        .split-item .si-tank { font-weight:900; color:var(--purple); min-width:72px; font-size:11px; }
+        .split-item .si-name { font-weight:600; flex:1; }
+        .split-item .si-extra { font-size:10px; color:var(--text-muted); text-align:right; line-height:1.4; }
+        .split-item .si-extra strong { color:var(--primary); }
+        .split-empty { padding:28px 16px; text-align:center; color:var(--text-muted); font-size:12px; }
+        .split-empty i { display:block; font-size:24px; margin-bottom:6px; opacity:.3; }
+
         /* ── POPUPS ── */
         .popup-overlay { position:fixed; inset:0; background:rgba(15,23,42,.4); backdrop-filter:blur(6px); z-index:9999; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .4s; }
         .popup-overlay.show { opacity:1; pointer-events:all; }
@@ -178,7 +221,7 @@
         .err-item i { color:var(--purple); margin-top:1px; flex-shrink:0; }
         .err-item span { color:#4c1d95; font-weight:600; line-height:1.4; }
 
-        @media (max-width:1024px) { .stats-grid{grid-template-columns:repeat(3,1fr);} .content-grid{grid-template-columns:1fr;} }
+        @media (max-width:1024px) { .stats-grid{grid-template-columns:repeat(3,1fr);} .content-grid{grid-template-columns:1fr;} .split-view{grid-template-columns:1fr;} }
         @media (max-width:640px) { .stats-grid{grid-template-columns:1fr 1fr;} .main-container{padding:12px;} }
     </style>
 </head>
@@ -200,11 +243,28 @@
 <div class="main-container">
     <!-- STATS -->
     <div class="stats-grid">
-        <div class="stat-card blue"><div class="stat-number" id="statTank">0</div><div class="stat-label">Total Tank</div></div>
-        <div class="stat-card green"><div class="stat-number" id="statPeserta">0</div><div class="stat-label">Total Peserta</div></div>
-        <div class="stat-card orange"><div class="stat-number" id="statSudah">0</div><div class="stat-label">Sudah Plot</div></div>
-        <div class="stat-card red"><div class="stat-number" id="statBelum">0</div><div class="stat-label">Belum Plot</div></div>
-        <div class="stat-card purple"><div class="stat-number" id="statSisa">0</div><div class="stat-label">Sisa Tank (Max 300)</div></div>
+        <div class="stat-card blue">
+            <div class="stat-number" id="statTank">0</div>
+            <div class="stat-label">Total Tank</div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-number" id="statPeserta">0</div>
+            <div class="stat-label">Total Peserta</div>
+        </div>
+        <div class="stat-card orange clickable" onclick="openPlotStatus('sudah_plot')">
+            <div class="stat-number" id="statSudah">0</div>
+            <div class="stat-label">Sudah Plot</div>
+            <div class="stat-click-hint"><i class="fas fa-arrow-up-right-from-square"></i> Lihat Data</div>
+        </div>
+        <div class="stat-card red clickable" onclick="openPlotStatus('belum_plot')">
+            <div class="stat-number" id="statBelum">0</div>
+            <div class="stat-label">Belum Plot</div>
+            <div class="stat-click-hint"><i class="fas fa-arrow-up-right-from-square"></i> Lihat Data</div>
+        </div>
+        <div class="stat-card purple">
+            <div class="stat-number" id="statSisa">0</div>
+            <div class="stat-label">Sisa Tank (Max 300)</div>
+        </div>
     </div>
 
     <!-- RINCIAN -->
@@ -217,7 +277,7 @@
     <div class="card">
         <div class="card-header">
             <div class="card-title"><i class="fas fa-users-gear"></i> Daftar Juri yang Menilai</div>
-            <div class="card-subtitle">Nama juri yang telah memberikan penilaian pada kontes ini</div>
+            <div class="card-subtitle">Klik nama juri untuk melihat peserta yang dinilai</div>
         </div>
         <div class="card-body" id="juriSummaryBody">
             <div class="empty-state"><i class="fas fa-spinner fa-spin" style="display:block;margin-bottom:8px;"></i>Memuat data juri...</div>
@@ -295,6 +355,22 @@
     </div>
 </div>
 
+<!-- MODAL GENERIC (reusable untuk Juri Peserta, Rincian Detail, Plot Status) -->
+<div class="modal-bg" id="modalGeneric">
+    <div class="modal-box" style="max-width:780px;">
+        <div class="modal-head">
+            <h3 id="genericTitle"><i class="fas fa-list"></i> Detail</h3>
+            <button class="modal-close" onclick="closeModal('modalGeneric')"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-content" id="genericContent">
+            <div class="empty-state"><i class="fas fa-spinner fa-spin" style="display:block;margin-bottom:8px;"></i>Memuat data...</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('modalGeneric')"><i class="fas fa-xmark"></i> Tutup</button>
+        </div>
+    </div>
+</div>
+
 <!-- POPUP SUKSES -->
 <div class="popup-overlay" id="popupSuccess">
     <div class="popup-card">
@@ -356,8 +432,8 @@ var formFields = {
    ================================================================ */
 var currentId       = null;
 var currentPData    = null;
-var editMemory      = {};   // menyimpan nilai saat ini (pre-fill dari juri + perubahan grand juri)
-var originalValues  = {};   // snapshot nilai ASLI dari juri (untuk deteksi perubahan)
+var editMemory      = {};
+var originalValues  = {};
 var currentEditKat  = 'overall';
 
 /* ================================================================
@@ -367,8 +443,9 @@ function showPopup(id){document.getElementById(id).classList.add('show');}
 function hidePopup(id){document.getElementById(id).classList.remove('show');}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 function getCsrf(){return document.querySelector('meta[name="csrf-token"]').getAttribute('content');}
+function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-['modalDetail','modalEdit'].forEach(function(id){
+['modalDetail','modalEdit','modalGeneric'].forEach(function(id){
     document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});
 });
 
@@ -377,7 +454,6 @@ function freshMemory(){
     Object.keys(formFields).forEach(function(k){m[k]={};});
     return m;
 }
-
 function cloneValues(source){
     var m={};
     Object.keys(formFields).forEach(function(k){
@@ -390,10 +466,8 @@ function cloneValues(source){
     return m;
 }
 
-function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-
 /* ================================================================
-   LOAD STATS
+   LOAD STATS (rincian cards now clickable)
    ================================================================ */
 function loadStats(){
     fetch('/api/grand-juri/stats',{headers:{'Accept':'application/json'}})
@@ -405,10 +479,12 @@ function loadStats(){
         document.getElementById('statSudah').innerText=d.sudah_plot;
         document.getElementById('statBelum').innerText=d.belum_plot;
         document.getElementById('statSisa').innerText=d.sisa_tank;
+
         var grid=document.getElementById('rincianGrid');
         grid.innerHTML='';
         if(d.rincian)d.rincian.forEach(function(r){
-            grid.innerHTML+='<div class="rincian-card"><div class="rincian-cat">'+esc(r.kategori)+'</div>'+
+            grid.innerHTML+='<div class="rincian-card" onclick="openRincianDetail(\''+esc(r.kategori)+'\')">'+
+                '<div class="rincian-cat"><i class="fas fa-arrow-up-right-from-square"></i>'+esc(r.kategori)+'</div>'+
                 '<div class="rincian-data"><div class="rincian-ekor">'+r.ekor+' Ekor</div>'+
                 '<div class="rincian-belum">'+r.belum_tank+' Belum Dinilai</div></div></div>';
         });
@@ -416,7 +492,7 @@ function loadStats(){
 }
 
 /* ================================================================
-   LOAD DAFTAR JURI
+   LOAD DAFTAR JURI (chips now clickable)
    ================================================================ */
 function loadJuriSummary(){
     fetch('/api/grand-juri/juri-summary',{headers:{'Accept':'application/json'}})
@@ -430,11 +506,13 @@ function loadJuriSummary(){
         body.innerHTML='<div class="juri-chip-list">';
         data.forEach(function(j){
             var isGrand=j.role==='grand_juri';
-            body.innerHTML+='<div class="juri-chip '+(isGrand?'juri-grand':'juri-awal')+'">'+
+            body.innerHTML+='<div class="juri-chip '+(isGrand?'juri-grand':'juri-awal')+'" '+
+                'onclick="openJuriPeserta('+j.juri_id+',\''+esc(j.name)+'\',\''+j.role+'\')">'+
                 '<i class="fas '+(isGrand?'fa-crown':'fa-user-pen')+'"></i>'+
                 '<span class="chip-role">'+(isGrand?'Grand':'Juri')+'</span>'+
                 '<span>'+esc(j.name)+'</span>'+
-                '<span class="chip-count">('+j.total_peserta+' peserta)</span>'+
+                '<span class="chip-count">('+j.total_peserta+')</span>'+
+                '<i class="fas fa-chevron-right chip-arrow"></i>'+
                 '</div>';
         });
         body.innerHTML+='</div>';
@@ -462,48 +540,33 @@ function loadPeserta(search){
         data.forEach(function(p){
             var tr=document.createElement('tr');
 
-            /* Kolom: Nama */
             var td1=document.createElement('td');
-            td1.style.fontWeight='700';
-            td1.innerText=p.nama_peserta||'—';
-            tr.appendChild(td1);
+            td1.style.fontWeight='700';td1.innerText=p.nama_peserta||'—';tr.appendChild(td1);
 
-            /* Kolom: Kategori */
             var td2=document.createElement('td');
             td2.style.cssText='font-size:12px;font-weight:600;color:var(--text-muted);';
-            td2.innerText=(p.kategori||'—')+' - '+(p.kelas||'—');
-            tr.appendChild(td2);
+            td2.innerText=(p.kategori||'—')+' - '+(p.kelas||'—');tr.appendChild(td2);
 
-            /* Kolom: Tank */
             var td3=document.createElement('td');
             td3.style.cssText='font-weight:700;color:var(--purple);';
-            td3.innerText=p.nomor_tank?'Tank '+p.nomor_tank:'—';
-            tr.appendChild(td3);
+            td3.innerText=p.nomor_tank?'Tank '+p.nomor_tank:'—';tr.appendChild(td3);
 
-            /* Kolom: Asal */
             var td4=document.createElement('td');
             td4.style.cssText='font-size:12px;color:var(--text-muted);';
-            td4.innerText=p.detail_anggota||'—';
-            tr.appendChild(td4);
+            td4.innerText=p.detail_anggota||'—';tr.appendChild(td4);
 
-            /* Kolom: Dinilai Oleh */
             var td5=document.createElement('td');
             if(p.juri_nama&&p.juri_nama!=='—'){
                 var html='<div class="juri-cell"><i class="fas fa-user-pen" style="font-size:10px;margin-right:3px;"></i>'+esc(p.juri_nama);
                 if(p.grand_juri_nama) html+='<div class="grand-line"><i class="fas fa-crown"></i> '+esc(p.grand_juri_nama)+' (edit)</div>';
-                html+='</div>';
-                td5.innerHTML=html;
-            } else {
-                td5.innerHTML='<span style="font-size:12px;color:var(--text-muted);">—</span>';
-            }
+                html+='</div>';td5.innerHTML=html;
+            } else { td5.innerHTML='<span style="font-size:12px;color:var(--text-muted);">—</span>'; }
             tr.appendChild(td5);
 
-            /* Kolom: Total */
             var td6=document.createElement('td');
             td6.innerHTML=p.total_nilai>0?'<span class="total-cell">'+p.total_nilai+'</span>':'<span class="total-cell zero">—</span>';
             tr.appendChild(td6);
 
-            /* Kolom: Status */
             var td7=document.createElement('td');
             if(p.grand_juri_nama){
                 td7.innerHTML='<span class="badge badge-purple"><i class="fas fa-crown" style="margin-right:3px;font-size:9px;"></i>GRAND EDITED</span>';
@@ -512,13 +575,11 @@ function loadPeserta(search){
             }
             tr.appendChild(td7);
 
-            /* Kolom: Aksi */
             var td8=document.createElement('td');
             td8.innerHTML='<div class="action-group">'+
                 '<button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button>'+
                 '<button class="btn-sm btn-edit" onclick="openEdit('+p.id+')"><i class="fas fa-pen-to-square"></i> Edit</button>'+
-                '</div>';
-            tr.appendChild(td8);
+                '</div>';tr.appendChild(td8);
 
             tbody.appendChild(tr);
         });
@@ -553,15 +614,12 @@ function openDetail(id){
     document.getElementById('btnToEdit').onclick=function(){closeModal('modalDetail');openEdit(id);};
     fetchSingle(id,function(p){
         if(!p){document.getElementById('detailContent').innerHTML='<div class="empty-state">Data tidak ditemukan.</div>';return;}
-        currentPData=p;
-        renderDetail(p);
+        currentPData=p;renderDetail(p);
     });
 }
 
 function renderDetail(p){
-    var nd=p.nilai_detail;
-    var total=p.total_nilai||0;
-    var html='';
+    var nd=p.nilai_detail;var total=p.total_nilai||0;var html='';
 
     html+='<div class="detail-info-banner">';
     html+='<div><h4>'+esc(p.nama_peserta)+'</h4><div class="detail-meta">';
@@ -571,8 +629,7 @@ function renderDetail(p){
     if(p.juri_nama&&p.juri_nama!=='—') html+='<span><i class="fas fa-user-pen"></i> '+esc(p.juri_nama)+'</span>';
     if(p.grand_juri_nama) html+='<span style="color:var(--purple);"><i class="fas fa-crown"></i> '+esc(p.grand_juri_nama)+'</span>';
     html+='</div></div>';
-    html+='<div class="detail-total-badge"><i class="fas fa-star"></i> Total: '+total+'</div>';
-    html+='</div>';
+    html+='<div class="detail-total-badge"><i class="fas fa-star"></i> Total: '+total+'</div></div>';
 
     if(p.grand_juri_nama){
         html+='<div class="detail-note"><i class="fas fa-circle-info"></i><span>Nilai ini sudah diperbarui oleh Grand Juri (<strong>'+esc(p.grand_juri_nama)+'</strong>). Nilai yang ditampilkan adalah nilai final.</span></div>';
@@ -580,22 +637,18 @@ function renderDetail(p){
 
     if(!nd||typeof nd!=='object'){
         html+='<div class="empty-state" style="padding:40px;"><i class="fas fa-clipboard-list" style="font-size:36px;display:block;margin-bottom:10px;color:#cbd5e1;"></i>Peserta belum memiliki nilai.</div>';
-        document.getElementById('detailContent').innerHTML=html;
-        return;
+        document.getElementById('detailContent').innerHTML=html;return;
     }
 
     Object.keys(formFields).forEach(function(kat){
-        var fields=formFields[kat];
-        var katNilai=nd[kat]||{};
-        var sub=0;
+        var fields=formFields[kat];var katNilai=nd[kat]||{};var sub=0;
         fields.forEach(function(f){if(katNilai[f.id]!==undefined&&katNilai[f.id]!==null)sub+=parseInt(katNilai[f.id])||0;});
 
         html+='<div class="detail-kat-section">';
         html+='<div class="detail-kat-header"><span class="detail-kat-title"><i class="fas fa-layer-group" style="margin-right:5px;"></i>'+kat.charAt(0).toUpperCase()+kat.slice(1)+'</span><span class="detail-kat-sub">Subtotal: '+sub+'</span></div>';
         html+='<div class="detail-kat-body">';
         fields.forEach(function(f){
-            var val=katNilai[f.id];
-            var has=(val!==undefined&&val!==null&&val!=='');
+            var val=katNilai[f.id];var has=(val!==undefined&&val!==null&&val!=='');
             html+='<div class="detail-field-row"><div><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
         });
         html+='</div></div>';
@@ -608,8 +661,7 @@ function renderDetail(p){
    MODAL EDIT — PRE-FILL DARI NILAI JURI
    ================================================================ */
 function openEdit(id){
-    currentId=id;
-    currentEditKat='overall';
+    currentId=id;currentEditKat='overall';
 
     fetchSingle(id,function(p){
         if(!p){
@@ -618,16 +670,11 @@ function openEdit(id){
         }
         currentPData=p;
 
-        /* ★ KEY FIX: Pre-fill editMemory dengan nilai yang sudah ada dari juri */
         if(p.nilai_detail&&typeof p.nilai_detail==='object'){
             editMemory=cloneValues(p.nilai_detail);
-        } else {
-            editMemory=freshMemory();
-        }
-        /* Simpan snapshot nilai asli untuk deteksi perubahan */
+        } else { editMemory=freshMemory(); }
         originalValues=cloneValues(editMemory);
 
-        /* Banner info */
         var info='<b>'+esc(p.nama_peserta)+'</b> — Tank '+(p.nomor_tank||'—');
         info+='<br><span style="font-size:11px;color:#6d28d9;">'+esc(p.kategori)+' - '+(p.kelas||'—')+' | '+esc(p.detail_anggota||'—')+'</span>';
         if(p.juri_nama&&p.juri_nama!=='—'){
@@ -640,8 +687,7 @@ function openEdit(id){
         }
         document.getElementById('editInfo').innerHTML=info;
 
-        renderEditList();
-        renderEditInputs('overall');
+        renderEditList();renderEditInputs('overall');
         document.getElementById('modalEdit').classList.add('show');
     });
 }
@@ -653,127 +699,73 @@ function renderEditList(){
         var btn=document.createElement('button');
         btn.className='kat-btn'+(kat===currentEditKat?' active':'');
         btn.innerHTML='<span>'+kat.charAt(0).toUpperCase()+kat.slice(1)+'</span>'+
-            '<span class="kat-badge'+(changes>0?' has-changes':'')+'">'+
-            (changes>0?changes:'—')+'</span>';
-        btn.onclick=function(){switchEditKat(kat);};
-        c.appendChild(btn);
+            '<span class="kat-badge'+(changes>0?' has-changes':'')+'">'+(changes>0?changes:'—')+'</span>';
+        btn.onclick=function(){switchEditKat(kat);};c.appendChild(btn);
     });
 }
 
 function countChanges(kat){
-    if(!editMemory[kat]||!originalValues[kat])return 0;
-    var n=0;
+    if(!editMemory[kat]||!originalValues[kat])return 0;var n=0;
     formFields[kat].forEach(function(f){
-        var cur=String(editMemory[kat][f.id]||'');
-        var ori=String(originalValues[kat][f.id]||'');
+        var cur=String(editMemory[kat][f.id]||'');var ori=String(originalValues[kat][f.id]||'');
         if(cur!==''&&cur!==ori)n++;
-    });
-    return n;
+    });return n;
 }
 
-function switchEditKat(kat){
-    saveCurrentTab();
-    currentEditKat=kat;
-    renderEditList();
-    renderEditInputs(kat);
-}
+function switchEditKat(kat){saveCurrentTab();currentEditKat=kat;renderEditList();renderEditInputs(kat);}
 
 function renderEditInputs(kat){
-    if(!editMemory[kat])editMemory[kat]={};
-    if(!originalValues[kat])originalValues[kat]={};
-
+    if(!editMemory[kat])editMemory[kat]={};if(!originalValues[kat])originalValues[kat]={};
     var html='';
     formFields[kat].forEach(function(f){
-        var currentVal=editMemory[kat][f.id]||'';
-        var origVal=originalValues[kat][f.id]||'';
+        var currentVal=editMemory[kat][f.id]||'';var origVal=originalValues[kat][f.id]||'';
         var isChanged=(currentVal!==''&&currentVal!==origVal);
-
-        html+='<div class="score-row">';
-        html+='<div class="score-label"><h4>'+f.label+'</h4>';
+        html+='<div class="score-row"><div class="score-label"><h4>'+f.label+'</h4>';
         html+='<p>'+f.desc+' (Maks: '+f.max+')';
-        if(origVal!==''){
-            html+=' &nbsp;|&nbsp; <span class="orig-val">Nilai juri: <strong>'+origVal+'</strong></span>';
-        }
+        if(origVal!=='') html+=' &nbsp;|&nbsp; <span class="orig-val">Nilai juri: <strong>'+origVal+'</strong></span>';
         html+='</p></div>';
         html+='<input type="number" class="score-input'+(isChanged?' changed':'')+'" id="edit-'+f.id+'" '+
             'value="'+currentVal+'" min="0" max="'+f.max+'" '+
-            'oninput="onInput(this,\''+kat+'\',\''+f.id+'\','+f.max+')">';
-        html+='</div>';
+            'oninput="onInput(this,\''+kat+'\',\''+f.id+'\','+f.max+')"></div>';
     });
-
     html+='<div class="subtotal-bar">Subtotal <em>'+kat+'</em>: <span id="subVal">0</span></div>';
-    document.getElementById('editFormArea').innerHTML=html;
-    updateSub(kat);
+    document.getElementById('editFormArea').innerHTML=html;updateSub(kat);
 }
 
 function onInput(el,kat,fid,maxVal){
-    /* Visual: tandai sebagai changed jika berbeda dari original */
-    var cur=el.value;
-    var ori=originalValues[kat]?String(originalValues[kat][fid]||''):'';
-    el.classList.remove('changed');
-    if(cur!==''&&cur!==ori) el.classList.add('changed');
-
-    /* Clamp value */
-    var v=parseInt(cur);
-    if(!isNaN(v)&&v>maxVal){v=maxVal;el.value=v;}
-    if(!isNaN(v)&&v<0){v=0;el.value=v;}
-
-    if(!editMemory[kat])editMemory[kat]={};
-    editMemory[kat][fid]=el.value;
-    updateSub(kat);
-    renderEditList();
+    var cur=el.value;var ori=originalValues[kat]?String(originalValues[kat][fid]||''):'';
+    el.classList.remove('changed');if(cur!==''&&cur!==ori)el.classList.add('changed');
+    var v=parseInt(cur);if(!isNaN(v)&&v>maxVal){v=maxVal;el.value=v;}if(!isNaN(v)&&v<0){v=0;el.value=v;}
+    if(!editMemory[kat])editMemory[kat]={};editMemory[kat][fid]=el.value;updateSub(kat);renderEditList();
 }
 
 function updateSub(kat){
-    var t=0;
-    formFields[kat].forEach(function(f){
-        var el=document.getElementById('edit-'+f.id);
-        if(el&&el.value!=='')t+=parseInt(el.value)||0;
-    });
+    var t=0;formFields[kat].forEach(function(f){var el=document.getElementById('edit-'+f.id);if(el&&el.value!=='')t+=parseInt(el.value)||0;});
     var s=document.getElementById('subVal');if(s)s.textContent=t;
 }
 
 function saveCurrentTab(){
-    if(!formFields[currentEditKat])return;
-    if(!editMemory[currentEditKat])editMemory[currentEditKat]={};
-    formFields[currentEditKat].forEach(function(f){
-        var el=document.getElementById('edit-'+f.id);
-        if(el)editMemory[currentEditKat][f.id]=el.value;
-    });
+    if(!formFields[currentEditKat])return;if(!editMemory[currentEditKat])editMemory[currentEditKat]={};
+    formFields[currentEditKat].forEach(function(f){var el=document.getElementById('edit-'+f.id);if(el)editMemory[currentEditKat][f.id]=el.value;});
 }
 
 /* ================================================================
-   SUBMIT — KIRIM HANYA FIELD YANG BERUBAH
+   SUBMIT — BUG FIX: kirim ikan_id bukan peserta_id
    ================================================================ */
 document.getElementById('btnSaveGrand').addEventListener('click',function(){submitEdit();});
 
 function submitEdit(){
     saveCurrentTab();
+    var payload={};var limitErrors=[];var totalChanged=0;
 
-    var payload={};
-    var limitErrors=[];
-    var totalChanged=0;
-
-    /* Bandingkan editMemory vs originalValues → hanya kirim yang berbeda */
     Object.keys(formFields).forEach(function(kat){
         formFields[kat].forEach(function(f){
-            var cur=editMemory[kat]?editMemory[kat][f.id]:'';
-            var ori=originalValues[kat]?originalValues[kat][f.id]:'';
-
-            /* Jika kosong dan original juga kosong → skip */
-            if(cur===''&&ori==='')return;
-            /* Jika sama → skip */
-            if(String(cur)===String(ori))return;
-
-            var val=parseInt(cur);
-            if(isNaN(val)){return;}
-
+            var cur=editMemory[kat]?editMemory[kat][f.id]:'';var ori=originalValues[kat]?originalValues[kat][f.id]:'';
+            if(cur===''&&ori==='')return;if(String(cur)===String(ori))return;
+            var val=parseInt(cur);if(isNaN(val)){return;}
             if(val<0){limitErrors.push(f.label+' ('+kat+'): tidak boleh negatif');return;}
             if(val>f.max){limitErrors.push(f.label+' ('+kat+'): maks '+f.max+', diisi '+val);return;}
-
-            if(!payload[kat])payload[kat]={};
-            payload[kat][f.id]=val;
-            totalChanged++;
+            if(!payload[kat])payload[kat]={};payload[kat][f.id]=val;totalChanged++;
         });
     });
 
@@ -787,7 +779,7 @@ function submitEdit(){
     var btn=document.getElementById('btnSaveGrand');
     btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> MENYIMPAN...';
 
-    /* ★ KEY FIX: Kirim sebagai JSON (bukan FormData) supaya $request->json()->all() bisa baca */
+    /* ★ BUG FIX: ikan_id (bukan peserta_id) sesuai yang controller expect */
     fetch('/api/grand-juri/edit-nilai',{
         method:'POST',
         headers:{
@@ -797,7 +789,7 @@ function submitEdit(){
         },
         body:JSON.stringify({
             _token:getCsrf(),
-            peserta_id:currentId,
+            ikan_id:currentId,
             changed_fields:payload
         })
     })
@@ -815,16 +807,164 @@ function submitEdit(){
             'Total nilai akhir: <strong style="color:var(--purple);font-size:18px;">'+d.total+'</strong><br>'+
             '<span style="font-size:12px;color:var(--text-muted);">'+totalChanged+' komponen diperbarui</span>';
         showPopup('popupSuccess');
-        loadPeserta(document.getElementById('searchInput').value);
-        loadStats();
-        loadJuriSummary();
+        loadPeserta(document.getElementById('searchInput').value);loadStats();loadJuriSummary();
     })
     .catch(function(){
         document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan. Periksa koneksi Anda.';
         showPopup('popupError');
     })
-    .finally(function(){
-        btn.disabled=false;btn.innerHTML='<i class="fas fa-save"></i> SIMPAN PERUBAHAN';
+    .finally(function(){btn.disabled=false;btn.innerHTML='<i class="fas fa-save"></i> SIMPAN PERUBAHAN';});
+}
+
+/* ================================================================
+   GENERIC MODAL — JURI PESERTA
+   ================================================================ */
+function openJuriPeserta(juriId, juriName, role){
+    var isGrand = role==='grand_juri';
+    document.getElementById('genericTitle').innerHTML='<i class="fas '+(isGrand?'fa-crown':'fa-user-pen')+'"></i> Peserta yang Dinilai — '+esc(juriName);
+
+    var content = document.getElementById('genericContent');
+    content.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin" style="display:block;margin-bottom:8px;"></i>Memuat data...</div>';
+    document.getElementById('modalGeneric').classList.add('show');
+
+    fetch('/api/grand-juri/juri-peserta?juri_id='+juriId+'&role='+role,{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(data){
+        if(!data||data.length===0){
+            content.innerHTML='<div class="empty-state"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Tidak ada data ditemukan.</div>';
+            return;
+        }
+        var html='<div class="detail-note purple-note"><i class="fas fa-circle-info"></i><span>'+
+            (isGrand?'Grand Juri':'Juri')+' <strong>'+esc(juriName)+'</strong> menilai <strong>'+data.length+'</strong> peserta.</span></div>';
+        html+='<div class="table-wrap"><table class="gen-table"><thead><tr>'+
+            '<th>NO</th><th>PESERTA</th><th>NO. TANK</th><th>KATEGORI</th><th>TOTAL NILAI</th>'+
+            '</tr></thead><tbody>';
+        data.forEach(function(item,i){
+            html+='<tr><td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td>'+
+                '<td style="font-weight:700;">'+esc(item.nama_peserta)+'</td>'+
+                '<td class="g-tank">'+esc(item.nomor_tank)+'</td>'+
+                '<td style="font-size:12px;color:var(--text-muted);">'+esc(item.kategori)+'</td>'+
+                '<td class="g-total">'+item.total_nilai+'</td></tr>';
+        });
+        html+='</tbody></table></div>';
+        content.innerHTML=html;
+    })
+    .catch(function(){
+        content.innerHTML='<div class="empty-state">Gagal memuat data.</div>';
+    });
+}
+
+/* ================================================================
+   GENERIC MODAL — RINCIAN DETAIL (Sudah / Belum Dinilai)
+   ================================================================ */
+function openRincianDetail(kategori){
+    document.getElementById('genericTitle').innerHTML='<i class="fas fa-chart-bar"></i> Detail Kategori: '+esc(kategori);
+
+    var content = document.getElementById('genericContent');
+    content.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin" style="display:block;margin-bottom:8px;"></i>Memuat data...</div>';
+    document.getElementById('modalGeneric').classList.add('show');
+
+    fetch('/api/grand-juri/rincian-detail?kategori='+encodeURIComponent(kategori),{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(data){
+        if(!data){
+            content.innerHTML='<div class="empty-state">Data tidak ditemukan.</div>';return;
+        }
+
+        var html='<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">';
+        html+='<span class="gen-count-badge green"><i class="fas fa-check-circle"></i> Sudah: '+data.sudah.length+' ekor</span>';
+        html+='<span class="gen-count-badge red"><i class="fas fa-times-circle"></i> Belum: '+data.belum.length+' ekor</span>';
+        html+='<span style="font-size:12px;color:var(--text-muted);font-weight:600;">Total: '+data.total_ekor+' ekor</span>';
+        html+='</div>';
+
+        html+='<div class="split-view">';
+
+        /* Panel Sudah */
+        html+='<div class="split-panel"><div class="split-panel-head sudah"><span><i class="fas fa-check-circle" style="margin-right:5px;"></i> Sudah Dinilai</span><span>'+data.sudah.length+'</span></div><div class="split-panel-body">';
+        if(data.sudah.length===0){
+            html+='<div class="split-empty"><i class="fas fa-minus-circle"></i>Tidak ada</div>';
+        } else {
+            data.sudah.forEach(function(item){
+                html+='<div class="split-item"><span class="si-tank">'+esc(item.nomor_tank)+'</span>'+
+                    '<span class="si-name">'+esc(item.nama_peserta)+'</span>'+
+                    '<span class="si-extra"><strong>'+item.total_nilai+'</strong> pts<br>'+esc(item.juri_nama)+'</span></div>';
+            });
+        }
+        html+='</div></div>';
+
+        /* Panel Belum */
+        html+='<div class="split-panel"><div class="split-panel-head belum"><span><i class="fas fa-times-circle" style="margin-right:5px;"></i> Belum Dinilai</span><span>'+data.belum.length+'</span></div><div class="split-panel-body">';
+        if(data.belum.length===0){
+            html+='<div class="split-empty"><i class="fas fa-check-double"></i>Semua sudah dinilai!</div>';
+        } else {
+            data.belum.forEach(function(item){
+                html+='<div class="split-item"><span class="si-tank">'+esc(item.nomor_tank)+'</span>'+
+                    '<span class="si-name">'+esc(item.nama_peserta)+'</span>'+
+                    '<span class="si-extra" style="color:var(--danger);font-weight:700;">Belum</span></div>';
+            });
+        }
+        html+='</div></div>';
+
+        html+='</div>';
+        content.innerHTML=html;
+    })
+    .catch(function(){
+        content.innerHTML='<div class="empty-state">Gagal memuat data.</div>';
+    });
+}
+
+/* ================================================================
+   GENERIC MODAL — PLOT STATUS (Sudah / Belum Plot)
+   ================================================================ */
+function openPlotStatus(status){
+    var isSudah = status==='sudah_plot';
+    var label = isSudah ? 'Sudah Plot' : 'Belum Plot';
+    var icon = isSudah ? 'fa-check-double' : 'fa-clock';
+    var noteColor = isSudah ? 'purple-note' : '';
+
+    document.getElementById('genericTitle').innerHTML='<i class="fas '+icon+'"></i> Daftar Peserta '+label;
+
+    var content = document.getElementById('genericContent');
+    content.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin" style="display:block;margin-bottom:8px;"></i>Memuat data...</div>';
+    document.getElementById('modalGeneric').classList.add('show');
+
+    fetch('/api/grand-juri/plot-status?status='+status,{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(data){
+        if(!data||data.length===0){
+            content.innerHTML='<div class="empty-state"><i class="fas '+(isSudah?'fa-check-double':'fa-inbox')+'" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>'+
+                (isSudah?'Belum ada peserta yang sudah di-plot.':'Tidak ada peserta yang belum di-plot — semua sudah!')+'</div>';
+            return;
+        }
+
+        var html='<div class="detail-note '+noteColor+'"><i class="fas '+(isSudah?'fa-check-circle':'fa-info-circle')+'"></i><span>'+
+            'Menampilkan <strong>'+data.length+'</strong> peserta yang <strong>'+label.toLowerCase()+'</strong>.'+
+            '</span></div>';
+
+        html+='<div class="table-wrap"><table class="gen-table"><thead><tr>'+
+            '<th>NO</th><th>PESERTA</th><th>NO. TANK</th><th>KATEGORI</th><th>KELAS</th><th>ASAL</th>';
+        if(isSudah) html+='<th>DINILAI OLEH</th><th>TOTAL</th>';
+        html+='</tr></thead><tbody>';
+
+        data.forEach(function(item,i){
+            html+='<tr><td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td>'+
+                '<td style="font-weight:700;">'+esc(item.nama_peserta)+'</td>'+
+                '<td class="g-tank">'+esc(item.nomor_tank)+'</td>'+
+                '<td style="font-size:12px;color:var(--text-muted);">'+esc(item.kategori)+'</td>'+
+                '<td style="font-size:12px;">'+esc(item.kelas)+'</td>'+
+                '<td style="font-size:11px;color:var(--text-muted);">'+esc(item.detail_anggota)+'</td>';
+            if(isSudah){
+                html+='<td class="g-juri">'+esc(item.juri_nama)+'</td>'+
+                    '<td class="g-total">'+item.total_nilai+'</td>';
+            }
+            html+='</tr>';
+        });
+
+        html+='</tbody></table></div>';
+        content.innerHTML=html;
+    })
+    .catch(function(){
+        content.innerHTML='<div class="empty-state">Gagal memuat data.</div>';
     });
 }
 

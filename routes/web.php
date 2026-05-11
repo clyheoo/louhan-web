@@ -42,7 +42,6 @@ Route::middleware(['auth', 'admin'])->group(function () {
    ═══════════════════════════════════════════ */
 Route::get('/api/juri/data', [JuriController::class, 'getJuriData'])->middleware('auth');
 Route::post('/api/juri/simpan-nilai', [JuriController::class, 'simpanNilai'])->middleware('auth');
-
 /* ═══════════════════════════════════════════
    GRAND JURI
    ═══════════════════════════════════════════ */
@@ -52,6 +51,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/grand-juri/peserta', [GrandJuriController::class, 'getPeserta']);
     Route::get('/api/grand-juri/juri-summary', [GrandJuriController::class, 'getJuriSummary']);
     Route::post('/api/grand-juri/edit-nilai', [GrandJuriController::class, 'editNilai']);
+    Route::get('/api/grand-juri/juri-peserta', [GrandJuriController::class, 'getJuriPeserta']);
+    Route::get('/api/grand-juri/rincian-detail', [GrandJuriController::class, 'getRincianDetail']);
+    Route::get('/api/grand-juri/plot-status', [GrandJuriController::class, 'getPlotStatus']);
 });
 
 /* ═══════════════════════════════════════════
