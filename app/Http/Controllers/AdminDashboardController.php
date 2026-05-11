@@ -257,4 +257,21 @@ class AdminDashboardController extends Controller
             'message' => 'Data ikan beserta nilai penilaiannya berhasil dihapus.'
         ]);
     }
+
+    public function getPesertaByUser(Request $request)
+    {
+        $request->validate(['user_id' => 'required|exists:users,id']);
+        
+        $peserta = Peserta::where('user_id', $request->user_id)->first();
+
+        if ($peserta) {
+            return response()->json([
+                'found' => true,
+                'jenis_keanggotaan' => $peserta->jenis_keanggotaan,
+                'detail_anggota' => $peserta->detail_anggota,
+            ]);
+        }
+
+        return response()->json(['found' => false]);
+    }
 }

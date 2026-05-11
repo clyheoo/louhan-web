@@ -536,7 +536,6 @@
     <div class="modal-box">
         <div class="modal-head"><h3><i class="fas fa-box-archive"></i> Modul Registrasi Ikan & Undian Tank</h3><button class="modal-close" onclick="closeModal('modalOld')"><i class="fas fa-xmark"></i></button></div>
         <div class="modal-body">
-            <p style="text-align:center;color:var(--light);margin-bottom:16px;font-size:12px;">Fitur pendukung kontes (Sistem Multi-Ikan)</p>
             <div class="old-grid">
                 <!-- REGISTRASI PESERTA & IKAN (style user.blade) -->
                 <div class="old-card" style="background:linear-gradient(135deg,#f8fafc,#fff);border:none;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,.04);">
@@ -1409,6 +1408,9 @@ if(admRegSearchEl){
         admRegHiddenName.value='';
         admRegSelected=false;
         admRegSearchEl.classList.remove('input-success');
+        document.getElementById('admPerorangan').checked = true;
+        updateAdmToggle();
+        document.getElementById('admInputDetail').value = '';
         renderAdmRegList(admRegUserCache);
         admRegSearchEl.focus();
     });
@@ -1448,6 +1450,27 @@ function renderAdmRegList(list){
                 admRegSelected=true;
                 admRegSearchEl.classList.add('input-success');
                 admRegListEl.classList.remove('show');
+
+                // FETCH DATA KOTA/TEAM JIKA SUDAH PERNAH DAFTAR
+                fetch('/api/admin/get-peserta-by-user?user_id=' + u.id, {
+                    headers: {'Accept': 'application/json'}
+                })
+                .then(function(r){ return r.json(); })
+                .then(function(res){
+                    if(res.found){
+                        if(res.jenis_keanggotaan === 'team'){
+                            document.getElementById('admTeam').checked = true;
+                        } else {
+                            document.getElementById('admPerorangan').checked = true;
+                        }
+                        updateAdmToggle();
+                        document.getElementById('admInputDetail').value = res.detail_anggota;
+                    } else {
+                        document.getElementById('admPerorangan').checked = true;
+                        updateAdmToggle();
+                        document.getElementById('admInputDetail').value = '';
+                    }
+                });
             });
             admRegListEl.appendChild(div);
         })(list[i]);

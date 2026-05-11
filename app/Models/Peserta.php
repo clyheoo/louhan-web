@@ -25,4 +25,9 @@ class Peserta extends Model
     public function scorings() {
         return $this->hasMany(Scoring::class);
     }
+
+        public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }               
