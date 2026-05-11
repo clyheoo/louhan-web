@@ -77,15 +77,25 @@ class AdminDashboardController extends Controller
         $top10 = Scoring::with('ikan.peserta')
             ->whereIn('id', $latestScores)
             ->whereNotNull('total_nilai')
-            ->orderByDesc('total_nilai')
-            ->limit(10)
             ->get()
-            ->map(function ($s) {
+            ->groupBy(fn($s) => $s->ikan?->peserta_id)
+            ->map(function ($scores) {
+                $sorted = $scores->sortByDesc('total_nilai');
+                $best = $sorted->first();
+                $ikan = $best?->ikan;
+                $peserta = $ikan?->peserta;
                 return [
-                    'nama'  => $s->ikan?->peserta?->nama_peserta ?? 'Unknown',
-                    'total' => $s->total_nilai,
+                    'nama'       => $peserta?->nama_peserta ?? 'Unknown',
+                    'total'      => $best?->total_nilai ?? 0,
+                    'kategori'   => $ikan?->kategori ?? '—',
+                    'kelas'      => $best?->kelas ?? ($ikan?->kelas ?? '—'),
+                    'nomor_tank' => $ikan?->nomor_tank ?? '—',
                 ];
-            })->toArray();
+            })
+            ->sortByDesc('total')
+            ->take(10)
+            ->values()
+            ->toArray();
 
         return response()->json([
             'total_peserta'  => $totalIkan, 
