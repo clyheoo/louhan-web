@@ -49,23 +49,25 @@ class AdminDashboardController extends Controller
     {
         $request->validate([
             'nama_peserta'      => 'required|string|max:255',
-            'jenis_keanggotaan' => 'required|in:perorangan,team',
-            'detail_anggota'    => 'required|string|max:255',
             'kategori'          => 'required|string|max:255',
             'kelas'             => 'required|string|max:10',
         ]);
 
-        $peserta = Peserta::create([
-            'user_id'           => null,
-            'nama_peserta'      => $request->nama_peserta,
-            'jenis_keanggotaan' => $request->jenis_keanggotaan,
-            'detail_anggota'    => $request->detail_anggota,
-        ]);
+        // Gunakan firstOrCreate agar tidak error jika peserta sudah terdaftar
+        $peserta = Peserta::firstOrCreate(
+            ['nama_peserta' => $request->nama_peserta],
+            [
+                'user_id'           => null,
+                'jenis_keanggotaan' => 'perorangan',
+                'detail_anggota'    => '-',
+            ]
+        );
 
         Ikan::create([
             'peserta_id' => $peserta->id,
             'kategori'   => $request->kategori,
             'kelas'      => $request->kelas,
+            'dibuat_oleh' => 'admin',
         ]);
 
         return response()->json([

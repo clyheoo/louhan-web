@@ -70,6 +70,7 @@ class DashboardController extends Controller
             'peserta_id' => $peserta->id,
             'kategori'   => $request->kategori,
             'kelas'      => $request->kelas,
+            'dibuat_oleh' => 'user',
         ]);
 
         return response()->json([
@@ -197,5 +198,14 @@ class DashboardController extends Controller
         $user->is_admin = !$user->is_admin;
         $user->save();
         return response()->json(['success' => true, 'message' => "Role {$user->name} diubah menjadi " . ($user->is_admin ? 'Admin' : 'User Biasa') . ".", 'new_role' => $user->is_admin]);
+    }
+
+    public function getMyIkans()
+    {
+        $peserta = Peserta::where('user_id', Auth::id())->first();
+        if (!$peserta) return response()->json([]);
+
+        $ikans = $peserta->ikans()->orderBy('created_at', 'desc')->get();
+        return response()->json($ikans);
     }
 }

@@ -10,10 +10,12 @@ class Ikan extends Model
     use HasFactory;
 
     protected $fillable = [
-        'peserta_id',
-        'kategori',
-        'kelas',
+        'peserta_id', 
+        'kategori', 
+        'kelas', 
         'nomor_tank',
+        'dibuat_oleh',
+        'diubah_oleh'
     ];
 
     public function peserta()

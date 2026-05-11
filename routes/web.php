@@ -28,6 +28,7 @@ Route::post('/api/acak-nomor-tank-user', [DashboardController::class, 'acakNomor
 Route::post('/api/admin/register-peserta-ikan', [AdminDashboardController::class, 'registerPesertaIkan'])->name('admin.register.peserta.ikan');
 Route::post('/api/admin/delete-ikan', [AdminDashboardController::class, 'deleteIkan']);
 Route::get('/api/admin/get-peserta-by-user', [AdminDashboardController::class, 'getPesertaByUser']);
+Route::get('/api/user/my-ikans', [DashboardController::class, 'getMyIkans'])->middleware('auth');
 
 /* ═══════════════════════════════════════════
    KELOLA USER (Hanya Admin)

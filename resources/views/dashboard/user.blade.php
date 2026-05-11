@@ -135,6 +135,11 @@
             .card-body, .card-header { padding-left: 20px; padding-right: 20px; }
             .number-display { font-size: 60px; }
         }
+                .badge-admin {
+            font-size: 9px; font-weight: 700; background: #fef3c7; color: #92400e;
+            padding: 2px 7px; border-radius: 4px; margin-left: 6px; vertical-align: middle;
+            display: inline-flex; align-items: center; gap: 3px; border: 1px solid #fde68a;
+        }
     </style>
 </head>
 <body>
@@ -238,8 +243,7 @@
                                     @foreach($ikansSaya as $index => $ikan)
                                         <div class="ikan-item" id="ikan-item-{{ $ikan->id }}">
                                             <div class="ikan-item-info">
-                                                <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #{{ $loop->iteration }}</h4>
-                                                <p>{{ $ikan->kategori }} - Kelas {{ $ikan->kelas }}</p>
+                                            <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #{{ $loop->iteration }}@if($ikan->dibuat_oleh === 'admin')<span class="badge-admin"><i class="fas fa-shield-halved"></i> Ditambah Admin</span>@endif</h4>                                                <p>{{ $ikan->kategori }} - Kelas {{ $ikan->kelas }}</p>
                                             </div>
                                             <div class="ikan-item-right">
                                                 <div class="tank-num {{ $ikan->nomor_tank ? 'filled' : 'empty' }}" id="tank-num-{{ $ikan->id }}">
@@ -414,6 +418,106 @@
             .catch(err => { alert(err.message || 'Gagal menambahkan ikan.'); })
             .finally(() => { btnSubmit.disabled = false; btnSubmit.innerHTML = 'Simpan Ikan'; });
         });
+
+                // --- REAL-TIME POLLING UNTUK UPDATE DARI ADMIN ---
+        let currentIkans = {};
+        document.querySelectorAll('.ikan-item').forEach(el => {
+            const id = el.id.replace('ikan-item-', '');
+            currentIkans[id] = {
+                kategori: el.querySelector('.ikan-item-info p').textContent.trim(),
+                nomor_tank: el.querySelector('.tank-num').textContent.trim()
+            };
+        });
+
+        function pollIkans() {
+            fetch('/api/user/my-ikans', {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                let listContainer = document.getElementById('ikanListContainer');
+                let emptyState = document.querySelector('.ikan-empty-state');
+
+                if(!listContainer && data.length > 0) {
+                    if(emptyState) emptyState.remove();
+                    listContainer = document.createElement('div');
+                    listContainer.className = 'ikan-list';
+                    listContainer.id = 'ikanListContainer';
+                    document.getElementById('ikanListWrapper').appendChild(listContainer);
+                }
+
+                data.forEach(ikan => {
+                    let existingEl = document.getElementById(`ikan-item-${ikan.id}`);
+                    
+                    if (!existingEl) {
+                        // IKAN BARU (DITAMBAHKAN ADMIN)
+                        const count = listContainer.children.length + 1;
+                        const badge = ikan.dibuat_oleh === 'admin' ? '<span class="badge-admin"><i class="fas fa-shield-halved"></i> Ditambah Admin</span>' : '';
+                        const newEl = document.createElement('div');
+                        newEl.className = 'ikan-item';
+                        newEl.id = `ikan-item-${ikan.id}`;
+                        newEl.style.animation = 'cardEntry 0.5s ease both';
+                        newEl.innerHTML = `
+                            <div class="ikan-item-info">
+                                <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #${count} ${badge}</h4>
+                                <p>${ikan.kategori} - Kelas ${ikan.kelas}</p>
+                            </div>
+                            <div class="ikan-item-right">
+                                <div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">
+                                    ${ikan.nomor_tank ?? '--'}
+                                </div>
+                                ${!ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`}
+                            </div>`;
+                        listContainer.prepend(newEl);
+                        currentIkans[ikan.id] = { kategori: `${ikan.kategori} - Kelas ${ikan.kelas}`, nomor_tank: ikan.nomor_tank ?? '--' };
+                    } else {
+                        // CEK JIKA ADMIN MENGUBAH DATA IKAN YANG SUDAH ADA
+                        const currentKat = `${ikan.kategori} - Kelas ${ikan.kelas}`;
+                        const currentTank = ikan.nomor_tank ?? '--';
+                        
+                        if (currentIkans[ikan.id].kategori !== currentKat) {
+                            existingEl.querySelector('.ikan-item-info p').textContent = currentKat;
+                            if (ikan.diubah_oleh === 'admin') {
+                                let badge = existingEl.querySelector('.badge-admin');
+                                if (!badge) {
+                                    badge = document.createElement('span');
+                                    badge.className = 'badge-admin';
+                                    existingEl.querySelector('.ikan-item-info h4').appendChild(badge);
+                                }
+                                badge.innerHTML = '<i class="fas fa-pen"></i> Diubah Admin';
+                            }
+                            currentIkans[ikan.id].kategori = currentKat;
+                        }
+
+                        // UPDATE JIKA ADMIN MENGACAKKAN TANK
+                        if (currentIkans[ikan.id].nomor_tank !== currentTank && currentTank !== '--') {
+                            const tankEl = document.getElementById(`tank-num-${ikan.id}`);
+                            if (tankEl) {
+                                tankEl.textContent = currentTank;
+                                tankEl.classList.remove('empty');
+                                tankEl.classList.add('filled');
+                                let btn = existingEl.querySelector('.btn-acak-kecil');
+                                if (btn) btn.outerHTML = '<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>';
+                            }
+                            currentIkans[ikan.id].nomor_tank = currentTank;
+                        }
+                    }
+                });
+
+                // UPDATE BADGE STATUS DI ATAS
+                const total = data.length;
+                const undi = data.filter(i => i.nomor_tank).length;
+                const statusBadge = document.querySelector('.status-badge');
+                if (statusBadge) {
+                    statusBadge.textContent = total > 0 ? `${undi}/${total} DIUNDI` : 'MENUNGGU IKAN';
+                    statusBadge.className = 'status-badge ' + (total > 0 ? 'success' : '');
+                }
+            })
+            .catch(err => console.error('Polling error:', err));
+        }
+
+        // Jalankan pengecekan setiap 5 detik
+        setInterval(pollIkans, 5000);
 
         // --- LOGIC MESIN UNDIAN PER IKAN ---
         const numberDisplay = document.getElementById('numberDisplay');
