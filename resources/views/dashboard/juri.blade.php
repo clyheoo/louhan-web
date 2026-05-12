@@ -259,7 +259,7 @@
             </div>
             <div class="card-body" style="padding: 0;">
                 <table class="result-table">
-                    <thead><tr><th>No. Tank</th><th>Nama Peserta</th><th>Kelas</th><th>Total Nilai</th><th>Status</th><th>Aksi</th></tr></thead>
+                    <thead><tr><th>No. Tank</th><th>Kelas</th><th>Total Nilai</th><th>Status</th><th>Aksi</th></tr></thead>
                     <tbody id="tbody-scores"><tr><td colspan="6"><div style="padding:30px;text-align:center;color:var(--text-light);">Belum ada data.</div></td></tr></tbody>
                 </table>
             </div>
@@ -501,7 +501,7 @@ function loadJuriData() {
             opt.value = t.id;
             opt.setAttribute('data-kategori', t.kategori);
             opt.setAttribute('data-kelas', t.kelas);
-            opt.textContent = 'Tank ' + t.nomor_tank + ' - ' + t.peserta.nama_peserta;
+            opt.textContent = 'Tank ' + t.nomor_tank;
 
             /* ★ tandai yang sudah dinilai */
             if (allScoredMap[t.id]) {
@@ -588,9 +588,8 @@ function loadJuriData() {
 
             const tr = document.createElement('tr');
             tr.innerHTML =
-                '<td style="font-weight:700; color:var(--primary);">Tank ' + s.ikan.nomor_tank + ' <span style="font-size:10px;color:var(--text-light);">(' + s.ikan.kategori + ')</span></td>' +
-                '<td>' + s.ikan.peserta.nama_peserta + '</td>' +
-                '<td>Kelas ' + s.kelas + '</td>' +
+            '<td style="font-weight:700; color:var(--primary);">Tank ' + s.ikan.nomor_tank + ' <span style="font-size:10px;color:var(--text-light);">(' + s.ikan.kategori + ')</span></td>' +
+            '<td>Kelas ' + s.kelas + '</td>' +
                 '<td style="font-weight:800; font-size:15px;">' + s.total_nilai + '</td>' +
                 '<td>' + statusHtml + '</td>' +
                 '<td><button class="btn-view" onclick="showDetail(' + s.ikan_id + ')"><i class="fas fa-eye"></i> Lihat Detail</button></td>';
@@ -634,7 +633,7 @@ function showFormState(show) {
 function showDetail(id) {
     const data = detailDataStorage[id];
     if (!data) return;
-    document.getElementById('modalTitle').innerText = 'Detail Nilai: Tank ' + data.tank + ' - ' + data.nama + ' (' + data.kategori + ')';
+    document.getElementById('modalTitle').innerText = 'Detail Nilai: Tank ' + data.tank + ' (' + data.kategori + ')';
     let html = '<table class="detail-table"><thead><tr><th style="width:25%;">KOMPONEN</th><th style="width:15%;">SKALA</th><th style="text-align:center; width:15%;">NILAI</th></tr></thead><tbody>';
     Object.keys(formFields).forEach(function(kat) {
         let subTotal = 0;
