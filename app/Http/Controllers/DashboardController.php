@@ -80,12 +80,14 @@ class DashboardController extends Controller
         ]);
     }
 
-    // UNDIAN USER (Sekarang berdasarkan ID Ikan)
     public function acakNomorTankUser(Request $request)
     {
         $request->validate(['ikan_id' => 'required|exists:ikans,id']);
 
-        // Cari ikan yang belum dapat nomor DAN milik user yang login
+        // AMBIL RANGE DARI PENGATURAN ADMIN
+        $min = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
+        $max = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+
         $ikan = Ikan::where('id', $request->ikan_id)
             ->whereHas('peserta', fn($q) => $q->where('user_id', Auth::id()))
             ->whereNull('nomor_tank')
@@ -96,14 +98,12 @@ class DashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($ikan) {
-                $min = 1; $max = 100; 
-                // Cek nomor yang sudah dipakai di seluruh tabel IKANS
+            DB::transaction(function () use ($ikan, $min, $max) {
                 $assignedNumbers = Ikan::whereNotNull('nomor_tank')->lockForUpdate()->pluck('nomor_tank')->toArray();
                 $allNumbers = range($min, $max);
                 $availableNumbers = array_diff($allNumbers, $assignedNumbers);
 
-                if (empty($availableNumbers)) throw new \Exception('Maaf, seluruh nomor tank sudah habis terisi.');
+                if (empty($availableNumbers)) throw new \Exception('Maaf, seluruh nomor tank (dari ' . $min . ' sampai ' . $max . ') sudah habis terisi.');
 
                 $randomNumber = array_values($availableNumbers)[array_rand($availableNumbers)];
                 $ikan->nomor_tank = $randomNumber;
@@ -138,24 +138,22 @@ class DashboardController extends Controller
     public function acakNomorTankAdmin(Request $request)
     {
         $request->validate([
-            'ikan_id'   => 'required|exists:ikans,id', // Diubah dari peserta_id
-            'range_min' => 'required|integer|min:1',
-            'range_max' => 'required|integer|min:1',
+            'ikan_id'   => 'required|exists:ikans,id', 
         ]);
 
-        if ($request->range_max < $request->range_min) {
-            return response()->json(['success' => false, 'message' => 'Range maksimal harus lebih besar dari minimal.'], 400);
-        }
+        // AMBIL RANGE DARI PENGATURAN ADMIN
+        $min = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
+        $max = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
 
         $ikan = Ikan::find($request->ikan_id);
 
         try {
-            DB::transaction(function () use ($ikan, $request) {
+            DB::transaction(function () use ($ikan, $min, $max) {
                 $assignedNumbers = Ikan::whereNotNull('nomor_tank')->lockForUpdate()->pluck('nomor_tank')->toArray();
-                $allNumbers = range($request->range_min, $request->range_max);
+                $allNumbers = range($min, $max);
                 $availableNumbers = array_diff($allNumbers, $assignedNumbers);
 
-                if (empty($availableNumbers)) throw new \Exception('Semua nomor dalam range tersebut sudah terisi habis!');
+                if (empty($availableNumbers)) throw new \Exception('Semua nomor dalam range ' . $min . ' - ' . $max . ' sudah terisi habis!');
 
                 $randomNumber = array_values($availableNumbers)[array_rand($availableNumbers)];
                 $ikan->nomor_tank = $randomNumber;
@@ -174,9 +172,19 @@ class DashboardController extends Controller
 
     public function getListUsers()
     {
-        $users = User::select('id', 'name', 'email', 'role', 'plain_password')->orderBy('name')->get()->map(function ($u) {
-            return ['id' => $u->id, 'name' => $u->name, 'email' => $u->email, 'role' => $u->role ?? 'user', 'plain_password' => $u->plain_password];
-        });
+        $users = User::select('id', 'name', 'email', 'role', 'plain_password')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id'             => $u->id,
+                    'name'           => $u->name,
+                    'email'          => $u->email,
+                    'role'           => $u->role ?? 'user',
+                    'plain_password' => $u->plain_password ?? '-',
+                ];
+            });
+        
         return response()->json($users);
     }
 

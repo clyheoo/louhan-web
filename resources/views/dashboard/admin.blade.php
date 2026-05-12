@@ -286,7 +286,32 @@
     .dropdown-item .di-role{font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;flex-shrink:0;}
     .dropdown-empty{padding:20px;text-align:center;font-size:12px;color:var(--light);
     }
-    </style>
+    /* ═══════════════════════════════════════════════
+   FORCE WHITE TEXT UNTUK AREA HITAM (UNDIAN)
+   ═══════════════════════════════════════════════ */
+    .dark-input-area .form-control,
+    .dark-input-area input[type="number"] {
+        background: rgba(0,0,0,.3) !important;
+        color: #ffffff !important;
+        border-color: rgba(255,255,255,.15) !important;
+        font-weight: 700;
+    }
+    .dark-input-area input[type="number"]::placeholder {
+        color: rgba(255,255,255,.4);
+    }
+    .dark-input-area input[type="number"]::-webkit-inner-spin-button,
+    .dark-input-area input[type="number"]::-webkit-outer-spin-button {
+        opacity: 1;
+        filter: invert(1);
+    }
+    .dark-input-area .btn-acak-kecil {
+        color: #ffffff !important;
+        border-color: rgba(255,255,255,.25) !important;
+    }
+    .dark-input-area .btn-acak-kecil:hover {
+        background: rgba(255,255,255,.1) !important;
+    }
+        </style>
 </head>
 <body>
 
@@ -585,6 +610,29 @@
                         <div class="section-title" style="color:#fff;font-size:13px;"><i class="fas fa-dice"></i> Undian Nomor Tank</div>
                     </div>
                     <div class="section-body" style="text-align:center;">
+                    <!-- UI PENGATURAN RANGE -->
+                    <div class="dark-input-area" style="margin-bottom:16px; background:rgba(255,255,255,0.05); border-radius:10px; padding:14px; border:1px solid rgba(255,255,255,0.08);">
+                        <div style="font-size:10px; color:rgb(255, 255, 255); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">
+                            <i class="fas fa-sliders" style="margin-right:4px;"></i> Rentang Nomor Undian
+                        </div>
+                        <div id="rangeViewMode" style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="font-size:24px; font-weight:900; color:#fff;" id="rangeDisplayText">1 - 1000</div>
+                            <button type="button" onclick="toggleRangeEdit(true)" style="padding:6px 12px; border-radius:8px; font-size:10px; font-weight:700; cursor:pointer; background:transparent; border:1px solid rgba(255,255,255,.25); color:#fff; display:flex; align-items:center; gap:4px; transition:all .2s;">
+                                <i class="fas fa-pen"></i> Ubah
+                            </button>
+                        </div>
+                        <div id="rangeEditMode" style="display:none;">
+                            <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+                                <input type="number" id="inputRangeMin" style="width:100%; padding:9px 12px; border-radius:9px; background:rgba(0,0,0,.3); color:#fff; border:1px solid rgba(255,255,255,.15); text-align:center; font-weight:700; font-family:inherit; font-size:14px; outline:none;" value="1" min="1">
+                                <span style="color:rgb(255, 255, 255); font-weight:600;">s/d</span>
+                                <input type="number" id="inputRangeMax" style="width:100%; padding:9px 12px; border-radius:9px; background:rgba(0,0,0,.3); color:#fff; border:1px solid rgba(255,255,255,.15); text-align:center; font-weight:700; font-family:inherit; font-size:14px; outline:none;" value="1000" min="1">
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <button type="button" onclick="toggleRangeEdit(false)" style="flex:1; padding:8px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; background:transparent; border:1px solid rgba(255,255,255,.25); color:#fff; font-family:inherit; transition:all .2s;">Batal</button>
+                                <button type="button" onclick="saveTankRange()" style="flex:1; padding:8px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; background:#3b82f6; border:none; color:#fff; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:4px; transition:all .2s;"><i class="fas fa-save"></i> Simpan</button>
+                            </div>
+                        </div>
+                    </div>
                         <select id="pesertaSelectOld" class="form-control" style="background:rgba(0,0,0,.3);color:#fff;border-color:rgba(255,255,255,.1);margin-bottom:14px;"></select>
                         <div id="tankCounter" style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px;">Memuat...</div>
                         <div style="font-size:56px;font-weight:900;margin:12px 0;letter-spacing:2px;transition:color .3s;" id="numberDisplayOld">--</div>
@@ -1354,12 +1402,64 @@ function loadPesertaOld(){
     });
 }
 
-// Trigger saat modal dibuka
+/* ═══════════════════════════════════════════════
+   PENGATURAN RANGE NOMOR UNDIAN (JS)
+   ═══════════════════════════════════════════════ */
+var currentTankMax = 1000; 
+
+function loadTankRange() {
+    fetch('/api/tank-range', {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        document.getElementById('rangeDisplayText').textContent = d.min + ' - ' + d.max;
+        document.getElementById('inputRangeMin').value = d.min;
+        document.getElementById('inputRangeMax').value = d.max;
+        currentTankMax = d.max;
+    })
+    .catch(function(){});
+}
+
+function toggleRangeEdit(show) {
+    document.getElementById('rangeViewMode').style.display = show ? 'none' : 'flex';
+    document.getElementById('rangeEditMode').style.display = show ? 'block' : 'none';
+}
+
+function saveTankRange() {
+    var min = parseInt(document.getElementById('inputRangeMin').value);
+    var max = parseInt(document.getElementById('inputRangeMax').value);
+    
+    if (isNaN(min) || isNaN(max) || min < 1 || max < 1) {
+        popupError('Invalid', 'Nomor harus lebih dari 0.'); return;
+    }
+    if (max <= min) {
+        popupError('Invalid', 'Nomor akhir harus lebih besar dari nomor awal.'); return;
+    }
+
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('min', min);
+    fd.append('max', max);
+
+    fetch('/api/admin/tank-range', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}, body:fd})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d.success) {
+            loadTankRange();
+            toggleRangeEdit(false);
+            popupSuccess('Berhasil', 'Rentang nomor undian diubah menjadi <b>' + min + ' - ' + max + '</b>.');
+        } else {
+            popupError('Gagal', d.message || 'Terjadi kesalahan.');
+        }
+    })
+    .catch(function(){ popupError('Error', 'Gagal menyimpan pengaturan.'); });
+}
+
 var origOpenModal2 = openModal;
 openModal = function(id){
     origOpenModal2(id);
     if(id==='modalOld'){
         loadPesertaOld();
+        loadTankRange();
     }
 };
 
@@ -1501,15 +1601,13 @@ document.getElementById('btnAcakOld').addEventListener('click',function(){
     btn.disabled=true;
 
     var c=0,iv=setInterval(function(){
-        display.textContent=Math.floor(Math.random()*100)+1;
+        display.textContent=Math.floor(Math.random()*currentTankMax)+1;
         if(c++>15){
             clearInterval(iv);
 
             var fd=new FormData();
             fd.append('_token',getCsrf());
             fd.append('ikan_id',sel.value);
-            fd.append('range_min',1);
-            fd.append('range_max',100);
 
             fetch('{{ route("api.acak.tank.admin") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
             .then(function(r){return r.json();})

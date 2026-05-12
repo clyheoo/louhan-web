@@ -42,6 +42,12 @@ Route::middleware(['auth', 'admin'])->group(function () {
 });
 
 /* ═══════════════════════════════════════════
+   GLOBAL SETTING (Undian Range)
+   ═══════════════════════════════════════════ */
+Route::get('/api/tank-range', [AdminDashboardController::class, 'getTankRange'])->middleware('auth');
+Route::post('/api/admin/tank-range', [AdminDashboardController::class, 'setTankRange'])->middleware(['auth', 'admin']); 
+
+/* ═══════════════════════════════════════════
    JURI
    ═══════════════════════════════════════════ */
 Route::get('/api/juri/data', [JuriController::class, 'getJuriData'])->middleware('auth');

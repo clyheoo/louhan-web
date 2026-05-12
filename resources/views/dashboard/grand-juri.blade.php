@@ -269,7 +269,7 @@
 
     <!-- RINCIAN -->
     <div class="card">
-        <div class="card-header"><div class="card-title"><i class="fas fa-chart-bar"></i> Rincian Per Kelas &amp; Kategori</div></div>
+        <div class="card-header"><div class="card-title"><i class="fas fa-chart-bar"></i> Rincian Kategori</div></div>
         <div class="card-body"><div class="rincian-grid" id="rincianGrid"><div class="empty-state">Memuat...</div></div></div>
     </div>
 

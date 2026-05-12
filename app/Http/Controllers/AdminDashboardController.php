@@ -208,18 +208,16 @@ class AdminDashboardController extends Controller
             'role'     => 'required|in:admin,juri,grand_juri,user',
         ]);
 
-        /* BYPASS ELOQUENT — langsung insert ke database */
         $userId = \DB::table('users')->insertGetId([
-            'name'          => $request->name,
-            'email'         => $request->email,
-            'password'      => bcrypt($request->password),
-            'plain_password'=> $request->password,
-            'role'          => $request->role,
-            'created_at'    => now(),
-            'updated_at'    => now(),
+            'name'           => $request->name,
+            'email'          => $request->email,
+            'password'       => bcrypt($request->password),
+            'plain_password' => $request->password,
+            'role'           => $request->role,
+            'created_at'     => now(),
+            'updated_at'     => now(),
         ]);
 
-        // Catat di log bahwa admin membuat user baru
         \App\Models\PasswordHistory::create([
             'user_id'     => $userId,
             'old_password' => null,
@@ -227,7 +225,10 @@ class AdminDashboardController extends Controller
             'changed_by'   => auth()->user()->name,
         ]);
 
-        return response()->json(['success' => true, 'message' => 'User "' . $request->name . '" berhasil ditambahkan.']);
+        return response()->json([
+            'success' => true, 
+            'message' => 'User "' . $request->name . '" berhasil ditambahkan.'
+        ]);
     }
 
     public function changeRole(Request $request)
@@ -303,5 +304,36 @@ class AdminDashboardController extends Controller
         }
 
         return response()->json(['found' => false]);
+    }
+    
+        /* ═══════════════════════════════════════════
+       PENGATURAN RANGE NOMOR UNDIAN
+       ═══════════════════════════════════════════ */
+    public function getTankRange()
+    {
+        $min = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
+        $max = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+        
+        return response()->json(['min' => $min, 'max' => $max]);
+    }
+
+    public function setTankRange(Request $request)
+    {
+        $request->validate([
+            'min' => 'required|integer|min:1',
+            'max' => 'required|integer|min:1|gte:min',
+        ]);
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'tank_range_min'],
+            ['value' => $request->min, 'updated_at' => now()]
+        );
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'tank_range_max'],
+            ['value' => $request->max, 'updated_at' => now()]
+        );
+
+        return response()->json(['success' => true, 'message' => 'Range nomor undian berhasil diperbarui.']);
     }
 }

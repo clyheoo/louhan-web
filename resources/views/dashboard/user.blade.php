@@ -519,6 +519,13 @@
         // Jalankan pengecekan setiap 5 detik
         setInterval(pollIkans, 5000);
 
+        // --- AMBIL RANGE UNDIAN DARI SERVER ---
+        let tankDrawMax = 1000; 
+        fetch('/api/tank-range', { headers: { 'Accept': 'application/json' } })
+        .then(r => r.json())
+        .then(d => { if(d.max) tankDrawMax = d.max; })
+        .catch(() => {});
+
         // --- LOGIC MESIN UNDIAN PER IKAN ---
         const numberDisplay = document.getElementById('numberDisplay');
         const lcdInfo = document.getElementById('lcdInfo');
@@ -533,7 +540,7 @@
             let rollCount = 0;
             const maxRolls = 15;
             const rollInterval = setInterval(() => {
-                numberDisplay.textContent = Math.floor(Math.random() * 100) + 1;
+                numberDisplay.textContent = Math.floor(Math.random() * tankDrawMax) + 1;
                 rollCount++;
 
                 if (rollCount >= maxRolls) {
