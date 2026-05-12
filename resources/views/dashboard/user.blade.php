@@ -236,7 +236,11 @@
                             <div class="number-display" id="numberDisplay">--</div>
                             <div style="font-size:11px; color:var(--gray-500); margin-top:8px;" id="lcdInfo">Pilih ikan untuk diundi</div>
                         </div>
-
+                        <!-- BANNER NOTIFIKASI RESET DARI ADMIN -->
+                        <div id="resetBanner" style="display:none; width:100%; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.25); border-radius:12px; padding:12px 16px; margin-bottom:16px; align-items:center; gap:10px;">
+                            <i class="fas fa-triangle-exclamation" style="color:#f59e0b; font-size:18px; flex-shrink:0;"></i>
+                            <span id="resetBannerText" style="font-size:12px; color:#fbbf24; line-height:1.5; flex:1;"></span>
+                        </div>
                         <div class="ikan-list-wrapper" id="ikanListWrapper">
                             @if($ikansSaya->count() > 0)
                                 <div class="ikan-list" id="ikanListContainer">
@@ -434,7 +438,12 @@
                 headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
             })
             .then(r => r.json())
-            .then(data => {
+            .then(response => {
+                // RESPONSE STRUKTUR BARU
+                const data = response.ikans;
+                const resetInfo = response.reset_info;
+                
+                let hasResetIkan = false; // Flag untuk cek apakah ada ikan user yang direset
                 let listContainer = document.getElementById('ikanListContainer');
                 let emptyState = document.querySelector('.ikan-empty-state');
 
@@ -471,26 +480,38 @@
                         listContainer.prepend(newEl);
                         currentIkans[ikan.id] = { kategori: `${ikan.kategori} - Kelas ${ikan.kelas}`, nomor_tank: ikan.nomor_tank ?? '--' };
                     } else {
-                        // CEK JIKA ADMIN MENGUBAH DATA IKAN YANG SUDAH ADA
                         const currentKat = `${ikan.kategori} - Kelas ${ikan.kelas}`;
                         const currentTank = ikan.nomor_tank ?? '--';
                         
+                        // CEK JIKA ADMIN MENGUBAH DATA IKAN
                         if (currentIkans[ikan.id].kategori !== currentKat) {
                             existingEl.querySelector('.ikan-item-info p').textContent = currentKat;
-                            if (ikan.diubah_oleh === 'admin') {
-                                let badge = existingEl.querySelector('.badge-admin');
-                                if (!badge) {
-                                    badge = document.createElement('span');
-                                    badge.className = 'badge-admin';
-                                    existingEl.querySelector('.ikan-item-info h4').appendChild(badge);
-                                }
-                                badge.innerHTML = '<i class="fas fa-pen"></i> Diubah Admin';
-                            }
                             currentIkans[ikan.id].kategori = currentKat;
                         }
 
-                        // UPDATE JIKA ADMIN MENGACAKKAN TANK
-                        if (currentIkans[ikan.id].nomor_tank !== currentTank && currentTank !== '--') {
+                        // ★ DETEKSI RESET NO TANK (User sudah punya nomor, tiba-tiba hilang)
+                        if (currentIkans[ikan.id].nomor_tank !== '--' && currentTank === '--') {
+                            hasResetIkan = true;
+                            
+                            const tankEl = document.getElementById(`tank-num-${ikan.id}`);
+                            if (tankEl) {
+                                tankEl.textContent = '--';
+                                tankEl.classList.remove('filled');
+                                tankEl.classList.add('empty');
+                                
+                                // Kembalikan tombol ACAK, hilangkan centang hijau
+                                let checkmark = existingEl.querySelector('.fa-circle-check');
+                                if (checkmark) {
+                                    const parent = checkmark.closest('span') || checkmark.parentElement;
+                                    if(parent) {
+                                        parent.outerHTML = `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>`;
+                                    }
+                                }
+                            }
+                            currentIkans[ikan.id].nomor_tank = '--';
+                        } 
+                        // UPDATE JIKA ADMIN MENGACAKKAN TANK SECARA MANUAL
+                        else if (currentIkans[ikan.id].nomor_tank !== currentTank && currentTank !== '--') {
                             const tankEl = document.getElementById(`tank-num-${ikan.id}`);
                             if (tankEl) {
                                 tankEl.textContent = currentTank;
@@ -503,6 +524,13 @@
                         }
                     }
                 });
+
+                // ★ TAMPILKAN BANNER JIKA ADA IKAN YANG DIRESET & USER SUDAH PERNAH PUNYA NOMOR
+                const banner = document.getElementById('resetBanner');
+                if (hasResetIkan && resetInfo && resetInfo.reason) {
+                    banner.style.display = 'flex';
+                    document.getElementById('resetBannerText').innerHTML = `Nomor tank Anda telah direset oleh panitia. Alasan: <strong style="color:#fff;">${resetInfo.reason}</strong>`;
+                }
 
                 // UPDATE BADGE STATUS DI ATAS
                 const total = data.length;

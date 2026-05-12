@@ -225,9 +225,27 @@ class DashboardController extends Controller
     public function getMyIkans()
     {
         $peserta = Peserta::where('user_id', Auth::id())->first();
-        if (!$peserta) return response()->json([]);
+
+        // Ambil info reset jika ada
+        $resetSetting = \DB::table('settings')->where('key', 'tank_reset_info')->first();
+        $resetInfo = null;
+        if ($resetSetting) {
+            $data = json_decode($resetSetting->value, true);
+            $resetInfo = [
+                'reason'   => $data['reason'] ?? null,
+                'reset_at' => $data['reset_at'] ?? null,
+            ];
+        }
+
+        if (!$peserta) {
+            return response()->json(['ikans' => [], 'reset_info' => $resetInfo]);
+        }
 
         $ikans = $peserta->ikans()->orderBy('created_at', 'desc')->get();
-        return response()->json($ikans);
+
+        return response()->json([
+            'ikans'      => $ikans,
+            'reset_info' => $resetInfo
+        ]);
     }
 }

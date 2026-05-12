@@ -45,8 +45,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
    GLOBAL SETTING (Undian Range)
    ═══════════════════════════════════════════ */
 Route::get('/api/tank-range', [AdminDashboardController::class, 'getTankRange'])->middleware('auth');
-Route::post('/api/admin/tank-range', [AdminDashboardController::class, 'setTankRange'])->middleware(['auth', 'admin']); 
-
+Route::post('/api/admin/tank-range', [AdminDashboardController::class, 'setTankRange'])->middleware(['auth', 'admin']);
+Route::post('/api/admin/reset-tank', [AdminDashboardController::class, 'resetTankNumbers'])->middleware(['auth', 'admin']); // TAMBAHKAN INI
 /* ═══════════════════════════════════════════
    JURI
    ═══════════════════════════════════════════ */

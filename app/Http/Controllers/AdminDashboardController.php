@@ -140,13 +140,13 @@ class AdminDashboardController extends Controller
         ]);
     }
 
-    /* ═══════════════════════════════════════════
-       SCORING DATA (TABLE WITH FILTERS)
-       ═══════════════════════════════════════════ */
     public function getScoringData(Request $request)
     {
-        /* DIPERBAIKI: Query langsung relasi milik IKAN (BUKAN peserta.scorings) */
-        $query = Ikan::whereNotNull('nomor_tank')
+        /* DIPERBAIKI: Tampilkan ikan JIKA sudah dapat nomor tank ATAU sudah pernah dinilai */
+        $query = Ikan::where(function($q) {
+            $q->whereNotNull('nomor_tank')
+              ->orWhereHas('scorings');
+        })
             ->with(['peserta', 'scorings' => function ($q) {
                 $q->latest()->limit(1);
             }, 'scorings.juri', 'scorings.grandJuri']);
@@ -305,7 +305,7 @@ class AdminDashboardController extends Controller
 
         return response()->json(['found' => false]);
     }
-    
+
         /* ═══════════════════════════════════════════
        PENGATURAN RANGE NOMOR UNDIAN
        ═══════════════════════════════════════════ */
@@ -335,5 +335,29 @@ class AdminDashboardController extends Controller
         );
 
         return response()->json(['success' => true, 'message' => 'Range nomor undian berhasil diperbarui.']);
+    }
+
+    public function resetTankNumbers(Request $request)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:255',
+        ]);
+
+        // HANYA kosongkan nomor tank, data penilaian (scorings) TIDAK DIHAPUS
+        \App\Models\Ikan::query()->update(['nomor_tank' => null]);
+
+        // Simpan info reset ke tabel settings untuk dibaca user
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'tank_reset_info'],
+            [
+                'value' => json_encode([
+                    'reason'   => $request->reason,
+                    'reset_at' => now()->toDateTimeString(),
+                ]),
+                'updated_at' => now(),
+            ]
+        );
+
+        return response()->json(['success' => true, 'message' => 'Semua nomor tank berhasil direset. Data penilaian tetap aman.']);
     }
 }

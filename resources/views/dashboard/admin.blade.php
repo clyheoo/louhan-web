@@ -639,6 +639,9 @@
                         <button class="btn-primary" id="btnAcakOld" style="width:100%;justify-content:center;background:#3b82f6;">
                             <i class="fas fa-shuffle"></i> Acak Nomor Tank
                         </button>
+                        <button type="button" onclick="openResetTankModal()" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#fca5a5;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;">
+                            <i class="fas fa-rotate-left"></i> Reset Semua Nomor Tank
+                        </button>
                     </div>
                 </div>
             </div>
@@ -646,6 +649,31 @@
     </div>
 </div>
 
+<!-- MODAL: RESET NOMOR TANK -->
+<div class="modal-bg" id="modalResetTank" style="--mw:450px;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-rotate-left" style="color:var(--danger);"></i> Reset Nomor Tank</h3>
+            <button class="modal-close" onclick="closeModal('modalResetTank')"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="background:var(--danger-lt);border:1px solid #fca5a5;border-radius:10px;padding:14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;">
+                <i class="fas fa-triangle-exclamation" style="color:var(--danger);margin-top:2px;"></i>
+                <div style="font-size:12px;color:#991b1b;line-height:1.5;">
+                    <b>Peringatan!</b> Tindakan ini akan menghapus <b>SEMUA</b> nomor tank yang sudah terundi. Peserta harus mengundi ulang nomornya dari awal.
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Alasan Reset <span style="color:var(--danger);">*</span></label>
+                <textarea id="resetReason" class="form-control" rows="3" placeholder="Contoh: Event lomba sebelumnya telah selesai, persiapan event baru..." style="resize:none;"></textarea>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-cancel" onclick="closeModal('modalResetTank')">Batal</button>
+            <button class="btn-primary" id="btnSubmitReset" style="background:var(--danger);box-shadow:0 3px 10px rgba(239,68,68,.2);" onclick="submitResetTank()"><i class="fas fa-rotate-left"></i> Ya, Reset Semua</button>
+        </div>
+    </div>
+</div>
 <!-- POPUP: SUKSES -->
 <div class="popup-overlay" id="popupSuccess">
     <div class="popup-card">
@@ -1422,6 +1450,60 @@ function loadTankRange() {
 function toggleRangeEdit(show) {
     document.getElementById('rangeViewMode').style.display = show ? 'none' : 'flex';
     document.getElementById('rangeEditMode').style.display = show ? 'block' : 'none';
+}
+
+/* ═══════════════════════════════════════════════
+   RESET NOMOR TANK (JS)
+   ═══════════════════════════════════════════════ */
+function openResetTankModal() {
+    document.getElementById('resetReason').value = '';
+    openModal('modalResetTank');
+}
+
+function submitResetTank() {
+    var reason = document.getElementById('resetReason').value.trim();
+    if (!reason) {
+        popupError('Alasan Wajib Diisi', 'Anda harus mencantumkan alasan mengapa nomor tank direset.');
+        return;
+    }
+    
+    popupConfirm(
+        'Konfirmasi Reset',
+        'Anda yakin ingin menghapus <b>SEMUA</b> nomor tank?<br><span style="font-size:11px;color:var(--danger);">Tindakan ini tidak dapat dibatalkan.</span>',
+        'Ya, Reset Sekarang',
+        function() {
+            var fd = new FormData();
+            fd.append('_token', getCsrf());
+            fd.append('reason', reason);
+            
+            var btn = document.getElementById('btnSubmitReset');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+            
+            fetch('/api/admin/reset-tank', {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'},
+                body: fd
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if (d.success) {
+                    closeModal('modalResetTank');
+                    loadPesertaOld();
+                    loadDashboard();
+                    document.getElementById('numberDisplayOld').textContent = '--';
+                    popupSuccess('Berhasil Direset', 'Semua nomor tank telah dihapus. Peserta akan mendapatkan notifikasi.');
+                } else {
+                    popupError('Gagal', d.message || 'Terjadi kesalahan.');
+                }
+            })
+            .catch(function(){ popupError('Error', 'Gagal menghubungi server.'); })
+            .finally(function(){
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-rotate-left"></i> Ya, Reset Semua';
+            });
+        }
+    );
 }
 
 function saveTankRange() {
