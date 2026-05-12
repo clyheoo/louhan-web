@@ -54,8 +54,11 @@ class GrandJuriController extends Controller
        ═══════════════════════════════════════════ */
     public function getPeserta(Request $request)
     {
-        // DIUBAH: Query utama dari IKAN
-        $query = Ikan::whereNotNull('nomor_tank')
+        // DIPERBAIKI: Tampilkan ikan JIKA sudah dapat nomor tank ATAU sudah pernah dinilai
+        $query = Ikan::where(function($q) {
+            $q->whereNotNull('nomor_tank')
+              ->orWhereHas('scorings');
+        })
             ->with(['peserta', 'scorings' => function ($q) {
                 $q->latest()->limit(1);
             }, 'scorings.juri', 'scorings.grandJuri']);
@@ -320,7 +323,10 @@ class GrandJuriController extends Controller
             return response()->json(['error' => 'kategori wajib diisi'], 422);
         }
 
-        $ikans = Ikan::whereNotNull('nomor_tank')
+        $ikans = Ikan::where(function($q) {
+                $q->whereNotNull('nomor_tank')
+                  ->orWhereHas('scorings');
+            })
             ->where('kategori', $kategori)
             ->with(['peserta', 'scorings' => function ($q) {
                 $q->latest()->limit(1);
@@ -366,7 +372,10 @@ class GrandJuriController extends Controller
             return response()->json(['error' => 'status tidak valid'], 422);
         }
 
-        $query = Ikan::whereNotNull('nomor_tank')
+        $query = Ikan::where(function($q) {
+            $q->whereNotNull('nomor_tank')
+              ->orWhereHas('scorings');
+        })
             ->with(['peserta', 'scorings' => function ($q) {
                 $q->latest()->limit(1);
             }, 'scorings.juri']);
