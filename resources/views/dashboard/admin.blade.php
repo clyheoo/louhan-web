@@ -340,6 +340,14 @@
         <div class="stat-card c-red"><div class="stat-icon red"><i class="fas fa-clock"></i></div><div class="stat-num" id="sBelum">0</div><div class="stat-lbl">Belum Dinilai</div></div>
         <div class="stat-card c-amber"><div class="stat-icon amber"><i class="fas fa-user-pen"></i></div><div class="stat-num" id="sJuri">0</div><div class="stat-lbl">Juri Aktif</div></div>
         <div class="stat-card c-teal"><div class="stat-icon teal"><i class="fas fa-chart-line"></i></div><div class="stat-num" id="sAvg">0</div><div class="stat-lbl">Rata-rata Nilai</div></div>
+            <!-- CARD SISA TANK (DINAMIS) -->
+        <div style="display:flex;justify-content:center;margin-top:-6px;">
+            <div class="stat-card c-teal" style="width:220px;">
+                <div class="stat-icon teal"><i class="fas fa-boxes-stacked"></i></div>
+                <div class="stat-num" id="sSisaTank">0</div>
+                <div class="stat-lbl" id="sSisaTankLabel">Sisa Tank (Max 1000)</div>
+            </div>
+        </div>
     </div>
 
     <!-- ── GRAFIK ── -->
@@ -863,6 +871,8 @@ function loadDashboard(){
         document.getElementById('sBelum').innerText=d.belum_dinilai||0;
         document.getElementById('sJuri').innerText=d.juri_aktif||0;
         document.getElementById('sAvg').innerText=d.rata_rata||0;
+        document.getElementById('sSisaTank').innerText=d.sisa_tank||0;
+        document.getElementById('sSisaTankLabel').innerText='Sisa Tank (Max '+(d.max_tank||1000)+')';
         renderChartKategori(d.per_kategori||{});
         renderChartStatus(d.sudah_dinilai||0,d.grand_edited||0,d.belum_dinilai||0);
         renderChartTop(d.top_10||[]);

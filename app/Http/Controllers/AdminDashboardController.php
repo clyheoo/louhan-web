@@ -70,15 +70,16 @@ class AdminDashboardController extends Controller
             'dibuat_oleh' => 'admin',
         ]);
 
+        // AMBIL RANGE DARI DATABASE UNTUK SISA TANK
+        $maxTank = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+        $sisaTank = max(0, $maxTank - $totalIkan);
+
         return response()->json([
             'success' => true,
             'message' => 'Peserta dan ikan berhasil didaftarkan.',
         ]);
     }
 
-    /* ═══════════════════════════════════════════
-       DASHBOARD STATS + CHART DATA
-       ═══════════════════════════════════════════ */
     public function getDashboardStats()
     {
         $totalIkan = Ikan::whereNotNull('nomor_tank')->count();
@@ -128,6 +129,10 @@ class AdminDashboardController extends Controller
             ->values()
             ->toArray();
 
+        // AMBIL RANGE DARI DATABASE UNTUK SISA TANK
+        $maxTank = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+        $sisaTank = max(0, $maxTank - $totalIkan);
+
         return response()->json([
             'total_peserta'  => $totalIkan, 
             'sudah_dinilai'  => $sudahDinilai,
@@ -135,6 +140,8 @@ class AdminDashboardController extends Controller
             'belum_dinilai'  => $belumDinilai,
             'juri_aktif'     => $juriAktif,
             'rata_rata'      => $avgScore,
+            'sisa_tank'      => $sisaTank,
+            'max_tank'       => $maxTank,
             'per_kategori'   => $perKategori,
             'top_10'         => $top10,
         ]);

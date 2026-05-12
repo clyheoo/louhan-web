@@ -24,10 +24,10 @@ class GrandJuriController extends Controller
         $totalTank = Ikan::whereNotNull('nomor_tank')->count();
         $totalPeserta = Peserta::count();
         
-        // Total Scoring yang sudah masuk (berdasarkan ikan_id)
         $sudahPlot = Scoring::distinct('ikan_id')->count('ikan_id');
         $belumPlot = max(0, $totalTank - $sudahPlot);
-        $sisaTank = max(0, 300 - $totalTank);
+        $maxTank = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+        $sisaTank = max(0, $maxTank - $totalTank);
 
         // Rincian Per Kategori (Ikan yang sudah dapat tank)
         $rincian = Ikan::whereNotNull('nomor_tank')
@@ -44,6 +44,7 @@ class GrandJuriController extends Controller
             'sudah_plot'    => $sudahPlot,
             'belum_plot'    => $belumPlot,
             'sisa_tank'     => $sisaTank,
+            'max_tank'      => $maxTank, // DITAMBAHKAN
             'rincian'       => $rincian,
         ]);
     }

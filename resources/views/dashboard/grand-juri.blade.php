@@ -263,7 +263,7 @@
         </div>
         <div class="stat-card purple">
             <div class="stat-number" id="statSisa">0</div>
-            <div class="stat-label">Sisa Tank (Max 300)</div>
+            <div class="stat-label" id="statSisaLabel">Sisa Tank</div>
         </div>
     </div>
 
@@ -479,6 +479,7 @@ function loadStats(){
         document.getElementById('statSudah').innerText=d.sudah_plot;
         document.getElementById('statBelum').innerText=d.belum_plot;
         document.getElementById('statSisa').innerText=d.sisa_tank;
+        document.getElementById('statSisaLabel').innerText='Sisa Tank (Max '+d.max_tank+')';
 
         var grid=document.getElementById('rincianGrid');
         grid.innerHTML='';
