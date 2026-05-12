@@ -50,8 +50,17 @@
         .score-label h4 { font-size: 13px; font-weight: 700; }
         .score-label p { font-size: 11px; color: var(--text-light); margin-top: 2px; }
         .score-input { width: 100%; padding: 10px; text-align: center; border: 2px solid var(--border); border-radius: 10px; font-size: 15px; font-weight: 800; color: var(--primary); outline: none; transition: 0.2s; }
-        .score-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .score-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+       }
         .score-input.error-input { border-color: var(--danger); background: #fef2f2; }
+                .score-input::-webkit-outer-spin-button,
+        .score-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .score-input[type=number] {
+            -moz-appearance: textfield;
+        }
         .submit-area { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }        .btn-primary { padding: 14px 30px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
         .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
         .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -189,12 +198,11 @@
                 <div class="form-row" style="grid-template-columns: 2fr 1fr 0.8fr 1fr 1.5fr;">
                     <div class="form-group">
                         <label class="form-label">Nomor Tank (Ikan)</label>
-                        <select id="selectTank" class="form-control"><option value="" disabled selected>-- Pilih Ikan Berdasarkan Tank --</option></select>
-                    </div>
+                        <select id="selectTank" class="form-control"><option value="">-- Pilih Ikan Berdasarkan Tank --</option></select>                    </div>
                     <div class="form-group">
                         <label class="form-label">Kelas Penilaian</label>
                         <select id="selectKelas" class="form-control">
-                            <option value="" disabled selected>- Pilih -</option>
+                            <option value="">- Pilih -</option>
                             <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
                         </select>
                     </div>
@@ -378,7 +386,16 @@ function updateMemory() {
     if (!memoryScores[currentTab]) { memoryScores[currentTab] = {}; }
     formFields[currentTab].forEach(function(field) {
         const el = document.getElementById('input-' + field.id);
-        if (el) { memoryScores[currentTab][field.id] = el.value; el.classList.remove('error-input'); }
+        if (el) { 
+            let val = el.value;
+            /* Hapus angka 0 di depan (misal 034 jadi 34), tapi boleh jika cuma "0" */
+            if (val.length > 1 && val.charAt(0) === '0') {
+                val = val.replace(/^0+/, '') || '0';
+                el.value = val;
+            }
+            memoryScores[currentTab][field.id] = val; 
+            el.classList.remove('error-input'); 
+        }
     });
     updateFilledBadges();
 }
@@ -484,7 +501,7 @@ function loadJuriData() {
     .then(function(res) { return res.json(); })
     .then(function(data) {
         const sel = document.getElementById('selectTank');
-        sel.innerHTML = '<option value="" disabled selected>-- Pilih Ikan Berdasarkan Tank --</option>';
+        sel.innerHTML = '<option value="">-- Pilih Ikan Berdasarkan Tank --</option>';
         sel.disabled = false;
 
         /* ★ Simpan data siapa yang sudah menilai */
@@ -519,7 +536,7 @@ function loadJuriData() {
         document.getElementById('inputKelas').value = '- Pilih Ikan -';
         document.getElementById('selectKelas').value = '';
         document.getElementById('warningKelasBox').style.display = 'none';
-        showFormState(false);
+        showIdleState();
         memoryScores = { overall: {}, head: {}, face: {}, body: {}, marking: {}, pearl: {}, color: {}, finnage: {} };
         renderFormInputs(currentTab);
         updateFilledBadges();
@@ -529,6 +546,14 @@ function loadJuriData() {
             const selectedId = this.value;
             const selectedOpt = this.options[this.selectedIndex];
 
+                        if (selectedId === "") {
+                showIdleState();
+                document.getElementById('inputKategori').value = '- Pilih Ikan -';
+                document.getElementById('inputKelas').value = '- Pilih Ikan -';
+                document.getElementById('selectKelas').value = "";
+                document.getElementById('warningKelasBox').style.display = 'none';
+                return;
+            }
             const elKategori = document.getElementById('inputKategori');
             const elKelasAsli = document.getElementById('inputKelas');
             const dropdownKelas = document.getElementById('selectKelas');
@@ -544,7 +569,9 @@ function loadJuriData() {
 
             if (dropdownKelas) {
                 dropdownKelas.onchange = function() {
-                    if (this.value !== kelasAsliUser) {
+                    if (this.value === "") {
+                        if (warningBox) warningBox.style.display = 'none';
+                    } else if (this.value !== kelasAsliUser) {
                         if (warningBox) {
                             warningBox.style.display = 'flex';
                             document.getElementById('warningKelasText').innerHTML = '<b>Perhatian:</b> Anda mengubah kelas penilaian menjadi <b>Kelas ' + this.value + '</b> (Kelas asli: Kelas ' + kelasAsliUser + '). Pastikan sudah sesuai keputusan panitia.';
@@ -555,17 +582,12 @@ function loadJuriData() {
                 };
             }
 
-            /* ★ CEK: apakah ikan ini sudah dinilai siapapun? */
-            var scoredInfo = allScoredMap[selectedId];
-            if (scoredInfo) {
-                showLockedState(scoredInfo);
-            } else {
-                memoryScores = { overall: {}, head: {}, face: {}, body: {}, marking: {}, pearl: {}, color: {}, finnage: {} };
-                document.getElementById('checkConfirm').checked = false;
-                showFormState(true);
-                renderFormInputs(currentTab);
-                updateFilledBadges();
-            }
+            memoryScores = { overall: {}, head: {}, face: {}, body: {}, marking: {}, pearl: {}, color: {}, finnage: {} };
+            document.getElementById('checkConfirm').checked = false;
+            document.getElementById('lockedBanner').style.display = 'none';
+            document.getElementById('formArea').style.display = 'block';
+            renderFormInputs(currentTab);
+            updateFilledBadges();
         };
 
         /* Riwayat tabel */
@@ -602,29 +624,30 @@ function loadJuriData() {
     });
 }
 
-/* ================================================================
-   LOCKED vs FORM STATE
-   ================================================================ */
-function showLockedState(info) {
-    document.getElementById('lockedBanner').style.display = 'block';
+function showIdleState() {
+    var banner = document.getElementById('lockedBanner');
+    banner.style.display = 'block';
     document.getElementById('formArea').style.display = 'none';
 
-    var nameEl = document.getElementById('lockedScorerName');
-    if (info.is_grand) {
-        nameEl.className = 'scorer-name grand';
-        nameEl.innerHTML = '<i class="fas fa-crown"></i> Grand Juri: ' + info.scorer_name;
-    } else if (info.is_mine) {
-        nameEl.className = 'scorer-name';
-        nameEl.innerHTML = '<i class="fas fa-check-circle"></i> Anda (' + info.scorer_name + ')';
-    } else {
-        nameEl.className = 'scorer-name';
-        nameEl.innerHTML = '<i class="fas fa-user-pen"></i> Juri: ' + info.scorer_name;
-    }
-}
+    /* Tampilan biru muda */
+    banner.style.background = 'linear-gradient(135deg, #eff6ff, #dbeafe)';
+    banner.style.borderColor = '#93c5fd';
 
-function showFormState(show) {
-    document.getElementById('lockedBanner').style.display = show ? 'none' : 'block';
-    document.getElementById('formArea').style.display = show ? 'block' : 'none';
+    var lockIcon = banner.querySelector('.lock-icon');
+    lockIcon.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+    lockIcon.style.boxShadow = '0 8px 20px rgba(59,130,246,0.3)';
+    lockIcon.innerHTML = '<i class="fas fa-hand-pointer"></i>';
+
+    banner.querySelector('h3').innerText = 'Silakan Pilih Peserta';
+    banner.querySelector('h3').style.color = '#1e40af';
+
+    var nameEl = document.getElementById('lockedScorerName');
+    nameEl.innerHTML = '';
+    nameEl.className = 'scorer-name';
+
+    var noteEl = banner.querySelector('.locked-note');
+    noteEl.innerHTML = 'Pilih Nomor Tank pada dropdown di atas untuk mulai menginput penilaian.<br><span style="color:#dc2626; font-weight:700; margin-top:8px; display:inline-block;"><i class="fas fa-exclamation-circle"></i> Nilai tidak dapat diubah atau diinput ulang.</span>';
+    noteEl.style.color = '#1d4ed8';
 }
 
 /* ================================================================
