@@ -8,48 +8,52 @@ use App\Models\Ikan;
 
 class JuriController extends Controller
 {
-    public function getJuriData()
-    {
-        $availableTanks = Ikan::whereNotNull('nomor_tank')
-            ->with('peserta')
-            ->orderBy('nomor_tank')
-            ->get();
+public function getJuriData()
+{
+    $availableTanks = Ikan::whereNotNull('nomor_tank')
+        ->with('peserta')
+        ->orderBy('nomor_tank')
+        ->get();
 
-        $myScores = Scoring::where('juri_id', auth()->id())
-            ->with('ikan', 'ikan.peserta')
-            ->orderByDesc('created_at')
-            ->get();
+    $myScores = Scoring::where('juri_id', auth()->id())
+        ->with('ikan', 'ikan.peserta')
+        ->orderByDesc('created_at')
+        ->get();
 
-        // ★ BARU: Ambil semua ikan yang SUDAH DINILAI oleh siapapun
-        $allScored = Scoring::with(['juri', 'grandJuri'])
-            ->select('ikan_id', 'juri_id', 'grand_juri_id', 'edited_by_grand_juri')
-            ->get()
-            ->groupBy('ikan_id')
-            ->map(function ($items) {
-                $first = $items->first();
-                $scorerName = 'Juri lain';
-                $isGrand = false;
+    $firstScoringIds = Scoring::select('ikan_id', \DB::raw('MIN(id) as first_id'))
+        ->groupBy('ikan_id')
+        ->pluck('first_id', 'ikan_id')
+        ->toArray();
 
-                if ($first->edited_by_grand_juri && $first->grandJuri) {
-                    $scorerName = $first->grandJuri->name;
-                    $isGrand = true;
-                } elseif ($first->juri) {
-                    $scorerName = $first->juri->name;
-                }
+    // Tandai mana yang first scorer
+    $myScores->transform(function ($s) use ($firstScoringIds) {
+        $s->is_first_scorer = isset($firstScoringIds[$s->ikan_id]) && $firstScoringIds[$s->ikan_id] == $s->id;
+        return $s;
+    });
 
-                return [
-                    'scorer_name' => $scorerName,
-                    'is_grand'    => $isGrand,
-                    'is_mine'     => ($first->juri_id === auth()->id()),
-                ];
-            });
+    // Hanya tank yang sudah dinilai JURI INI
+    $myScoredTankIds = Scoring::where('juri_id', auth()->id())
+        ->pluck('ikan_id')
+        ->toArray();
 
-        return response()->json([
-            'available_tanks' => $availableTanks,
-            'my_scores'       => $myScores,
-            'all_scored'      => $allScored,
-        ]);
+    $allScored = [];
+    foreach ($myScoredTankIds as $tankId) {
+        $allScored[$tankId] = ['is_mine' => true];
     }
+
+    // Hitung jumlah juri yang sudah menilai per tank
+    $scoredCounts = Scoring::select('ikan_id', \DB::raw('COUNT(*) as total_juri'))
+        ->groupBy('ikan_id')
+        ->pluck('total_juri', 'ikan_id')
+        ->toArray();
+
+    return response()->json([
+        'available_tanks' => $availableTanks,
+        'my_scores'       => $myScores,
+        'all_scored'      => $allScored,
+        'scored_counts'   => $scoredCounts,
+    ]);
+}
 
     public function simpanNilai(Request $request)
     {
@@ -84,13 +88,14 @@ class JuriController extends Controller
             }
         }
 
-        // ★ DIUBAH: Cek apakah ikan ini SUDAH DINILAI oleh siapapun
-        $anyExisting = Scoring::where('ikan_id', $ikanId)->first();
+        $myExisting = Scoring::where('ikan_id', $ikanId)
+            ->where('juri_id', auth()->id())
+            ->first();
 
-        if ($anyExisting) {
+        if ($myExisting) {
             return response()->json([
                 'success' => false,
-                'message' => 'PESERTA INI SUDAH DINILAI. Nilai tidak dapat diubah atau diinput ulang.'
+                'message' => 'ANDA SUDAH MENILAI peserta ini. Nilai Anda sudah tersimpan dan tidak dapat diubah.'
             ]);
         }
 
@@ -104,5 +109,31 @@ class JuriController extends Controller
         ]);
 
         return response()->json(['success' => true, 'message' => 'Nilai berhasil disimpan!']);
+    }
+
+    public function kirimKeGrandJuri(Request $request)
+    {
+        $scoringId = $request->json('scoring_id');
+
+        if (!$scoringId) {
+            return response()->json(['success' => false, 'message' => 'Scoring ID wajib dikirim.'], 422);
+        }
+
+        /* Hanya boleh kirim nilai milik sendiri */
+        $scoring = Scoring::where('id', $scoringId)
+            ->where('juri_id', auth()->id())
+            ->first();
+
+        if (!$scoring) {
+            return response()->json(['success' => false, 'message' => 'Data penilaian tidak ditemukan.'], 404);
+        }
+
+        if ($scoring->submitted_to_grand) {
+            return response()->json(['success' => false, 'message' => 'Nilai ini sudah pernah dikirim ke Grand Juri.']);
+        }
+
+        $scoring->update(['submitted_to_grand' => true]);
+
+        return response()->json(['success' => true, 'message' => 'Nilai berhasil dikirim ke Grand Juri.']);
     }
 }

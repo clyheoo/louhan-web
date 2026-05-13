@@ -165,7 +165,18 @@
         .popup-title { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 8px; }
         .popup-desc { font-size: 13.5px; color: #64748b; line-height: 1.6; margin-bottom: 28px; }
         .popup-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border: none; border-radius: 14px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
-        .popup-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.35); }
+        .popup-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.35); 
+        }
+        .btn-kirim { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; padding:6px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all .2s; font-family:inherit; }
+        .btn-kirim:hover { background:#16a34a; color:white; border-color:#16a34a; }
+        .btn-kirim:disabled { background:#f1f5f9; color:#94a3b8; border-color:#e2e8f0; cursor:not-allowed; }
+        .badge-terkirim { background:#f5f3ff; color:#7c3aed; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:700; display:inline-flex; align-items:center; gap:3px; 
+        }
+        .popup-icon.confirm { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 8px 24px rgba(59,130,246,0.3); }
+        .popup-btn-outline { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border: 2px solid #e2e8f0; border-radius: 14px; background: white; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s; color: var(--text-muted); }
+        .popup-btn-outline:hover { border-color: #94a3b8; color: var(--text-main); }
+        .popup-actions { display: flex; gap: 12px; justify-content: center; 
+        }
     </style>
 </head>
 <body>
@@ -315,17 +326,32 @@
             </button>
         </div>
     </div>
-
+    <!-- Popup Konfirmasi Kirim -->
+<div class="popup-overlay" id="popupConfirm">
+    <div class="popup-card">
+        <div class="popup-icon confirm"><i class="fas fa-paper-plane"></i></div>
+        <h2 class="popup-title">Kirim ke Grand Juri?</h2>
+        <p class="popup-desc">Nilai yang sudah Anda simpan akan dikirim ke Grand Juri untuk ditinjau. Tindakan ini tidak dapat dibatalkan.</p>
+        <div class="popup-actions">
+            <button class="popup-btn-outline" onclick="document.getElementById('popupConfirm').classList.remove('show')">
+                <i class="fas fa-xmark"></i> Batal
+            </button>
+            <button class="popup-btn" id="btnConfirmKirim" style="background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 12px rgba(34,197,94,0.25);">
+                <i class="fas fa-paper-plane"></i> Ya, Kirim
+            </button>
+        </div>
+    </div>
+</div>
 <script>
 const pedomanData = {
-    overall: { title: "Pedoman: OVERALL IMPRESSION", list: `<li>IMPRESSION (100%): Menarik perhatian pada pandangan pertama.</li><li>Memiliki keistimewaan yang menarik.</li><li>MENTAL: Ikan tidak takut, aktif berinteraksi, menguasai area.</li><li>KESEHATAN: Tidak terkena penyakit, tidak luka, performa bagus.</li>` },
-    head: { title: "Pedoman: HEAD (KEPALA)", list: `<li>SIZE (60%): Ukuran kepala menjadi prioritas utama.</li><li>BENTUK (40%):<ul><li>Kepala Bulat Bola (Nilai 85 - 95)</li><li>Kepala Swan Head (Nilai 70 - 80)</li><li>Kepala Tidak Simetris (Nilai 60 - 70)</li></ul></li>` },
-    face: { title: "Pedoman: FACE (WAJAH)", list: `<li>Pipi: Tidak terlalu tembem maupun berkerut.</li><li>Mata: Rata, seimbang, tidak ada titik putih.</li><li>Bibir: Menutup simetris (garis lurus atas-bawah).</li><li>Kondisi: Tidak berair, tidak ada marking di bawah mata.</li><li>Insang: Tertutup rapat & tidak terdorong dayung.</li>` },
-    body: { title: "Pedoman: BODY (BADAN)", list: `<li>BENTUK (50%):<ul><li>Kotak tidak simetris (Nilai 80 - 90)</li><li>Daun simetris (Nilai 70 - 80)</li><li>Daun tidak simetris (Nilai 60 - 70)</li><li>Lancip (Nilai 10 - 50)</li></ul></li><li>PROPORSIONAL (40%): Perbandingan ideal 1 : 1.5</li><li>PANGKAL (10%): Besar dan kokoh.</li><li><i>Catatan Bonsai: Short body > 1:1.2 diskualifikasi kelas bonsai.</i></li>` },
-    marking: { title: "Pedoman: MARKING (MUTIARA HITAM)", list: `<li>FULLNESS (40%): Sepanjang badan (dari pangkal ekor s.d. insang).</li><li>CONTRAST (40%): Hitam pekat.</li><li>BENTUK (20%): Rapi.</li><li><i>Catatan Free Marking: Marking tidak boleh lebih dari setengah badan.</i></li>` },
-    pearl: { title: "Pedoman: PEARL (MUTIARA)", list: `<li>SHINING (45%): Berkilau.</li><li>FULLNESS (35%): Penuh sampai kepala.</li><li>BENTUK (20%): Rapi (tipe cacing/pasir).</li><li><i>Catatan Klasik: Mutiara tidak boleh melebihi 25%.</i></li>` },
-    color: { title: "Pedoman: COLOR (WARNA)", list: `<li>KOMPOSISI (45%): Memiliki dua warna (Dasar merah/kuning).</li><li>KECERAHAN (35%): Warna bersih.</li><li>FULLNESS (20%): Warna merata.</li>` },
-    finnage: { title: "Pedoman: FINNAGE (SIRIP)", list: `<li>BENTUK (75%):<ul><li>Sirip atas & bawah menutup ekor (wrapping).</li><li>Ekor mekar (seperti kipas).</li><li>Dayung seimbang.</li></ul></li><li>KECERAHAN (25%): Bersih, tidak ada bercak/jamur.</li>` }
+    overall: { title: "Pedoman: OVERALL IMPRESSION", list: "<li>IMPRESSION (100%): Menarik perhatian pada pandangan pertama.</li><li>Memiliki keistimewaan yang menarik.</li><li>MENTAL: Ikan tidak takut, aktif berinteraksi, menguasai area.</li><li>KESEHATAN: Tidak terkena penyakit, tidak luka, performa bagus.</li>" },
+    head: { title: "Pedoman: HEAD (KEPALA)", list: "<li>SIZE (60%): Ukuran kepala menjadi prioritas utama.</li><li>BENTUK (40%):<ul><li>Kepala Bulat Bola (Nilai 85 - 95)</li><li>Kepala Swan Head (Nilai 70 - 80)</li><li>Kepala Tidak Simetris (Nilai 60 - 70)</li></ul></li>" },
+    face: { title: "Pedoman: FACE (WAJAH)", list: "<li>Pipi: Tidak terlalu tembem maupun berkerut.</li><li>Mata: Rata, seimbang, tidak ada titik putih.</li><li>Bibir: Menutup simetris (garis lurus atas-bawah).</li><li>Kondisi: Tidak berair, tidak ada marking di bawah mata.</li><li>Insang: Tertutup rapat & tidak terdorong dayung.</li>" },
+    body: { title: "Pedoman: BODY (BADAN)", list: "<li>BENTUK (50%):<ul><li>Kotak tidak simetris (Nilai 80 - 90)</li><li>Daun simetris (Nilai 70 - 80)</li><li>Daun tidak simetris (Nilai 60 - 70)</li><li>Lancip (Nilai 10 - 50)</li></ul></li><li>PROPORSIONAL (40%): Perbandingan ideal 1 : 1.5</li><li>PANGKAL (10%): Besar dan kokoh.</li><li><i>Catatan Bonsai: Short body > 1:1.2 diskualifikasi kelas bonsai.</i></li>" },
+    marking: { title: "Pedoman: MARKING (MUTIARA HITAM)", list: "<li>FULLNESS (40%): Sepanjang badan (dari pangkal ekor s.d. insang).</li><li>CONTRAST (40%): Hitam pekat.</li><li>BENTUK (20%): Rapi.</li><li><i>Catatan Free Marking: Marking tidak boleh lebih dari setengah badan.</i></li>" },
+    pearl: { title: "Pedoman: PEARL (MUTIARA)", list: "<li>SHINING (45%): Berkilau.</li><li>FULLNESS (35%): Penuh sampai kepala.</li><li>BENTUK (20%): Rapi (tipe cacing/pasir).</li><li><i>Catatan Klasik: Mutiara tidak boleh melebihi 25%.</i></li>" },
+    color: { title: "Pedoman: COLOR (WARNA)", list: "<li>KOMPOSISI (45%): Memiliki dua warna (Dasar merah/kuning).</li><li>KECERAHAN (35%): Warna bersih.</li><li>FULLNESS (20%): Warna merata.</li>" },
+    finnage: { title: "Pedoman: FINNAGE (SIRIP)", list: "<li>BENTUK (75%):<ul><li>Sirip atas & bawah menutup ekor (wrapping).</li><li>Ekor mekar (seperti kipas).</li><li>Dayung seimbang.</li></ul></li><li>KECERAHAN (25%): Bersih, tidak ada bercak/jamur.</li>" }
 };
 
 const formFields = {
@@ -342,8 +368,54 @@ const formFields = {
 let currentTab = 'overall';
 let memoryScores = { overall: {}, head: {}, face: {}, body: {}, marking: {}, pearl: {}, color: {}, finnage: {} };
 let detailDataStorage = {};
-/* ★ Data scored dari server: { ikan_id: { scorer_name, is_grand, is_mine } } */
-let allScoredMap = {};
+let myScoredMap = {};
+let scoredCounts = {};
+
+var pendingKirimId = null;
+var pendingKirimBtn = null;
+
+function kirimKeGrand(scoringId, btnEl) {
+    pendingKirimId = scoringId;
+    pendingKirimBtn = btnEl;
+    document.getElementById('popupConfirm').classList.add('show');
+}
+
+document.getElementById('btnConfirmKirim').addEventListener('click', function() {
+    document.getElementById('popupConfirm').classList.remove('show');
+    if (!pendingKirimId || !pendingKirimBtn) return;
+
+    var scoringId = pendingKirimId;
+    var btnEl = pendingKirimBtn;
+    pendingKirimId = null;
+    pendingKirimBtn = null;
+
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
+
+    fetch('/api/juri/kirim-ke-grand', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'), scoring_id: scoringId })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.success) {
+            document.getElementById('popupTitle').innerHTML = 'Berhasil Dikirim!';
+            document.getElementById('popupDesc').innerHTML = 'Nilai telah dikirim ke Grand Juri untuk ditinjau.';
+            document.getElementById('successPopup').classList.add('show');
+            btnEl.outerHTML = '<span class="badge-terkirim"><i class="fas fa-check"></i> Terkirim</span>';
+        } else {
+            showWarningModal([{ type: 'select', msg: d.message || 'Gagal mengirim nilai.' }]);
+            btnEl.disabled = false;
+            btnEl.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim';
+        }
+    })
+    .catch(function() {
+        showWarningModal([{ type: 'select', msg: 'Gagal mengirim. Periksa koneksi internet Anda.' }]);
+        btnEl.disabled = false;
+        btnEl.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim';
+    });
+});
 
 function renderKategoriList() {
     const c = document.getElementById('katListContainer');
@@ -386,15 +458,14 @@ function updateMemory() {
     if (!memoryScores[currentTab]) { memoryScores[currentTab] = {}; }
     formFields[currentTab].forEach(function(field) {
         const el = document.getElementById('input-' + field.id);
-        if (el) { 
+        if (el) {
             let val = el.value;
-            /* Hapus angka 0 di depan (misal 034 jadi 34), tapi boleh jika cuma "0" */
             if (val.length > 1 && val.charAt(0) === '0') {
                 val = val.replace(/^0+/, '') || '0';
                 el.value = val;
             }
-            memoryScores[currentTab][field.id] = val; 
-            el.classList.remove('error-input'); 
+            memoryScores[currentTab][field.id] = val;
+            el.classList.remove('error-input');
         }
     });
     updateFilledBadges();
@@ -482,7 +553,6 @@ function submitAllScores() {
             changeKat('overall');
             loadJuriData();
         } else {
-            /* ★ Tampilkan pesan error dari server (misal: "SUDAH DINILAI") */
             showWarningModal([{ type: 'select', msg: d.message || 'Terjadi kesalahan.' }]);
         }
     })
@@ -494,23 +564,26 @@ function submitAllScores() {
 }
 
 /* ================================================================
-   LOAD DATA — TERMASUK CEK SIAPA YANG SUDAH DINILAI
+   LOAD DATA
    ================================================================ */
 function loadJuriData() {
     fetch('/api/juri/data', { headers: { 'Accept': 'application/json' } })
     .then(function(res) { return res.json(); })
     .then(function(data) {
+    console.log('API RESPONSE:', data);
         const sel = document.getElementById('selectTank');
         sel.innerHTML = '<option value="">-- Pilih Ikan Berdasarkan Tank --</option>';
         sel.disabled = false;
 
-        /* ★ Simpan data siapa yang sudah menilai */
-        allScoredMap = {};
+        myScoredMap = {};
         if (data.all_scored) {
             Object.keys(data.all_scored).forEach(function(ikanId) {
-                allScoredMap[ikanId] = data.all_scored[ikanId];
+                myScoredMap[ikanId] = data.all_scored[ikanId];
             });
         }
+
+        /* ★ BARU: Simpan jumlah juri per tank */
+        scoredCounts = data.scored_counts || {};
 
         /* Populate dropdown */
         data.available_tanks.forEach(function(t) {
@@ -520,12 +593,19 @@ function loadJuriData() {
             opt.setAttribute('data-kelas', t.kelas);
             opt.textContent = 'Tank ' + t.nomor_tank;
 
-            /* ★ tandai yang sudah dinilai */
-            if (allScoredMap[t.id]) {
+            /*
+             ★ LOGIKA DROPDOWN:
+             1. Juri ini sudah menilai → disabled + label "Sudah Anda Nilai"
+             2. Juri lain sudah menilai → normal (bisa dipilih) + label jumlah juri
+             3. Belum ada yang menilai → normal tanpa label
+            */
+            if (myScoredMap[t.id] && myScoredMap[t.id].is_mine) {
                 opt.disabled = true;
-                const who = allScoredMap[t.id];
-                const label = who.is_grand ? '👑 Grand Juri' : (who.is_mine ? '✓ Anda' : '🔒 Juri lain');
-                opt.textContent += '  [' + label + ']';
+                opt.textContent += '  [\u2713 Sudah Anda Nilai]';
+            } else if (scoredCounts[t.id]) {
+                var jml = scoredCounts[t.id];
+                var labelJuri = jml === 1 ? '1 juri' : jml + ' juri';
+                opt.textContent += '  \u00b7 Sudah dinilai oleh ' + labelJuri;
             }
 
             sel.appendChild(opt);
@@ -544,9 +624,8 @@ function loadJuriData() {
         /* Onchange handler */
         sel.onchange = function() {
             const selectedId = this.value;
-            const selectedOpt = this.options[this.selectedIndex];
 
-                        if (selectedId === "") {
+            if (selectedId === "") {
                 showIdleState();
                 document.getElementById('inputKategori').value = '- Pilih Ikan -';
                 document.getElementById('inputKelas').value = '- Pilih Ikan -';
@@ -554,6 +633,8 @@ function loadJuriData() {
                 document.getElementById('warningKelasBox').style.display = 'none';
                 return;
             }
+
+            const selectedOpt = this.options[this.selectedIndex];
             const elKategori = document.getElementById('inputKategori');
             const elKelasAsli = document.getElementById('inputKelas');
             const dropdownKelas = document.getElementById('selectKelas');
@@ -596,7 +677,7 @@ function loadJuriData() {
         detailDataStorage = {};
 
         if (!data.my_scores || data.my_scores.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6"><div style="padding:30px;text-align:center;color:var(--text-light);">Belum ada data penilaian.</div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5"><div style="padding:30px;text-align:center;color:var(--text-light);">Belum ada data penilaian.</div></td></tr>';
             return;
         }
 
@@ -608,13 +689,19 @@ function loadJuriData() {
                 statusHtml = '<span class="badge-edited"><i class="fas fa-crown" style="margin-right:3px;font-size:9px;"></i> GRAND EDITED</span>';
             }
 
-            const tr = document.createElement('tr');
+            var tr = document.createElement('tr');
+            var aksiHtml = '<button class="btn-view" onclick="showDetail(' + s.ikan_id + ')"><i class="fas fa-eye"></i> Lihat Detail</button>';
+            if (s.submitted_to_grand) {
+                aksiHtml += ' <span class="badge-terkirim"><i class="fas fa-check"></i> Terkirim</span>';
+            } else {
+                aksiHtml += ' <button class="btn-kirim" onclick="kirimKeGrand(' + s.id + ', this)"><i class="fas fa-paper-plane"></i> Kirim</button>';
+            }
             tr.innerHTML =
             '<td style="font-weight:700; color:var(--primary);">Tank ' + s.ikan.nomor_tank + ' <span style="font-size:10px;color:var(--text-light);">(' + s.ikan.kategori + ')</span></td>' +
             '<td>Kelas ' + s.kelas + '</td>' +
-                '<td style="font-weight:800; font-size:15px;">' + s.total_nilai + '</td>' +
-                '<td>' + statusHtml + '</td>' +
-                '<td><button class="btn-view" onclick="showDetail(' + s.ikan_id + ')"><i class="fas fa-eye"></i> Lihat Detail</button></td>';
+            '<td style="font-weight:800; font-size:15px;">' + s.total_nilai + '</td>' +
+            '<td>' + statusHtml + '</td>' +
+            '<td>' + aksiHtml + '</td>';
             tbody.appendChild(tr);
         });
     })
@@ -629,7 +716,6 @@ function showIdleState() {
     banner.style.display = 'block';
     document.getElementById('formArea').style.display = 'none';
 
-    /* Tampilan biru muda */
     banner.style.background = 'linear-gradient(135deg, #eff6ff, #dbeafe)';
     banner.style.borderColor = '#93c5fd';
 
@@ -646,7 +732,7 @@ function showIdleState() {
     nameEl.className = 'scorer-name';
 
     var noteEl = banner.querySelector('.locked-note');
-    noteEl.innerHTML = 'Pilih Nomor Tank pada dropdown di atas untuk mulai menginput penilaian.<br><span style="color:#dc2626; font-weight:700; margin-top:8px; display:inline-block;"><i class="fas fa-exclamation-circle"></i> Nilai tidak dapat diubah atau diinput ulang.</span>';
+    noteEl.innerHTML = 'Pilih Nomor Tank pada dropdown di atas untuk mulai menginput penilaian.<br><span style="color:#dc2626; font-weight:700; margin-top:8px; display:inline-block;"><i class="fas fa-exclamation-circle"></i> Nilai yang sudah Anda simpan tidak dapat diubah.</span>';
     noteEl.style.color = '#1d4ed8';
 }
 
@@ -656,7 +742,7 @@ function showIdleState() {
 function showDetail(id) {
     const data = detailDataStorage[id];
     if (!data) return;
-    document.getElementById('modalTitle').innerText = 'Detail Nilai: Tank ' + data.tank + ' (' + data.kategori + ')';
+    document.getElementById('modalTitle').innerText = 'Detail Nilai Anda: Tank ' + data.tank + ' (' + data.kategori + ')';
     let html = '<table class="detail-table"><thead><tr><th style="width:25%;">KOMPONEN</th><th style="width:15%;">SKALA</th><th style="text-align:center; width:15%;">NILAI</th></tr></thead><tbody>';
     Object.keys(formFields).forEach(function(kat) {
         let subTotal = 0;

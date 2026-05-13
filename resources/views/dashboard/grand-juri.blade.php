@@ -128,9 +128,17 @@
         .detail-kat-title { font-size:12px; font-weight:800; color:var(--purple); text-transform:uppercase; letter-spacing:.5px; }
         .detail-kat-sub { font-size:12px; font-weight:700; color:#6d28d9; }
         .detail-kat-body { border:1px solid #ddd6fe; border-top:none; border-radius:0 0 8px 8px; overflow:hidden; }
-        .detail-field-row { display:grid; grid-template-columns:1fr auto; align-items:center; padding:10px 14px; border-bottom:1px solid #f1f5f9; }
+        .detail-kat-mini { background:#f8fafc; padding:7px 16px; font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; }
+        .detail-kat-mini span { color:var(--purple); font-weight:900; font-size:11px; }
+        .detail-field-row { display:flex; align-items:center; justify-content:space-between; padding:8px 16px; border-bottom:1px solid #f8fafc; gap:12px; }
         .detail-field-row:last-child { border-bottom:none; }
         .detail-field-row:hover { background:#faf5ff; }
+        .detail-field-left { flex:1; }
+        .detail-field-name { font-size:12px; font-weight:700; color:var(--text-main); }
+        .detail-field-meta { font-size:10px; color:var(--text-muted); margin-top:1px; }
+        .score-chip { padding:5px 16px; border-radius:6px; font-size:13px; font-weight:800; min-width:48px; text-align:center; }
+        .score-chip.filled { background:#ede9fe; color:var(--purple); }
+        .score-chip.empty { background:#f1f5f9; color:var(--text-muted); font-size:11px; font-weight:600; }
         .detail-field-name { font-size:13px; font-weight:600; }
         .detail-field-meta { font-size:11px; color:var(--text-muted); margin-top:2px; }
         .score-chip { padding:4px 12px; border-radius:6px; font-size:13px; font-weight:800; min-width:50px; text-align:center; }
@@ -222,7 +230,27 @@
         .err-item span { color:#4c1d95; font-weight:600; line-height:1.4; }
 
         @media (max-width:1024px) { .stats-grid{grid-template-columns:repeat(3,1fr);} .content-grid{grid-template-columns:1fr;} .split-view{grid-template-columns:1fr;} }
-        @media (max-width:640px) { .stats-grid{grid-template-columns:1fr 1fr;} .main-container{padding:12px;} }
+        @media (max-width:640px) { .stats-grid{grid-template-columns:1fr 1fr;} .main-container{padding:12px;} 
+        }
+        .btn-lock { background:#fef9c3; color:#d97706; border:1px solid #fde68a; }
+        .btn-lock:hover { background:#d97706; color:white; border-color:#d97706; }
+        .btn-lock.locked { background:#fee2e2; color:#dc2626; border-color:#fca5a5; cursor:not-allowed; }
+        .btn-lock.locked:hover { background:#fee2e2; color:#dc2626; border-color:#fca5a5; }
+        .juri-cell div { font-size:12px; font-weight:600; color:var(--primary); line-height:1.6; }
+        .juri-count-chip { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:700; background:var(--primary-light); color:var(--primary); margin-top:4px; 
+        }
+        .detail-juri-accordion { border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:10px; }
+        .detail-juri-toggle { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; transition:background .2s; user-select:none; }
+        .detail-juri-toggle:hover { background:#faf5ff; }
+        .detail-juri-toggle.open { background:var(--purple-light); border-bottom:1px solid #ddd6fe; }
+        .detail-juri-toggle .dj-name { font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px; }
+        .detail-juri-toggle .dj-total { font-size:14px; font-weight:900; color:var(--purple); }
+        .detail-juri-toggle .dj-arrow { font-size:12px; color:var(--text-muted); transition:transform .2s; }
+        .detail-juri-toggle.open .dj-arrow { transform:rotate(180deg); }
+        .detail-juri-scores { display:none; }
+        .detail-juri-scores.open { display:block; }
+        .status-actions { margin-top:8px; 
+        }
     </style>
 </head>
 <body>
@@ -301,7 +329,7 @@
                             <th>PESERTA</th>
                             <th>KATEGORI</th>
                             <th>NO. TANK</th>
-                            <th>ASAL</th>
+                            <th>ASAL/TEAM</th>
                             <th>DINILAI OLEH</th>
                             <th>TOTAL</th>
                             <th>STATUS</th>
@@ -466,6 +494,29 @@ function cloneValues(source){
     return m;
 }
 
+function kunciNilai(id){
+    fetch('/api/grand-juri/kunci-nilai',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+        body:JSON.stringify({_token:getCsrf(),ikan_id:id})
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.success){
+            document.getElementById('popupSuccessDesc').textContent=d.message;
+            showPopup('popupSuccess');
+            loadPeserta(document.getElementById('searchInput').value);
+        } else {
+            document.getElementById('popupErrorDesc').textContent=d.message||'Gagal.';
+            showPopup('popupError');
+        }
+    })
+    .catch(function(){
+        document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan.';
+        showPopup('popupError');
+    });
+}
+
 /* ================================================================
    LOAD STATS (rincian cards now clickable)
    ================================================================ */
@@ -556,32 +607,56 @@ function loadPeserta(search){
             td4.style.cssText='font-size:12px;color:var(--text-muted);';
             td4.innerText=p.detail_anggota||'—';tr.appendChild(td4);
 
+            /* td5 — DINILAI OLEH (nama juri langsung, tanpa label grand edit) */
             var td5=document.createElement('td');
-            if(p.juri_nama&&p.juri_nama!=='—'){
-                var html='<div class="juri-cell"><i class="fas fa-user-pen" style="font-size:10px;margin-right:3px;"></i>'+esc(p.juri_nama);
-                if(p.grand_juri_nama) html+='<div class="grand-line"><i class="fas fa-crown"></i> '+esc(p.grand_juri_nama)+' (edit)</div>';
-                html+='</div>';td5.innerHTML=html;
+            if(p.juri_list&&p.juri_list.length>0){
+                var jHtml='<div class="juri-cell">';
+                p.juri_list.forEach(function(j){
+                    if(j.is_grand){
+                        jHtml+='<div class="grand-line"><i class="fas fa-crown"></i> '+esc(j.name)+'</div>';
+                    } else {
+                        jHtml+='<div><i class="fas fa-user-pen" style="font-size:10px;margin-right:3px;"></i>'+esc(j.name)+'</div>';
+                    }
+                });
+                jHtml+='</div>';td5.innerHTML=jHtml;
             } else { td5.innerHTML='<span style="font-size:12px;color:var(--text-muted);">—</span>'; }
             tr.appendChild(td5);
 
+            /* td6 — TOTAL */
             var td6=document.createElement('td');
             td6.innerHTML=p.total_nilai>0?'<span class="total-cell">'+p.total_nilai+'</span>':'<span class="total-cell zero">—</span>';
             tr.appendChild(td6);
 
+            /* td7 — STATUS (badge saja, tanpa aksi) */
             var td7=document.createElement('td');
-            if(p.grand_juri_nama){
+            if(p.is_locked){
+                td7.innerHTML='<span class="badge badge-success"><i class="fas fa-lock" style="margin-right:3px;font-size:9px;"></i>NILAI FINAL</span>';
+            } else if(p.grand_juri_nama){
                 td7.innerHTML='<span class="badge badge-purple"><i class="fas fa-crown" style="margin-right:3px;font-size:9px;"></i>GRAND EDITED</span>';
             } else {
-                td7.innerHTML='<span class="badge '+(p.status_class||'badge-warning')+'">'+(p.status||'—').toUpperCase()+'</span>';
+                td7.innerHTML='<span class="badge '+(p.status_class||'badge-success')+'">'+(p.status||'—').toUpperCase()+'</span>';
             }
             tr.appendChild(td7);
 
+            /* td8 — AKSI */
             var td8=document.createElement('td');
-            td8.innerHTML='<div class="action-group">'+
-                '<button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button>'+
-                '<button class="btn-sm btn-edit" onclick="openEdit('+p.id+')"><i class="fas fa-pen-to-square"></i> Edit</button>'+
-                '</div>';tr.appendChild(td8);
-
+            if(p.is_locked){
+                td8.innerHTML='<div class="action-group">'+
+                    '<button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button>'+
+                    '<button class="btn-sm btn-lock" style="background:#eff6ff;color:#2563eb;border-color:#bfdbfe;" onclick="kunciNilai('+p.id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka Kunci</button>'+
+                    '</div>';
+            } else {
+                var canLock=p.submitted_juri_count>=p.total_juri_all;
+                var lockHtml=canLock
+                    ?'<button class="btn-sm btn-lock" onclick="kunciNilai('+p.id+')" title="Semua juri sudah kirim — siap dikunci"><i class="fas fa-lock-open"></i> Kunci</button>'
+                    :'<button class="btn-sm btn-lock" style="opacity:.35;cursor:not-allowed;" disabled title="Masih ada juri yang belum mengirim"><i class="fas fa-lock-open"></i> Kunci</button>';
+                td8.innerHTML='<div class="action-group">'+
+                    '<button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button>'+
+                    '<button class="btn-sm btn-edit" onclick="openEdit('+p.id+')"><i class="fas fa-pen-to-square"></i> Edit</button>'+
+                    lockHtml+
+                    '</div>';
+            }
+            tr.appendChild(td8);
             tbody.appendChild(tr);
         });
     })
@@ -612,52 +687,87 @@ function openDetail(id){
     currentId=id;
     document.getElementById('detailContent').innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:20px;display:block;margin-bottom:8px;"></i>Memuat...</div>';
     document.getElementById('modalDetail').classList.add('show');
-    document.getElementById('btnToEdit').onclick=function(){closeModal('modalDetail');openEdit(id);};
     fetchSingle(id,function(p){
         if(!p){document.getElementById('detailContent').innerHTML='<div class="empty-state">Data tidak ditemukan.</div>';return;}
-        currentPData=p;renderDetail(p);
+        currentPData=p;
+        var editBtn=document.getElementById('btnToEdit');
+        if(p.is_locked){
+            editBtn.style.display='none';
+        } else {
+            editBtn.style.display='';
+            editBtn.onclick=function(){closeModal('modalDetail');openEdit(id);};
+        }
+        renderDetail(p);
     });
 }
 
 function renderDetail(p){
-    var nd=p.nilai_detail;var total=p.total_nilai||0;var html='';
+    var html='';
 
     html+='<div class="detail-info-banner">';
     html+='<div><h4>'+esc(p.nama_peserta)+'</h4><div class="detail-meta">';
     html+='<span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span>';
     html+='<span><i class="fas fa-tag"></i> '+(p.kategori||'—')+' - '+(p.kelas||'—')+'</span>';
     if(p.detail_anggota&&p.detail_anggota!=='—') html+='<span><i class="fas fa-users"></i> '+esc(p.detail_anggota)+'</span>';
-    if(p.juri_nama&&p.juri_nama!=='—') html+='<span><i class="fas fa-user-pen"></i> '+esc(p.juri_nama)+'</span>';
-    if(p.grand_juri_nama) html+='<span style="color:var(--purple);"><i class="fas fa-crown"></i> '+esc(p.grand_juri_nama)+'</span>';
     html+='</div></div>';
-    html+='<div class="detail-total-badge"><i class="fas fa-star"></i> Total: '+total+'</div></div>';
+    var allIn=p.submitted_juri_count>=p.total_juri_all;
+    html+='<span class="juri-submit-chip '+(allIn?'ok':'not-ok')+'"><i class="fas '+(allIn?'fa-check-circle':'fa-clock')+'"></i> '+p.submitted_juri_count+' dari '+p.total_juri_all+' juri kirim</span>';
+    html+='</div>';
 
-    if(p.grand_juri_nama){
-        html+='<div class="detail-note"><i class="fas fa-circle-info"></i><span>Nilai ini sudah diperbarui oleh Grand Juri (<strong>'+esc(p.grand_juri_nama)+'</strong>). Nilai yang ditampilkan adalah nilai final.</span></div>';
+    if(p.is_locked){
+        html+='<div class="detail-note purple-note"><i class="fas fa-lock"></i><span>Nilai ini sudah <strong>TERKUNCI (FINAL)</strong> dan tidak dapat diubah.</span></div>';
+    } else if(!allIn){
+        html+='<div class="detail-note"><i class="fas fa-info-circle"></i><span>Masih ada <strong>'+(p.total_juri_all-p.submitted_juri_count)+'</strong> juri yang belum mengirim. Tombol <strong>Kunci</strong> aktif setelah semua juri mengirim.</span></div>';
     }
 
-    if(!nd||typeof nd!=='object'){
-        html+='<div class="empty-state" style="padding:40px;"><i class="fas fa-clipboard-list" style="font-size:36px;display:block;margin-bottom:10px;color:#cbd5e1;"></i>Peserta belum memiliki nilai.</div>';
+    if(!p.all_scorings||p.all_scorings.length===0){
+        html+='<div class="empty-state" style="padding:40px;"><i class="fas fa-clipboard-list" style="font-size:36px;display:block;margin-bottom:10px;color:#cbd5e1;"></i>Belum ada nilai yang dikirim juri.</div>';
         document.getElementById('detailContent').innerHTML=html;return;
     }
 
-    Object.keys(formFields).forEach(function(kat){
-        var fields=formFields[kat];var katNilai=nd[kat]||{};var sub=0;
-        fields.forEach(function(f){if(katNilai[f.id]!==undefined&&katNilai[f.id]!==null)sub+=parseInt(katNilai[f.id])||0;});
+    /* ★ Accordion: daftar juri yang bisa diklik */
+    p.all_scorings.forEach(function(sc,idx){
+        var isG=sc.is_grand;
+        var uid='dj-'+idx;
+        var iconCls=isG?'fas fa-crown':'fas fa-user-pen';
+        var label=isG?'Grand Juri: '+esc(sc.juri_name):'Juri: '+esc(sc.juri_name);
 
-        html+='<div class="detail-kat-section">';
-        html+='<div class="detail-kat-header"><span class="detail-kat-title"><i class="fas fa-layer-group" style="margin-right:5px;"></i>'+kat.charAt(0).toUpperCase()+kat.slice(1)+'</span><span class="detail-kat-sub">Subtotal: '+sub+'</span></div>';
-        html+='<div class="detail-kat-body">';
-        fields.forEach(function(f){
-            var val=katNilai[f.id];var has=(val!==undefined&&val!==null&&val!=='');
-            html+='<div class="detail-field-row"><div><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
-        });
+        html+='<div class="detail-juri-accordion">';
+        html+='<div class="detail-juri-toggle" id="'+uid+'-toggle" onclick="toggleJuriDetail(\''+uid+'\')">';
+        html+='<span class="dj-name"><i class="'+iconCls+'" style="font-size:11px;"></i> '+label+'</span>';
+        html+='<span style="display:flex;align-items:center;gap:10px;"><span class="dj-total">'+sc.total_nilai+'</span><i class="fas fa-chevron-down dj-arrow"></i></span>';
+        html+='</div>';
+
+        html+='<div class="detail-juri-scores" id="'+uid+'-scores">';
+        var nd=sc.nilai_detail;
+        if(!nd||typeof nd!=='object'){
+            html+='<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada data nilai.</div>';
+        } else {
+                Object.keys(formFields).forEach(function(kat){
+                    var fields=formFields[kat];var katNilai=nd[kat]||{};var sub=0;
+                    fields.forEach(function(f){if(katNilai[f.id]!==undefined&&katNilai[f.id]!==null)sub+=parseInt(katNilai[f.id])||0;});
+                    html+='<div class="detail-kat-mini"><span>'+kat.toUpperCase()+'</span><span>Subtotal: '+sub+'</span></div>';
+                    fields.forEach(function(f){
+                        var val=katNilai[f.id];var has=(val!==undefined&&val!==null&&val!=='');
+                        html+='<div class="detail-field-row"><div class="detail-field-left"><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
+                    });
+                });
+        }
         html+='</div></div>';
     });
 
     document.getElementById('detailContent').innerHTML=html;
 }
 
+function toggleJuriDetail(uid){
+    var t=document.getElementById(uid+'-toggle');
+    var s=document.getElementById(uid+'-scores');
+    if(t.classList.contains('open')){
+        t.classList.remove('open');s.classList.remove('open');
+    } else {
+        t.classList.add('open');s.classList.add('open');
+    }
+}
 /* ================================================================
    MODAL EDIT — PRE-FILL DARI NILAI JURI
    ================================================================ */
@@ -667,6 +777,10 @@ function openEdit(id){
     fetchSingle(id,function(p){
         if(!p){
             document.getElementById('popupErrorDesc').textContent='Data peserta tidak ditemukan.';
+            showPopup('popupError');return;
+        }
+        if(p.is_locked){
+            document.getElementById('popupErrorDesc').innerHTML='Nilai ini sudah <b>TERKUNCI (FINAL)</b> dan tidak dapat diubah.';
             showPopup('popupError');return;
         }
         currentPData=p;

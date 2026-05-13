@@ -20,20 +20,18 @@ class GrandJuriController extends Controller
        ═══════════════════════════════════════════ */
     public function getStats()
     {
-        // Total Ikan yang sudah mendapat nomor tank
         $totalTank = Ikan::whereNotNull('nomor_tank')->count();
         $totalPeserta = Peserta::count();
-        
+
         $sudahPlot = Scoring::distinct('ikan_id')->count('ikan_id');
         $belumPlot = max(0, $totalTank - $sudahPlot);
         $maxTank = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
         $sisaTank = max(0, $maxTank - $totalTank);
 
-        // Rincian Per Kategori (Ikan yang sudah dapat tank)
         $rincian = Ikan::whereNotNull('nomor_tank')
             ->selectRaw('ikans.kategori, COUNT(ikans.id) as ekor,
                 SUM(CASE WHEN scorings.id IS NULL THEN 1 ELSE 0 END) as belum_tank')
-            ->leftJoin('scorings', 'ikans.id', '=', 'scorings.ikan_id') // DIUBAH: Join ke ikans.id
+            ->leftJoin('scorings', 'ikans.id', '=', 'scorings.ikan_id')
             ->groupBy('ikans.kategori')
             ->orderByDesc('ekor')
             ->get();
@@ -44,23 +42,18 @@ class GrandJuriController extends Controller
             'sudah_plot'    => $sudahPlot,
             'belum_plot'    => $belumPlot,
             'sisa_tank'     => $sisaTank,
-            'max_tank'      => $maxTank, // DITAMBAHKAN
+            'max_tank'      => $maxTank,
             'rincian'       => $rincian,
         ]);
     }
 
-    /* ═══════════════════════════════════════════
-       PESERTA LIST (QUERY DARI TABEL IKANS)
-       ═══════════════════════════════════════════ */
     public function getPeserta(Request $request)
     {
-        // DIPERBAIKI: Tampilkan ikan JIKA sudah dapat nomor tank ATAU sudah pernah dinilai
-        $query = Ikan::where(function($q) {
-            $q->whereNotNull('nomor_tank')
-              ->orWhereHas('scorings');
+        $query = Ikan::whereHas('scorings', function ($q) {
+            $q->where('submitted_to_grand', true);
         })
             ->with(['peserta', 'scorings' => function ($q) {
-                $q->latest()->limit(1);
+                $q->where('submitted_to_grand', true);
             }, 'scorings.juri', 'scorings.grandJuri']);
 
         if ($request->filled('search')) {
@@ -75,25 +68,73 @@ class GrandJuriController extends Controller
 
         $data = $query->orderBy('nomor_tank')->get()->map(function ($ikan) {
             $peserta = $ikan->peserta;
-            $scoring = $ikan->scorings->first();
+            $scorings = $ikan->scorings;
+
+            $juriList = [];
+            $grandJuriName = null;
+            $latestNilai = null;
+            $latestTotal = 0;
+            $latestKelas = null;
+
+            foreach ($scorings as $s) {
+                if ($s->juri) {
+                    // ★ FIX: is_grand cek role user, bukan flag edited_by_grand_juri
+                    $juriList[] = [
+                        'name'     => $s->juri->name,
+                        'is_grand' => ($s->juri->role === 'grand_juri'),
+                    ];
+                }
+                if ($s->edited_by_grand_juri && $s->grandJuri) {
+                    $grandJuriName = $s->grandJuri->name;
+                    $latestNilai = $s->nilai_detail;
+                    $latestTotal = $s->total_nilai ?? 0;
+                    $latestKelas = $s->kelas;
+                }
+            }
+
+            if (!$latestNilai && $scorings->isNotEmpty()) {
+                $latest = $scorings->last();
+                $latestNilai = $latest->nilai_detail;
+                $latestTotal = $latest->total_nilai ?? 0;
+                $latestKelas = $latest->kelas;
+            }
+
+            // ★ Hitung total juri aktif dan yang sudah kirim
+            $totalJuriAll = \App\Models\User::where('role', 'juri')->count();
+            $submittedCount = $scorings->count();
+
+            // ★ Kumpulkan semua scoring untuk detail modal (per-juri)
+            $allScoringsData = $scorings->map(function ($s) {
+                return [
+                    'juri_name'    => $s->juri ? $s->juri->name : '—',
+                    'is_grand'     => ($s->juri && $s->juri->role === 'grand_juri'),
+                    'nilai_detail' => $s->nilai_detail,
+                    'total_nilai'  => $s->total_nilai ?? 0,
+                ];
+            })->values()->toArray();
 
             return [
-                'id'               => $ikan->id, // Sekarang ini adalah IKAN_ID
+                'id'               => $ikan->id,
                 'nama_peserta'     => $peserta->nama_peserta ?? 'Unknown',
-                'kategori'         => $ikan->kategori,     // Diambil dari tabel Ikan
-                'kelas'            => $scoring ? $scoring->kelas : $ikan->kelas, // Prioritas kelas dari Juri, jika belum ada ambil dari Ikan
-                'nomor_tank'       => $ikan->nomor_tank,   // Diambil dari tabel Ikan
+                'kategori'         => $ikan->kategori,
+                'kelas'            => $latestKelas ?? $ikan->kelas,
+                'nomor_tank'       => $ikan->nomor_tank,
                 'detail_anggota'   => $peserta->detail_anggota ?? '—',
-                'status'           => $scoring 
-                                    ? ($scoring->edited_by_grand_juri ? 'Diubah Grand Juri' : 'Sudah Dinilai') 
-                                    : 'Belum Dinilai',
-                'status_class'     => $scoring 
-                                    ? ($scoring->edited_by_grand_juri ? 'badge-warning' : 'badge-success') 
-                                    : 'badge-warning',
-                'juri_nama'        => $scoring?->juri?->name ?? '—',
-                'grand_juri_nama'  => $scoring?->grandJuri?->name ?? null,
-                'nilai_detail'     => $scoring?->nilai_detail ?? null,
-                'total_nilai'      => $scoring?->total_nilai ?? 0,
+                'juri_list'        => $juriList,
+                'grand_juri_nama'  => $grandJuriName,
+                'nilai_detail'     => $latestNilai,
+                'total_nilai'      => $latestTotal,
+                'total_juri'       => $scorings->count(),
+                'is_locked'        => (bool) ($ikan->is_locked ?? false),
+                'status'           => $ikan->is_locked
+                                    ? 'NILAI FINAL (TERKUNCI)'
+                                    : ($grandJuriName ? 'Diubah Grand Juri' : 'Sudah Dinilai'),
+                'status_class'     => $ikan->is_locked
+                                    ? 'badge-success'
+                                    : ($grandJuriName ? 'badge-warning' : 'badge-success'),
+                'total_juri_all'       => $totalJuriAll,
+                'submitted_juri_count' => $submittedCount,
+                'all_scorings'         => $allScoringsData,
             ];
         });
 
@@ -109,25 +150,20 @@ class GrandJuriController extends Controller
         $ikanId    = $data['ikan_id'] ?? null;
         $changed   = $data['changed_fields'] ?? null;
 
-        if (!$ikanId || !Ikan::find($ikanId)) {
+        $ikan = Ikan::find($ikanId);
+
+        if (!$ikanId || !$ikan) {
             return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
         }
 
-        if (!$changed || !is_array($changed)) {
-            return response()->json(['success' => false, 'message' => 'Tidak ada perubahan nilai.'], 422);
+        if ($ikan->is_locked) {
+            return response()->json(['success' => false, 'message' => 'Nilai sudah TERKUNCI (FINAL) dan tidak dapat diubah.']);
         }
 
         /* ── KASUS 1: Sudah ada scoring dari juri ── */
         $existing = Scoring::with('ikan')->where('ikan_id', $ikanId)->latest()->first();
 
         if ($existing && $existing->nilai_detail) {
-            $nilaiAsli = null;
-            if (!$existing->edited_by_grand_juri) {
-                $nilaiAsli = $existing->nilai_detail;
-            } elseif ($existing->nilai_detail_asli) {
-                $nilaiAsli = $existing->nilai_detail_asli;
-            }
-
             $finalScores = $existing->nilai_detail;
             foreach ($changed as $kat => $fields) {
                 if (!is_array($fields)) continue;
@@ -151,13 +187,11 @@ class GrandJuriController extends Controller
             $existing->update([
                 'grand_juri_id'        => auth()->id(),
                 'nilai_detail'         => $finalScores,
-                'nilai_detail_asli'    => $nilaiAsli,
                 'total_nilai'          => $totalNilai,
                 'edited_by_grand_juri' => true,
                 'status'               => 'submitted',
             ]);
 
-            /* ★ FIX: ambil peserta_id dari relasi ikan, bukan langsung dari scoring */
             GrandJuriEdit::create([
                 'scoring_id'     => $existing->id,
                 'peserta_id'     => $existing->ikan ? $existing->ikan->peserta_id : null,
@@ -210,6 +244,43 @@ class GrandJuriController extends Controller
             'success' => true,
             'message' => 'Nilai baru berhasil disimpan oleh Grand Juri!',
             'total'   => $totalNilai,
+        ]);
+    }
+
+    public function kunciNilai(Request $request)
+    {
+        $ikanId = $request->json('ikan_id');
+
+        if (!$ikanId) {
+            return response()->json(['success' => false, 'message' => 'Ikan ID wajib dikirim.'], 422);
+        }
+
+        $ikan = Ikan::find($ikanId);
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
+        }
+
+        $totalJuriAll = \App\Models\User::where('role', 'juri')->count();
+        $submittedCount = Scoring::where('ikan_id', $ikanId)
+            ->where('submitted_to_grand', true)
+            ->count();
+
+        if ($submittedCount < $totalJuriAll) {
+            $sisa = $totalJuriAll - $submittedCount;
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak bisa mengunci. Masih ada ' . $sisa . ' juri yang belum mengirim nilai.',
+            ]);
+        }
+
+
+        $ikan->is_locked = !$ikan->is_locked;
+        $ikan->save();
+
+        return response()->json([
+            'success'   => true,
+            'message'   => $ikan->is_locked ? 'Nilai berhasil dikunci (FINAL).' : 'Nilai berhasil dibuka kembali.',
+            'is_locked' => $ikan->is_locked,
         ]);
     }
 

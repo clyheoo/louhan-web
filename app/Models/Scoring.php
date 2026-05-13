@@ -13,6 +13,7 @@ class Scoring extends Model
         'nilai_detail',
         'total_nilai',
         'status',
+        'submitted_to_grand',   // ← TAMBAHKAN INI
         'edited_by_grand_juri',
         'grand_juri_id',
     ];

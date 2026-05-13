@@ -15,7 +15,12 @@ class Ikan extends Model
         'kelas', 
         'nomor_tank',
         'dibuat_oleh',
-        'diubah_oleh'
+        'diubah_oleh',
+        'is_locked',
+    ];
+
+    protected $casts = [
+        'is_locked' => 'boolean',
     ];
 
     public function peserta()
