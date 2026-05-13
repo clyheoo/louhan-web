@@ -70,9 +70,8 @@ class AdminDashboardController extends Controller
             'dibuat_oleh' => 'admin',
         ]);
 
-        // AMBIL RANGE DARI DATABASE UNTUK SISA TANK
-        $maxTank = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
-        $sisaTank = max(0, $maxTank - $totalIkan);
+        // ★ FIX: Hapus kode $sisaTank yang menggunakan $totalIkan undefined,
+        // karena tidak di-return ke response juga.
 
         return response()->json([
             'success' => true,
