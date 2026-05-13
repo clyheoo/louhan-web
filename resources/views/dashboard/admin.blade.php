@@ -809,6 +809,9 @@ document.querySelectorAll('.modal-bg').forEach(function(m){
     m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
 });
 
+
+var currentTankMax = 1000;
+var kelasList = ['A', 'B', 'C', 'D', 'E'];
 var allScoringData=[];
 var chartKat,chartStat,chartTop;
 var _confirmCallback=null;
@@ -1473,6 +1476,27 @@ function loadPesertaOld(){
         }
 
         sel.disabled=false;
+        document.getElementById('btnAcakOld').disabled=false;
+        if(counter) counter.innerHTML=data.length+' ikan belum diundi';
+
+        sel.innerHTML='<option value="" disabled selected>Pilih ikan yang belum diundi ('+data.length+')</option>';
+        for(var i=0;i<data.length;i++){
+            var o=document.createElement('option');
+            o.value=data[i].id;
+            o.textContent=data[i].nama_peserta+' — '+data[i].kategori+' ('+data[i].kelas+')';
+            sel.appendChild(o);
+        }
+
+        /* Reset display ke -- */
+        document.getElementById('numberDisplayOld').textContent='--';
+        document.getElementById('numberDisplayOld').style.color='#fff';
+    })
+    .catch(function(){
+        sel.innerHTML='<option disabled>Gagal memuat data</option>';
+        if(counter) counter.textContent='Error';
+    });
+}
+
 document.getElementById('btnAcakOld').addEventListener('click',function(){
     var sel=document.getElementById('pesertaSelectOld');
     if(!sel.value)return;
@@ -1701,6 +1725,72 @@ if(_regForm) _regForm.addEventListener('submit',function(e){
         btn.innerHTML='<i class="fas fa-fish" style="margin-right:6px;"></i> DAFTARKAN PESERTA & IKAN';
     });
 });
+
+/* ═══ PENGATURAN RANGE NOMOR UNDIAN (GLOBAL + PER KELAS) ═══ */
+function loadTankRange(){
+    // Load Global Range
+    fetch('/api/tank-range-global',{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        var min=d.min||1,max=d.max||1000;
+        currentTankMax=max;
+        var displayEl=document.getElementById('globalRangeDisplayText');
+        if(displayEl)displayEl.textContent=min+' - '+max;
+        var minInput=document.getElementById('inputGlobalRangeMin'),maxInput=document.getElementById('inputGlobalRangeMax');
+        if(minInput)minInput.value=min;if(maxInput)maxInput.value=max;
+    }).catch(function(){});
+
+    // Load Per-Kelas Range
+    fetch('/api/tank-range',{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        var container=document.getElementById('kelasRangeInputs');if(!container)return;container.innerHTML='';
+        for(var i=0;i<kelasList.length;i++){
+            var k=kelasList[i],minVal=(d[k]&&d[k].min)?d[k].min:'',maxVal=(d[k]&&d[k].max)?d[k].max:'';
+            var card=document.createElement('div');
+            card.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center;';
+            card.innerHTML='<div style="font-size:11px;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Kelas '+k+'</div><div style="display:flex;gap:6px;align-items:center;"><input type="number" id="range_'+k+'_min" value="'+minVal+'" placeholder="Min" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;"><span style="font-weight:600;color:#94a3b8;">-</span><input type="number" id="range_'+k+'_max" value="'+maxVal+'" placeholder="Max" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;"></div>';
+            container.appendChild(card);
+        }
+    }).catch(function(){});
+}
+
+function toggleGlobalRangeEdit(show){
+    var viewEl=document.getElementById('globalRangeViewMode'),editEl=document.getElementById('globalRangeEditMode');
+    if(viewEl)viewEl.style.display=show?'none':'flex';if(editEl)editEl.style.display=show?'block':'none';
+}
+
+function saveGlobalTankRange(){
+    var min=parseInt(document.getElementById('inputGlobalRangeMin').value),max=parseInt(document.getElementById('inputGlobalRangeMax').value);
+    if(isNaN(min)||isNaN(max)||min<1||max<1){popupError('Tidak Valid','Nomor harus lebih dari 0.');return;}
+    if(max<=min){popupError('Tidak Valid','Nomor akhir harus lebih besar.');return;}
+    var fd=new FormData();fd.append('_token',getCsrf());fd.append('min',min);fd.append('max',max);
+    fetch('/api/admin/tank-range-global',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.success){currentTankMax=max;document.getElementById('globalRangeDisplayText').textContent=min+' - '+max;toggleGlobalRangeEdit(false);popupSuccess('Berhasil','Rentang global: <b>'+min+' - '+max+'</b>');}
+        else popupError('Gagal',d.message||'Error');
+    }).catch(function(){popupError('Error','Gagal menyimpan.');});
+}
+
+function saveTankRange(){
+    var ranges={},isValid=true,errorMsg='';
+    for(var i=0;i<kelasList.length;i++){
+        var k=kelasList[i],minEl=document.getElementById('range_'+k+'_min'),maxEl=document.getElementById('range_'+k+'_max');
+        if(!minEl||!maxEl)continue;var min=parseInt(minEl.value),max=parseInt(maxEl.value);
+        if(minEl.value===''&&maxEl.value==='')continue;
+        if(isNaN(min)||isNaN(max)||min<1||max<1){isValid=false;errorMsg='Rentang Kelas '+k+' tidak valid.';break;}
+        if(max<min){isValid=false;errorMsg='Kelas '+k+': Max < Min.';break;}
+        ranges[k]={min:min,max:max};
+    }
+    if(!isValid){popupError('Validasi Gagal',errorMsg);return;}
+    if(Object.keys(ranges).length===0){popupError('Kosong','Isi setidaknya satu kelas.');return;}
+    var fd=new FormData();fd.append('_token',getCsrf());fd.append('ranges',JSON.stringify(ranges));
+    fetch('/api/admin/tank-range',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+    .then(function(r){return r.json();})
+    .then(function(d){if(d.success)popupSuccess('Berhasil','Rentang per kelas disimpan.');else popupError('Gagal',d.message||'Error');})
+    .catch(function(){popupError('Error','Gagal menyimpan.');});
+}
 
 // 4. Aksi Undian Tank Admin
 document.getElementById('btnAcakOld').addEventListener('click',function(){
