@@ -311,7 +311,13 @@
     .dark-input-area .btn-acak-kecil:hover {
         background: rgba(255,255,255,.1) !important;
     }
-        </style>
+    @media(max-width:768px){
+    #kelasRangeInputs{ grid-template-columns: repeat(2, 1fr) !important; }
+    }
+    @media(max-width:480px){
+        #kelasRangeInputs{ grid-template-columns: 1fr !important; }
+    }
+    </style>
 </head>
 <body>
 
@@ -437,138 +443,188 @@
      ═══════════════════════════════════════════════ -->
 
 <!-- MODAL: DETAIL NILAI -->
-<div class="modal-bg" id="modalDetail" style="--mw:750px;">
-    <div class="modal-box">
-        <div class="modal-head"><h3><i class="fas fa-eye"></i> Detail Nilai Peserta</h3><button class="modal-close" onclick="closeModal('modalDetail')"><i class="fas fa-xmark"></i></button></div>
-        <div class="modal-body" id="detailBody"></div>
-        <div class="modal-foot"><button class="btn-cancel" onclick="closeModal('modalDetail')">Tutup</button></div>
-    </div>
-</div>
-
-<!-- MODAL: TAMBAH USER -->
-<div class="modal-bg" id="modalCreate">
-    <div class="modal-box" style="--mw:460px;">
-        <div class="modal-head">
-            <h3><i class="fas fa-user-plus"></i> Tambah User Baru</h3>
-            <button class="modal-close" onclick="closeModal('modalCreate')"><i class="fas fa-xmark"></i></button>
-        </div>
-        <div class="modal-body">
-            <form id="formCreateUser">
-                <div class="form-group">
-                    <label class="form-label">Nama Lengkap</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="name" id="createName" class="form-input-modal" placeholder="Masukkan nama lengkap" required>
-                        <i class="fas fa-user input-icon"></i>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <div class="input-wrapper">
-                        <input type="email" name="email" id="createEmail" class="form-input-modal" placeholder="nama@email.com" required>
-                        <i class="fas fa-envelope input-icon"></i>
-                    </div>
-                    <div class="pwd-error-msg" id="createEmailErr"><i class="fas fa-circle-exclamation"></i><span></span></div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Password</label>
-                    <div class="input-wrapper">
-                        <input type="password" name="password" id="createPwd" class="form-input-modal" placeholder="Min.8: besar, kecil, angka, simbol" required>
-                        <i class="fas fa-lock input-icon"></i>
-                        <button type="button" class="pwd-toggle" id="toggleCreatePwd"><i class="fas fa-eye"></i></button>
-                    </div>
-                    <div class="pwd-error-msg" id="createPwdErr"><i class="fas fa-circle-exclamation"></i><span>Wajib: min.8 karakter, huruf besar, kecil, angka, simbol</span></div>
-                    <div class="str-bar" id="createStrBar" style="display:none;">
-                        <div class="str-seg" id="cSeg1"></div><div class="str-seg" id="cSeg2"></div>
-                        <div class="str-seg" id="cSeg3"></div><div class="str-seg" id="cSeg4"></div><div class="str-seg" id="cSeg5"></div>
-                    </div>
-                    <div class="str-text" id="createStrText" style="display:none;"></div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Konfirmasi Password</label>
-                    <div class="input-wrapper">
-                        <input type="password" id="createPwdConf" class="form-input-modal" placeholder="Ulangi password" required>
-                        <i class="fas fa-lock input-icon"></i>
-                        <button type="button" class="pwd-toggle" id="toggleCreatePwdConf"><i class="fas fa-eye"></i></button>
-                    </div>
-                    <div class="match-ind no" id="createMatchNo"><i class="fas fa-circle-exclamation"></i><span>Password tidak cocok</span></div>
-                    <div class="match-ind ok" id="createMatchOk"><i class="fas fa-circle-check"></i><span>Password cocok</span></div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Role</label>
-                    <select name="role" id="createRole" class="form-control" required>
-                        <option value="">— Pilih Role —</option>
-                        <option value="juri">Juri</option>
-                        <option value="grand_juri">Grand Juri</option>
-                        <option value="admin">Admin</option>
-                        <option value="user">User Biasa</option>
-                    </select>
-                </div>
-            </form>
-        </div>
-        <div class="modal-foot">
-            <button class="btn-cancel" onclick="closeModal('modalCreate')">Batal</button>
-            <button class="btn-primary" onclick="submitCreateUser()"><i class="fas fa-save"></i> Simpan User</button>
+    <div class="modal-bg" id="modalDetail" style="--mw:750px;">
+        <div class="modal-box">
+            <div class="modal-head"><h3><i class="fas fa-eye"></i> Detail Nilai Peserta</h3><button class="modal-close" onclick="closeModal('modalDetail')"><i class="fas fa-xmark"></i></button></div>
+            <div class="modal-body" id="detailBody"></div>
+            <div class="modal-foot"><button class="btn-cancel" onclick="closeModal('modalDetail')">Tutup</button></div>
         </div>
     </div>
-</div>
+            <!-- MODAL: TAMBAH USER -->
+            <div class="modal-bg" id="modalCreate">
+                <div class="modal-box" style="--mw:460px;">
+                    <div class="modal-head">
+                        <h3><i class="fas fa-user-plus"></i> Tambah User Baru</h3>
+                        <button class="modal-close" onclick="closeModal('modalCreate')"><i class="fas fa-xmark"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formCreateUser">
+                            <div class="form-group">
+                                <label class="form-label">Nama Lengkap</label>
+                                <div class="input-wrapper">
+                                    <input type="text" name="name" id="createName" class="form-input-modal" placeholder="Masukkan nama lengkap" required>
+                                    <i class="fas fa-user input-icon"></i>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <div class="input-wrapper">
+                                    <input type="email" name="email" id="createEmail" class="form-input-modal" placeholder="nama@email.com" required>
+                                    <i class="fas fa-envelope input-icon"></i>
+                                </div>
+                                <div class="pwd-error-msg" id="createEmailErr"><i class="fas fa-circle-exclamation"></i><span></span></div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Password</label>
+                                <div class="input-wrapper">
+                                    <input type="password" name="password" id="createPwd" class="form-input-modal" placeholder="Min.8: besar, kecil, angka, simbol" required>
+                                    <i class="fas fa-lock input-icon"></i>
+                                    <button type="button" class="pwd-toggle" id="toggleCreatePwd"><i class="fas fa-eye"></i></button>
+                                </div>
+                                <div class="pwd-error-msg" id="createPwdErr"><i class="fas fa-circle-exclamation"></i><span>Wajib: min.8 karakter, huruf besar, kecil, angka, simbol</span></div>
+                                <div class="str-bar" id="createStrBar" style="display:none;">
+                                    <div class="str-seg" id="cSeg1"></div><div class="str-seg" id="cSeg2"></div>
+                                    <div class="str-seg" id="cSeg3"></div><div class="str-seg" id="cSeg4"></div><div class="str-seg" id="cSeg5"></div>
+                                </div>
+                                <div class="str-text" id="createStrText" style="display:none;"></div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Konfirmasi Password</label>
+                                <div class="input-wrapper">
+                                    <input type="password" id="createPwdConf" class="form-input-modal" placeholder="Ulangi password" required>
+                                    <i class="fas fa-lock input-icon"></i>
+                                    <button type="button" class="pwd-toggle" id="toggleCreatePwdConf"><i class="fas fa-eye"></i></button>
+                                </div>
+                                <div class="match-ind no" id="createMatchNo"><i class="fas fa-circle-exclamation"></i><span>Password tidak cocok</span></div>
+                                <div class="match-ind ok" id="createMatchOk"><i class="fas fa-circle-check"></i><span>Password cocok</span></div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Role</label>
+                                <select name="role" id="createRole" class="form-control" required>
+                                    <option value="">— Pilih Role —</option>
+                                    <option value="juri">Juri</option>
+                                    <option value="grand_juri">Grand Juri</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="user">User Biasa</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-foot">
+                        <button class="btn-cancel" onclick="closeModal('modalCreate')">Batal</button>
+                        <button class="btn-primary" onclick="submitCreateUser()"><i class="fas fa-save"></i> Simpan User</button>
+                    </div>
+                </div>
+            </div>
 
-<!-- MODAL: LIHAT & GANTI PASSWORD -->
-<div class="modal-bg" id="modalPwd">
-    <div class="modal-box" style="--mw:420px;">
-        <div class="modal-head">
-            <h3><i class="fas fa-key"></i> Password User</h3>
-            <button class="modal-close" onclick="closeModal('modalPwd')"><i class="fas fa-xmark"></i></button>
-        </div>
-        <div class="modal-body">
-            <p style="font-size:12px;margin-bottom:14px;">User: <b id="pwdTarget"></b></p>
-            <input type="hidden" id="pwdUserId">
+            <!-- MODAL: LIHAT & GANTI PASSWORD -->
+            <div class="modal-bg" id="modalPwd">
+                <div class="modal-box" style="--mw:420px;">
+                    <div class="modal-head">
+                        <h3><i class="fas fa-key"></i> Password User</h3>
+                        <button class="modal-close" onclick="closeModal('modalPwd')"><i class="fas fa-xmark"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="font-size:12px;margin-bottom:14px;">User: <b id="pwdTarget"></b></p>
+                        <input type="hidden" id="pwdUserId">
 
-            <!-- CURRENT PASSWORD -->
-            <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:12px;padding:16px;margin-bottom:18px;">
-                <div style="font-size:10px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
-                    <span><i class="fas fa-eye"></i> Password Saat Ini</span>
-                    <button type="button" id="togglePwdView" onclick="toggleCurrentPwd()" style="background:none;border:none;cursor:pointer;color:#15803d;font-size:13px;padding:2px 4px;display:flex;align-items:center;gap:4px;">
-                        <span id="togglePwdLabel" style="font-size:9px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;">TUTUP</span>
-                        <i id="togglePwdIcon" class="fas fa-eye-slash"></i>
+                        <!-- CURRENT PASSWORD -->
+                        <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:12px;padding:16px;margin-bottom:18px;">
+                            <div style="font-size:10px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+                                <span><i class="fas fa-eye"></i> Password Saat Ini</span>
+                                <button type="button" id="togglePwdView" onclick="toggleCurrentPwd()" style="background:none;border:none;cursor:pointer;color:#15803d;font-size:13px;padding:2px 4px;display:flex;align-items:center;gap:4px;">
+                                    <span id="togglePwdLabel" style="font-size:9px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;">TUTUP</span>
+                                    <i id="togglePwdIcon" class="fas fa-eye-slash"></i>
+                                </button>
+                            </div>
+                            <div id="pwdCurrentDisplay" style="font-size:20px;font-weight:900;color:#166534;letter-spacing:1px;word-break:break-all;user-select:none;">
+                                ••••••••
+                            </div>
+                            <div id="pwdNoData" style="display:none;font-size:12px;color:#16a34a;margin-top:4px;">
+                                <i class="fas fa-info-circle"></i> Belum pernah diset oleh admin
+                            </div>
+                        </div>
+
+                        <!-- CHANGE PASSWORD -->
+                        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+                            <i class="fas fa-pen"></i> Ganti Password Baru
+                        </div>
+                        <div class="form-group" style="position:relative;margin-bottom:0;">
+                            <input type="password" id="pwdNew" class="form-control" placeholder="Masukkan password baru (min. 8 karakter)" style="font-size:14px;font-weight:700;letter-spacing:.5px;padding-right:42px;">
+                            <button type="button" class="pwd-toggle" id="toggleNewPwd" onclick="toggleNewPwdInput()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-foot">
+                        <button class="btn-cancel" onclick="closeModal('modalPwd')">Tutup</button>
+                        <button class="btn-primary" onclick="submitPwd()"><i class="fas fa-save"></i> Simpan Password Baru</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: MODUL LAMA -->
+            <div class="modal-bg" id="modalOld" style="--mw:1100px;">
+                <div class="modal-box">
+                    <div class="modal-head">
+                        <h3><i class="fas fa-box-archive"></i> Modul Registrasi Ikan & Undian Tank</h3>
+                        <button class="modal-close" onclick="closeModal('modalOld')"><i class="fas fa-xmark"></i></button>
+                    </div>
+                    <div class="modal-body" style="max-height:80vh; overflow-y:auto;">
+                        <!-- ★ PENGATURAN RENTANG GLOBAL (FALLBACK) -->
+            <div style="background:linear-gradient(135deg,#f8fafc,#f1f5f9); border:1px solid var(--border); border-radius:16px; margin-bottom:20px;">
+                <div style="padding:14px 20px; border-bottom:1px solid var(--border);">
+                    <div style="font-size:14px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-globe"></i> Rentang Nomor Undian Global
+                    </div>
+                    <div style="font-size:11px; color:var(--muted); margin-top:4px;">Digunakan sebagai fallback jika kelas tidak memiliki rentang khusus</div>
+                </div>
+                <div style="padding:18px 20px;">
+                    <div id="globalRangeViewMode" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-size:24px; font-weight:900; color:var(--primary);" id="globalRangeDisplayText">1 - 1000</div>
+                        <button type="button" onclick="toggleGlobalRangeEdit(true)" style="padding:8px 14px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; background:var(--primary-lt); border:1px solid #bfdbfe; color:var(--primary); display:flex; align-items:center; gap:5px; transition:all .2s;">
+                            <i class="fas fa-pen"></i> Ubah
+                        </button>
+                    </div>
+                    <div id="globalRangeEditMode" style="display:none;">
+                        <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
+                            <input type="number" id="inputGlobalRangeMin" value="1" min="1" class="form-control" style="text-align:center; font-weight:700; padding:10px; font-size:14px;">
+                            <span style="font-weight:600; color:var(--muted); font-size:13px;">s/d</span>
+                            <input type="number" id="inputGlobalRangeMax" value="1000" min="1" class="form-control" style="text-align:center; font-weight:700; padding:10px; font-size:14px;">
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" onclick="toggleGlobalRangeEdit(false)" style="flex:1; padding:9px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; background:var(--bg); border:1px solid var(--border); color:var(--muted); font-family:inherit; transition:all .2s;">Batal</button>
+                            <button type="button" onclick="saveGlobalTankRange()" style="flex:1; padding:9px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; background:var(--primary); border:none; color:#fff; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:4px; transition:all .2s;"><i class="fas fa-save"></i> Simpan</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ★ PENGATURAN RENTANG PER KELAS (DI ATAS) -->
+            <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe); border:1px solid #bfdbfe; border-radius:16px; margin-bottom:20px;">
+                <div style="padding:14px 20px; border-bottom:1px solid #bfdbfe;">
+                    <div style="font-size:14px; font-weight:800; color:#1e40af; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-sliders"></i> Pengaturan Rentang Nomor Tank per Kelas
+                    </div>
+                </div>
+                <div style="padding:18px 20px;">
+                    <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; margin-bottom:16px;" id="kelasRangeInputs">
+                        <div style="text-align:center; padding:20px; color:#64748b; grid-column: 1/-1;">
+                            <i class="fas fa-spinner fa-spin"></i> Memuat pengaturan...
+                        </div>
+                    </div>
+                    <button type="button" onclick="saveTankRange()" class="btn-primary" style="width:100%; justify-content:center; background:#1e40af;">
+                        <i class="fas fa-save"></i> Simpan Rentang Nomor
                     </button>
                 </div>
-                <div id="pwdCurrentDisplay" style="font-size:20px;font-weight:900;color:#166534;letter-spacing:1px;word-break:break-all;user-select:none;">
-                    ••••••••
-                </div>
-                <div id="pwdNoData" style="display:none;font-size:12px;color:#16a34a;margin-top:4px;">
-                    <i class="fas fa-info-circle"></i> Belum pernah diset oleh admin
-                </div>
             </div>
 
-            <!-- CHANGE PASSWORD -->
-            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
-                <i class="fas fa-pen"></i> Ganti Password Baru
-            </div>
-            <div class="form-group" style="position:relative;margin-bottom:0;">
-                <input type="password" id="pwdNew" class="form-control" placeholder="Masukkan password baru (min. 8 karakter)" style="font-size:14px;font-weight:700;letter-spacing:.5px;padding-right:42px;">
-                <button type="button" class="pwd-toggle" id="toggleNewPwd" onclick="toggleNewPwdInput()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);">
-                    <i class="fas fa-eye"></i>
-                </button>
-            </div>
-        </div>
-        <div class="modal-foot">
-            <button class="btn-cancel" onclick="closeModal('modalPwd')">Tutup</button>
-            <button class="btn-primary" onclick="submitPwd()"><i class="fas fa-save"></i> Simpan Password Baru</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL: MODUL LAMA -->
-<div class="modal-bg" id="modalOld" style="--mw:1100px;">
-    <div class="modal-box">
-        <div class="modal-head"><h3><i class="fas fa-box-archive"></i> Modul Registrasi Ikan & Undian Tank</h3><button class="modal-close" onclick="closeModal('modalOld')"><i class="fas fa-xmark"></i></button></div>
-        <div class="modal-body">
             <div class="old-grid">
-                <!-- REGISTRASI PESERTA & IKAN (style user.blade) -->
-                <div class="old-card" style="background:linear-gradient(135deg,#f8fafc,#fff);border:none;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,.04);">
-                    <div class="section-head" style="border-bottom:1px solid var(--border);padding:18px 24px;">
-                        <div class="section-title" style="font-size:15px;color:var(--text);">
-                            <i class="fas fa-user-plus" style="color:var(--primary);margin-right:8px;"></i>Registrasi Peserta & Ikan Baru
+                <!-- REGISTRASI PESERTA & IKAN -->
+                <div class="old-card" style="background:linear-gradient(135deg,#f8fafc,#fff); border:none; border-radius:20px; box-shadow:0 4px 20px rgba(0,0,0,.04);">
+                    <div class="section-head" style="border-bottom:1px solid var(--border); padding:18px 24px;">
+                        <div class="section-title" style="font-size:15px; color:var(--text);">
+                            <i class="fas fa-user-plus" style="color:var(--primary); margin-right:8px;"></i>Registrasi Peserta & Ikan Baru
                         </div>
                     </div>
                     <div class="section-body" style="padding:24px;">
@@ -585,11 +641,11 @@
                                     <div class="dropdown-list" id="admRegList"></div>
                                 </div>
                             </div>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                                 <div class="form-group" style="margin-bottom:0;">
                                     <label class="form-label">Kategori</label>
                                     <div class="input-wrapper">
-                                        <select name="kategori" class="form-input-modal" required style="padding-left:14px;cursor:pointer;">
+                                        <select name="kategori" class="form-input-modal" required style="padding-left:14px; cursor:pointer;">
                                             <option value="" disabled selected>Pilih Kategori</option>
                                             <option>Cencu</option><option>Chginwa</option><option>Freemarking</option>
                                             <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
@@ -599,60 +655,39 @@
                                 <div class="form-group" style="margin-bottom:0;">
                                     <label class="form-label">Kelas</label>
                                     <div class="input-wrapper">
-                                        <select name="kelas" class="form-input-modal" required style="padding-left:14px;cursor:pointer;">
+                                        <select name="kelas" class="form-input-modal" required style="padding-left:14px; cursor:pointer;">
                                             <option value="" disabled selected>Pilih Kelas</option>
                                             <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
-                            <button type="submit" class="btn-primary" style="width:100%;justify-content:center;margin-top:18px;padding:13px;">
+                            <button type="submit" class="btn-primary" style="width:100%; justify-content:center; margin-top:18px; padding:13px;">
                                 <i class="fas fa-fish" style="margin-right:6px;"></i> DAFTARKAN PESERTA & IKAN
                             </button>
                         </form>
                     </div>
                 </div>
-                <!-- UNDIAN TANK (TIDAK DIUBAH) -->
-                <div class="old-card" style="background:#1e293b;color:#fff;">
+                
+                <!-- UNDIAN TANK -->
+                <div class="old-card" style="background:#1e293b; color:#fff;">
                     <div class="section-head" style="border-color:rgba(255,255,255,.1);">
-                        <div class="section-title" style="color:#fff;font-size:13px;"><i class="fas fa-dice"></i> Undian Nomor Tank</div>
+                        <div class="section-title" style="color:#fff; font-size:13px;"><i class="fas fa-dice"></i> Undian Nomor Tank</div>
                     </div>
                     <div class="section-body" style="text-align:center;">
-                    <!-- UI PENGATURAN RANGE -->
-                    <div class="dark-input-area" style="margin-bottom:16px; background:rgba(255,255,255,0.05); border-radius:10px; padding:14px; border:1px solid rgba(255,255,255,0.08);">
-                        <div style="font-size:10px; color:rgb(255, 255, 255); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">
-                            <i class="fas fa-sliders" style="margin-right:4px;"></i> Rentang Nomor Undian
-                        </div>
-                        <div id="rangeViewMode" style="display:flex; justify-content:space-between; align-items:center;">
-                            <div style="font-size:24px; font-weight:900; color:#fff;" id="rangeDisplayText">1 - 1000</div>
-                            <button type="button" onclick="toggleRangeEdit(true)" style="padding:6px 12px; border-radius:8px; font-size:10px; font-weight:700; cursor:pointer; background:transparent; border:1px solid rgba(255,255,255,.25); color:#fff; display:flex; align-items:center; gap:4px; transition:all .2s;">
-                                <i class="fas fa-pen"></i> Ubah
-                            </button>
-                        </div>
-                        <div id="rangeEditMode" style="display:none;">
-                            <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
-                                <input type="number" id="inputRangeMin" style="width:100%; padding:9px 12px; border-radius:9px; background:rgba(0,0,0,.3); color:#fff; border:1px solid rgba(255,255,255,.15); text-align:center; font-weight:700; font-family:inherit; font-size:14px; outline:none;" value="1" min="1">
-                                <span style="color:rgb(255, 255, 255); font-weight:600;">s/d</span>
-                                <input type="number" id="inputRangeMax" style="width:100%; padding:9px 12px; border-radius:9px; background:rgba(0,0,0,.3); color:#fff; border:1px solid rgba(255,255,255,.15); text-align:center; font-weight:700; font-family:inherit; font-size:14px; outline:none;" value="1000" min="1">
-                            </div>
-                            <div style="display:flex; gap:6px;">
-                                <button type="button" onclick="toggleRangeEdit(false)" style="flex:1; padding:8px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; background:transparent; border:1px solid rgba(255,255,255,.25); color:#fff; font-family:inherit; transition:all .2s;">Batal</button>
-                                <button type="button" onclick="saveTankRange()" style="flex:1; padding:8px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; background:#3b82f6; border:none; color:#fff; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:4px; transition:all .2s;"><i class="fas fa-save"></i> Simpan</button>
-                            </div>
-                        </div>
-                    </div>
-                        <select id="pesertaSelectOld" class="form-control" style="background:rgba(0,0,0,.3);color:#fff;border-color:rgba(255,255,255,.1);margin-bottom:14px;"></select>
-                        <div id="tankCounter" style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px;">Memuat...</div>
-                        <div style="font-size:56px;font-weight:900;margin:12px 0;letter-spacing:2px;transition:color .3s;" id="numberDisplayOld">--</div>
-                        <button class="btn-primary" id="btnAcakOld" style="width:100%;justify-content:center;background:#3b82f6;">
+                        <select id="pesertaSelectOld" class="form-control" style="background:rgba(0,0,0,.3); color:#fff; border-color:rgba(255,255,255,.1); margin-bottom:14px;"></select>
+                        <div id="tankCounter" style="font-size:11px; color:rgba(255,255,255,.5); margin-bottom:8px;">Memuat...</div>
+                        <div style="font-size:56px; font-weight:900; margin:12px 0; letter-spacing:2px; transition:color .3s;" id="numberDisplayOld">--</div>
+                        <button class="btn-primary" id="btnAcakOld" style="width:100%; justify-content:center; background:#3b82f6;">
                             <i class="fas fa-shuffle"></i> Acak Nomor Tank
                         </button>
-                        <button type="button" onclick="openResetTankModal()" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#fca5a5;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;">
+                        <button type="button" onclick="openResetTankModal()" style="width:100%; margin-top:10px; padding:10px; border-radius:10px; border:1px solid rgba(239,68,68,.3); background:rgba(239,68,68,.1); color:#fca5a5; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:6px; transition:all .2s;">
                             <i class="fas fa-rotate-left"></i> Reset Semua Nomor Tank
                         </button>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
@@ -729,8 +764,44 @@
 /* ═══════════════════════════════════════════════
    HELPERS & STATE
    ═══════════════════════════════════════════════ */
-function openModal(id){document.getElementById(id).classList.add('show');}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
+
+/* ═══ FUNGSI MODAL BERSIH (TANPA OVERRIDE BERANTAI) ═══ */
+function openModal(id){
+    var el = document.getElementById(id);
+    if(!el) return; // Cegah error jika elemen tidak ditemukan
+    el.classList.add('show');
+
+    // Trigger khusus saat modal spesifik dibuka
+    if(id === 'modalCreate'){
+        var form = document.getElementById('formCreateUser');
+        if(form) form.reset();
+        var cPwdEl = document.getElementById('createPwd');
+        var cConfEl = document.getElementById('createPwdConf');
+        if(cPwdEl) cPwdEl.classList.remove('input-error','input-success');
+        if(cConfEl) cConfEl.classList.remove('input-error','input-success');
+        var errPwd = document.getElementById('createPwdErr');
+        var barPwd = document.getElementById('createStrBar');
+        var txtPwd = document.getElementById('createStrText');
+        var errEmail = document.getElementById('createEmailErr');
+        var matchNo = document.getElementById('createMatchNo');
+        var matchOk = document.getElementById('createMatchOk');
+        if(errPwd) errPwd.style.display='none';
+        if(barPwd) barPwd.style.display='none';
+        if(txtPwd) txtPwd.style.display='none';
+        if(errEmail) errEmail.style.display='none';
+        if(matchNo) matchNo.style.display='none';
+        if(matchOk) matchOk.style.display='none';
+        var cSegs = [document.getElementById('cSeg1'),document.getElementById('cSeg2'),document.getElementById('cSeg3'),document.getElementById('cSeg4'),document.getElementById('cSeg5')];
+        for(var i=0;i<cSegs.length;i++){ if(cSegs[i]) cSegs[i].className='str-seg'; }
+    }
+
+    if(id === 'modalOld'){
+        loadPesertaOld();
+        loadTankRange();
+    }
+}
+
 function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function getCsrf(){return document.querySelector('meta[name="csrf-token"]').getAttribute('content');}
 
@@ -840,23 +911,6 @@ document.getElementById('toggleCreatePwdConf').addEventListener('click',function
     if(cConf.type==='password'){cConf.type='text';ic.classList.replace('fa-eye','fa-eye-slash');}
     else{cConf.type='password';ic.classList.replace('fa-eye-slash','fa-eye');}
 });
-
-/* Reset form saat modal buka */
-var origOpenCreate=openModal;
-openModal=function(id){
-    origOpenCreate(id);
-    if(id==='modalCreate'){
-        document.getElementById('formCreateUser').reset();
-        cPwd.classList.remove('input-error','input-success');cConf.classList.remove('input-error','input-success');
-        document.getElementById('createPwdErr').style.display='none';
-        document.getElementById('createStrBar').style.display='none';
-        document.getElementById('createStrText').style.display='none';
-        document.getElementById('createEmailErr').style.display='none';
-        document.getElementById('createMatchNo').style.display='none';
-        document.getElementById('createMatchOk').style.display='none';
-        for(var i=0;i<cSegs.length;i++)cSegs[i].className='str-seg';
-    }
-};
 
 /* ═══════════════════════════════════════════════
    LOAD STATISTIK & CHARTS
@@ -1419,48 +1473,53 @@ function loadPesertaOld(){
         }
 
         sel.disabled=false;
-        document.getElementById('btnAcakOld').disabled=false;
-        if(counter) counter.innerHTML=data.length+' ikan belum diundi';
+document.getElementById('btnAcakOld').addEventListener('click',function(){
+    var sel=document.getElementById('pesertaSelectOld');
+    if(!sel.value)return;
 
-        sel.innerHTML='<option value="" disabled selected>Pilih ikan yang belum diundi ('+data.length+')</option>';
-        for(var i=0;i<data.length;i++){
-            var o=document.createElement('option');
-            o.value=data[i].id;
-            o.textContent=data[i].nama_peserta+' — '+data[i].kategori+' ('+data[i].kelas+')';
-            sel.appendChild(o);
+    var display=document.getElementById('numberDisplayOld');
+    var btn=this;
+    display.style.color='#60a5fa';
+    btn.disabled=true;
+
+    // ★ FIX: Gunakan currentTankMax yang sudah didefinisikan di atas
+    var maxForAnim = currentTankMax || 1000;
+
+    var c=0,iv=setInterval(function(){
+        display.textContent=Math.floor(Math.random()*maxForAnim)+1;
+        if(c++>15){
+            clearInterval(iv);
+
+            var fd=new FormData();
+            fd.append('_token',getCsrf());
+            fd.append('ikan_id',sel.value);
+
+            fetch('{{ route("api.acak.tank.admin") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+            .then(function(r){return r.json();})
+            .then(function(d){
+                if(d.success){
+                    display.textContent=d.nomor_tank;
+                    display.style.color='#22c55e';
+
+                    setTimeout(function(){
+                        display.textContent='--';
+                        display.style.color='#fff';
+                        btn.disabled=false;
+                        loadPesertaOld();
+                    },2000);
+                } else {
+                    throw new Error(d.message);
+                }
+            })
+            .catch(function(e){
+                display.textContent='--';
+                display.style.color='#fff';
+                btn.disabled=false;
+                popupError('Undian Gagal',esc(e.message));
+            });
         }
-
-        /* Reset display ke -- */
-        document.getElementById('numberDisplayOld').textContent='--';
-        document.getElementById('numberDisplayOld').style.color='#fff';
-    })
-    .catch(function(){
-        sel.innerHTML='<option disabled>Gagal memuat data</option>';
-        if(counter) counter.textContent='Error';
-    });
-}
-
-/* ═══════════════════════════════════════════════
-   PENGATURAN RANGE NOMOR UNDIAN (JS)
-   ═══════════════════════════════════════════════ */
-var currentTankMax = 1000; 
-
-function loadTankRange() {
-    fetch('/api/tank-range', {headers:{'Accept':'application/json'}})
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-        document.getElementById('rangeDisplayText').textContent = d.min + ' - ' + d.max;
-        document.getElementById('inputRangeMin').value = d.min;
-        document.getElementById('inputRangeMax').value = d.max;
-        currentTankMax = d.max;
-    })
-    .catch(function(){});
-}
-
-function toggleRangeEdit(show) {
-    document.getElementById('rangeViewMode').style.display = show ? 'none' : 'flex';
-    document.getElementById('rangeEditMode').style.display = show ? 'block' : 'none';
-}
+    },60);
+});
 
 /* ═══════════════════════════════════════════════
    RESET NOMOR TANK (JS)
@@ -1515,45 +1574,6 @@ function submitResetTank() {
         }
     );
 }
-
-function saveTankRange() {
-    var min = parseInt(document.getElementById('inputRangeMin').value);
-    var max = parseInt(document.getElementById('inputRangeMax').value);
-    
-    if (isNaN(min) || isNaN(max) || min < 1 || max < 1) {
-        popupError('Invalid', 'Nomor harus lebih dari 0.'); return;
-    }
-    if (max <= min) {
-        popupError('Invalid', 'Nomor akhir harus lebih besar dari nomor awal.'); return;
-    }
-
-    var fd = new FormData();
-    fd.append('_token', getCsrf());
-    fd.append('min', min);
-    fd.append('max', max);
-
-    fetch('/api/admin/tank-range', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}, body:fd})
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-        if(d.success) {
-            loadTankRange();
-            toggleRangeEdit(false);
-            popupSuccess('Berhasil', 'Rentang nomor undian diubah menjadi <b>' + min + ' - ' + max + '</b>.');
-        } else {
-            popupError('Gagal', d.message || 'Terjadi kesalahan.');
-        }
-    })
-    .catch(function(){ popupError('Error', 'Gagal menyimpan pengaturan.'); });
-}
-
-var origOpenModal2 = openModal;
-openModal = function(id){
-    origOpenModal2(id);
-    if(id==='modalOld'){
-        loadPesertaOld();
-        loadTankRange();
-    }
-};
 
 // ── SEARCHABLE DROPDOWN PESERTA (modalOld) ──
 var admRegUserCache = [];
@@ -1692,8 +1712,10 @@ document.getElementById('btnAcakOld').addEventListener('click',function(){
     display.style.color='#60a5fa';
     btn.disabled=true;
 
+    var maxForAnim = currentTankMax || 1000;
+
     var c=0,iv=setInterval(function(){
-        display.textContent=Math.floor(Math.random()*currentTankMax)+1;
+        display.textContent=Math.floor(Math.random()*maxForAnim)+1;
         if(c++>15){
             clearInterval(iv);
 
@@ -1705,11 +1727,9 @@ document.getElementById('btnAcakOld').addEventListener('click',function(){
             .then(function(r){return r.json();})
             .then(function(d){
                 if(d.success){
-                    /* Tampilkan nomor hasil undian */
                     display.textContent=d.nomor_tank;
                     display.style.color='#22c55e';
 
-                    /* Setelah 2 detik: reset tampilan ke --, refresh dropdown (ikan hilang otomatis) */
                     setTimeout(function(){
                         display.textContent='--';
                         display.style.color='#fff';
@@ -1748,7 +1768,6 @@ function filterUsers(q){
     var c=document.getElementById('userList');c.innerHTML='';
     var filtered=[];
 
-    /* Populate password map dari data lengkap */
     plainPwdMap={};
     for(var i=0;i<allUsersCache.length;i++){
         plainPwdMap[allUsersCache[i].id]=allUsersCache[i].plain_password||'';
@@ -1774,9 +1793,8 @@ function renderUserList(data){
     for(var i=0;i<data.length;i++){
         var u=data[i],role=u.role||'user',isMe=myId===u.id,isOtherAdmin=(role==='admin'&&!isMe);
         var div=document.createElement('div');div.className='user-card';
-        var safeName=esc(u.name).replace(/'/g,"\\'");
+        var safeName=esc(u.name).replace(/'/g,"\\");
 
-        /* Baris 1: Avatar + Nama + Email + Role Badge */
         var topHtml=
             '<div class="user-card-top">'+
                 '<div class="user-avatar" style="background:'+roleColors[role]+';">'+esc(u.name.charAt(0).toUpperCase())+'</div>'+
@@ -1784,7 +1802,6 @@ function renderUserList(data){
                 '<span class="role-badge '+roleBadgeCls[role]+'" style="flex-shrink:0;">'+roleLabels[role]+'</span>'+
             '</div>';
 
-        /* Baris 2: Tombol Aksi */
         var actions='';
         if(!isMe&&!isOtherAdmin){
             actions+='<button class="btn-xs blue" onclick="openPwdModal('+u.id+',\''+safeName+'\')" title="Password"><i class="fas fa-key"></i></button>';

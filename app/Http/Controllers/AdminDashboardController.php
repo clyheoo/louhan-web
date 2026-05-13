@@ -80,11 +80,11 @@ class AdminDashboardController extends Controller
         ]);
     }
 
+    // Update getDashboardStats untuk menghitung max tank per kelas
     public function getDashboardStats()
     {
         $totalIkan = Ikan::whereNotNull('nomor_tank')->count();
 
-        /* DIPERBAIKI: Menggunakan ikan_id (BUKAN peserta_id) */
         $latestScores = Scoring::selectRaw('ikan_id, MAX(id) as latest_id')
             ->groupBy('ikan_id')
             ->pluck('latest_id');
@@ -105,7 +105,6 @@ class AdminDashboardController extends Controller
             ->pluck('total', 'kategori')
             ->toArray();
 
-        /* DIPERBAIKI: Relasi Scoring -> Ikan -> Peserta */
         $top10 = Scoring::with('ikan.peserta')
             ->whereIn('id', $latestScores)
             ->whereNotNull('total_nilai')
@@ -129,9 +128,18 @@ class AdminDashboardController extends Controller
             ->values()
             ->toArray();
 
-        // AMBIL RANGE DARI DATABASE UNTUK SISA TANK
-        $maxTank = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
-        $sisaTank = max(0, $maxTank - $totalIkan);
+        // Hitung sisa tank berdasarkan range per kelas
+        $ranges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
+        $maxTankTotal = 0;
+        if ($ranges) {
+            foreach ($ranges as $data) {
+                $maxTankTotal += ((int)$data['max'] - (int)$data['min'] + 1);
+            }
+        } else {
+            $maxTankTotal = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+        }
+        
+        $sisaTank = max(0, $maxTankTotal - $totalIkan);
 
         return response()->json([
             'total_peserta'  => $totalIkan, 
@@ -141,7 +149,7 @@ class AdminDashboardController extends Controller
             'juri_aktif'     => $juriAktif,
             'rata_rata'      => $avgScore,
             'sisa_tank'      => $sisaTank,
-            'max_tank'       => $maxTank,
+            'max_tank'       => $maxTankTotal,
             'per_kategori'   => $perKategori,
             'top_10'         => $top10,
         ]);
@@ -318,30 +326,48 @@ class AdminDashboardController extends Controller
        ═══════════════════════════════════════════ */
     public function getTankRange()
     {
-        $min = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
-        $max = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+        $ranges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
         
-        return response()->json(['min' => $min, 'max' => $max]);
+        // Default values jika belum diatur
+        if (!$ranges) {
+            $ranges = [
+                'A' => ['min' => 1, 'max' => 20],
+                'B' => ['min' => 21, 'max' => 40],
+                'C' => ['min' => 41, 'max' => 60],
+                'D' => ['min' => 61, 'max' => 80],
+                'E' => ['min' => 81, 'max' => 100],
+            ];
+        }
+        
+        return response()->json($ranges);
     }
 
     public function setTankRange(Request $request)
     {
         $request->validate([
-            'min' => 'required|integer|min:1',
-            'max' => 'required|integer|min:1|gte:min',
+            'ranges' => 'required|array',
+            'ranges.*.min' => 'required|integer|min:1',
+            'ranges.*.max' => 'required|integer|min:1',
         ]);
 
-        \DB::table('settings')->updateOrInsert(
-            ['key' => 'tank_range_min'],
-            ['value' => $request->min, 'updated_at' => now()]
-        );
+        $ranges = $request->ranges;
+        
+        // Validasi tambahan: max harus >= min
+        foreach($ranges as $kelas => $data) {
+            if ((int)$data['max'] < (int)$data['min']) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Rentang Kelas ' . $kelas . ' tidak valid (Max lebih kecil dari Min).'
+                ], 422);
+            }
+        }
 
         \DB::table('settings')->updateOrInsert(
-            ['key' => 'tank_range_max'],
-            ['value' => $request->max, 'updated_at' => now()]
+            ['key' => 'tank_class_ranges'],
+            ['value' => json_encode($ranges), 'updated_at' => now()]
         );
 
-        return response()->json(['success' => true, 'message' => 'Range nomor undian berhasil diperbarui.']);
+        return response()->json(['success' => true, 'message' => 'Rentang nomor undian per kelas berhasil diperbarui.']);
     }
 
     public function resetTankNumbers(Request $request)
@@ -366,5 +392,36 @@ class AdminDashboardController extends Controller
         );
 
         return response()->json(['success' => true, 'message' => 'Semua nomor tank berhasil direset. Data penilaian tetap aman.']);
+    }
+
+    /* ═══════════════════════════════════════════
+    RENTANG GLOBAL (FALLBACK)
+    ═══════════════════════════════════════════ */
+    public function getTankRangeGlobal()
+    {
+        $min = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
+        $max = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+        
+        return response()->json(['min' => $min, 'max' => $max]);
+    }
+
+    public function setTankRangeGlobal(Request $request)
+    {
+        $request->validate([
+            'min' => 'required|integer|min:1',
+            'max' => 'required|integer|min:1|gte:min',
+        ]);
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'tank_range_min'],
+            ['value' => $request->min, 'updated_at' => now()]
+        );
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'tank_range_max'],
+            ['value' => $request->max, 'updated_at' => now()]
+        );
+
+        return response()->json(['success' => true, 'message' => 'Rentang global berhasil diperbarui.']);
     }
 }
