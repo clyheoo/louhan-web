@@ -23,15 +23,19 @@ class GrandJuriController extends Controller
         $totalTank = Ikan::whereNotNull('nomor_tank')->count();
         $totalPeserta = Peserta::count();
 
-        $sudahPlot = Scoring::distinct('ikan_id')->count('ikan_id');
+        $sudahPlot = Scoring::where('submitted_to_grand', true)
+            ->distinct('ikan_id')
+            ->count('ikan_id');
         $belumPlot = max(0, $totalTank - $sudahPlot);
         $maxTank = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
         $sisaTank = max(0, $maxTank - $totalTank);
 
+        // ★ FIX: Hanya hitung ikan yang sudah submitted_to_grand, tanpa belum_tank
         $rincian = Ikan::whereNotNull('nomor_tank')
-            ->selectRaw('ikans.kategori, COUNT(ikans.id) as ekor,
-                SUM(CASE WHEN scorings.id IS NULL THEN 1 ELSE 0 END) as belum_tank')
-            ->leftJoin('scorings', 'ikans.id', '=', 'scorings.ikan_id')
+            ->whereHas('scorings', function ($q) {
+                $q->where('submitted_to_grand', true);
+            })
+            ->selectRaw('ikans.kategori, COUNT(ikans.id) as ekor')
             ->groupBy('ikans.kategori')
             ->orderByDesc('ekor')
             ->get();
@@ -260,10 +264,14 @@ class GrandJuriController extends Controller
             return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
         }
 
-        $totalJuriAll = \App\Models\User::where('role', 'juri')->count();
+        $totalJuriAll = Scoring::where('ikan_id', $ikanId)
+            ->where('submitted_to_grand', true)
+            ->distinct('juri_id')
+            ->count('juri_id');
+
         $submittedCount = Scoring::where('ikan_id', $ikanId)
             ->where('submitted_to_grand', true)
-            ->count();
+            ->count('ikan_id');
 
         if ($submittedCount < $totalJuriAll) {
             $sisa = $totalJuriAll - $submittedCount;
@@ -292,10 +300,11 @@ class GrandJuriController extends Controller
         try {
             $merged = [];
 
-            // --- Juri biasa ---
+            // --- Juri biasa (hanya yang sudah kirim ke Grand Juri) ---
             $juriRows = \DB::table('scorings')
                 ->join('users', 'scorings.juri_id', '=', 'users.id')
                 ->whereNotNull('scorings.juri_id')
+                ->where('scorings.submitted_to_grand', true)
                 ->selectRaw('scorings.juri_id, users.name, COUNT(DISTINCT scorings.ikan_id) as total_ikan')
                 ->groupBy('scorings.juri_id', 'users.name')
                 ->orderByDesc('total_ikan')
@@ -394,41 +403,32 @@ class GrandJuriController extends Controller
             return response()->json(['error' => 'kategori wajib diisi'], 422);
         }
 
-        $ikans = Ikan::where(function($q) {
-                $q->whereNotNull('nomor_tank')
-                  ->orWhereHas('scorings');
+        // ★ FIX: Satu query saja, hanya ikan yang sudah submitted_to_grand
+        $ikans = Ikan::whereNotNull('nomor_tank')
+            ->whereHas('scorings', function ($q) {
+                $q->where('submitted_to_grand', true);
             })
             ->where('kategori', $kategori)
             ->with(['peserta', 'scorings' => function ($q) {
-                $q->latest()->limit(1);
+                $q->where('submitted_to_grand', true)->latest()->limit(1);
             }, 'scorings.juri'])
             ->orderBy('nomor_tank')
             ->get();
 
-        $sudah = [];
-        $belum = [];
-
+        $data = [];
         foreach ($ikans as $ikan) {
-            $scoring = $ikan->scorings->first();
-            $item = [
+            $data[] = [
                 'nama_peserta' => $ikan->peserta->nama_peserta ?? 'Unknown',
                 'nomor_tank'   => $ikan->nomor_tank,
+                'juri_nama'    => $ikan->scorings->first()?->juri?->name ?? '—',
+                'total_nilai'  => $ikan->scorings->first()?->total_nilai ?? 0,
             ];
-
-            if ($scoring) {
-                $item['juri_nama']   = $scoring->juri?->name ?? '—';
-                $item['total_nilai'] = $scoring->total_nilai ?? 0;
-                $sudah[] = $item;
-            } else {
-                $belum[] = $item;
-            }
         }
 
         return response()->json([
-            'kategori'  => $kategori,
+            'kategori'   => $kategori,
             'total_ekor' => $ikans->count(),
-            'sudah'     => $sudah,
-            'belum'     => $belum,
+            'data'       => $data,
         ]);
     }
 
@@ -452,11 +452,12 @@ class GrandJuriController extends Controller
             }, 'scorings.juri']);
 
         if ($status === 'sudah_plot') {
-            $query->whereHas('scorings');
+            $query->whereHas('scorings', function ($q) {
+                $q->where('submitted_to_grand', true);
+            });
         } else {
             $query->whereDoesntHave('scorings');
         }
-
         $data = $query->orderBy('nomor_tank')->get()->map(function ($ikan) {
             $scoring = $ikan->scorings->first();
             return [

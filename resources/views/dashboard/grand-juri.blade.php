@@ -57,7 +57,6 @@
         .rincian-card:hover .rincian-cat i { opacity:1; }
         .rincian-data { text-align:right; }
         .rincian-ekor { font-size:18px; font-weight:900; }
-        .rincian-belum { font-size:11px; color:var(--danger); font-weight:700; }
 
         /* ── KOMPONEN JURI ── */
         .juri-chip-list { display:flex; flex-wrap:wrap; gap:8px; }
@@ -139,11 +138,6 @@
         .score-chip { padding:5px 16px; border-radius:6px; font-size:13px; font-weight:800; min-width:48px; text-align:center; }
         .score-chip.filled { background:#ede9fe; color:var(--purple); }
         .score-chip.empty { background:#f1f5f9; color:var(--text-muted); font-size:11px; font-weight:600; }
-        .detail-field-name { font-size:13px; font-weight:600; }
-        .detail-field-meta { font-size:11px; color:var(--text-muted); margin-top:2px; }
-        .score-chip { padding:4px 12px; border-radius:6px; font-size:13px; font-weight:800; min-width:50px; text-align:center; }
-        .score-chip.filled { background:#ede9fe; color:var(--purple); }
-        .score-chip.empty { background:#f1f5f9; color:var(--text-muted); font-size:11px; font-weight:600; }
 
         /* ── EDIT MODAL ── */
         .edit-info-banner { margin-bottom:12px; font-size:13px; background:linear-gradient(135deg,#f5f3ff,#ede9fe); padding:12px 16px; border-radius:10px; border:1px solid #ddd6fe; }
@@ -186,23 +180,6 @@
         .gen-count-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:800; }
         .gen-count-badge.green { background:#dcfce7; color:#16a34a; }
         .gen-count-badge.red { background:#fee2e2; color:#dc2626; }
-
-        /* ── SPLIT VIEW (Rincian Detail) ── */
-        .split-view { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-        .split-panel { border-radius:12px; border:1px solid var(--border); overflow:hidden; }
-        .split-panel-head { padding:12px 16px; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:space-between; }
-        .split-panel-head.sudah { background:linear-gradient(135deg,#dcfce7,#bbf7d0); color:#15803d; border-bottom:1px solid #86efac; }
-        .split-panel-head.belum { background:linear-gradient(135deg,#fee2e2,#fecaca); color:#dc2626; border-bottom:1px solid #fca5a5; }
-        .split-panel-body { max-height:420px; overflow-y:auto; }
-        .split-item { padding:10px 16px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:10px; font-size:12px; transition:background .15s; }
-        .split-item:last-child { border-bottom:none; }
-        .split-item:hover { background:#fafbfc; }
-        .split-item .si-tank { font-weight:900; color:var(--purple); min-width:72px; font-size:11px; }
-        .split-item .si-name { font-weight:600; flex:1; }
-        .split-item .si-extra { font-size:10px; color:var(--text-muted); text-align:right; line-height:1.4; }
-        .split-item .si-extra strong { color:var(--primary); }
-        .split-empty { padding:28px 16px; text-align:center; color:var(--text-muted); font-size:12px; }
-        .split-empty i { display:block; font-size:24px; margin-bottom:6px; opacity:.3; }
 
         /* ── POPUPS ── */
         .popup-overlay { position:fixed; inset:0; background:rgba(15,23,42,.4); backdrop-filter:blur(6px); z-index:9999; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .4s; }
@@ -327,7 +304,7 @@
                     <thead>
                         <tr>
                             <th>PESERTA</th>
-                            <th>KATEGORI</th>
+                            <th>KATEGORI - KELAS</th>
                             <th>NO. TANK</th>
                             <th>ASAL/TEAM</th>
                             <th>DINILAI OLEH</th>
@@ -535,10 +512,10 @@ function loadStats(){
         var grid=document.getElementById('rincianGrid');
         grid.innerHTML='';
         if(d.rincian)d.rincian.forEach(function(r){
+            // ★ FIX: Hapus baris "Belum Dinilai", hanya tampilkan jumlah ekor
             grid.innerHTML+='<div class="rincian-card" onclick="openRincianDetail(\''+esc(r.kategori)+'\')">'+
                 '<div class="rincian-cat"><i class="fas fa-arrow-up-right-from-square"></i>'+esc(r.kategori)+'</div>'+
-                '<div class="rincian-data"><div class="rincian-ekor">'+r.ekor+' Ekor</div>'+
-                '<div class="rincian-belum">'+r.belum_tank+' Belum Dinilai</div></div></div>';
+                '<div class="rincian-data"><div class="rincian-ekor">'+r.ekor+' Ekor</div></div></div>';
         });
     });
 }
@@ -986,41 +963,27 @@ function openRincianDetail(kategori){
             content.innerHTML='<div class="empty-state">Data tidak ditemukan.</div>';return;
         }
 
-        var html='<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">';
-        html+='<span class="gen-count-badge green"><i class="fas fa-check-circle"></i> Sudah: '+data.sudah.length+' ekor</span>';
-        html+='<span class="gen-count-badge red"><i class="fas fa-times-circle"></i> Belum: '+data.belum.length+' ekor</span>';
-        html+='<span style="font-size:12px;color:var(--text-muted);font-weight:600;">Total: '+data.total_ekor+' ekor</span>';
-        html+='</div>';
+        // ★ FIX: Tanpa panel "Belum Dinilai", hanya tabel data yang sudah dinilai
+        var html='<div class="detail-note purple-note"><i class="fas fa-circle-info"></i><span>'+
+            'Kategori <strong>'+esc(kategori)+'</strong> — Total <strong>'+data.total_ekor+'</strong> ekor sudah dinilai.</span></div>';
 
-        html+='<div class="split-view">';
+        html+='<div class="table-wrap"><table class="gen-table"><thead><tr>'+
+            '<th>NO</th><th>PESERTA</th><th>NO. TANK</th><th>DINILAI OLEH</th><th>TOTAL NILAI</th>'+
+            '</tr></thead><tbody>';
 
-        /* Panel Sudah */
-        html+='<div class="split-panel"><div class="split-panel-head sudah"><span><i class="fas fa-check-circle" style="margin-right:5px;"></i> Sudah Dinilai</span><span>'+data.sudah.length+'</span></div><div class="split-panel-body">';
-        if(data.sudah.length===0){
-            html+='<div class="split-empty"><i class="fas fa-minus-circle"></i>Tidak ada</div>';
+        if(!data.data||data.data.length===0){
+            html+='<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Tidak ada data ditemukan.</td></tr>';
         } else {
-            data.sudah.forEach(function(item){
-                html+='<div class="split-item"><span class="si-tank">'+esc(item.nomor_tank)+'</span>'+
-                    '<span class="si-name">'+esc(item.nama_peserta)+'</span>'+
-                    '<span class="si-extra"><strong>'+item.total_nilai+'</strong> pts<br>'+esc(item.juri_nama)+'</span></div>';
+            data.data.forEach(function(item,i){
+                html+='<tr><td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td>'+
+                    '<td style="font-weight:700;">'+esc(item.nama_peserta)+'</td>'+
+                    '<td class="g-tank">'+esc(item.nomor_tank)+'</td>'+
+                    '<td class="g-juri">'+esc(item.juri_nama)+'</td>'+
+                    '<td class="g-total">'+item.total_nilai+'</td></tr>';
             });
         }
-        html+='</div></div>';
 
-        /* Panel Belum */
-        html+='<div class="split-panel"><div class="split-panel-head belum"><span><i class="fas fa-times-circle" style="margin-right:5px;"></i> Belum Dinilai</span><span>'+data.belum.length+'</span></div><div class="split-panel-body">';
-        if(data.belum.length===0){
-            html+='<div class="split-empty"><i class="fas fa-check-double"></i>Semua sudah dinilai!</div>';
-        } else {
-            data.belum.forEach(function(item){
-                html+='<div class="split-item"><span class="si-tank">'+esc(item.nomor_tank)+'</span>'+
-                    '<span class="si-name">'+esc(item.nama_peserta)+'</span>'+
-                    '<span class="si-extra" style="color:var(--danger);font-weight:700;">Belum</span></div>';
-            });
-        }
-        html+='</div></div>';
-
-        html+='</div>';
+        html+='</tbody></table></div>';
         content.innerHTML=html;
     })
     .catch(function(){
