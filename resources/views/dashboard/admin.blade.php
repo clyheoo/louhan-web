@@ -637,6 +637,7 @@
                         <form id="regPesertaIkanForm">
                             <div class="form-group">
                                 <label class="form-label">Nama Peserta</label>
+                                <input type="hidden" name="user_id" id="admRegUserId" required>
                                 <input type="hidden" name="nama_peserta" id="admRegNama" required>
                                 <div class="search-dropdown" id="admRegDropdown">
                                     <div class="input-wrapper">
@@ -645,6 +646,26 @@
                                         <i class="fas fa-xmark" id="admRegClear" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--light);font-size:13px;display:none;padding:4px;"></i>
                                     </div>
                                     <div class="dropdown-list" id="admRegList"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Jenis Keanggotaan</label>
+                                <div class="toggle-group" id="admRegToggleGroup">
+                                    <div class="toggle-option">
+                                        <input type="radio" name="jenis_keanggotaan" id="admPerorangan" value="perorangan" checked>
+                                        <label for="admPerorangan"><i class="fas fa-user" style="margin-right:4px"></i>Perorangan</label>
+                                    </div>
+                                    <div class="toggle-option">
+                                        <input type="radio" name="jenis_keanggotaan" id="admTeam" value="team">
+                                        <label for="admTeam"><i class="fas fa-users" style="margin-right:4px"></i>Team / Club</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" id="admLabelDetail">Kota Asal</label>
+                                <div class="input-wrapper">
+                                    <input type="text" name="detail_anggota" id="admInputDetail" class="form-input-modal" placeholder="Contoh: Jakarta" required>
+                                    <i class="fas fa-city input-icon" id="admIconDetail"></i>
                                 </div>
                             </div>
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
@@ -1642,8 +1663,12 @@ if(admRegSearchEl){
         admRegSearchEl.value='';
         admRegClearEl.style.display='none';
         admRegHiddenName.value='';
+        admRegUserIdEl.value='';
         admRegSelected=false;
         admRegSearchEl.classList.remove('input-success');
+        document.getElementById('admPerorangan').checked = true;
+        updateAdmToggleUI();
+        document.getElementById('admInputDetail').value = '';
         renderAdmRegList(admRegUserCache);
         admRegSearchEl.focus();
     });
@@ -1660,6 +1685,44 @@ function loadAdmRegUsers(){
         renderAdmRegList(admRegUserCache);
     })
     .catch(function(){});
+}
+
+// Tambahkan variabel di atas (dekat var admRegUserCache)
+var admRegUserIdEl = document.getElementById('admRegUserId');
+
+// Toggle jenis keanggotaan admin
+var admRadioP = document.getElementById('admPerorangan');
+var admRadioT = document.getElementById('admTeam');
+function updateAdmToggleUI() {
+    if (admRadioT.checked) {
+        document.getElementById('admLabelDetail').textContent = 'Nama Team / Club';
+        document.getElementById('admInputDetail').placeholder = 'Contoh: Louhan Fanatic Jakarta';
+        document.getElementById('admIconDetail').classList.replace('fa-city', 'fa-shield-halved');
+    } else {
+        document.getElementById('admLabelDetail').textContent = 'Kota Asal';
+        document.getElementById('admInputDetail').placeholder = 'Contoh: Jakarta';
+        document.getElementById('admIconDetail').classList.replace('fa-shield-halved', 'fa-city');
+    }
+}
+if(admRadioP) admRadioP.addEventListener('change', updateAdmToggleUI);
+if(admRadioT) admRadioT.addEventListener('change', updateAdmToggleUI);
+
+function loadPesertaDetail(userId) {
+    fetch('/api/admin/get-peserta-by-user?user_id=' + userId, { headers: {'Accept': 'application/json'} })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.found) {
+            if (d.jenis_keanggotaan === 'team') { document.getElementById('admTeam').checked = true; }
+            else { document.getElementById('admPerorangan').checked = true; }
+            updateAdmToggleUI();
+            document.getElementById('admInputDetail').value = d.detail_anggota || '';
+        } else {
+            document.getElementById('admPerorangan').checked = true;
+            updateAdmToggleUI();
+            document.getElementById('admInputDetail').value = '';
+        }
+    })
+    .catch(function() {});
 }
 
 function renderAdmRegList(list){
@@ -1680,9 +1743,11 @@ function renderAdmRegList(list){
             div.addEventListener('click',function(){
                 admRegSearchEl.value=u.name;
                 admRegHiddenName.value=u.name;
+                admRegUserIdEl.value=u.id;
                 admRegSelected=true;
                 admRegSearchEl.classList.add('input-success');
                 admRegListEl.classList.remove('show');
+                loadPesertaDetail(u.id);
             });
             admRegListEl.appendChild(div);
         })(list[i]);
@@ -1720,9 +1785,13 @@ if(_regForm) _regForm.addEventListener('submit',function(e){
             admRegSearchEl.classList.remove('input-success');
             admRegClearEl.style.display='none';
             admRegNama.value='';
+            admRegUserIdEl.value='';
             admRegSelected=false;
             loadPesertaOld();
+            loadDashboard();
             popupSuccess('Berhasil Didaftarkan!','Peserta baru beserta ikan berhasil ditambahkan ke sistem.');
+        } else {
+            popupError('Gagal Mendaftar',d.message||'Terjadi kesalahan saat mendaftarkan peserta.');
         }
     })
     .catch(function(e){

@@ -48,34 +48,40 @@ class AdminDashboardController extends Controller
     public function registerPesertaIkan(Request $request)
     {
         $request->validate([
+            'user_id'           => 'required|exists:users,id',
             'nama_peserta'      => 'required|string|max:255',
             'kategori'          => 'required|string|max:255',
             'kelas'             => 'required|string|max:10',
+            'jenis_keanggotaan' => 'required|in:perorangan,team',
+            'detail_anggota'    => 'required|string|max:255',
         ]);
 
-        // Gunakan firstOrCreate agar tidak error jika peserta sudah terdaftar
+        $user = User::find($request->user_id);
+
         $peserta = Peserta::firstOrCreate(
-            ['nama_peserta' => $request->nama_peserta],
+            ['user_id' => $request->user_id],
             [
-                'user_id'           => null,
+                'nama_peserta'      => $user->name,
                 'jenis_keanggotaan' => 'perorangan',
                 'detail_anggota'    => '-',
             ]
         );
 
-        Ikan::create([
-            'peserta_id' => $peserta->id,
-            'kategori'   => $request->kategori,
-            'kelas'      => $request->kelas,
-            'dibuat_oleh' => 'admin',
-        ]);
+        // Admin bisa mengedit jenis keanggotaan dan detail
+        $peserta->jenis_keanggotaan = $request->jenis_keanggotaan;
+        $peserta->detail_anggota = $request->detail_anggota;
+        $peserta->save();
 
-        // ★ FIX: Hapus kode $sisaTank yang menggunakan $totalIkan undefined,
-        // karena tidak di-return ke response juga.
+        Ikan::create([
+            'peserta_id'   => $peserta->id,
+            'kategori'     => $request->kategori,
+            'kelas'        => $request->kelas,
+            'dibuat_oleh'  => 'admin',
+        ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Peserta dan ikan berhasil didaftarkan.',
+            'message' => 'Ikan berhasil didaftarkan untuk <strong>' . $user->name . '</strong>.',
         ]);
     }
 

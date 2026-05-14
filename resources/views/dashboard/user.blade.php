@@ -143,6 +143,9 @@
     </style>
 </head>
 <body>
+    @php 
+        $profilLengkap = $pesertaSaya && !empty($pesertaSaya->detail_anggota); 
+    @endphp
     <div class="bg-layer">
         <div class="bg-gradient"></div>
         <div class="orb orb-1"></div>
@@ -190,7 +193,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Jenis Keanggotaan</label>
-                                <div class="toggle-group">
+                                <div class="toggle-group" @if($profilLengkap) style="opacity:0.5;pointer-events:none;" @endif>
                                     <div class="toggle-option">
                                         <input type="radio" name="jenis_keanggotaan" id="perorangan" value="perorangan" {{ !$pesertaSaya || $pesertaSaya->jenis_keanggotaan == 'perorangan' ? 'checked' : '' }}>
                                         <label for="perorangan"><i class="fas fa-user" style="margin-right:4px"></i>Perorangan</label>
@@ -204,15 +207,16 @@
                             <div class="form-group">
                                 <label class="form-label" id="labelDetail">{{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'Nama Team / Club' : 'Kota Asal' }}</label>
                                 <div class="input-wrapper">
-                                    <input type="text" name="detail_anggota" id="inputDetail" class="form-input" placeholder="Contoh: Jakarta" value="{{ $pesertaSaya->detail_anggota ?? '' }}" required>
-                                    <i class="fas {{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'fa-shield-halved' : 'fa-city' }} input-icon" id="iconDetail"></i>
+                                    <input type="text" name="detail_anggota" id="inputDetail" class="form-input" placeholder="Contoh: Jakarta" value="{{ $pesertaSaya->detail_anggota ?? '' }}" {{ $profilLengkap ? 'readonly style="background:var(--gray-100);cursor:not-allowed;"' : '' }} required>                                    <i class="fas {{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'fa-shield-halved' : 'fa-city' }} input-icon" id="iconDetail"></i>
                                 </div>
                                 <div class="input-error-msg" id="errDetail"></div>
                             </div>
                             
+                            @if(!$profilLengkap)
                             <button type="submit" class="submit-btn" id="submitBtn">
                                 <i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN PROFIL
                             </button>
+                            @endif
                         </form>
                         
                         <button class="submit-btn btn-green" style="margin-top: 12px;" onclick="document.getElementById('modalIkan').classList.add('show')">
@@ -276,6 +280,10 @@
             </div>
         </main>
     </div>
+    
+    @if($profilLengkap)
+    <script>document.addEventListener('DOMContentLoaded', function(){ lockProfilForm(); });</script>
+    @endif
 
     <!-- MODAL TAMBAH IKAN -->
     <div class="modal-overlay" id="modalIkan">
@@ -346,6 +354,23 @@
         radioPerorangan.addEventListener('change', updateToggleUI);
         radioTeam.addEventListener('change', updateToggleUI);
 
+        function lockProfilForm() {
+            document.querySelectorAll('input[name="jenis_keanggotaan"]').forEach(function(r) { r.disabled = true; });
+            document.querySelector('.toggle-group').style.opacity = '0.5';
+            document.querySelector('.toggle-group').style.pointerEvents = 'none';
+            var inp = document.getElementById('inputDetail');
+            inp.readOnly = true;
+            inp.style.background = 'var(--gray-100)';
+            inp.style.cursor = 'not-allowed';
+            var btn = document.getElementById('submitBtn');
+            if (btn) btn.style.display = 'none';
+        }
+
+        // Lock langsung jika profil sudah lengkap saat load
+        @if($profilLengkap)
+        lockProfilForm();
+        @endif
+
         const regForm = document.getElementById('regForm');
         const submitBtn = document.getElementById('submitBtn');
 
@@ -360,7 +385,10 @@
             fetch('{{ route("store.registrasi") }}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
             .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
             .then(data => { 
-                if (data.success) document.getElementById('successModal').classList.add('show'); 
+                if (data.success) {
+                    document.getElementById('successModal').classList.add('show');
+                    lockProfilForm();
+                }
             })
             .catch(err => { 
                 const errEl = document.getElementById('errDetail');
@@ -382,19 +410,25 @@
             const formData = new FormData(formIkan);
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
 
-            fetch('{{ route("store.ikan") }}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
-            .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
+            fetch('{{ route("store.ikan") }}', { 
+                method: 'POST', 
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, 
+                body: formData 
+            })
+            .then(res => { 
+                if (!res.ok) return res.json().then(data => { throw data; }); 
+                return res.json(); 
+            })
             .then(data => {
                 if (data.success) {
                     document.getElementById('modalIkan').classList.remove('show');
                     formIkan.reset();
                     
-                    // Tambahkan ke list tanpa reload
                     let listContainer = document.getElementById('ikanListContainer');
                     let emptyState = document.querySelector('.ikan-empty-state');
                     
-                    if(emptyState) emptyState.remove();
-                    if(!listContainer) {
+                    if (emptyState) emptyState.remove();
+                    if (!listContainer) {
                         listContainer = document.createElement('div');
                         listContainer.className = 'ikan-list';
                         listContainer.id = 'ikanListContainer';
@@ -417,20 +451,43 @@
                             </button>
                         </div>`;
                     listContainer.prepend(newEl);
+                    
+                    // ★ PENTING: Update currentIkans agar polling tidak error
+                    currentIkans[data.ikan.id] = {
+                        kategori: `${data.ikan.kategori} - Kelas ${data.ikan.kelas}`,
+                        nomor_tank: '--'
+                    };
                 }
             })
-            .catch(err => { alert(err.message || 'Gagal menambahkan ikan.'); })
-            .finally(() => { btnSubmit.disabled = false; btnSubmit.innerHTML = 'Simpan Ikan'; });
+            .catch(err => { 
+                if (err.errors) {
+                    let msg = '';
+                    Object.values(err.errors).forEach(function(e) { msg += e[0] + '\n'; });
+                    alert(msg);
+                } else {
+                    alert(err.message || 'Gagal menambahkan ikan.');
+                }
+            })
+            .finally(() => { 
+                btnSubmit.disabled = false; 
+                btnSubmit.innerHTML = 'Simpan Ikan'; 
+            });
         });
 
-                // --- REAL-TIME POLLING UNTUK UPDATE DARI ADMIN ---
+        // --- REAL-TIME POLLING UNTUK UPDATE DARI ADMIN ---
         let currentIkans = {};
+
+        // Inisialisasi currentIkans dari DOM yang sudah ada
         document.querySelectorAll('.ikan-item').forEach(el => {
             const id = el.id.replace('ikan-item-', '');
-            currentIkans[id] = {
-                kategori: el.querySelector('.ikan-item-info p').textContent.trim(),
-                nomor_tank: el.querySelector('.tank-num').textContent.trim()
-            };
+            const pEl = el.querySelector('.ikan-item-info p');
+            const tankEl = el.querySelector('.tank-num');
+            if (id && pEl && tankEl) {
+                currentIkans[id] = {
+                    kategori: pEl.textContent.trim(),
+                    nomor_tank: tankEl.textContent.trim()
+                };
+            }
         });
 
         function pollIkans() {
@@ -439,16 +496,15 @@
             })
             .then(r => r.json())
             .then(response => {
-                // RESPONSE STRUKTUR BARU
-                const data = response.ikans;
+                const data = response.ikans || [];
                 const resetInfo = response.reset_info;
                 
-                let hasResetIkan = false; // Flag untuk cek apakah ada ikan user yang direset
+                let hasResetIkan = false;
                 let listContainer = document.getElementById('ikanListContainer');
                 let emptyState = document.querySelector('.ikan-empty-state');
 
-                if(!listContainer && data.length > 0) {
-                    if(emptyState) emptyState.remove();
+                if (!listContainer && data.length > 0) {
+                    if (emptyState) emptyState.remove();
                     listContainer = document.createElement('div');
                     listContainer.className = 'ikan-list';
                     listContainer.id = 'ikanListContainer';
@@ -460,6 +516,8 @@
                     
                     if (!existingEl) {
                         // IKAN BARU (DITAMBAHKAN ADMIN)
+                        if (!listContainer) return;
+                        
                         const count = listContainer.children.length + 1;
                         const badge = ikan.dibuat_oleh === 'admin' ? '<span class="badge-admin"><i class="fas fa-shield-halved"></i> Ditambah Admin</span>' : '';
                         const newEl = document.createElement('div');
@@ -478,8 +536,23 @@
                                 ${!ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`}
                             </div>`;
                         listContainer.prepend(newEl);
-                        currentIkans[ikan.id] = { kategori: `${ikan.kategori} - Kelas ${ikan.kelas}`, nomor_tank: ikan.nomor_tank ?? '--' };
+                        
+                        // ★ PENTING: Update currentIkans agar tidak error di polling berikutnya
+                        currentIkans[ikan.id] = { 
+                            kategori: `${ikan.kategori} - Kelas ${ikan.kelas}`, 
+                            nomor_tank: ikan.nomor_tank ?? '--' 
+                        };
                     } else {
+                        // ★ PENTING: Pastikan currentIkans[id] ada sebelum diakses
+                        if (!currentIkans[ikan.id]) {
+                            const pEl = existingEl.querySelector('.ikan-item-info p');
+                            const tankEl = existingEl.querySelector('.tank-num');
+                            currentIkans[ikan.id] = {
+                                kategori: pEl ? pEl.textContent.trim() : '',
+                                nomor_tank: tankEl ? tankEl.textContent.trim() : '--'
+                            };
+                        }
+                        
                         const currentKat = `${ikan.kategori} - Kelas ${ikan.kelas}`;
                         const currentTank = ikan.nomor_tank ?? '--';
                         
@@ -489,7 +562,7 @@
                             currentIkans[ikan.id].kategori = currentKat;
                         }
 
-                        // ★ DETEKSI RESET NO TANK (User sudah punya nomor, tiba-tiba hilang)
+                        // DETEKSI RESET NO TANK
                         if (currentIkans[ikan.id].nomor_tank !== '--' && currentTank === '--') {
                             hasResetIkan = true;
                             
@@ -499,18 +572,17 @@
                                 tankEl.classList.remove('filled');
                                 tankEl.classList.add('empty');
                                 
-                                // Kembalikan tombol ACAK, hilangkan centang hijau
                                 let checkmark = existingEl.querySelector('.fa-circle-check');
                                 if (checkmark) {
                                     const parent = checkmark.closest('span') || checkmark.parentElement;
-                                    if(parent) {
+                                    if (parent) {
                                         parent.outerHTML = `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>`;
                                     }
                                 }
                             }
                             currentIkans[ikan.id].nomor_tank = '--';
                         } 
-                        // UPDATE JIKA ADMIN MENGACAKKAN TANK SECARA MANUAL
+                        // UPDATE JIKA ADMIN MENGACAKKAN TANK
                         else if (currentIkans[ikan.id].nomor_tank !== currentTank && currentTank !== '--') {
                             const tankEl = document.getElementById(`tank-num-${ikan.id}`);
                             if (tankEl) {
@@ -525,14 +597,14 @@
                     }
                 });
 
-                // ★ TAMPILKAN BANNER JIKA ADA IKAN YANG DIRESET & USER SUDAH PERNAH PUNYA NOMOR
+                // TAMPILKAN BANNER JIKA ADA IKAN YANG DIRESET
                 const banner = document.getElementById('resetBanner');
                 if (hasResetIkan && resetInfo && resetInfo.reason) {
                     banner.style.display = 'flex';
                     document.getElementById('resetBannerText').innerHTML = `Nomor tank Anda telah direset oleh panitia. Alasan: <strong style="color:#fff;">${resetInfo.reason}</strong>`;
                 }
 
-                // UPDATE BADGE STATUS DI ATAS
+                // UPDATE BADGE STATUS
                 const total = data.length;
                 const undi = data.filter(i => i.nomor_tank).length;
                 const statusBadge = document.querySelector('.status-badge');
@@ -544,7 +616,6 @@
             .catch(err => console.error('Polling error:', err));
         }
 
-        // Jalankan pengecekan setiap 5 detik
         setInterval(pollIkans, 5000);
 
         // --- AMBIL RANGE UNDIAN DARI SERVER ---
