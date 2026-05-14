@@ -105,11 +105,12 @@ class DashboardController extends Controller
 
         try {
             DB::transaction(function () use ($ikan, $min, $max) {
-                $assignedNumbers = Ikan::whereNotNull('nomor_tank')
-                    ->lockForUpdate()
-                    ->pluck('nomor_tank')
-                    ->map(fn($n) => (int) $n)
-                    ->toArray();
+            $assignedNumbers = Ikan::whereNotNull('nomor_tank')
+                ->where('kelas', $ikan->kelas)  // ← TAMBAHKAN INI
+                ->lockForUpdate()
+                ->pluck('nomor_tank')
+                ->map(fn($n) => (int) $n)
+                ->toArray();
                     
                 $allNumbers = range($min, $max);
                 $availableNumbers = array_diff($allNumbers, $assignedNumbers);
@@ -128,7 +129,7 @@ class DashboardController extends Controller
                 'nomor_tank'   => $ikan->fresh()->nomor_tank,
                 'nama_peserta' => $ikan->peserta->nama_peserta
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
         }
     }
@@ -166,12 +167,13 @@ class DashboardController extends Controller
 
         try {
             DB::transaction(function () use ($ikan, $min, $max) {
-                $assignedNumbers = Ikan::whereNotNull('nomor_tank')
-                    ->lockForUpdate()
-                    ->pluck('nomor_tank')
-                    ->map(fn($n) => (int) $n)
-                    ->toArray();
-                    
+            $assignedNumbers = Ikan::whereNotNull('nomor_tank')
+                ->where('kelas', $ikan->kelas)  // ← TAMBAHKAN INI
+                ->lockForUpdate()
+                ->pluck('nomor_tank')
+                ->map(fn($n) => (int) $n)
+                ->toArray();
+
                 $allNumbers = range($min, $max);
                 $availableNumbers = array_diff($allNumbers, $assignedNumbers);
 
@@ -189,7 +191,7 @@ class DashboardController extends Controller
                 'nomor_tank' => $ikan->fresh()->nomor_tank,
                 'ikan_id' => $ikan->id
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
         }
     }
@@ -263,9 +265,16 @@ class DashboardController extends Controller
 
     public function getMyIkans()
     {
-        $peserta = Peserta::where('user_id', Auth::id())->first();
+        // Langsung ambil ID, jangan panggil Auth::check() dulu
+        $userId = Auth::id();
+        
+        // Jika tidak ada ID, kembalikan 401
+        if (!$userId) {
+            return response()->json(['ikans' => [], 'reset_info' => null], 401);
+        }
 
-        // Ambil info reset jika ada
+        $peserta = Peserta::where('user_id', $userId)->first();
+
         $resetSetting = \DB::table('settings')->where('key', 'tank_reset_info')->first();
         $resetInfo = null;
         if ($resetSetting) {

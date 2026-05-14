@@ -613,9 +613,15 @@
                             <i class="fas fa-spinner fa-spin"></i> Memuat pengaturan...
                         </div>
                     </div>
-                    <button type="button" onclick="saveTankRange()" class="btn-primary" style="width:100%; justify-content:center; background:#1e40af;">
-                        <i class="fas fa-save"></i> Simpan Rentang Nomor
-                    </button>
+                    <div id="kelasRangeSavedInfo" style="display:none; background:#dcfce7; border:1px solid #86efac; border-radius:10px; padding:10px 14px; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-circle-check" style="color:#16a34a; font-size:14px;"></i>
+                        <span style="font-size:12px; font-weight:700; color:#166534;">Rentang nomor per kelas sudah disimpan</span>
+                    </div>
+                    <div id="kelasRangeBtnWrap">
+                        <button type="button" id="btnSaveTankRange" onclick="saveTankRange()" class="btn-primary" style="width:100%; justify-content:center; background:#1e40af;">
+                            <i class="fas fa-save"></i> Simpan Rentang Nomor
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1505,44 +1511,52 @@ document.getElementById('btnAcakOld').addEventListener('click',function(){
     var btn=this;
     display.style.color='#60a5fa';
     btn.disabled=true;
+    display.textContent='...';
 
-    // ★ FIX: Gunakan currentTankMax yang sudah didefinisikan di atas
-    var maxForAnim = currentTankMax || 1000;
+    var fd=new FormData();
+    fd.append('_token',getCsrf());
+    fd.append('ikan_id',sel.value);
 
-    var c=0,iv=setInterval(function(){
-        display.textContent=Math.floor(Math.random()*maxForAnim)+1;
-        if(c++>15){
-            clearInterval(iv);
+    // Panggil API dulu, baru animasi berakhir tepat di nomor hasil
+    fetch('{{ route("api.acak.tank.admin") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(!d.success) throw new Error(d.message);
 
-            var fd=new FormData();
-            fd.append('_token',getCsrf());
-            fd.append('ikan_id',sel.value);
+        var finalNumber=d.nomor_tank;
+        var maxForAnim=currentTankMax||1000;
+        var totalSteps=18,step=0;
 
-            fetch('{{ route("api.acak.tank.admin") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-            .then(function(r){return r.json();})
-            .then(function(d){
-                if(d.success){
-                    display.textContent=d.nomor_tank;
-                    display.style.color='#22c55e';
-
-                    setTimeout(function(){
-                        display.textContent='--';
-                        display.style.color='#fff';
-                        btn.disabled=false;
-                        loadPesertaOld();
-                    },2000);
+        var iv=setInterval(function(){
+            step++;
+            if(step<totalSteps){
+                if(step>totalSteps-5){
+                    var spread=Math.floor((totalSteps-step)*3)+5;
+                    var minA=Math.max(1,finalNumber-spread),maxA=finalNumber+spread;
+                    display.textContent=Math.floor(Math.random()*(maxA-minA+1))+minA;
                 } else {
-                    throw new Error(d.message);
+                    display.textContent=Math.floor(Math.random()*maxForAnim)+1;
                 }
-            })
-            .catch(function(e){
-                display.textContent='--';
-                display.style.color='#fff';
-                btn.disabled=false;
-                popupError('Undian Gagal',esc(e.message));
-            });
-        }
-    },60);
+            } else {
+                display.textContent=finalNumber;
+                display.style.color='#22c55e';
+                clearInterval(iv);
+                setTimeout(function(){
+                    display.textContent='--';
+                    display.style.color='#fff';
+                    btn.disabled=false;
+                    loadPesertaOld();
+                    loadDashboard();
+                },2000);
+            }
+        },60);
+    })
+    .catch(function(e){
+        display.textContent='--';
+        display.style.color='#fff';
+        btn.disabled=false;
+        popupError('Undian Gagal',esc(e.message));
+    });
 });
 
 /* ═══════════════════════════════════════════════
@@ -1745,12 +1759,21 @@ function loadTankRange(){
     .then(function(r){return r.json();})
     .then(function(d){
         var container=document.getElementById('kelasRangeInputs');if(!container)return;container.innerHTML='';
+        var hasAny=false;
         for(var i=0;i<kelasList.length;i++){
             var k=kelasList[i],minVal=(d[k]&&d[k].min)?d[k].min:'',maxVal=(d[k]&&d[k].max)?d[k].max:'';
+            if(minVal!==''&&maxVal!=='') hasAny=true;
             var card=document.createElement('div');
             card.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center;';
             card.innerHTML='<div style="font-size:11px;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Kelas '+k+'</div><div style="display:flex;gap:6px;align-items:center;"><input type="number" id="range_'+k+'_min" value="'+minVal+'" placeholder="Min" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;"><span style="font-weight:600;color:#94a3b8;">-</span><input type="number" id="range_'+k+'_max" value="'+maxVal+'" placeholder="Max" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;"></div>';
             container.appendChild(card);
+        }
+        // Jika sudah ada data tersimpan, tampilkan indikator
+        if(hasAny){
+            kelasRangeSaved=true;
+            showKelasRangeSaved();
+        } else {
+            resetKelasRangeUI();
         }
     }).catch(function(){});
 }
@@ -1764,14 +1787,23 @@ function saveGlobalTankRange(){
     var min=parseInt(document.getElementById('inputGlobalRangeMin').value),max=parseInt(document.getElementById('inputGlobalRangeMax').value);
     if(isNaN(min)||isNaN(max)||min<1||max<1){popupError('Tidak Valid','Nomor harus lebih dari 0.');return;}
     if(max<=min){popupError('Tidak Valid','Nomor akhir harus lebih besar.');return;}
+    
+    var btn=event.target.closest('button');
+    var originalHtml=btn.innerHTML;
+    btn.disabled=true;
+    btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    
     var fd=new FormData();fd.append('_token',getCsrf());fd.append('min',min);fd.append('max',max);
     fetch('/api/admin/tank-range-global',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
     .then(function(r){return r.json();})
     .then(function(d){
-        if(d.success){currentTankMax=max;document.getElementById('globalRangeDisplayText').textContent=min+' - '+max;toggleGlobalRangeEdit(false);popupSuccess('Berhasil','Rentang global: <b>'+min+' - '+max+'</b>');}
+        if(d.success){currentTankMax=max;document.getElementById('globalRangeDisplayText').textContent=min+' - '+max;toggleGlobalRangeEdit(false);loadDashboard();popupSuccess('Berhasil','Rentang global: <b>'+min+' - '+max+'</b>');}
         else popupError('Gagal',d.message||'Error');
-    }).catch(function(){popupError('Error','Gagal menyimpan.');});
+    }).catch(function(){popupError('Error','Gagal menyimpan.');})
+    .finally(function(){btn.disabled=false;btn.innerHTML=originalHtml;});
 }
+
+var kelasRangeSaved = false;
 
 function saveTankRange(){
     var ranges={},isValid=true,errorMsg='';
@@ -1785,60 +1817,51 @@ function saveTankRange(){
     }
     if(!isValid){popupError('Validasi Gagal',errorMsg);return;}
     if(Object.keys(ranges).length===0){popupError('Kosong','Isi setidaknya satu kelas.');return;}
+    
+    var btn=document.getElementById('btnSaveTankRange');
+    var originalHtml=btn.innerHTML;
+    btn.disabled=true;
+    btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    
     var fd=new FormData();fd.append('_token',getCsrf());fd.append('ranges',JSON.stringify(ranges));
     fetch('/api/admin/tank-range',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
     .then(function(r){return r.json();})
-    .then(function(d){if(d.success)popupSuccess('Berhasil','Rentang per kelas disimpan.');else popupError('Gagal',d.message||'Error');})
-    .catch(function(){popupError('Error','Gagal menyimpan.');});
+    .then(function(d){
+        if(d.success){
+            kelasRangeSaved=true;
+            loadDashboard();
+            showKelasRangeSaved();
+        } else {
+            popupError('Gagal',d.message||'Error');
+        }
+    })
+    .catch(function(){popupError('Error','Gagal menyimpan.');})
+    .finally(function(){
+        if(!kelasRangeSaved){
+            btn.disabled=false;
+            btn.innerHTML=originalHtml;
+        }
+    });
 }
 
-// 4. Aksi Undian Tank Admin
-document.getElementById('btnAcakOld').addEventListener('click',function(){
-    var sel=document.getElementById('pesertaSelectOld');
-    if(!sel.value)return;
+function showKelasRangeSaved(){
+    var info=document.getElementById('kelasRangeSavedInfo');
+    var wrap=document.getElementById('kelasRangeBtnWrap');
+    if(info) info.style.display='flex';
+    if(wrap){
+        wrap.innerHTML='<button type="button" onclick="resetKelasRangeUI()" style="width:100%; padding:10px 20px; border-radius:10px; border:1px solid #86efac; background:#f0fdf4; color:#166534; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all .2s;" onmouseover="this.style.background=\'#dcfce7\'" onmouseout="this.style.background=\'#f0fdf4\'"><i class="fas fa-pen-to-square"></i> Atur Ulang Rentang Nomor</button>';
+    }
+}
 
-    var display=document.getElementById('numberDisplayOld');
-    var btn=this;
-    display.style.color='#60a5fa';
-    btn.disabled=true;
-
-    var maxForAnim = currentTankMax || 1000;
-
-    var c=0,iv=setInterval(function(){
-        display.textContent=Math.floor(Math.random()*maxForAnim)+1;
-        if(c++>15){
-            clearInterval(iv);
-
-            var fd=new FormData();
-            fd.append('_token',getCsrf());
-            fd.append('ikan_id',sel.value);
-
-            fetch('{{ route("api.acak.tank.admin") }}',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-            .then(function(r){return r.json();})
-            .then(function(d){
-                if(d.success){
-                    display.textContent=d.nomor_tank;
-                    display.style.color='#22c55e';
-
-                    setTimeout(function(){
-                        display.textContent='--';
-                        display.style.color='#fff';
-                        btn.disabled=false;
-                        loadPesertaOld();
-                    },2000);
-                } else {
-                    throw new Error(d.message);
-                }
-            })
-            .catch(function(e){
-                display.textContent='--';
-                display.style.color='#fff';
-                btn.disabled=false;
-                popupError('Undian Gagal',esc(e.message));
-            });
-        }
-    },60);
-});
+function resetKelasRangeUI(){
+    kelasRangeSaved=false;
+    var info=document.getElementById('kelasRangeSavedInfo');
+    var wrap=document.getElementById('kelasRangeBtnWrap');
+    if(info) info.style.display='none';
+    if(wrap){
+        wrap.innerHTML='<button type="button" id="btnSaveTankRange" onclick="saveTankRange()" class="btn-primary" style="width:100%; justify-content:center; background:#1e40af;"><i class="fas fa-save"></i> Simpan Rentang Nomor</button>';
+    }
+}
 
 /* ═══════════════════════════════════════════════
    SEARCH USER

@@ -127,18 +127,12 @@ class AdminDashboardController extends Controller
             ->values()
             ->toArray();
 
-        // Hitung sisa tank berdasarkan range per kelas
-        $ranges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
-        $maxTankTotal = 0;
-        if ($ranges) {
-            foreach ($ranges as $data) {
-                $maxTankTotal += ((int)$data['max'] - (int)$data['min'] + 1);
-            }
-        } else {
-            $maxTankTotal = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
-        }
-        
-        $sisaTank = max(0, $maxTankTotal - $totalIkan);
+            // SELALU gunakan global range untuk card sisa tank
+            $minGlobal = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
+            $maxGlobal = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+            $maxTankTotal = $maxGlobal - $minGlobal + 1;
+
+            $sisaTank = max(0, $maxTankTotal - $totalIkan);
 
         return response()->json([
             'total_peserta'  => $totalIkan, 
@@ -343,20 +337,32 @@ class AdminDashboardController extends Controller
 
     public function setTankRange(Request $request)
     {
-        $request->validate([
-            'ranges' => 'required|array',
-            'ranges.*.min' => 'required|integer|min:1',
-            'ranges.*.max' => 'required|integer|min:1',
-        ]);
+        // Decode JSON string dari frontend
+        $ranges = json_decode($request->ranges, true);
 
-        $ranges = $request->ranges;
-        
-        // Validasi tambahan: max harus >= min
-        foreach($ranges as $kelas => $data) {
-            if ((int)$data['max'] < (int)$data['min']) {
+        if (!$ranges || !is_array($ranges)) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Format data tidak valid.'
+            ], 422);
+        }
+
+        // Validasi manual setiap kelas
+        foreach ($ranges as $kelas => $data) {
+            $min = isset($data['min']) ? (int)$data['min'] : null;
+            $max = isset($data['max']) ? (int)$data['max'] : null;
+
+            if ($min === null || $max === null || $min < 1 || $max < 1) {
                 return response()->json([
                     'success' => false, 
-                    'message' => 'Rentang Kelas ' . $kelas . ' tidak valid (Max lebih kecil dari Min).'
+                    'message' => 'Rentang Kelas ' . $kelas . ' tidak valid.'
+                ], 422);
+            }
+
+            if ($max < $min) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Rentang Kelas ' . $kelas . ': Max harus >= Min.'
                 ], 422);
             }
         }
