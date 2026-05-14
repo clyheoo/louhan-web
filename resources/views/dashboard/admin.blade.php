@@ -341,7 +341,7 @@
     <!-- ── STATISTIK ── -->
     <div class="stats-row">
         <div class="stat-card c-blue"><div class="stat-icon blue"><i class="fas fa-fish"></i></div><div class="stat-num" id="sTotal">0</div><div class="stat-lbl">Total Ikan Terdaftar</div></div>
-        <div class="stat-card c-green"><div class="stat-icon green"><i class="fas fa-check-double"></i></div><div class="stat-num" id="sDinilai">0</div><div class="stat-lbl">Sudah Dinilai</div></div>
+        <div class="stat-card c-green"><div class="stat-icon green"><i class="fas fa-check-double"></i></div><div class="stat-num" id="sDinilai">0</div><div class="stat-lbl">Sudah Dinilai Juri</div></div>
         <div class="stat-card c-purple"><div class="stat-icon purple"><i class="fas fa-crown"></i></div><div class="stat-num" id="sGrand">0</div><div class="stat-lbl">Grand Juri Edit</div></div>
         <div class="stat-card c-red"><div class="stat-icon red"><i class="fas fa-clock"></i></div><div class="stat-num" id="sBelum">0</div><div class="stat-lbl">Belum Dinilai</div></div>
         <div class="stat-card c-amber"><div class="stat-icon amber"><i class="fas fa-user-pen"></i></div><div class="stat-num" id="sJuri">0</div><div class="stat-lbl">Juri Aktif</div></div>
