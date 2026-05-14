@@ -41,7 +41,8 @@
         .btn-logout:hover { background: var(--red-500); color: white; border-color: var(--red-500); }
 
         .main-content { flex: 1; padding: 32px; }
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; max-width: 1400px; margin: 0 auto; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1400px; margin: 0 auto; }
+        .right-col { display: flex; flex-direction: column; gap: 24px; }
 
         .glass-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); border: 1px solid rgba(59,130,246,0.08); border-radius: 24px; box-shadow: 0 20px 40px -8px rgba(59,130,246,0.08); position: relative; overflow: hidden; animation: cardEntry 0.8s 0.3s cubic-bezier(0.16,1,0.3,1) both; }
         @keyframes cardEntry { from { opacity:0; transform: translateY(30px) scale(0.97); } to { opacity:1; transform: translateY(0) scale(1); } }
@@ -128,7 +129,7 @@
         .modal-close-btn { padding: 12px 24px; border: none; border-radius: 14px; background: var(--gray-100); color: var(--gray-700); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .modal-close-btn:hover { background: var(--gray-200); }
 
-        @media (max-width: 1024px) { .dashboard-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1024px) { .dashboard-grid { grid-template-columns: 1fr; } .right-col { flex-direction: column; } }
         @media (max-width: 640px) {
             .navbar { padding: 16px; }
             .main-content { padding: 16px; }
@@ -225,62 +226,73 @@
                     </div>
                 </div>
 
-                <!-- KOLOM KANAN: MESIN UNDIAN & LIST IKAN -->
-                <div class="glass-card machine-card">
-                    <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-dice"></i>Undian Tank Saya</h2>
-                        <div class="status-badge {{ $ikansSaya->count() > 0 ? 'success' : '' }}">
-                            {{ $ikansSaya->count() > 0 ? $ikansSaya->whereNotNull('nomor_tank')->count() . '/' . $ikansSaya->count() . ' DIUNDI' : 'MENUNGGU IKAN' }}
+                <!-- KOLOM KANAN -->
+                <div class="right-col">
+
+                    <!-- CARD: MESIN UNDIAN -->
+                    <div class="glass-card machine-card">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fas fa-dice"></i>Undian Tank</h2>
+                        </div>
+                        <div class="machine-body">
+                            <div class="lcd-screen">
+                                <div class="lcd-label">Nomor Aquarium</div>
+                                <div class="number-display" id="numberDisplay">--</div>
+                                <div style="font-size:11px; color:var(--gray-500); margin-top:8px;" id="lcdInfo">Klik ACAK pada daftar ikan</div>
+                            </div>
+                            <div id="resetBanner" style="display:none; width:100%; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.25); border-radius:12px; padding:12px 16px; margin-bottom:16px; align-items:center; gap:10px;">
+                                <i class="fas fa-triangle-exclamation" style="color:#f59e0b; font-size:18px; flex-shrink:0;"></i>
+                                <span id="resetBannerText" style="font-size:12px; color:#fbbf24; line-height:1.5; flex:1;"></span>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="machine-body">
-                        <div class="lcd-screen">
-                            <div class="lcd-label">Nomor Aquarium</div>
-                            <div class="number-display" id="numberDisplay">--</div>
-                            <div style="font-size:11px; color:var(--gray-500); margin-top:8px;" id="lcdInfo">Pilih ikan untuk diundi</div>
+
+                    <!-- CARD: DAFTAR IKAN -->
+                    <div class="glass-card machine-card">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fas fa-list-fish"></i>Daftar Ikan Saya</h2>
+                            <div class="status-badge {{ $ikansSaya->count() > 0 ? 'success' : '' }}">
+                                {{ $ikansSaya->count() > 0 ? $ikansSaya->whereNotNull('nomor_tank')->count() . '/' . $ikansSaya->count() . ' DIUNDI' : 'MENUNGGU IKAN' }}
+                            </div>
                         </div>
-                        <!-- BANNER NOTIFIKASI RESET DARI ADMIN -->
-                        <div id="resetBanner" style="display:none; width:100%; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.25); border-radius:12px; padding:12px 16px; margin-bottom:16px; align-items:center; gap:10px;">
-                            <i class="fas fa-triangle-exclamation" style="color:#f59e0b; font-size:18px; flex-shrink:0;"></i>
-                            <span id="resetBannerText" style="font-size:12px; color:#fbbf24; line-height:1.5; flex:1;"></span>
-                        </div>
-                        <div class="ikan-list-wrapper" id="ikanListWrapper">
-                            @if($ikansSaya->count() > 0)
-                                <div class="ikan-list" id="ikanListContainer">
-                                    @foreach($ikansSaya as $index => $ikan)
-                                        <div class="ikan-item" id="ikan-item-{{ $ikan->id }}">
-                                            <div class="ikan-item-info">
-                                            <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #{{ $loop->iteration }}@if($ikan->dibuat_oleh === 'admin')<span class="badge-admin"><i class="fas fa-shield-halved"></i> Ditambah Admin</span>@endif</h4>                                                <p>{{ $ikan->kategori }} - Kelas {{ $ikan->kelas }}</p>
-                                            </div>
-                                            <div class="ikan-item-right">
-                                                <div class="tank-num {{ $ikan->nomor_tank ? 'filled' : 'empty' }}" id="tank-num-{{ $ikan->id }}">
-                                                    {{ $ikan->nomor_tank ?? '--' }}
+                        <div class="machine-body" style="padding:20px 24px;">
+                            <div class="ikan-list-wrapper" id="ikanListWrapper" style="max-height:340px;">
+                                @if($ikansSaya->count() > 0)
+                                    <div class="ikan-list" id="ikanListContainer">
+                                        @foreach($ikansSaya as $index => $ikan)
+                                            <div class="ikan-item" id="ikan-item-{{ $ikan->id }}">
+                                                <div class="ikan-item-info">
+                                                <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #{{ $loop->iteration }}@if($ikan->dibuat_oleh === 'admin')<span class="badge-admin"><i class="fas fa-shield-halved"></i> Ditambah Admin</span>@endif</h4>                                                <p>{{ $ikan->kategori }} - Kelas {{ $ikan->kelas }}</p>
                                                 </div>
-                                                @if(!$ikan->nomor_tank)
-                                                    <button class="btn-acak-kecil" onclick="mulaiAcak({{ $ikan->id }}, this)">
-                                                        <i class="fas fa-shuffle"></i> ACAK
-                                                    </button>
-                                                @else
-                                                    <span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>
-                                                @endif
+                                                <div class="ikan-item-right">
+                                                    <div class="tank-num {{ $ikan->nomor_tank ? 'filled' : 'empty' }}" id="tank-num-{{ $ikan->id }}">
+                                                        {{ $ikan->nomor_tank ?? '--' }}
+                                                    </div>
+                                                    @if(!$ikan->nomor_tank)
+                                                        <button class="btn-acak-kecil" onclick="mulaiAcak({{ $ikan->id }}, this)">
+                                                            <i class="fas fa-shuffle"></i> ACAK
+                                                        </button>
+                                                    @else
+                                                        <span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>
+                                                    @endif
+                                                </div>
                                             </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <div class="ikan-empty-state">
-                                    <i class="fas fa-fish" style="font-size:24px; margin-bottom:8px; display:block; opacity:0.5;"></i>
-                                    Belum ada ikan yang didaftarkan.<br>Silakan klik tombol "Masukkan Data Ikan".
-                                </div>
-                            @endif
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="ikan-empty-state">
+                                        <i class="fas fa-fish" style="font-size:24px; margin-bottom:8px; display:block; opacity:0.5;"></i>
+                                        Belum ada ikan yang didaftarkan.<br>Silakan klik tombol "Masukkan Data Ikan".
+                                    </div>
+                                @endif
+                            </div>
                         </div>
                     </div>
-                </div>
+                 </div>
             </div>
         </main>
     </div>
-    
+
     @if($profilLengkap)
     <script>document.addEventListener('DOMContentLoaded', function(){ lockProfilForm(); });</script>
     @endif
@@ -636,52 +648,91 @@
             numberDisplay.classList.add('rolling');
             numberDisplay.classList.remove('final');
 
-            let rollCount = 0;
-            const maxRolls = 15;
-            const rollInterval = setInterval(() => {
-                numberDisplay.textContent = Math.floor(Math.random() * tankDrawMax) + 1;
-                rollCount++;
+            var formData = new FormData();
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+            formData.append('ikan_id', ikanId);
 
-                if (rollCount >= maxRolls) {
-                    clearInterval(rollInterval);
-                    
-                    const formData = new FormData();
-                    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-                    formData.append('ikan_id', ikanId);
+            fetch('{{ route("api.acak.tank.user") }}', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                body: formData
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (!data.success) throw new Error(data.message);
 
-                    fetch('{{ route("api.acak.tank.user") }}', {
-                        method: 'POST',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-                        body: formData
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            numberDisplay.textContent = data.nomor_tank;
-                            numberDisplay.classList.remove('rolling');
-                            numberDisplay.classList.add('final');
-                            lcdInfo.textContent = 'Berhasil!';
-                            
-                            // Update UI List Ikan
-                            const tankNumEl = document.getElementById(`tank-num-${ikanId}`);
-                            tankNumEl.textContent = data.nomor_tank;
-                            tankNumEl.classList.remove('empty');
-                            tankNumEl.classList.add('filled');
-                            
-                            btnElement.outerHTML = '<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>';
-                        } else {
-                            throw new Error(data.message);
+                var finalNumber = data.nomor_tank;
+                var maxForAnim = tankDrawMax || 1000;
+
+                // Fase 1: Rolling cepat (~1.8 detik)
+                var fastDuration = 1800;
+                var fastInterval = 40;
+                var fastSteps = Math.floor(fastDuration / fastInterval);
+                var currentStep = 0;
+
+                var rollTimer = setInterval(function() {
+                    currentStep++;
+                    numberDisplay.textContent = Math.floor(Math.random() * maxForAnim) + 1;
+
+                    if (currentStep >= fastSteps) {
+                        clearInterval(rollTimer);
+
+                        // Fase 2: Perlambatan mendekati nomor akhir
+                        var slowSteps = 8;
+                        var slowIndex = 0;
+
+                        function slowRoll() {
+                            slowIndex++;
+                            var progress = slowIndex / slowSteps;
+                            // Spread mengecil dari 50 → 0
+                            var spread = Math.max(0, Math.round(50 * (1 - progress)));
+                            var minN = Math.max(1, finalNumber - spread);
+                            var maxN = finalNumber + spread;
+                            var shown = Math.floor(Math.random() * (maxN - minN + 1)) + minN;
+
+                            // Langkah terakhir WAJIB nomor akhir
+                            if (slowIndex >= slowSteps) {
+                                shown = finalNumber;
+                            }
+
+                            numberDisplay.textContent = shown;
+
+                            if (slowIndex >= slowSteps) {
+                                // BERHENTI — tampilkan hasil
+                                numberDisplay.classList.remove('rolling');
+                                numberDisplay.classList.add('final');
+                                lcdInfo.textContent = 'Berhasil!';
+
+                                var tankNumEl = document.getElementById('tank-num-' + ikanId);
+                                if (tankNumEl) {
+                                    tankNumEl.textContent = finalNumber;
+                                    tankNumEl.classList.remove('empty');
+                                    tankNumEl.classList.add('filled');
+                                }
+                                btnElement.outerHTML = '<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>';
+
+                                setTimeout(function() {
+                                    numberDisplay.textContent = '--';
+                                    numberDisplay.classList.remove('final');
+                                    lcdInfo.textContent = 'Klik ACAK pada daftar ikan';
+                                }, 2500);
+                            } else {
+                                // Interval makin lambat: 100ms → 350ms
+                                var delay = 100 + (progress * progress * 250);
+                                setTimeout(slowRoll, delay);
+                            }
                         }
-                    })
-                    .catch(err => {
-                        numberDisplay.textContent = '--';
-                        numberDisplay.classList.remove('rolling');
-                        lcdInfo.textContent = 'Gagal: ' + err.message;
-                        btnElement.disabled = false;
-                        btnElement.innerHTML = '<i class="fas fa-shuffle"></i> ACAK';
-                    });
-                }
-            }, 60);
+                        slowRoll();
+                    }
+                }, fastInterval);
+            })
+            .catch(function(err) {
+                numberDisplay.textContent = '--';
+                numberDisplay.classList.remove('rolling');
+                lcdInfo.textContent = 'Gagal: ' + err.message;
+                btnElement.disabled = false;
+                btnElement.innerHTML = '<i class="fas fa-shuffle"></i> ACAK';
+            });
         }
     </script>
 </body>
