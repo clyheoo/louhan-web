@@ -648,6 +648,14 @@
             numberDisplay.classList.add('rolling');
             numberDisplay.classList.remove('final');
 
+            // LANGSUNG mulai rolling, jangan tunggu API
+            var maxForAnim = tankDrawMax || 1000;
+            var rolling = true;
+            var rollTimer = setInterval(function() {
+                numberDisplay.textContent = Math.floor(Math.random() * maxForAnim) + 1;
+            }, 40);
+
+            // Sambil rolling, panggil API di background
             var formData = new FormData();
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
             formData.append('ikan_id', ikanId);
@@ -662,71 +670,55 @@
                 if (!data.success) throw new Error(data.message);
 
                 var finalNumber = data.nomor_tank;
-                var maxForAnim = tankDrawMax || 1000;
+                rolling = false;
+                clearInterval(rollTimer);
 
-                // Fase 1: Rolling cepat (~1.8 detik)
-                var fastDuration = 1800;
-                var fastInterval = 40;
-                var fastSteps = Math.floor(fastDuration / fastInterval);
-                var currentStep = 0;
+                // Fase perlambatan: nomor makin dekat, interval makin lambat
+                var slowSteps = 8;
+                var slowIndex = 0;
 
-                var rollTimer = setInterval(function() {
-                    currentStep++;
-                    numberDisplay.textContent = Math.floor(Math.random() * maxForAnim) + 1;
+                function slowRoll() {
+                    slowIndex++;
+                    var progress = slowIndex / slowSteps;
+                    var spread = Math.max(0, Math.round(50 * (1 - progress)));
+                    var minN = Math.max(1, finalNumber - spread);
+                    var maxN = finalNumber + spread;
+                    var shown = Math.floor(Math.random() * (maxN - minN + 1)) + minN;
 
-                    if (currentStep >= fastSteps) {
-                        clearInterval(rollTimer);
-
-                        // Fase 2: Perlambatan mendekati nomor akhir
-                        var slowSteps = 8;
-                        var slowIndex = 0;
-
-                        function slowRoll() {
-                            slowIndex++;
-                            var progress = slowIndex / slowSteps;
-                            // Spread mengecil dari 50 → 0
-                            var spread = Math.max(0, Math.round(50 * (1 - progress)));
-                            var minN = Math.max(1, finalNumber - spread);
-                            var maxN = finalNumber + spread;
-                            var shown = Math.floor(Math.random() * (maxN - minN + 1)) + minN;
-
-                            // Langkah terakhir WAJIB nomor akhir
-                            if (slowIndex >= slowSteps) {
-                                shown = finalNumber;
-                            }
-
-                            numberDisplay.textContent = shown;
-
-                            if (slowIndex >= slowSteps) {
-                                // BERHENTI — tampilkan hasil
-                                numberDisplay.classList.remove('rolling');
-                                numberDisplay.classList.add('final');
-                                lcdInfo.textContent = 'Berhasil!';
-
-                                var tankNumEl = document.getElementById('tank-num-' + ikanId);
-                                if (tankNumEl) {
-                                    tankNumEl.textContent = finalNumber;
-                                    tankNumEl.classList.remove('empty');
-                                    tankNumEl.classList.add('filled');
-                                }
-                                btnElement.outerHTML = '<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>';
-
-                                setTimeout(function() {
-                                    numberDisplay.textContent = '--';
-                                    numberDisplay.classList.remove('final');
-                                    lcdInfo.textContent = 'Klik ACAK pada daftar ikan';
-                                }, 2500);
-                            } else {
-                                // Interval makin lambat: 100ms → 350ms
-                                var delay = 100 + (progress * progress * 250);
-                                setTimeout(slowRoll, delay);
-                            }
-                        }
-                        slowRoll();
+                    if (slowIndex >= slowSteps) {
+                        shown = finalNumber;
                     }
-                }, fastInterval);
+
+                    numberDisplay.textContent = shown;
+
+                    if (slowIndex >= slowSteps) {
+                        numberDisplay.classList.remove('rolling');
+                        numberDisplay.classList.add('final');
+                        lcdInfo.textContent = 'Berhasil!';
+
+                        var tankNumEl = document.getElementById('tank-num-' + ikanId);
+                        if (tankNumEl) {
+                            tankNumEl.textContent = finalNumber;
+                            tankNumEl.classList.remove('empty');
+                            tankNumEl.classList.add('filled');
+                        }
+                        btnElement.outerHTML = '<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>';
+
+                        setTimeout(function() {
+                            numberDisplay.textContent = '--';
+                            numberDisplay.classList.remove('final');
+                            lcdInfo.textContent = 'Klik ACAK pada daftar ikan';
+                        }, 2500);
+                    } else {
+                        var delay = 100 + (progress * progress * 250);
+                        setTimeout(slowRoll, delay);
+                    }
+                }
+                slowRoll();
             })
             .catch(function(err) {
+                rolling = false;
+                clearInterval(rollTimer);
                 numberDisplay.textContent = '--';
                 numberDisplay.classList.remove('rolling');
                 lcdInfo.textContent = 'Gagal: ' + err.message;
