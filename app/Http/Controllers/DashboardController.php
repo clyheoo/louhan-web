@@ -87,14 +87,12 @@ class DashboardController extends Controller
         $ikan = Ikan::find($request->ikan_id);
         $kelas = $ikan->kelas;
 
-        // 1. Cek range per-kelas dulu
         $ranges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
         
         if ($ranges && isset($ranges[$kelas])) {
             $min = (int) ($ranges[$kelas]['min'] ?? 1);
             $max = (int) ($ranges[$kelas]['max'] ?? 1000);
         } else {
-            // 2. Fallback ke range global
             $min = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
             $max = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
         }
@@ -105,22 +103,26 @@ class DashboardController extends Controller
 
         try {
             DB::transaction(function () use ($ikan, $min, $max) {
-            $assignedNumbers = Ikan::whereNotNull('nomor_tank')
-                ->where('kelas', $ikan->kelas)  // ← TAMBAHKAN INI
-                ->lockForUpdate()
-                ->pluck('nomor_tank')
-                ->map(fn($n) => (int) $n)
-                ->toArray();
-                    
-                $allNumbers = range($min, $max);
-                $availableNumbers = array_diff($allNumbers, $assignedNumbers);
+                $assignedNumbers = Ikan::whereNotNull('nomor_tank')
+                    ->where('kelas', $ikan->kelas)
+                    ->lockForUpdate()
+                    ->pluck('nomor_tank')
+                    ->map(fn($n) => (string) $n)
+                    ->toArray();
 
-                if (empty($availableNumbers)) {
-                    throw new \Exception('Maaf, seluruh nomor tank untuk Kelas ' . $ikan->kelas . ' (Range ' . $min . '-' . $max . ') sudah habis terisi!');
+                $availableNumbers = [];
+                for ($i = $min; $i <= $max; $i++) {
+                    if (!in_array((string) $i, $assignedNumbers, false)) {
+                        $availableNumbers[] = $i;
+                    }
                 }
 
-                $randomNumber = array_values($availableNumbers)[array_rand($availableNumbers)];
-                $ikan->nomor_tank = $randomNumber;
+                if (empty($availableNumbers)) {
+                    throw new \Exception('NOMOR TANK PENUH untuk Kelas ' . $ikan->kelas . ' (Rentang ' . $min . '-' . $max . '). Semua nomor sudah terisi.');
+                }
+
+                shuffle($availableNumbers);
+                $ikan->nomor_tank = $availableNumbers[0];
                 $ikan->save();
             });
 
@@ -133,7 +135,7 @@ class DashboardController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
         }
     }
-
+    
     public function acakNomorTankUser(Request $request)
     {
         $request->validate(['ikan_id' => 'required|exists:ikans,id']);
@@ -149,14 +151,12 @@ class DashboardController extends Controller
 
         $kelas = $ikan->kelas;
 
-        // 1. Cek range per-kelas dulu
         $ranges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
         
         if ($ranges && isset($ranges[$kelas])) {
             $min = (int) ($ranges[$kelas]['min'] ?? 1);
             $max = (int) ($ranges[$kelas]['max'] ?? 1000);
         } else {
-            // 2. Fallback ke range global
             $min = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
             $max = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
         }
@@ -167,22 +167,26 @@ class DashboardController extends Controller
 
         try {
             DB::transaction(function () use ($ikan, $min, $max) {
-            $assignedNumbers = Ikan::whereNotNull('nomor_tank')
-                ->where('kelas', $ikan->kelas)  // ← TAMBAHKAN INI
-                ->lockForUpdate()
-                ->pluck('nomor_tank')
-                ->map(fn($n) => (int) $n)
-                ->toArray();
+                $assignedNumbers = Ikan::whereNotNull('nomor_tank')
+                    ->where('kelas', $ikan->kelas)
+                    ->lockForUpdate()
+                    ->pluck('nomor_tank')
+                    ->map(fn($n) => (string) $n)
+                    ->toArray();
 
-                $allNumbers = range($min, $max);
-                $availableNumbers = array_diff($allNumbers, $assignedNumbers);
-
-                if (empty($availableNumbers)) {
-                    throw new \Exception('Maaf, seluruh nomor tank untuk Kelas ' . $ikan->kelas . ' sudah habis terisi.');
+                $availableNumbers = [];
+                for ($i = $min; $i <= $max; $i++) {
+                    if (!in_array((string) $i, $assignedNumbers, false)) {
+                        $availableNumbers[] = $i;
+                    }
                 }
 
-                $randomNumber = array_values($availableNumbers)[array_rand($availableNumbers)];
-                $ikan->nomor_tank = $randomNumber;
+                if (empty($availableNumbers)) {
+                    throw new \Exception('NOMOR TANK PENUH untuk Kelas ' . $ikan->kelas . ' (Rentang ' . $min . '-' . $max . '). Semua nomor sudah terisi.');
+                }
+
+                shuffle($availableNumbers);
+                $ikan->nomor_tank = $availableNumbers[0];
                 $ikan->save();
             });
 

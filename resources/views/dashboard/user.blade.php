@@ -642,6 +642,9 @@
         const lcdInfo = document.getElementById('lcdInfo');
 
         function mulaiAcak(ikanId, btnElement) {
+            // CEGAH DOUBLE-CLICK
+            if (btnElement.disabled) return;
+
             btnElement.disabled = true;
             btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             lcdInfo.textContent = 'Sedang mengundi...';
@@ -655,7 +658,6 @@
                 numberDisplay.textContent = Math.floor(Math.random() * maxForAnim) + 1;
             }, 40);
 
-            // Sambil rolling, panggil API di background
             var formData = new FormData();
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
             formData.append('ikan_id', ikanId);
@@ -667,13 +669,12 @@
             })
             .then(function(res) { return res.json(); })
             .then(function(data) {
-                if (!data.success) throw new Error(data.message);
+                if (!data.success) throw new Error(data.message || 'Gagal mengacak nomor.');
 
                 var finalNumber = data.nomor_tank;
                 rolling = false;
                 clearInterval(rollTimer);
 
-                // Fase perlambatan: nomor makin dekat, interval makin lambat
                 var slowSteps = 8;
                 var slowIndex = 0;
 
@@ -721,9 +722,27 @@
                 clearInterval(rollTimer);
                 numberDisplay.textContent = '--';
                 numberDisplay.classList.remove('rolling');
-                lcdInfo.textContent = 'Gagal: ' + err.message;
-                btnElement.disabled = false;
-                btnElement.innerHTML = '<i class="fas fa-shuffle"></i> ACAK';
+
+                var errorMsg = err.message || 'Terjadi kesalahan';
+
+                // Cek apakah error karena nomor tank penuh
+                if (errorMsg.indexOf('NOMOR TANK PENUH') !== -1) {
+                    lcdInfo.textContent = 'Nomor tank penuh';
+                    alert('⚠️ ' + errorMsg);
+                } else {
+                    lcdInfo.textContent = 'Gagal';
+                    alert('Gagal mengacak: ' + errorMsg);
+                }
+
+                pollIkans();
+
+                setTimeout(function() {
+                    var checkBtn = document.querySelector('#ikan-item-' + ikanId + ' .btn-acak-kecil');
+                    if (checkBtn) {
+                        checkBtn.disabled = false;
+                        checkBtn.innerHTML = '<i class="fas fa-shuffle"></i> ACAK';
+                    }
+                }, 600);
             });
         }
     </script>
