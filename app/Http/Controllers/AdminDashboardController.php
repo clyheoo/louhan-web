@@ -435,4 +435,42 @@ class AdminDashboardController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Rentang global berhasil diperbarui.']);
     }
+
+    public function getMvpIkan()
+    {
+        $ikans = Ikan::where('is_mvp', true)->with('peserta')->orderBy('kategori')->orderBy('kelas')->get()->map(function($ikan) {
+            return [
+                'id' => $ikan->id,
+                'nama_peserta' => $ikan->peserta->nama_peserta ?? '-',
+                'detail_anggota' => $ikan->peserta->detail_anggota ?? '-',
+                'kategori' => $ikan->kategori,
+                'kelas' => $ikan->kelas,
+                'nomor_tank' => $ikan->nomor_tank ?? '-',
+            ];
+        });
+        return response()->json($ikans);
+    }
+
+    public function toggleMvpRegistration()
+    {
+        $current = \DB::table('settings')->where('key', 'mvp_registration_open')->value('value');
+        $newVal = ($current === '1') ? '0' : '1';
+        
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'mvp_registration_open'],
+            ['value' => $newVal, 'updated_at' => now()]
+        );
+
+        return response()->json([
+            'success' => true, 
+            'is_open' => (bool)$newVal,
+            'message' => $newVal === '1' ? 'Pendaftaran MVP DIBUKA untuk user.' : 'Pendaftaran MVP DITUTUP untuk user.'
+        ]);
+    }
+
+    public function getMvpStatus()
+    {
+        $isOpen = (bool)(\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
+        return response()->json(['is_open' => $isOpen]);
+    }
 }

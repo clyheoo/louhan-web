@@ -329,6 +329,7 @@
     </div>
     <div class="nav-actions">
         <button class="nav-btn green" onclick="openModal('modalOld')"><i class="fas fa-database"></i> <span>Undian & Registrasi</span></button>
+        <button class="nav-btn" onclick="openModal('modalMvp')" style="background:#fffbeb;color:#b45309;border-color:#fde68a;"><i class="fas fa-star" style="color:#f59e0b;"></i> <span>Kelola MVP</span></button>
         <button class="nav-btn accent" onclick="exportCSV()"><i class="fas fa-download"></i> <span>Export CSV</span></button>
         <div class="nav-user"><b>{{ $user->name }}</b><small>Administrator</small></div>
         <form method="POST" action="{{ route('logout') }}" style="display:inline;">@csrf<button type="submit" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button></form>
@@ -744,6 +745,37 @@
         </div>
     </div>
 </div>
+
+<!-- MODAL: KELOLA MVP -->
+<div class="modal-bg" id="modalMvp" style="--mw:900px;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-star" style="color:#f59e0b;"></i> Manajemen Pendaftaran MVP</h3>
+            <button class="modal-close" onclick="closeModal('modalMvp')"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:20px;">
+                <div>
+                    <div style="font-size:14px; font-weight:800;">Status Pendaftaran MVP</div>
+                    <div style="font-size:11px; color:var(--muted);" id="mvpStatusText">Memuat status...</div>
+                </div>
+                <button class="btn-primary" id="btnToggleMvp" onclick="toggleMvpRegistration()" style="padding:8px 18px; font-size:12px;"><i class="fas fa-spinner fa-spin"></i></button>
+            </div>
+
+            <div class="section-title" style="margin-bottom:12px; font-size:13px;"><i class="fas fa-list" style="color:#f59e0b;"></i> Daftar Ikan Terdaftar MVP</div>
+            <div class="table-wrap" style="max-height:400px;">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>PESERTA</th><th>ASAL / TEAM</th><th>KATEGORI</th><th>KELAS</th><th>NO. TANK</th></tr>
+                    </thead>
+                    <tbody id="mvpTableBody"><tr><td colspan="5" style="text-align:center; color:var(--light); padding:20px;">Memuat data...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-foot"><button class="btn-cancel" onclick="closeModal('modalMvp')">Tutup</button></div>
+    </div>
+</div>
+
 <!-- POPUP: SUKSES -->
 <div class="popup-overlay" id="popupSuccess">
     <div class="popup-card">
@@ -2001,6 +2033,69 @@ function renderUserList(data){
 
         div.innerHTML=topHtml+bottomHtml;
         c.appendChild(div);
+    }
+}
+
+/* ═══ KELOLA MVP ═══ */
+function loadMvpData() {
+    fetch('/api/admin/mvp-ikan', {headers:{'Accept':'application/json'}})
+    .then(r => r.json())
+    .then(data => {
+        var tb = document.getElementById('mvpTableBody');
+        if(!data.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--light); padding:20px;">Belum ada ikan yang didaftarkan MVP.</td></tr>'; return; }
+        tb.innerHTML = '';
+        data.forEach(d => {
+            tb.innerHTML += `<tr><td style="font-weight:700;">${esc(d.nama_peserta)}</td><td>${esc(d.detail_anggota)}</td><td>${esc(d.kategori)}</td><td>${esc(d.kelas)}</td><td style="font-weight:700; color:var(--primary);">Tank ${esc(d.nomor_tank)}</td></tr>`;
+        });
+    });
+}
+
+function loadMvpStatus() {
+    fetch('/api/admin/mvp-status', {headers:{'Accept':'application/json'}})
+    .then(r => r.json())
+    .then(d => {
+        updateMvpToggleUI(d.is_open || false);
+    })
+    .catch(() => updateMvpToggleUI(false));
+}
+
+function toggleMvpRegistration() {
+    var btn = document.getElementById('btnToggleMvp');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    fetch('/api/admin/toggle-mvp-registration', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}})
+    .then(r => r.json())
+    .then(d => {
+        if(d.success) {
+            updateMvpToggleUI(d.is_open);
+            popupSuccess('Status MVP Diperbarui', d.message);
+        } else popupError('Gagal', d.message);
+    })
+    .catch(() => popupError('Error', 'Gagal menghubungi server'))
+    .finally(() => { btn.disabled = false; });
+}
+
+function updateMvpToggleUI(isOpen) {
+    var btn = document.getElementById('btnToggleMvp');
+    var txt = document.getElementById('mvpStatusText');
+    if(isOpen) {
+        btn.innerHTML = '<i class="fas fa-lock-open"></i> TUTUP MVP';
+        btn.style.background = 'var(--danger)'; btn.style.boxShadow = '0 3px 10px rgba(239,68,68,.2)';
+        txt.innerHTML = '<i class="fas fa-circle-check" style="color:var(--success);"></i> Pendaftaran MVP sedang <b style="color:var(--success);">DIBUKA</b>';
+    } else {
+        btn.innerHTML = '<i class="fas fa-lock"></i> BUKA MVP';
+        btn.style.background = 'var(--success)'; btn.style.boxShadow = '0 3px 10px rgba(34,197,94,.2)';
+        txt.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--danger);"></i> Pendaftaran MVP sedang <b style="color:var(--danger);">DITUTUP</b>';
+    }
+}
+
+// Override openModal buat MVP
+var origOpenModal = openModal;
+openModal = function(id) {
+    origOpenModal(id);
+    if(id === 'modalMvp') {
+        loadMvpData();
+        loadMvpStatus();
     }
 }
 

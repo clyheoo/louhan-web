@@ -275,15 +275,71 @@ class DashboardController extends Controller
         return response()->json(['success' => true, 'message' => "Role {$user->name} diubah menjadi " . ($user->is_admin ? 'Admin' : 'User Biasa') . ".", 'new_role' => $user->is_admin]);
     }
 
+    public function toggleMvpIkan(Request $request)
+    {
+        $request->validate(['ikan_id' => 'required|exists:ikans,id']);
+
+        $isOpen = \DB::table('settings')->where('key', 'mvp_registration_open')->value('value');
+        if (!$isOpen || $isOpen === '0') {
+            return response()->json(['success' => false, 'message' => 'Pendaftaran MVP belum dibuka oleh panitia.'], 403);
+        }
+
+        $ikan = Ikan::where('id', $request->ikan_id)
+            ->whereHas('peserta', fn($q) => $q->where('user_id', Auth::id()))
+            ->first();
+
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan atau bukan milik Anda.'], 404);
+        }
+
+        // ★ GUARD: Cegah edit jika sudah dikirim
+        if ($ikan->peserta->is_mvp_submitted) {
+            return response()->json(['success' => false, 'message' => 'Data MVP sudah dikirim dan tidak dapat diubah.'], 403);
+        }
+
+        if (!$ikan->is_mvp) {
+            $mvpCount = Ikan::where('peserta_id', $ikan->peserta_id)->where('is_mvp', true)->count();
+            if ($mvpCount >= 30) {
+                return response()->json(['success' => false, 'message' => 'Gagal! Batas maksimal 30 ikan untuk MVP sudah tercapai.'], 422);
+            }
+        }
+
+        $ikan->is_mvp = !$ikan->is_mvp;
+        $ikan->save();
+
+        return response()->json([
+            'success' => true, 
+            'is_mvp' => $ikan->is_mvp,
+            'message' => $ikan->is_mvp ? 'Ikan ditambahkan ke daftar MVP.' : 'Ikan dihapus dari daftar MVP.'
+        ]);
+    }
+
+    // ★ METHOD BARU: SUBMIT MVP
+    public function submitMvpIkan()
+    {
+        $peserta = Peserta::where('user_id', Auth::id())->first();
+        if (!$peserta) return response()->json(['success' => false, 'message' => 'Profil peserta tidak ditemukan.'], 404);
+
+        if ($peserta->is_mvp_submitted) {
+            return response()->json(['success' => false, 'message' => 'Anda sudah mengirimkan data MVP sebelumnya.'], 400);
+        }
+
+        $mvpCount = Ikan::where('peserta_id', $peserta->id)->where('is_mvp', true)->count();
+        if ($mvpCount === 0) {
+            return response()->json(['success' => false, 'message' => 'Belum ada ikan yang dipilih sebagai MVP.'], 422);
+        }
+
+        $peserta->is_mvp_submitted = true;
+        $peserta->save();
+
+        return response()->json(['success' => true, 'message' => 'Data ikan MVP berhasil dikirim! Pilihan tidak dapat diubah lagi.']);
+    }
+
+    // ★ UPDATE getMyIkans
     public function getMyIkans()
     {
-        // Langsung ambil ID, jangan panggil Auth::check() dulu
         $userId = Auth::id();
-        
-        // Jika tidak ada ID, kembalikan 401
-        if (!$userId) {
-            return response()->json(['ikans' => [], 'reset_info' => null], 401);
-        }
+        if (!$userId) return response()->json(['ikans' => [], 'reset_info' => null, 'mvp_open' => false, 'mvp_submitted' => false], 401);
 
         $peserta = Peserta::where('user_id', $userId)->first();
 
@@ -291,21 +347,21 @@ class DashboardController extends Controller
         $resetInfo = null;
         if ($resetSetting) {
             $data = json_decode($resetSetting->value, true);
-            $resetInfo = [
-                'reason'   => $data['reason'] ?? null,
-                'reset_at' => $data['reset_at'] ?? null,
-            ];
+            $resetInfo = ['reason' => $data['reason'] ?? null, 'reset_at' => $data['reset_at'] ?? null];
         }
 
-        if (!$peserta) {
-            return response()->json(['ikans' => [], 'reset_info' => $resetInfo]);
-        }
+        $mvpOpen = (bool)(\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
+        $mvpSubmitted = $peserta ? $peserta->is_mvp_submitted : false; // ★ Cek status kirim
+
+        if (!$peserta) return response()->json(['ikans' => [], 'reset_info' => $resetInfo, 'mvp_open' => $mvpOpen, 'mvp_submitted' => $mvpSubmitted]);
 
         $ikans = $peserta->ikans()->orderBy('created_at', 'desc')->get();
 
         return response()->json([
             'ikans'      => $ikans,
-            'reset_info' => $resetInfo
+            'reset_info' => $resetInfo,
+            'mvp_open'   => $mvpOpen,
+            'mvp_submitted' => $mvpSubmitted // ★ Kirim ke frontend
         ]);
     }
 }

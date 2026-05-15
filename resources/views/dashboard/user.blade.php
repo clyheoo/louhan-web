@@ -136,11 +136,23 @@
             .card-body, .card-header { padding-left: 20px; padding-right: 20px; }
             .number-display { font-size: 60px; }
         }
-                .badge-admin {
-            font-size: 9px; font-weight: 700; background: #fef3c7; color: #92400e;
-            padding: 2px 7px; border-radius: 4px; margin-left: 6px; vertical-align: middle;
-            display: inline-flex; align-items: center; gap: 3px; border: 1px solid #fde68a;
-        }
+        .badge-admin { font-size: 9px; font-weight: 700; background: #fef3c7; color: #92400e; padding: 2px 7px; border-radius: 4px; margin-left: 6px; vertical-align: middle; display: inline-flex; align-items: center; gap: 3px; border: 1px solid #fde68a; }
+        
+        /* MVP CARD */
+        .mvp-card { border: 2px solid rgba(245,158,11,0.2); }
+        .mvp-card .card-title { color: #b45309; }
+        .mvp-card .card-title i { color: #f59e0b; }
+        .btn-mvp-star { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--gray-500); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        .btn-mvp-star:hover { border-color: #f59e0b; color: #f59e0b; }
+        .btn-mvp-star.active { background: rgba(245,158,11,0.2); border-color: #f59e0b; color: #f59e0b; }
+        .btn-mvp-star:disabled { opacity: 0.3; cursor: not-allowed; }
+        .mvp-badge { font-size: 10px; font-weight: 700; background: rgba(245,158,11,0.2); color: #fbbf24; padding: 4px 10px; border-radius: 20px; letter-spacing: 1px; }
+        .mvp-list-item { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.15); border-radius:8px; margin-bottom:6px; font-size:12px; color:#92400e; }
+        .mvp-list-item .mvp-remove { background:none; border:none; color:#ef4444; cursor:pointer; font-size:12px; padding:2px 5px; }
+        .mvp-list-item.locked { opacity:0.7; }
+        .btn-submit-mvp { width:100%; padding:12px; border:none; border-radius:12px; background:linear-gradient(135deg,#f59e0b,#d97706); color:white; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; margin-top:12px; display:flex; align-items:center; justify-content:center; gap:8px; transition:all .2s; box-shadow:0 4px 12px rgba(245,158,11,.25); }
+        .btn-submit-mvp:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(245,158,11,.35); }
+        .btn-submit-mvp:disabled { background:#94a3b8; cursor:not-allowed; transform:none; box-shadow:none; }
     </style>
 </head>
 <body>
@@ -174,59 +186,95 @@
         <main class="main-content">
             <div class="dashboard-grid">
                 
-                <!-- KOLOM KIRI: PROFIL PESERTA -->
-                <div class="glass-card">
-                    <div class="card-header">
-                        <div>
-                            <h2 class="card-title"><i class="fas fa-user-circle" style="color:var(--blue-500); margin-right:8px;"></i>Profil Saya</h2>
-                            <p class="card-subtitle">Lengkapi data diri Anda terlebih dahulu.</p>
+                <!-- ★ KOLOM KIRI: PROFIL & MVP -->
+                <div style="display:flex;flex-direction:column;gap:24px;">
+                    
+                    <!-- CARD: PROFIL PESERTA -->
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <div>
+                                <h2 class="card-title"><i class="fas fa-user-circle" style="color:var(--blue-500); margin-right:8px;"></i>Profil Saya</h2>
+                                <p class="card-subtitle">Lengkapi data diri Anda terlebih dahulu.</p>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <form id="regForm">
+                                @csrf
+                                <div class="form-group">
+                                    <label class="form-label">Nama Peserta</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" name="nama_peserta" id="namaPeserta" class="form-input" value="{{ $user->name }}" readonly>
+                                        <i class="fas fa-lock input-icon" style="font-size:12px;"></i>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Jenis Keanggotaan</label>
+                                    <div class="toggle-group" @if($profilLengkap) style="opacity:0.5;pointer-events:none;" @endif>
+                                        <div class="toggle-option">
+                                            <input type="radio" name="jenis_keanggotaan" id="perorangan" value="perorangan" {{ !$pesertaSaya || $pesertaSaya->jenis_keanggotaan == 'perorangan' ? 'checked' : '' }}>
+                                            <label for="perorangan"><i class="fas fa-user" style="margin-right:4px"></i>Perorangan</label>
+                                        </div>
+                                        <div class="toggle-option">
+                                            <input type="radio" name="jenis_keanggotaan" id="team" value="team" {{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'checked' : '' }}>
+                                            <label for="team"><i class="fas fa-users" style="margin-right:4px"></i>Team / Club</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" id="labelDetail">{{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'Nama Team / Club' : 'Kota Asal' }}</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" name="detail_anggota" id="inputDetail" class="form-input" placeholder="Contoh: Jakarta" value="{{ $pesertaSaya->detail_anggota ?? '' }}" {{ $profilLengkap ? 'readonly style="background:var(--gray-100);cursor:not-allowed;"' : '' }} required>
+                                        <i class="fas {{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'fa-shield-halved' : 'fa-city' }} input-icon" id="iconDetail"></i>
+                                    </div>
+                                    <div class="input-error-msg" id="errDetail"></div>
+                                </div>
+                                
+                                @if(!$profilLengkap)
+                                <button type="submit" class="submit-btn" id="submitBtn">
+                                    <i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN PROFIL
+                                </button>
+                                @endif
+                            </form>
+                            
+                            <button class="submit-btn btn-green" style="margin-top: 12px;" onclick="document.getElementById('modalIkan').classList.add('show')">
+                                <i class="fas fa-plus" style="margin-right:8px;"></i>MASUKKAN DATA IKAN
+                            </button>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <form id="regForm">
-                            @csrf
-                            <div class="form-group">
-                                <label class="form-label">Nama Peserta</label>
-                                <div class="input-wrapper">
-                                    <input type="text" name="nama_peserta" id="namaPeserta" class="form-input" value="{{ $user->name }}" readonly>
-                                    <i class="fas fa-lock input-icon" style="font-size:12px;"></i>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Jenis Keanggotaan</label>
-                                <div class="toggle-group" @if($profilLengkap) style="opacity:0.5;pointer-events:none;" @endif>
-                                    <div class="toggle-option">
-                                        <input type="radio" name="jenis_keanggotaan" id="perorangan" value="perorangan" {{ !$pesertaSaya || $pesertaSaya->jenis_keanggotaan == 'perorangan' ? 'checked' : '' }}>
-                                        <label for="perorangan"><i class="fas fa-user" style="margin-right:4px"></i>Perorangan</label>
-                                    </div>
-                                    <div class="toggle-option">
-                                        <input type="radio" name="jenis_keanggotaan" id="team" value="team" {{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'checked' : '' }}>
-                                        <label for="team"><i class="fas fa-users" style="margin-right:4px"></i>Team / Club</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" id="labelDetail">{{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'Nama Team / Club' : 'Kota Asal' }}</label>
-                                <div class="input-wrapper">
-                                    <input type="text" name="detail_anggota" id="inputDetail" class="form-input" placeholder="Contoh: Jakarta" value="{{ $pesertaSaya->detail_anggota ?? '' }}" {{ $profilLengkap ? 'readonly style="background:var(--gray-100);cursor:not-allowed;"' : '' }} required>                                    <i class="fas {{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'fa-shield-halved' : 'fa-city' }} input-icon" id="iconDetail"></i>
-                                </div>
-                                <div class="input-error-msg" id="errDetail"></div>
-                            </div>
-                            
-                            @if(!$profilLengkap)
-                            <button type="submit" class="submit-btn" id="submitBtn">
-                                <i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN PROFIL
-                            </button>
-                            @endif
-                        </form>
-                        
-                        <button class="submit-btn btn-green" style="margin-top: 12px;" onclick="document.getElementById('modalIkan').classList.add('show')">
-                            <i class="fas fa-plus" style="margin-right:8px;"></i>MASUKKAN DATA IKAN
-                        </button>
-                    </div>
-                </div>
 
-                <!-- KOLOM KANAN -->
+                    <!-- CARD: PENDAFTARAN MVP -->
+                    <div class="glass-card mvp-card" id="mvpCard">
+                        <div class="card-header">
+                            <div>
+                                <h2 class="card-title"><i class="fas fa-star"></i> Pendaftaran MVP</h2>
+                                <p class="card-subtitle">Pilih maksimal 30 ikan terbaik Anda.</p>
+                            </div>
+                            <div class="mvp-badge" id="mvpCountBadge">0/30 MVP</div>
+                        </div>
+                        <div class="card-body" id="mvpCardBody" style="padding-top:10px;">
+                            <div id="mvpLockedState" style="text-align:center; color:var(--gray-500); padding: 20px 0; font-size:13px;">
+                                <i class="fas fa-lock" style="font-size:24px; margin-bottom:8px; display:block; opacity:0.3;"></i>
+                                Pendaftaran MVP belum dibuka oleh panitia.
+                            </div>
+                            <div id="mvpUnlockedState" style="display:none;">
+                                <div id="mvpListContainer" style="max-height:220px; overflow-y:auto; margin-bottom:8px;"></div>
+                                <div id="mvpEmptyList" style="text-align:center; color:#b45309; padding: 20px 0; font-size:13px;">
+                                    <i class="fas fa-lock-open" style="font-size:24px; margin-bottom:8px; display:block; color:#f59e0b;"></i>
+                                    Pendaftaran MVP DIBUKA! Klik <i class="fas fa-star" style="color:#f59e0b;"></i> pada ikan Anda di daftar sebelah.
+                                </div>
+                                <button class="btn-submit-mvp" id="btnSubmitMvp" onclick="confirmSubmitMvp()" style="display:none;">
+                                    <i class="fas fa-paper-plane"></i> KIRIM IKAN MVP
+                                </button>
+                                <div id="mvpSubmittedBadge" style="display:none; text-align:center; margin-top:12px; background:#dcfce7; border:1px solid #86efac; border-radius:10px; padding:10px; color:#166534; font-size:12px; font-weight:700;">
+                                    <i class="fas fa-circle-check"></i> Data MVP sudah dikirim dan terkunci.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div> <!-- ★ PENUTUP KOLOM KIRI (INI YANG HILANG SEBELUMNYA) -->
+
+                <!-- ★ KOLOM KANAN: UNDIAN & IKAN -->
                 <div class="right-col">
 
                     <!-- CARD: MESIN UNDIAN -->
@@ -262,7 +310,8 @@
                                         @foreach($ikansSaya as $index => $ikan)
                                             <div class="ikan-item" id="ikan-item-{{ $ikan->id }}">
                                                 <div class="ikan-item-info">
-                                                <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #{{ $loop->iteration }}@if($ikan->dibuat_oleh === 'admin')<span class="badge-admin"><i class="fas fa-shield-halved"></i> Ditambah Admin</span>@endif</h4>                                                <p>{{ $ikan->kategori }} - Kelas {{ $ikan->kelas }}</p>
+                                                    <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #{{ $loop->iteration }}@if($ikan->dibuat_oleh === 'admin')<span class="badge-admin"><i class="fas fa-shield-halved"></i> Ditambah Admin</span>@endif</h4>
+                                                    <p>{{ $ikan->kategori }} - Kelas {{ $ikan->kelas }}</p>
                                                 </div>
                                                 <div class="ikan-item-right">
                                                     <div class="tank-num {{ $ikan->nomor_tank ? 'filled' : 'empty' }}" id="tank-num-{{ $ikan->id }}">
@@ -288,10 +337,10 @@
                             </div>
                         </div>
                     </div>
-                 </div>
-            </div>
+                </div> <!-- Penutup right-col -->
+            </div> <!-- Penutup dashboard-grid -->
         </main>
-    </div>
+    </div> <!-- Penutup app-container -->
 
     @if($profilLengkap)
     <script>document.addEventListener('DOMContentLoaded', function(){ lockProfilForm(); });</script>
@@ -303,7 +352,6 @@
             <div class="modal-icon blue"><i class="fas fa-fish"></i></div>
             <h2 class="modal-title">Masukkan Data Ikan</h2>
             <p class="modal-desc">Isi kategori dan kelas untuk ikan yang akan dilombakan.</p>
-            
             <form id="formIkan">
                 @csrf
                 <div class="modal-form">
@@ -338,12 +386,29 @@
     <div class="modal-overlay" id="successModal">
         <div class="modal-card">
             <div class="modal-icon green"><i class="fas fa-check"></i></div>
-            <h2 class="modal-title">Berhasil Disimpan!</h2>
-            <p class="modal-desc">Profil Anda sudah diperbarui. Sekarang silakan masukkan data ikan yang akan dilombakan.</p>
+            <h2 class="modal-title" id="successModalTitle">Berhasil Disimpan!</h2>
+            <p class="modal-desc" id="successModalDesc">Profil Anda sudah diperbarui. Sekarang silakan masukkan data ikan yang akan dilombakan.</p>
             <button class="modal-close-btn" onclick="document.getElementById('successModal').classList.remove('show')">Mengerti</button>
         </div>
     </div>
 
+    <!-- MODAL KONFIRMASI MVP -->
+    <div class="modal-overlay" id="modalConfirmMvp">
+        <div class="modal-card">
+            <div class="modal-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 8px 24px rgba(245,158,11,.3);"><i class="fas fa-paper-plane"></i></div>
+            <h2 class="modal-title">Kirim Data MVP?</h2>
+            <p class="modal-desc">Pastikan pilihan Anda sudah benar. Ikan yang terdaftar sebagai MVP <b style="color:#b45309;">TIDAK DAPAT DIUBAH ATAU DIHAPUS</b> setelah dikirim.</p>
+            <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:10px; padding:12px; margin-bottom:20px; display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" id="mvpAgree" style="width:18px; height:18px; cursor:pointer; accent-color:#d97706;">
+                <label for="mvpAgree" style="font-size:12px; font-weight:700; color:#92400e; cursor:pointer;">Saya mengerti dan menyetujui bahwa data tidak dapat diubah.</label>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-close-btn" onclick="document.getElementById('modalConfirmMvp').classList.remove('show')">Batal</button>
+                <button class="btn-submit-mvp" id="btnConfirmSubmitMvp" onclick="submitMvpIkan()" disabled style="width:auto; margin-top:0;"><i class="fas fa-paper-plane"></i> Ya, Kirim MVP</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // --- LOGIC PROFIL ---
         const radioPerorangan = document.getElementById('perorangan');
@@ -371,42 +436,27 @@
             document.querySelector('.toggle-group').style.opacity = '0.5';
             document.querySelector('.toggle-group').style.pointerEvents = 'none';
             var inp = document.getElementById('inputDetail');
-            inp.readOnly = true;
-            inp.style.background = 'var(--gray-100)';
-            inp.style.cursor = 'not-allowed';
+            inp.readOnly = true; inp.style.background = 'var(--gray-100)'; inp.style.cursor = 'not-allowed';
             var btn = document.getElementById('submitBtn');
             if (btn) btn.style.display = 'none';
         }
 
-        // Lock langsung jika profil sudah lengkap saat load
-        @if($profilLengkap)
-        lockProfilForm();
-        @endif
+        @if($profilLengkap) lockProfilForm(); @endif
 
         const regForm = document.getElementById('regForm');
         const submitBtn = document.getElementById('submitBtn');
 
         regForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>MEMPROSES...';
-            
+            submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>MEMPROSES...';
             const formData = new FormData(regForm);
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-
             fetch('{{ route("store.registrasi") }}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
             .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
-            .then(data => { 
-                if (data.success) {
-                    document.getElementById('successModal').classList.add('show');
-                    lockProfilForm();
-                }
-            })
+            .then(data => { if (data.success) { document.getElementById('successModal').classList.add('show'); lockProfilForm(); } })
             .catch(err => { 
                 const errEl = document.getElementById('errDetail');
-                if (err.errors && err.errors.detail_anggota) {
-                    errEl.textContent = err.errors.detail_anggota[0]; errEl.style.display = 'block'; 
-                } else { alert('Terjadi kesalahan pada server.'); }
+                if (err.errors && err.errors.detail_anggota) { errEl.textContent = err.errors.detail_anggota[0]; errEl.style.display = 'block'; } else { alert('Terjadi kesalahan pada server.'); }
             })
             .finally(() => { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN PROFIL'; });
         });
@@ -416,334 +466,274 @@
         formIkan.addEventListener('submit', function(e) {
             e.preventDefault();
             const btnSubmit = formIkan.querySelector('.submit-btn');
-            btnSubmit.disabled = true;
-            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
-
+            btnSubmit.disabled = true; btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
             const formData = new FormData(formIkan);
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-
-            fetch('{{ route("store.ikan") }}', { 
-                method: 'POST', 
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, 
-                body: formData 
-            })
-            .then(res => { 
-                if (!res.ok) return res.json().then(data => { throw data; }); 
-                return res.json(); 
-            })
+            fetch('{{ route("store.ikan") }}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
+            .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
             .then(data => {
                 if (data.success) {
                     document.getElementById('modalIkan').classList.remove('show');
                     formIkan.reset();
-                    
                     let listContainer = document.getElementById('ikanListContainer');
                     let emptyState = document.querySelector('.ikan-empty-state');
-                    
                     if (emptyState) emptyState.remove();
-                    if (!listContainer) {
-                        listContainer = document.createElement('div');
-                        listContainer.className = 'ikan-list';
-                        listContainer.id = 'ikanListContainer';
-                        document.getElementById('ikanListWrapper').appendChild(listContainer);
-                    }
-                    
+                    if (!listContainer) { listContainer = document.createElement('div'); listContainer.className = 'ikan-list'; listContainer.id = 'ikanListContainer'; document.getElementById('ikanListWrapper').appendChild(listContainer); }
                     const currentCount = listContainer.children.length;
                     const newEl = document.createElement('div');
-                    newEl.className = 'ikan-item';
-                    newEl.id = `ikan-item-${data.ikan.id}`;
-                    newEl.innerHTML = `
-                        <div class="ikan-item-info">
-                            <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #${currentCount + 1}</h4>
-                            <p>${data.ikan.kategori} - Kelas ${data.ikan.kelas}</p>
-                        </div>
-                        <div class="ikan-item-right">
-                            <div class="tank-num empty" id="tank-num-${data.ikan.id}">--</div>
-                            <button class="btn-acak-kecil" onclick="mulaiAcak(${data.ikan.id}, this)">
-                                <i class="fas fa-shuffle"></i> ACAK
-                            </button>
-                        </div>`;
+                    newEl.className = 'ikan-item'; newEl.id = `ikan-item-${data.ikan.id}`;
+                    newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #${currentCount + 1}</h4><p>${data.ikan.kategori} - Kelas ${data.ikan.kelas}</p></div><div class="ikan-item-right"><div class="tank-num empty" id="tank-num-${data.ikan.id}">--</div><button class="btn-acak-kecil" onclick="mulaiAcak(${data.ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button></div>`;
                     listContainer.prepend(newEl);
-                    
-                    // ★ PENTING: Update currentIkans agar polling tidak error
-                    currentIkans[data.ikan.id] = {
-                        kategori: `${data.ikan.kategori} - Kelas ${data.ikan.kelas}`,
-                        nomor_tank: '--'
-                    };
+                    currentIkans[data.ikan.id] = { kategori: `${data.ikan.kategori} - Kelas ${data.ikan.kelas}`, nomor_tank: '--', is_mvp: false };
                 }
             })
-            .catch(err => { 
-                if (err.errors) {
-                    let msg = '';
-                    Object.values(err.errors).forEach(function(e) { msg += e[0] + '\n'; });
-                    alert(msg);
-                } else {
-                    alert(err.message || 'Gagal menambahkan ikan.');
-                }
-            })
-            .finally(() => { 
-                btnSubmit.disabled = false; 
-                btnSubmit.innerHTML = 'Simpan Ikan'; 
-            });
+            .catch(err => { if (err.errors) { let msg = ''; Object.values(err.errors).forEach(function(e) { msg += e[0] + '\n'; }); alert(msg); } else { alert(err.message || 'Gagal menambahkan ikan.'); } })
+            .finally(() => { btnSubmit.disabled = false; btnSubmit.innerHTML = 'Simpan Ikan'; });
         });
 
-        // --- REAL-TIME POLLING UNTUK UPDATE DARI ADMIN ---
+        // --- REAL-TIME POLLING UNTUK UPDATE DARI ADMIN & MVP LOGIC ---
         let currentIkans = {};
+        let isMvpOpen = false;
+        let currentMvpSubmitted = false;
 
-        // Inisialisasi currentIkans dari DOM yang sudah ada
         document.querySelectorAll('.ikan-item').forEach(el => {
             const id = el.id.replace('ikan-item-', '');
             const pEl = el.querySelector('.ikan-item-info p');
             const tankEl = el.querySelector('.tank-num');
-            if (id && pEl && tankEl) {
-                currentIkans[id] = {
-                    kategori: pEl.textContent.trim(),
-                    nomor_tank: tankEl.textContent.trim()
-                };
-            }
+            if (id && pEl && tankEl) { currentIkans[id] = { kategori: pEl.textContent.trim(), nomor_tank: tankEl.textContent.trim(), is_mvp: false }; }
         });
 
         function pollIkans() {
-            fetch('/api/user/my-ikans', {
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-            })
+            fetch('/api/user/my-ikans', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
             .then(r => r.json())
             .then(response => {
                 const data = response.ikans || [];
                 const resetInfo = response.reset_info;
-                
+                const mvpOpen = response.mvp_open || false;
+                const mvpSubmitted = response.mvp_submitted || false;
+
+                if (mvpOpen !== isMvpOpen || mvpSubmitted !== currentMvpSubmitted) {
+                    isMvpOpen = mvpOpen;
+                    currentMvpSubmitted = mvpSubmitted;
+                    
+                    if(isMvpOpen) {
+                        document.getElementById('mvpLockedState').style.display = 'none';
+                        document.getElementById('mvpUnlockedState').style.display = 'block';
+                    } else {
+                        document.getElementById('mvpLockedState').style.display = 'block';
+                        document.getElementById('mvpUnlockedState').style.display = 'none';
+                    }
+                    
+                    document.querySelectorAll('.ikan-item').forEach(el => {
+                        const rightDiv = el.querySelector('.ikan-item-right');
+                        if(!rightDiv) return;
+                        let mvpBtn = rightDiv.querySelector('.btn-mvp-star');
+                        
+                        if(currentMvpSubmitted) {
+                            if(mvpBtn) { mvpBtn.disabled = true; mvpBtn.style.opacity = '0.5'; mvpBtn.style.cursor = 'not-allowed'; }
+                        } else {
+                            if(isMvpOpen && !mvpBtn) {
+                                const id = el.id.replace('ikan-item-', '');
+                                const isMvp = currentIkans[id] ? currentIkans[id].is_mvp : false;
+                                const btn = document.createElement('button');
+                                btn.className = 'btn-mvp-star' + (isMvp ? ' active' : '');
+                                btn.setAttribute('onclick', 'toggleMvp('+id+', this)');
+                                btn.setAttribute('title', 'Daftarkan MVP');
+                                btn.innerHTML = '<i class="fas fa-star"></i>';
+                                rightDiv.insertBefore(btn, rightDiv.firstChild);
+                            } else if(!isMvpOpen && mvpBtn) {
+                                mvpBtn.remove();
+                            }
+                        }
+                    });
+                }
+
+                let mvpCount = 0;
+                let mvpListHtml = '';
                 let hasResetIkan = false;
                 let listContainer = document.getElementById('ikanListContainer');
                 let emptyState = document.querySelector('.ikan-empty-state');
 
                 if (!listContainer && data.length > 0) {
                     if (emptyState) emptyState.remove();
-                    listContainer = document.createElement('div');
-                    listContainer.className = 'ikan-list';
-                    listContainer.id = 'ikanListContainer';
-                    document.getElementById('ikanListWrapper').appendChild(listContainer);
+                    listContainer = document.createElement('div'); listContainer.className = 'ikan-list'; listContainer.id = 'ikanListContainer'; document.getElementById('ikanListWrapper').appendChild(listContainer);
                 }
 
                 data.forEach(ikan => {
-                    let existingEl = document.getElementById(`ikan-item-${ikan.id}`);
+                    if(ikan.is_mvp) {
+                        mvpCount++;
+                        const removeBtn = currentMvpSubmitted ? '' : `<button class="mvp-remove" onclick="toggleMvp(${ikan.id}, document.querySelector('#ikan-item-${ikan.id} .btn-mvp-star'))"><i class="fas fa-xmark"></i></button>`;
+                        mvpListHtml += `<div class="mvp-list-item ${currentMvpSubmitted ? 'locked' : ''}">
+                            <span><i class="fas fa-star" style="color:#f59e0b; margin-right:6px;"></i>${ikan.kategori} - Kelas ${ikan.kelas} (Tank ${ikan.nomor_tank ?? '--'})</span>
+                            ${removeBtn}
+                        </div>`;
+                    }
                     
+                    let existingEl = document.getElementById(`ikan-item-${ikan.id}`);
                     if (!existingEl) {
-                        // IKAN BARU (DITAMBAHKAN ADMIN)
                         if (!listContainer) return;
-                        
                         const count = listContainer.children.length + 1;
                         const badge = ikan.dibuat_oleh === 'admin' ? '<span class="badge-admin"><i class="fas fa-shield-halved"></i> Ditambah Admin</span>' : '';
-                        const newEl = document.createElement('div');
-                        newEl.className = 'ikan-item';
-                        newEl.id = `ikan-item-${ikan.id}`;
-                        newEl.style.animation = 'cardEntry 0.5s ease both';
-                        newEl.innerHTML = `
-                            <div class="ikan-item-info">
-                                <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #${count} ${badge}</h4>
-                                <p>${ikan.kategori} - Kelas ${ikan.kelas}</p>
-                            </div>
-                            <div class="ikan-item-right">
-                                <div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">
-                                    ${ikan.nomor_tank ?? '--'}
-                                </div>
-                                ${!ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`}
-                            </div>`;
+                        const mvpBtnHtml = (isMvpOpen && !currentMvpSubmitted) ? `<button class="btn-mvp-star ${ikan.is_mvp ? 'active' : ''}" onclick="toggleMvp(${ikan.id}, this)" title="Daftarkan MVP"><i class="fas fa-star"></i></button>` : (currentMvpSubmitted && ikan.is_mvp ? `<button class="btn-mvp-star active" disabled style="opacity:0.5; cursor:not-allowed;"><i class="fas fa-star"></i></button>` : '');
+                        const newEl = document.createElement('div'); newEl.className = 'ikan-item'; newEl.id = `ikan-item-${ikan.id}`; newEl.style.animation = 'cardEntry 0.5s ease both';
+                        newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #${count} ${badge}</h4><p>${ikan.kategori} - Kelas ${ikan.kelas}</p></div><div class="ikan-item-right">${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${!ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`}</div>`;
                         listContainer.prepend(newEl);
-                        
-                        // ★ PENTING: Update currentIkans agar tidak error di polling berikutnya
-                        currentIkans[ikan.id] = { 
-                            kategori: `${ikan.kategori} - Kelas ${ikan.kelas}`, 
-                            nomor_tank: ikan.nomor_tank ?? '--' 
-                        };
+                        currentIkans[ikan.id] = { kategori: `${ikan.kategori} - Kelas ${ikan.kelas}`, nomor_tank: ikan.nomor_tank ?? '--', is_mvp: ikan.is_mvp };
                     } else {
-                        // ★ PENTING: Pastikan currentIkans[id] ada sebelum diakses
-                        if (!currentIkans[ikan.id]) {
-                            const pEl = existingEl.querySelector('.ikan-item-info p');
-                            const tankEl = existingEl.querySelector('.tank-num');
-                            currentIkans[ikan.id] = {
-                                kategori: pEl ? pEl.textContent.trim() : '',
-                                nomor_tank: tankEl ? tankEl.textContent.trim() : '--'
-                            };
-                        }
-                        
+                        if (!currentIkans[ikan.id]) currentIkans[ikan.id] = { kategori: '', nomor_tank: '--', is_mvp: false };
                         const currentKat = `${ikan.kategori} - Kelas ${ikan.kelas}`;
                         const currentTank = ikan.nomor_tank ?? '--';
                         
-                        // CEK JIKA ADMIN MENGUBAH DATA IKAN
-                        if (currentIkans[ikan.id].kategori !== currentKat) {
-                            existingEl.querySelector('.ikan-item-info p').textContent = currentKat;
-                            currentIkans[ikan.id].kategori = currentKat;
+                        if (currentIkans[ikan.id].kategori !== currentKat) { existingEl.querySelector('.ikan-item-info p').textContent = currentKat; currentIkans[ikan.id].kategori = currentKat; }
+
+                        if (currentIkans[ikan.id].is_mvp !== ikan.is_mvp && isMvpOpen) {
+                            let mvpBtn = existingEl.querySelector('.btn-mvp-star');
+                            if(mvpBtn) {
+                                if(ikan.is_mvp) mvpBtn.classList.add('active'); else mvpBtn.classList.remove('active');
+                            }
+                            currentIkans[ikan.id].is_mvp = ikan.is_mvp;
                         }
 
-                        // DETEKSI RESET NO TANK
                         if (currentIkans[ikan.id].nomor_tank !== '--' && currentTank === '--') {
                             hasResetIkan = true;
-                            
                             const tankEl = document.getElementById(`tank-num-${ikan.id}`);
-                            if (tankEl) {
-                                tankEl.textContent = '--';
-                                tankEl.classList.remove('filled');
-                                tankEl.classList.add('empty');
-                                
-                                let checkmark = existingEl.querySelector('.fa-circle-check');
-                                if (checkmark) {
-                                    const parent = checkmark.closest('span') || checkmark.parentElement;
-                                    if (parent) {
-                                        parent.outerHTML = `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>`;
-                                    }
-                                }
-                            }
+                            if (tankEl) { tankEl.textContent = '--'; tankEl.classList.remove('filled'); tankEl.classList.add('empty'); let checkmark = existingEl.querySelector('.fa-circle-check'); if (checkmark) { const parent = checkmark.closest('span') || checkmark.parentElement; if (parent) parent.outerHTML = `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>`; } }
                             currentIkans[ikan.id].nomor_tank = '--';
-                        } 
-                        // UPDATE JIKA ADMIN MENGACAKKAN TANK
-                        else if (currentIkans[ikan.id].nomor_tank !== currentTank && currentTank !== '--') {
+                        } else if (currentIkans[ikan.id].nomor_tank !== currentTank && currentTank !== '--') {
                             const tankEl = document.getElementById(`tank-num-${ikan.id}`);
-                            if (tankEl) {
-                                tankEl.textContent = currentTank;
-                                tankEl.classList.remove('empty');
-                                tankEl.classList.add('filled');
-                                let btn = existingEl.querySelector('.btn-acak-kecil');
-                                if (btn) btn.outerHTML = '<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>';
-                            }
+                            if (tankEl) { tankEl.textContent = currentTank; tankEl.classList.remove('empty'); tankEl.classList.add('filled'); let btn = existingEl.querySelector('.btn-acak-kecil'); if (btn) btn.outerHTML = '<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>'; }
                             currentIkans[ikan.id].nomor_tank = currentTank;
                         }
                     }
                 });
 
-                // TAMPILKAN BANNER JIKA ADA IKAN YANG DIRESET
-                const banner = document.getElementById('resetBanner');
-                if (hasResetIkan && resetInfo && resetInfo.reason) {
-                    banner.style.display = 'flex';
-                    document.getElementById('resetBannerText').innerHTML = `Nomor tank Anda telah direset oleh panitia. Alasan: <strong style="color:#fff;">${resetInfo.reason}</strong>`;
+                document.getElementById('mvpListContainer').innerHTML = mvpListHtml;
+                document.getElementById('mvpCountBadge').textContent = `${mvpCount}/30 MVP`;
+
+                if(isMvpOpen) {
+                    document.getElementById('mvpEmptyList').style.display = mvpCount > 0 ? 'none' : 'block';
+                    document.getElementById('btnSubmitMvp').style.display = mvpCount > 0 && !currentMvpSubmitted ? 'flex' : 'none';
+                    document.getElementById('mvpSubmittedBadge').style.display = currentMvpSubmitted ? 'block' : 'none';
                 }
 
-                // UPDATE BADGE STATUS
-                const total = data.length;
-                const undi = data.filter(i => i.nomor_tank).length;
+                const banner = document.getElementById('resetBanner');
+                if (hasResetIkan && resetInfo && resetInfo.reason) { banner.style.display = 'flex'; document.getElementById('resetBannerText').innerHTML = `Nomor tank Anda telah direset oleh panitia. Alasan: <strong style="color:#fff;">${resetInfo.reason}</strong>`; }
+
+                const total = data.length; const undi = data.filter(i => i.nomor_tank).length;
                 const statusBadge = document.querySelector('.status-badge');
-                if (statusBadge) {
-                    statusBadge.textContent = total > 0 ? `${undi}/${total} DIUNDI` : 'MENUNGGU IKAN';
-                    statusBadge.className = 'status-badge ' + (total > 0 ? 'success' : '');
-                }
+                if (statusBadge) { statusBadge.textContent = total > 0 ? `${undi}/${total} DIUNDI` : 'MENUNGGU IKAN'; statusBadge.className = 'status-badge ' + (total > 0 ? 'success' : ''); }
             })
             .catch(err => console.error('Polling error:', err));
         }
-
         setInterval(pollIkans, 5000);
+        pollIkans();
+
+        // --- LOGIC TOGGLE MVP ---
+        function toggleMvp(ikanId, btnElement) {
+            if (btnElement.disabled) return;
+            btnElement.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+            formData.append('ikan_id', ikanId);
+
+            fetch('/api/toggle-mvp-ikan', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if(data.is_mvp) { btnElement.classList.add('active'); } else { btnElement.classList.remove('active'); }
+                    currentIkans[ikanId].is_mvp = data.is_mvp;
+                    pollIkans(); 
+                } else {
+                    alert(data.message || 'Gagal mengubah status MVP.');
+                }
+            })
+            .catch(() => alert('Terjadi kesalahan jaringan.'))
+            .finally(() => { btnElement.disabled = false; });
+        }
 
         // --- AMBIL RANGE UNDIAN DARI SERVER ---
         let tankDrawMax = 1000; 
-        fetch('/api/tank-range', { headers: { 'Accept': 'application/json' } })
-        .then(r => r.json())
-        .then(d => { if(d.max) tankDrawMax = d.max; })
-        .catch(() => {});
+        fetch('/api/tank-range', { headers: { 'Accept': 'application/json' } }).then(r => r.json()).then(d => { if(d.max) tankDrawMax = d.max; }).catch(() => {});
 
         // --- LOGIC MESIN UNDIAN PER IKAN ---
         const numberDisplay = document.getElementById('numberDisplay');
         const lcdInfo = document.getElementById('lcdInfo');
 
         function mulaiAcak(ikanId, btnElement) {
-            // CEGAH DOUBLE-CLICK
             if (btnElement.disabled) return;
-
-            btnElement.disabled = true;
-            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            lcdInfo.textContent = 'Sedang mengundi...';
-            numberDisplay.classList.add('rolling');
-            numberDisplay.classList.remove('final');
-
-            // LANGSUNG mulai rolling, jangan tunggu API
-            var maxForAnim = tankDrawMax || 1000;
-            var rolling = true;
-            var rollTimer = setInterval(function() {
-                numberDisplay.textContent = Math.floor(Math.random() * maxForAnim) + 1;
-            }, 40);
-
-            var formData = new FormData();
-            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-            formData.append('ikan_id', ikanId);
-
-            fetch('{{ route("api.acak.tank.user") }}', {
-                method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-                body: formData
-            })
+            btnElement.disabled = true; btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            lcdInfo.textContent = 'Sedang mengundi...'; numberDisplay.classList.add('rolling'); numberDisplay.classList.remove('final');
+            var maxForAnim = tankDrawMax || 1000; var rolling = true;
+            var rollTimer = setInterval(function() { numberDisplay.textContent = Math.floor(Math.random() * maxForAnim) + 1; }, 40);
+            var formData = new FormData(); formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content')); formData.append('ikan_id', ikanId);
+            fetch('{{ route("api.acak.tank.user") }}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
             .then(function(res) { return res.json(); })
             .then(function(data) {
                 if (!data.success) throw new Error(data.message || 'Gagal mengacak nomor.');
-
-                var finalNumber = data.nomor_tank;
-                rolling = false;
-                clearInterval(rollTimer);
-
-                var slowSteps = 8;
-                var slowIndex = 0;
-
+                var finalNumber = data.nomor_tank; rolling = false; clearInterval(rollTimer); var slowSteps = 8; var slowIndex = 0;
                 function slowRoll() {
-                    slowIndex++;
-                    var progress = slowIndex / slowSteps;
-                    var spread = Math.max(0, Math.round(50 * (1 - progress)));
-                    var minN = Math.max(1, finalNumber - spread);
-                    var maxN = finalNumber + spread;
+                    slowIndex++; var progress = slowIndex / slowSteps; var spread = Math.max(0, Math.round(50 * (1 - progress)));
+                    var minN = Math.max(1, finalNumber - spread); var maxN = finalNumber + spread;
                     var shown = Math.floor(Math.random() * (maxN - minN + 1)) + minN;
-
-                    if (slowIndex >= slowSteps) {
-                        shown = finalNumber;
-                    }
-
+                    if (slowIndex >= slowSteps) shown = finalNumber;
                     numberDisplay.textContent = shown;
-
                     if (slowIndex >= slowSteps) {
-                        numberDisplay.classList.remove('rolling');
-                        numberDisplay.classList.add('final');
-                        lcdInfo.textContent = 'Berhasil!';
-
+                        numberDisplay.classList.remove('rolling'); numberDisplay.classList.add('final'); lcdInfo.textContent = 'Berhasil!';
                         var tankNumEl = document.getElementById('tank-num-' + ikanId);
-                        if (tankNumEl) {
-                            tankNumEl.textContent = finalNumber;
-                            tankNumEl.classList.remove('empty');
-                            tankNumEl.classList.add('filled');
-                        }
+                        if (tankNumEl) { tankNumEl.textContent = finalNumber; tankNumEl.classList.remove('empty'); tankNumEl.classList.add('filled'); }
                         btnElement.outerHTML = '<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>';
-
-                        setTimeout(function() {
-                            numberDisplay.textContent = '--';
-                            numberDisplay.classList.remove('final');
-                            lcdInfo.textContent = 'Klik ACAK pada daftar ikan';
-                        }, 2500);
-                    } else {
-                        var delay = 100 + (progress * progress * 250);
-                        setTimeout(slowRoll, delay);
-                    }
+                        setTimeout(function() { numberDisplay.textContent = '--'; numberDisplay.classList.remove('final'); lcdInfo.textContent = 'Klik ACAK pada daftar ikan'; }, 2500);
+                    } else { var delay = 100 + (progress * progress * 250); setTimeout(slowRoll, delay); }
                 }
                 slowRoll();
             })
             .catch(function(err) {
-                rolling = false;
-                clearInterval(rollTimer);
-                numberDisplay.textContent = '--';
-                numberDisplay.classList.remove('rolling');
-
+                rolling = false; clearInterval(rollTimer); numberDisplay.textContent = '--'; numberDisplay.classList.remove('rolling');
                 var errorMsg = err.message || 'Terjadi kesalahan';
-
-                // Cek apakah error karena nomor tank penuh
-                if (errorMsg.indexOf('NOMOR TANK PENUH') !== -1) {
-                    lcdInfo.textContent = 'Nomor tank penuh';
-                    alert('⚠️ ' + errorMsg);
-                } else {
-                    lcdInfo.textContent = 'Gagal';
-                    alert('Gagal mengacak: ' + errorMsg);
-                }
-
+                if (errorMsg.indexOf('NOMOR TANK PENUH') !== -1) { lcdInfo.textContent = 'Nomor tank penuh'; alert('⚠️ ' + errorMsg); } else { lcdInfo.textContent = 'Gagal'; alert('Gagal mengacak: ' + errorMsg); }
                 pollIkans();
-
-                setTimeout(function() {
-                    var checkBtn = document.querySelector('#ikan-item-' + ikanId + ' .btn-acak-kecil');
-                    if (checkBtn) {
-                        checkBtn.disabled = false;
-                        checkBtn.innerHTML = '<i class="fas fa-shuffle"></i> ACAK';
-                    }
-                }, 600);
+                setTimeout(function() { var checkBtn = document.querySelector('#ikan-item-' + ikanId + ' .btn-acak-kecil'); if (checkBtn) { checkBtn.disabled = false; checkBtn.innerHTML = '<i class="fas fa-shuffle"></i> ACAK'; } }, 600);
             });
+        }
+
+        document.getElementById('mvpAgree').addEventListener('change', function() {
+            document.getElementById('btnConfirmSubmitMvp').disabled = !this.checked;
+        });
+
+        function confirmSubmitMvp() {
+            document.getElementById('mvpAgree').checked = false;
+            document.getElementById('btnConfirmSubmitMvp').disabled = true;
+            document.getElementById('modalConfirmMvp').classList.add('show');
+        }
+
+        function submitMvpIkan() {
+            var btn = document.getElementById('btnConfirmSubmitMvp');
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
+            
+            var formData = new FormData();
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+            fetch('/api/submit-mvp-ikan', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById('modalConfirmMvp').classList.remove('show');
+                    
+                    // ★ GANTI ALERT BIASA DENGAN POPUP CUSTOM
+                    var modalTitle = document.getElementById('successModalTitle');
+                    var modalDesc = document.getElementById('successModalDesc');
+                    if(modalTitle) modalTitle.textContent = 'Data MVP Terkirim!';
+                    if(modalDesc) modalDesc.innerHTML = 'Pilihan ikan MVP Anda berhasil dikirim dan sudah <b style="color:#b45309;">TERKUNCI</b>. Data tidak dapat diubah lagi.';
+                    
+                    document.getElementById('successModal').classList.add('show');
+                    pollIkans(); 
+                } else {
+                    alert(data.message || 'Gagal mengirim data MVP.');
+                }
+            })
+            .catch(() => alert('Terjadi kesalahan jaringan.'))
+            .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Ya, Kirim MVP'; });
         }
     </script>
 </body>

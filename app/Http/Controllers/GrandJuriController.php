@@ -473,4 +473,38 @@ class GrandJuriController extends Controller
 
         return response()->json($data);
     }
+
+    public function getMvpIkan()
+    {
+        // ★ Hanya ambil ikan dari peserta yang SUDAH MENGIRIM (is_mvp_submitted = true)
+        $ikans = Ikan::where('is_mvp', true)
+            ->whereHas('peserta', function($q) {
+                $q->where('is_mvp_submitted', true);
+            })
+            ->with('peserta')
+            ->get()
+            ->groupBy('peserta_id'); // ★ Kelompokkan berdasarkan peserta
+
+        $data = [];
+        foreach ($ikans as $pesertaId => $ikanList) {
+            $peserta = $ikanList->first()->peserta;
+            $ikanDetails = $ikanList->map(function($ikan) {
+                return [
+                    'kategori' => $ikan->kategori,
+                    'kelas' => $ikan->kelas,
+                    'nomor_tank' => $ikan->nomor_tank ?? '-',
+                ];
+            })->values()->toArray();
+
+            $data[] = [
+                'peserta_id' => $pesertaId,
+                'nama_peserta' => $peserta->nama_peserta ?? '-',
+                'detail_anggota' => $peserta->detail_anggota ?? '-',
+                'total_mvp' => $ikanList->count(),
+                'ikans' => $ikanDetails // ★ Array detail ikan
+            ];
+        }
+
+        return response()->json($data);
+    }
 }

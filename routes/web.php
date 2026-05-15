@@ -29,6 +29,9 @@ Route::post('/api/admin/register-peserta-ikan', [AdminDashboardController::class
 Route::post('/api/admin/delete-ikan', [AdminDashboardController::class, 'deleteIkan']);
 Route::get('/api/admin/get-peserta-by-user', [AdminDashboardController::class, 'getPesertaByUser']);
 Route::get('/api/user/my-ikans', [DashboardController::class, 'getMyIkans'])->middleware('auth');
+Route::post('/api/toggle-mvp-ikan', [DashboardController::class, 'toggleMvpIkan'])->middleware('auth')->name('api.toggle.mvp');
+Route::post('/api/submit-mvp-ikan', [DashboardController::class, 'submitMvpIkan'])->middleware('auth')->name('api.submit.mvp');
+
 
 /* ═══════════════════════════════════════════
    KELOLA USER (Hanya Admin)
@@ -41,6 +44,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/toggle-role', [DashboardController::class, 'toggleRoleUser'])->name('api.toggle.role');
     Route::get('/api/tank-range-global', [AdminDashboardController::class, 'getTankRangeGlobal'])->middleware('auth');
     Route::post('/api/admin/tank-range-global', [AdminDashboardController::class, 'setTankRangeGlobal'])->middleware(['auth', 'admin']);
+    Route::get('/api/admin/mvp-ikan', [AdminDashboardController::class, 'getMvpIkan']);
+    Route::post('/api/admin/toggle-mvp-registration', [AdminDashboardController::class, 'toggleMvpRegistration']);
+    Route::get('/api/admin/mvp-status', [AdminDashboardController::class, 'getMvpStatus']);  
 });
 
 /* ═══════════════════════════════════════════
@@ -68,6 +74,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/grand-juri/rincian-detail', [GrandJuriController::class, 'getRincianDetail']);
     Route::get('/api/grand-juri/plot-status', [GrandJuriController::class, 'getPlotStatus']);
     Route::post('/api/grand-juri/kunci-nilai', [GrandJuriController::class, 'kunciNilai'])->middleware('auth');
+    Route::get('/api/grand-juri/mvp-ikan', [GrandJuriController::class, 'getMvpIkan']);
 });
 
 /* ═══════════════════════════════════════════

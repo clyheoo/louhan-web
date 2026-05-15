@@ -289,6 +289,30 @@
         </div>
     </div>
 
+    <!-- DATA MVP -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title"><i class="fas fa-star" style="color:#f59e0b;"></i> Data Ikan MVP</div>
+            <div class="card-subtitle">Daftar peserta yang sudah mengirimkan ikan untuk penilaian MVP</div>
+        </div>
+        <div class="card-body">
+            <div class="table-wrap">
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>PESERTA</th>
+                            <th>ASAL / TEAM</th>
+                            <th>JUMLAH IKAN MVP</th>
+                            <th>STATUS</th>
+                            <th>AKSI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyMvp"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- DATA MANAJEMEN -->
     <div class="card">
         <div class="card-header">
@@ -1046,12 +1070,65 @@ function openPlotStatus(status){
     });
 }
 
+function loadMvpGj() {
+    fetch('/api/grand-juri/mvp-ikan', {headers:{'Accept':'application/json'}})
+    .then(r => r.json())
+    .then(data => {
+        var tb = document.getElementById('tbodyMvp');
+        if(!data || data.length === 0) {
+            tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-star" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Belum ada peserta yang mengirimkan data MVP.</div></td></tr>';
+            return;
+        }
+        tb.innerHTML = '';
+        data.forEach(function(p, idx) {
+            var tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight:700;">${esc(p.nama_peserta)}</td>
+                <td style="font-size:12px; color:var(--text-muted);">${esc(p.detail_anggota)}</td>
+                <td><span class="badge badge-purple"><i class="fas fa-star" style="margin-right:3px; font-size:9px; color:#f59e0b;"></i>${p.total_mvp} Ikan MVP</span></td>
+                <td><span class="badge badge-success"><i class="fas fa-paper-plane" style="margin-right:3px; font-size:9px;"></i>TERKIRIM</span></td>
+                <td><button class="btn-sm btn-detail" onclick="openMvpDetail(${idx})"><i class="fas fa-eye"></i> Lihat Ikan</button></td>
+            `;
+            tb.appendChild(tr);
+        });
+        
+        // Simpan data sementara untuk modal detail
+        window._mvpData = data;
+    })
+    .catch(function(){
+        document.getElementById('tbodyMvp').innerHTML = '<tr><td colspan="5"><div class="empty-state">Gagal memuat data MVP.</div></td></tr>';
+    });
+}
+
+function openMvpDetail(idx) {
+    var p = window._mvpData[idx];
+    if(!p) return;
+    
+    var html = `<div class="detail-note purple-note"><i class="fas fa-circle-info"></i><span>Peserta <strong>${esc(p.nama_peserta)}</strong> (${esc(p.detail_anggota)}) mendaftarkan <strong>${p.total_mvp}</strong> ikan MVP.</span></div>`;
+    html += '<table class="gen-table"><thead><tr><th>NO</th><th>KATEGORI</th><th>KELAS</th><th>NO. TANK</th></tr></thead><tbody>';
+    
+    p.ikans.forEach(function(ikan, i) {
+        html += `<tr>
+            <td style="color:var(--text-muted);font-weight:700;">${i+1}</td>
+            <td style="font-weight:600;">${esc(ikan.kategori)}</td>
+            <td>${esc(ikan.kelas)}</td>
+            <td style="font-weight:700; color:var(--purple);">${ikan.nomor_tank ? 'Tank '+ikan.nomor_tank : '—'}</td>
+        </tr>`;
+    });
+    
+    html += '</tbody></table>';
+    
+    document.getElementById('genericTitle').innerHTML = '<i class="fas fa-star" style="color:#f59e0b;"></i> Detail Ikan MVP - ' + esc(p.nama_peserta);
+    document.getElementById('genericContent').innerHTML = html;
+    document.getElementById('modalGeneric').classList.add('show');
+}
 /* ================================================================
    INIT
    ================================================================ */
 loadStats();
 loadPeserta();
 loadJuriSummary();
+loadMvpGj(); // ★ TAMBAHKAN BARIS INI AGAR MVP TERLOAD SAAT BUKA HALAMAN
 </script>
 </body>
 </html>

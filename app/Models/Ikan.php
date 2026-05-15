@@ -17,10 +17,12 @@ class Ikan extends Model
         'dibuat_oleh',
         'diubah_oleh',
         'is_locked',
+        'is_mvp', // ★ TAMBAHKAN INI
     ];
 
     protected $casts = [
         'is_locked' => 'boolean',
+        'is_mvp' => 'boolean', // ★ TAMBAHKAN INI
     ];
 
     public function peserta()
