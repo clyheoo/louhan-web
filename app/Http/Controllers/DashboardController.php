@@ -83,8 +83,16 @@ class DashboardController extends Controller
     public function acakNomorTankAdmin(Request $request)
     {
         $request->validate(['ikan_id' => 'required|exists:ikans,id']);
-
         $ikan = Ikan::find($request->ikan_id);
+
+        // ★ GUARD: Tolak jika ikan sudah punya nomor tank (sudah diundi user)
+        if ($ikan->nomor_tank !== null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ikan milik ' . $ikan->peserta->nama_peserta . ' sudah memiliki nomor tank (Tank ' . $ikan->nomor_tank . '). Admin tidak dapat mengundi ulang.',
+            ], 422);
+        }
+
         $kelas = $ikan->kelas;
 
         $ranges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);

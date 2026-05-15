@@ -1576,6 +1576,7 @@ document.getElementById('btnAcakOld').addEventListener('click',function(){
         display.textContent='--';
         display.style.color='#fff';
         btn.disabled=false;
+        loadPesertaOld(); // ★ Refresh dropdown agar ikan yang sudah diundi hilang
         popupError('Undian Gagal',esc(e.message));
     });
 });
