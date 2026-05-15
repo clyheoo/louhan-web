@@ -473,4 +473,30 @@ class AdminDashboardController extends Controller
         $isOpen = (bool)(\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
         return response()->json(['is_open' => $isOpen]);
     }
+
+    public function deleteMvpIkan(Request $request)
+    {
+        $request->validate([
+            'ikan_id' => 'required|exists:ikans,id',
+        ]);
+
+        $ikan = Ikan::find($request->ikan_id);
+
+        // Cek apakah ikan benar-benar terdaftar MVP
+        if (!$ikan->is_mvp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ikan ini tidak terdaftar sebagai MVP.'
+            ], 422);
+        }
+
+        // Hanya hapus status MVP, data ikan & penilaian tetap aman
+        $ikan->is_mvp = false;
+        $ikan->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ikan berhasil dihapus dari pendaftaran MVP. Peserta dapat mendaftarkan ulang.'
+        ]);
+    }
 }

@@ -762,13 +762,31 @@
                 <button class="btn-primary" id="btnToggleMvp" onclick="toggleMvpRegistration()" style="padding:8px 18px; font-size:12px;"><i class="fas fa-spinner fa-spin"></i></button>
             </div>
 
+            <!-- ★ PERHATIAN: Info penting untuk user -->
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start;">
+                <i class="fas fa-circle-info" style="color:#d97706;margin-top:2px;"></i>
+                <span style="font-size:11px;color:#92400e;line-height:1.5;">Menghapus ikan dari daftar MVP <b>tidak menghapus data ikan</b>. Peserta dapat mendaftarkan ulang ikan tersebut ke MVP jika pendaftaran masih dibuka.</span>
+            </div>
+
             <div class="section-title" style="margin-bottom:12px; font-size:13px;"><i class="fas fa-list" style="color:#f59e0b;"></i> Daftar Ikan Terdaftar MVP</div>
+
+            <!-- ★ PERUBAHAN: min-width:auto agar kolom tidak terlalu lebar, tambah kolom AKSI -->
             <div class="table-wrap" style="max-height:400px;">
-                <table class="data-table">
+                <table class="data-table" style="min-width:auto;">
                     <thead>
-                        <tr><th>PESERTA</th><th>ASAL / TEAM</th><th>KATEGORI</th><th>KELAS</th><th>NO. TANK</th></tr>
+                        <tr>
+                            <th style="width:30px;">#</th>
+                            <th>PESERTA</th>
+                            <th>ASAL / TEAM</th>
+                            <th>KATEGORI</th>
+                            <th>KELAS</th>
+                            <th>NO. TANK</th>
+                            <th style="text-align:center;width:80px;">AKSI</th>
+                        </tr>
                     </thead>
-                    <tbody id="mvpTableBody"><tr><td colspan="5" style="text-align:center; color:var(--light); padding:20px;">Memuat data...</td></tr></tbody>
+                    <tbody id="mvpTableBody">
+                        <tr><td colspan="7" style="text-align:center; color:var(--light); padding:20px;">Memuat data...</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -2042,12 +2060,64 @@ function loadMvpData() {
     .then(r => r.json())
     .then(data => {
         var tb = document.getElementById('mvpTableBody');
-        if(!data.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--light); padding:20px;">Belum ada ikan yang didaftarkan MVP.</td></tr>'; return; }
+        if(!data.length) {
+            tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--light); padding:20px;"><i class="fas fa-inbox" style="font-size:18px;display:block;margin-bottom:6px;opacity:.4;"></i>Belum ada ikan yang didaftarkan MVP.</td></tr>';
+            return;
+        }
         tb.innerHTML = '';
-        data.forEach(d => {
-            tb.innerHTML += `<tr><td style="font-weight:700;">${esc(d.nama_peserta)}</td><td>${esc(d.detail_anggota)}</td><td>${esc(d.kategori)}</td><td>${esc(d.kelas)}</td><td style="font-weight:700; color:var(--primary);">Tank ${esc(d.nomor_tank)}</td></tr>`;
+        data.forEach((d, idx) => {
+            // Escape nama untuk dipakai di onclick string
+            var safeName = esc(d.nama_peserta).replace(/'/g, "\\'");
+            tb.innerHTML += 
+                '<tr>' +
+                    '<td style="font-weight:600;color:var(--light);font-size:11px;">' + (idx + 1) + '</td>' +
+                    '<td style="font-weight:700;">' + esc(d.nama_peserta) + '</td>' +
+                    '<td style="font-size:11px;color:var(--muted);">' + esc(d.detail_anggota) + '</td>' +
+                    '<td style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;">' + esc(d.kategori) + '</td>' +
+                    '<td style="font-size:11px;color:var(--muted);">' + esc(d.kelas) + '</td>' +
+                    '<td style="font-weight:700;color:var(--primary);">Tank ' + esc(d.nomor_tank) + '</td>' +
+                    '<td style="text-align:center;">' +
+                        '<button class="btn-xs red" onclick="deleteMvpIkan(' + d.id + ',\'' + safeName + '\')" title="Hapus dari MVP"><i class="fas fa-trash-can"></i></button>' +
+                    '</td>' +
+                '</tr>';
         });
+    })
+    .catch(function(){
+        var tb = document.getElementById('mvpTableBody');
+        tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--danger); padding:20px;"><i class="fas fa-triangle-exclamation"></i> Gagal memuat data.</td></tr>';
     });
+}
+
+/* ═══ HAPUS IKAN DARI MVP ═══ */
+function deleteMvpIkan(ikanId, nama) {
+    popupConfirm(
+        'Hapus dari Pendaftaran MVP',
+        'Yakin ingin menghapus ikan milik <strong>' + esc(nama) + '</strong> dari pendaftaran MVP?<br><span style="font-size:11px;color:var(--warning);">Ikan tetap ada di sistem, hanya dihapus dari daftar MVP. Peserta dapat mendaftarkan ulang.</span>',
+        'Ya, Hapus dari MVP',
+        function() {
+            var fd = new FormData();
+            fd.append('_token', getCsrf());
+            fd.append('ikan_id', ikanId);
+
+            fetch('/api/admin/delete-mvp-ikan', {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'},
+                body: fd
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.success) {
+                    loadMvpData();
+                    popupSuccess('Berhasil Dihapus dari MVP', 'Ikan milik <strong>' + esc(nama) + '</strong> berhasil dihapus dari pendaftaran MVP. Peserta dapat mendaftarkan ulang ikan ini.');
+                } else {
+                    popupError('Gagal Menghapus', d.message || 'Terjadi kesalahan.');
+                }
+            })
+            .catch(function() {
+                popupError('Kesalahan Jaringan', 'Gagal menghubungi server.');
+            });
+        }
+    );
 }
 
 function loadMvpStatus() {

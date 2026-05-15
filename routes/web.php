@@ -42,11 +42,12 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/list-users', [DashboardController::class, 'getListUsers'])->name('api.list.users');
     Route::post('/api/update-password', [DashboardController::class, 'updatePasswordUser'])->name('api.update.password');
     Route::post('/api/toggle-role', [DashboardController::class, 'toggleRoleUser'])->name('api.toggle.role');
-    Route::get('/api/tank-range-global', [AdminDashboardController::class, 'getTankRangeGlobal'])->middleware('auth');
+    Route::get('/api/tank-range-global', [AdminDashboardController::class, 'getTankRangeGlobal'])->middleware('   auth');
     Route::post('/api/admin/tank-range-global', [AdminDashboardController::class, 'setTankRangeGlobal'])->middleware(['auth', 'admin']);
     Route::get('/api/admin/mvp-ikan', [AdminDashboardController::class, 'getMvpIkan']);
     Route::post('/api/admin/toggle-mvp-registration', [AdminDashboardController::class, 'toggleMvpRegistration']);
-    Route::get('/api/admin/mvp-status', [AdminDashboardController::class, 'getMvpStatus']);  
+    Route::get('/api/admin/mvp-status', [AdminDashboardController::class, 'getMvpStatus']);
+    Route::post('/api/admin/delete-mvp-ikan', [AdminDashboardController::class, 'deleteMvpIkan']);  
 });
 
 /* ═══════════════════════════════════════════
