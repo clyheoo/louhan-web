@@ -12,16 +12,18 @@ class Scoring extends Model
         'kelas',
         'nilai_detail',
         'total_nilai',
+        'total_point',           // ✅ TAMBAHKAN
         'status',
-        'submitted_to_grand',   // ← TAMBAHKAN INI
+        'submitted_to_grand',
         'edited_by_grand_juri',
         'grand_juri_id',
     ];
 
-    // TAMBAHKAN INI: Agar Array otomatis diubah jadi JSON saat disimpan
     protected $casts = [
-        'nilai_detail' => 'array',
+        'nilai_detail'         => 'array',
         'edited_by_grand_juri' => 'boolean',
+        'submitted_to_grand'   => 'boolean',   // ✅ TAMBAHKAN
+        'total_point'          => 'float',     // ✅ TAMBAHKAN
     ];
     
     public function ikan()

@@ -172,69 +172,6 @@ class GrandJuriController extends Controller
         $ikanId    = $data['ikan_id'] ?? null;
         $changed   = $data['changed_fields'] ?? null;
 
-        $ikan = Ikan::find($ikanId);
-
-        if (!$ikanId || !$ikan) {
-            return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
-        }
-
-        if ($ikan->is_locked) {
-            return response()->json(['success' => false, 'message' => 'Nilai sudah TERKUNCI (FINAL) dan tidak dapat diubah.']);
-        }
-
-        /* ── KASUS 1: Sudah ada scoring dari juri ── */
-        $existing = Scoring::with('ikan')->where('ikan_id', $ikanId)->latest()->first();
-
-        if ($existing && $existing->nilai_detail) {
-            $finalScores = $existing->nilai_detail;
-            foreach ($changed as $kat => $fields) {
-                if (!is_array($fields)) continue;
-                foreach ($fields as $fieldId => $value) {
-                    if (is_numeric($value)) {
-                        if (!isset($finalScores[$kat])) $finalScores[$kat] = [];
-                        $finalScores[$kat][$fieldId] = (int) $value;
-                    }
-                }
-            }
-
-            $totalNilai = 0;
-            foreach ($finalScores as $katDetail) {
-                if (is_array($katDetail)) {
-                    foreach ($katDetail as $val) $totalNilai += (int) $val;
-                }
-            }
-
-            $totalSebelum = $existing->total_nilai ?? 0;
-
-            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalScores);
-
-            $existing->update([
-                'grand_juri_id'        => auth()->id(),
-                'nilai_detail'         => $finalScores,
-                'total_nilai'          => $totalNilai,
-                'total_point'          => $totalPoint,
-                'edited_by_grand_juri' => true,
-                'status'               => 'submitted',
-            ]);
-
-            GrandJuriEdit::create([
-                'scoring_id'     => $existing->id,
-                'peserta_id'     => $existing->ikan ? $existing->ikan->peserta_id : null,
-                'grand_juri_id'  => auth()->id(),
-                'nilai_sebelum'  => $existing->getRawOriginal('nilai_detail'),
-                'nilai_sesudah'  => $finalScores,
-                'changed_fields' => $changed,
-                'total_sebelum'  => $totalSebelum,
-                'total_sesudah'  => $totalNilai,
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Nilai berhasil diperbarui oleh Grand Juri!',
-                'total'   => $totalNilai,
-            ]);
-        }
-
         /* ── KASUS 2: Belum ada scoring sama sekali ── */
         $ikan = Ikan::find($ikanId);
         $totalNilai = 0;
@@ -253,7 +190,7 @@ class GrandJuriController extends Controller
             'nilai_detail'         => $changed,
             'total_nilai'          => $totalNilai,
             'status'               => 'submitted',
-            'total_point'          => $totalPoint,
+            'total_point'          => $totalPoint,        // ★ Sekarang ada di $fillable
             'edited_by_grand_juri' => true,
         ]);
 
@@ -541,11 +478,9 @@ class GrandJuriController extends Controller
         $query = Ikan::where('is_locked', true)
             ->whereNotNull('nomor_tank')
             ->whereHas('scorings', function ($q) {
-                // ✅ FIX: Gunakan submitted_to_grand, bukan edited_by_grand_juri
                 $q->where('submitted_to_grand', true);
             })
             ->with(['peserta', 'scorings' => function ($q) {
-                // ✅ FIX: Prioritaskan scoring yang diedit Grand Juri, fallback ke submitted
                 $q->where('submitted_to_grand', true)
                 ->orderByRaw('edited_by_grand_juri DESC')
                 ->latest()
@@ -562,6 +497,15 @@ class GrandJuriController extends Controller
             $sc = $ikan->scorings->first();
             if (!$sc) continue;
 
+            // ★ FIX: Hitung point on-the-fly, bukan rely pada stored value
+            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $sc->nilai_detail ?? []);
+
+            // ★ Back-fill: simpan ke DB kalau sebelumnya 0/null
+            if ($totalPoint > 0 && (!$sc->total_point || $sc->total_point == 0)) {
+                $sc->total_point = $totalPoint;
+                $sc->saveQuietly(); // tanpa trigger events
+            }
+
             $key = ($scope === 'per_kategori')
                 ? $ikan->kategori
                 : $ikan->kategori . ' - Kelas ' . $ikan->kelas;
@@ -574,7 +518,7 @@ class GrandJuriController extends Controller
                 'kelas'         => $ikan->kelas,
                 'nomor_tank'    => $ikan->nomor_tank,
                 'total_nilai'   => $sc->total_nilai ?? 0,
-                'total_point'   => (float)($sc->total_point ?? 0),
+                'total_point'   => (float) $totalPoint,   // ★ Pakai hasil kalkulasi
                 'grand_juri'    => $sc->grandJuri ? $sc->grandJuri->name : '—',
             ];
         }

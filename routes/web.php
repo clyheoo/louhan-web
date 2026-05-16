@@ -13,91 +13,37 @@ Route::get('/', function () {
 })->middleware('guest');
 
 /* ═══════════════════════════════════════════
-   DASHBOARD UTAMA (Dibedakan di Controller)
+   DASHBOARD UTAMA
    ═══════════════════════════════════════════ */
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth')->name('dashboard');
 
 /* ═══════════════════════════════════════════
-   API REGISTRASI & UNDIAN (DashboardController)
+   API REGISTRASI & UNDIAN
    ═══════════════════════════════════════════ */
-Route::post('/api/registrasi-peserta', [DashboardController::class, 'storePeserta'])->middleware('auth')->name('store.registrasi');
-Route::post('/api/tambah-ikan', [DashboardController::class, 'storeIkan'])->middleware('auth')->name('store.ikan');
-Route::get('/api/peserta-belum-tidak', [DashboardController::class, 'getPesertaBelumDapatTank'])->middleware('auth')->name('api.peserta.belum.tank');
-Route::post('/api/acak-nomor-tank-admin', [DashboardController::class, 'acakNomorTankAdmin'])->middleware('auth')->name('api.acak.tank.admin');
-Route::post('/api/acak-nomor-tank-user', [DashboardController::class, 'acakNomorTankUser'])->middleware('auth')->name('api.acak.tank.user');
-Route::post('/api/admin/register-peserta-ikan', [AdminDashboardController::class, 'registerPesertaIkan'])->name('admin.register.peserta.ikan');
-Route::post('/api/admin/delete-ikan', [AdminDashboardController::class, 'deleteIkan']);
-Route::get('/api/admin/get-peserta-by-user', [AdminDashboardController::class, 'getPesertaByUser']);
-Route::get('/api/user/my-ikans', [DashboardController::class, 'getMyIkans'])->middleware('auth');
-Route::post('/api/toggle-mvp-ikan', [DashboardController::class, 'toggleMvpIkan'])->middleware('auth')->name('api.toggle.mvp');
-Route::post('/api/submit-mvp-ikan', [DashboardController::class, 'submitMvpIkan'])->middleware('auth')->name('api.submit.mvp');
-
-
-/* ═══════════════════════════════════════════
-   KELOLA USER (Hanya Admin)
-   ═══════════════════════════════════════════ */
-Route::middleware(['auth', 'admin'])->group(function () {
-    Route::get('/api/admin/list-pesertas', [AdminDashboardController::class, 'getListPesertas'])->name('admin.list.pesertas');
-    Route::post('/api/admin/tambah-ikan', [AdminDashboardController::class, 'storeIkanAdmin'])->name('admin.tambah.ikan');
-    Route::get('/api/list-users', [DashboardController::class, 'getListUsers'])->name('api.list.users');
-    Route::post('/api/update-password', [DashboardController::class, 'updatePasswordUser'])->name('api.update.password');
-    Route::post('/api/toggle-role', [DashboardController::class, 'toggleRoleUser'])->name('api.toggle.role');
-    Route::get('/api/tank-range-global', [AdminDashboardController::class, 'getTankRangeGlobal'])->middleware('   auth');
-    Route::post('/api/admin/tank-range-global', [AdminDashboardController::class, 'setTankRangeGlobal'])->middleware(['auth', 'admin']);
-    Route::get('/api/admin/mvp-ikan', [AdminDashboardController::class, 'getMvpIkan']);
-    Route::post('/api/admin/toggle-mvp-registration', [AdminDashboardController::class, 'toggleMvpRegistration']);
-    Route::get('/api/admin/mvp-status', [AdminDashboardController::class, 'getMvpStatus']);
-    Route::post('/api/admin/delete-mvp-ikan', [AdminDashboardController::class, 'deleteMvpIkan']);
-    Route::get('/api/admin/mvp-submitted-peserta', [AdminDashboardController::class, 'getMvpSubmittedPeserta']);
-    Route::post('/api/admin/unlock-mvp-peserta', [AdminDashboardController::class, 'unlockMvpPeserta']);  
+Route::middleware('auth')->group(function () {
+    Route::post('/api/registrasi-peserta', [DashboardController::class, 'storePeserta'])->name('store.registrasi');
+    Route::post('/api/tambah-ikan', [DashboardController::class, 'storeIkan'])->name('store.ikan');
+    Route::get('/api/peserta-belum-tidak', [DashboardController::class, 'getPesertaBelumDapatTank'])->name('api.peserta.belum.tank');
+    Route::post('/api/acak-nomor-tank-admin', [DashboardController::class, 'acakNomorTankAdmin'])->name('api.acak.tank.admin');
+    Route::post('/api/acak-nomor-tank-user', [DashboardController::class, 'acakNomorTankUser'])->name('api.acak.tank.user');
+    Route::get('/api/user/my-ikans', [DashboardController::class, 'getMyIkans']);
+    Route::post('/api/toggle-mvp-ikan', [DashboardController::class, 'toggleMvpIkan'])->name('api.toggle.mvp');
+    Route::post('/api/submit-mvp-ikan', [DashboardController::class, 'submitMvpIkan'])->name('api.submit.mvp');
 });
 
-/* ═══════════════════════════════════════════
-   GLOBAL SETTING (Undian Range)
-   ═══════════════════════════════════════════ */
-Route::get('/api/tank-range', [AdminDashboardController::class, 'getTankRange'])->middleware('auth');
-Route::post('/api/admin/tank-range', [AdminDashboardController::class, 'setTankRange'])->middleware(['auth', 'admin']);
-Route::post('/api/admin/reset-tank', [AdminDashboardController::class, 'resetTankNumbers'])->middleware(['auth', 'admin']); // TAMBAHKAN INI
 /* ═══════════════════════════════════════════
    JURI
    ═══════════════════════════════════════════ */
-Route::get('/api/juri/data', [JuriController::class, 'getJuriData'])->middleware('auth');
-Route::post('/api/juri/simpan-nilai', [JuriController::class, 'simpanNilai'])->middleware('auth');
-Route::post('/api/juri/kirim-ke-grand', [JuriController::class, 'kirimKeGrandJuri'])->middleware('auth');
+Route::middleware('auth')->group(function () {
+    Route::get('/api/juri/data', [JuriController::class, 'getJuriData']);
+    Route::post('/api/juri/simpan-nilai', [JuriController::class, 'simpanNilai']);
+    Route::post('/api/juri/kirim-ke-grand', [JuriController::class, 'kirimKeGrandJuri']);
+});
+
 /* ═══════════════════════════════════════════
-   GRAND JURI
+   GRAND JURI ( semua route di sini, TANPA duplikat )
    ═══════════════════════════════════════════ */
 Route::middleware('auth')->group(function () {
-    Route::get('/grand-juri', [GrandJuriController::class, 'index'])->name('grand-juri.index');
-    Route::get('/api/grand-juri/stats', [GrandJuriController::class, 'getStats']);
-    Route::get('/api/grand-juri/peserta', [GrandJuriController::class, 'getPeserta']);
-    Route::get('/api/grand-juri/juri-summary', [GrandJuriController::class, 'getJuriSummary']);
-    Route::post('/api/grand-juri/edit-nilai', [GrandJuriController::class, 'editNilai']);
-    Route::get('/api/grand-juri/juri-peserta', [GrandJuriController::class, 'getJuriPeserta']);
-    Route::get('/api/grand-juri/rincian-detail', [GrandJuriController::class, 'getRincianDetail']);
-    Route::get('/api/grand-juri/plot-status', [GrandJuriController::class, 'getPlotStatus']);
-    Route::post('/api/grand-juri/kunci-nilai', [GrandJuriController::class, 'kunciNilai'])->middleware('auth');
-    Route::get('/api/grand-juri/mvp-ikan', [GrandJuriController::class, 'getMvpIkan']);
-});
-
-/* ═══════════════════════════════════════════
-   ADMIN DASHBOARD (Statistik, Grafik, Data)
-   ═══════════════════════════════════════════ */
-Route::middleware(['auth', 'admin'])->group(function () {
-    Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
-    Route::get('/api/admin/dashboard-stats', [AdminDashboardController::class, 'getDashboardStats']);
-    Route::get('/api/admin/scoring-data', [AdminDashboardController::class, 'getScoringData']);
-    Route::post('/api/admin/create-user', [AdminDashboardController::class, 'createUser']);
-    Route::post('/api/admin/change-role', [AdminDashboardController::class, 'changeRole']);
-    Route::post('/api/admin/delete-user', [AdminDashboardController::class, 'deleteUser']);
-    Route::get('/api/grand-juri/point-ranking', [GrandJuriController::class, 'getPointRanking']);
-    Route::get('/api/scoring-point-configs', [GrandJuriController::class, 'getPointConfigs']);
-});
-
-/* ═══════════════════════════════════════════
-   GRAND JURI (TAMBAHAN POINT RANKING)
-   ═══════════════════════════════════════════ */
-Route::middleware(['auth'])->group(function () {
     Route::get('/grand-juri', [GrandJuriController::class, 'index'])->name('grand-juri.index');
     Route::get('/api/grand-juri/stats', [GrandJuriController::class, 'getStats']);
     Route::get('/api/grand-juri/peserta', [GrandJuriController::class, 'getPeserta']);
@@ -110,4 +56,39 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/grand-juri/mvp-ikan', [GrandJuriController::class, 'getMvpIkan']);
     Route::get('/api/grand-juri/point-ranking', [GrandJuriController::class, 'getPointRanking']);
     Route::get('/api/scoring-point-configs', [GrandJuriController::class, 'getPointConfigs']);
+});
+
+/* ═══════════════════════════════════════════
+   ADMIN ONLY
+   ═══════════════════════════════════════════ */
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/api/admin/dashboard-stats', [AdminDashboardController::class, 'getDashboardStats']);
+    Route::get('/api/admin/scoring-data', [AdminDashboardController::class, 'getScoringData']);
+    Route::post('/api/admin/create-user', [AdminDashboardController::class, 'createUser']);
+    Route::post('/api/admin/change-role', [AdminDashboardController::class, 'changeRole']);
+    Route::post('/api/admin/delete-user', [AdminDashboardController::class, 'deleteUser']);
+    Route::post('/api/admin/register-peserta-ikan', [AdminDashboardController::class, 'registerPesertaIkan']);
+    Route::post('/api/admin/delete-ikan', [AdminDashboardController::class, 'deleteIkan']);
+    Route::get('/api/admin/get-peserta-by-user', [AdminDashboardController::class, 'getPesertaByUser']);
+    Route::get('/api/list-users', [DashboardController::class, 'getListUsers'])->name('api.list.users');
+    Route::post('/api/update-password', [DashboardController::class, 'updatePasswordUser'])->name('api.update.password');
+    Route::post('/api/toggle-role', [DashboardController::class, 'toggleRoleUser'])->name('api.toggle.role');
+    Route::get('/api/tank-range-global', [AdminDashboardController::class, 'getTankRangeGlobal']);
+    Route::post('/api/admin/tank-range-global', [AdminDashboardController::class, 'setTankRangeGlobal']);
+    Route::get('/api/admin/mvp-ikan', [AdminDashboardController::class, 'getMvpIkan']);
+    Route::post('/api/admin/toggle-mvp-registration', [AdminDashboardController::class, 'toggleMvpRegistration']);
+    Route::get('/api/admin/mvp-status', [AdminDashboardController::class, 'getMvpStatus']);
+    Route::post('/api/admin/delete-mvp-ikan', [AdminDashboardController::class, 'deleteMvpIkan']);
+    Route::get('/api/admin/mvp-submitted-peserta', [AdminDashboardController::class, 'getMvpSubmittedPeserta']);
+    Route::post('/api/admin/unlock-mvp-peserta', [AdminDashboardController::class, 'unlockMvpPeserta']);
+});
+
+/* ═══════════════════════════════════════════
+   GLOBAL SETTING
+   ═══════════════════════════════════════════ */
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/api/tank-range', [AdminDashboardController::class, 'getTankRange']);
+    Route::post('/api/admin/tank-range', [AdminDashboardController::class, 'setTankRange']);
+    Route::post('/api/admin/reset-tank', [AdminDashboardController::class, 'resetTankNumbers']);
 });
