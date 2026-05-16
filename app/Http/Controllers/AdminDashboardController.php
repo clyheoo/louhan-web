@@ -499,4 +499,49 @@ class AdminDashboardController extends Controller
             'message' => 'Ikan berhasil dihapus dari pendaftaran MVP. Peserta dapat mendaftarkan ulang.'
         ]);
     }
+
+        public function getMvpSubmittedPeserta()
+    {
+        $pesertas = \App\Models\Peserta::where('is_mvp_submitted', true)
+            ->with(['user', 'ikans'])
+            ->orderBy('nama_peserta')
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'peserta_id'    => $p->id,
+                    'nama_peserta'  => $p->nama_peserta,
+                    'detail_anggota'=> $p->detail_anggota ?? '-',
+                    'email'         => $p->user->email ?? '-',
+                    'jumlah_mvp'    => $p->ikans->where('is_mvp', true)->count(),
+                ];
+            });
+
+        return response()->json($pesertas);
+    }
+
+    public function unlockMvpPeserta(Request $request)
+    {
+        $request->validate([
+            'peserta_id' => 'required|exists:pesertas,id',
+        ]);
+
+        $peserta = \App\Models\Peserta::find($request->peserta_id);
+
+        if (!$peserta->is_mvp_submitted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Peserta ini belum mengirim data MVP, tidak perlu dibuka kunci.',
+            ], 422);
+        }
+
+        // Buka kunci = set is_mvp_submitted menjadi false
+        // Ikan yang sudah ditandai is_mvp tetap aman, user bisa tambah/hapus lalu kirim ulang
+        $peserta->is_mvp_submitted = false;
+        $peserta->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Peserta "' . $peserta->nama_peserta . '" dapat kembali mendaftarkan ikan MVP.',
+        ]);
+    }
 }

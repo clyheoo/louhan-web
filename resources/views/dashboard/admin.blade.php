@@ -768,6 +768,31 @@
                 <span style="font-size:11px;color:#92400e;line-height:1.5;">Menghapus ikan dari daftar MVP <b>tidak menghapus data ikan</b>. Peserta dapat mendaftarkan ulang ikan tersebut ke MVP jika pendaftaran masih dibuka.</span>
             </div>
 
+            
+            <!-- ★ PESERTA YANG SUDAH KIRIM MVP (UNLOCK) -->
+            <div style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:1px solid var(--border);border-radius:14px;margin-bottom:16px;overflow:hidden;">
+                <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <div class="section-title" style="font-size:13px;margin:0;"><i class="fas fa-user-lock" style="color:var(--purple);"></i> Peserta yang Sudah Mengirim MVP</div>
+                    <span style="font-size:10px;color:var(--light);font-weight:700;" id="mvpPesertaCount">0 peserta</span>
+                </div>
+                <div class="table-wrap" style="max-height:220px;border:none;border-radius:0;">
+                    <table class="data-table" style="min-width:auto;">
+                        <thead>
+                            <tr>
+                                <th style="width:30px;">#</th>
+                                <th>PESERTA</th>
+                                <th>ASAL / TEAM</th>
+                                <th style="text-align:center;width:80px;">IKAN MVP</th>
+                                <th style="text-align:center;width:100px;">AKSI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mvpPesertaBody">
+                            <tr><td colspan="5" style="text-align:center;color:var(--light);padding:16px;">Memuat data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="section-title" style="margin-bottom:12px; font-size:13px;"><i class="fas fa-list" style="color:#f59e0b;"></i> Daftar Ikan Terdaftar MVP</div>
 
             <!-- ★ PERUBAHAN: min-width:auto agar kolom tidak terlalu lebar, tambah kolom AKSI -->
@@ -2159,6 +2184,75 @@ function updateMvpToggleUI(isOpen) {
     }
 }
 
+/* ═══ LOAD & UNLOCK PESERTA MVP ═══ */
+function loadMvpPeserta() {
+    fetch('/api/admin/mvp-submitted-peserta', {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+        var tb = document.getElementById('mvpPesertaBody');
+        var countEl = document.getElementById('mvpPesertaCount');
+        if(!data.length) {
+            tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--light);padding:16px;"><i class="fas fa-inbox" style="font-size:14px;display:block;margin-bottom:4px;opacity:.4;"></i>Belum ada peserta yang mengirim data MVP.</td></tr>';
+            countEl.textContent = '0 peserta';
+            return;
+        }
+        countEl.textContent = data.length + ' peserta';
+        tb.innerHTML = '';
+        for(var i = 0; i < data.length; i++) {
+            (function(d, idx) {
+                var safeName = esc(d.nama_peserta).replace(/'/g, "\\'");
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td style="font-weight:600;color:var(--light);font-size:11px;">' + (idx + 1) + '</td>' +
+                    '<td style="font-weight:700;">' + esc(d.nama_peserta) + '</td>' +
+                    '<td style="font-size:11px;color:var(--muted);">' + esc(d.detail_anggota) + '</td>' +
+                    '<td style="text-align:center;"><span style="font-weight:800;color:#f59e0b;font-size:13px;">' + d.jumlah_mvp + '</span><span style="font-size:10px;color:var(--light);"> ikan</span></td>' +
+                    '<td style="text-align:center;">' +
+                        '<button class="btn-xs green" onclick="unlockMvpPeserta(' + d.peserta_id + ',\'' + safeName + '\')" title="Buka kunci agar peserta bisa ubah pilihan MVP"><i class="fas fa-lock-open"></i> Buka</button>' +
+                    '</td>';
+                tb.appendChild(tr);
+            })(data[i], i);
+        }
+    })
+    .catch(function() {
+        var tb = document.getElementById('mvpPesertaBody');
+        tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:16px;">Gagal memuat data.</td></tr>';
+    });
+}
+
+function unlockMvpPeserta(pesertaId, nama) {
+    popupConfirm(
+        'Buka Kunci MVP Peserta',
+        'Yakin ingin membuka kembali pendaftaran MVP untuk <strong>' + esc(nama) + '</strong>?<br><div style="text-align:left;margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;font-size:11px;line-height:1.6;color:var(--muted);"><i class="fas fa-circle-info" style="color:var(--primary);"></i> Peserta dapat menambah/hapus pilihan ikan MVP mereka (maks. 30 ikan). Setelah mereka kirim ulang, akan terkunci otomatis.</div>',
+        'Ya, Buka Kunci',
+        function() {
+            var fd = new FormData();
+            fd.append('_token', getCsrf());
+            fd.append('peserta_id', pesertaId);
+
+            fetch('/api/admin/unlock-mvp-peserta', {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'},
+                body: fd
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                if(d.success) {
+                    loadMvpPeserta();
+                    loadMvpData();
+                    popupSuccess('Berhasil Dibuka', 'Peserta <strong>' + esc(nama) + '</strong> dapat kembali mendaftarkan ikan MVP.');
+                } else {
+                    popupError('Gagal', d.message || 'Terjadi kesalahan.');
+                }
+            })
+            .catch(function() {
+                popupError('Kesalahan Jaringan', 'Gagal menghubungi server.');
+            });
+        }
+    );
+}
+
+
 // Override openModal buat MVP
 var origOpenModal = openModal;
 openModal = function(id) {
@@ -2166,6 +2260,7 @@ openModal = function(id) {
     if(id === 'modalMvp') {
         loadMvpData();
         loadMvpStatus();
+        loadMvpPeserta();
     }
 }
 
