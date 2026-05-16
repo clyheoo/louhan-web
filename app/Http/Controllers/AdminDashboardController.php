@@ -7,6 +7,8 @@ use App\Models\Scoring;
 use App\Models\Peserta;
 use App\Models\Ikan;
 use App\Models\User;
+use App\Helpers\PointCalculator;
+use App\Models\ScoringPointConfig;
 
 class AdminDashboardController extends Controller
 {
@@ -177,15 +179,18 @@ class AdminDashboardController extends Controller
 
         $data = $query->orderBy('nomor_tank')->get()->map(function ($ikan) {
             $peserta = $ikan->peserta;
-            // DIPERBAIKI: Ambil scoring langsung dari $ikan->scorings
             $scoring = $ikan->scorings->first();
+
+            $pointConfig = ScoringPointConfig::where('kategori', $ikan->kategori)->first();
+            $ikanKat = $ikan->kategori;
+            $nd = $scoring ? $scoring->nilai_detail : null;
 
             return [
                 'id'              => $ikan->id,
                 'peserta_id'      => $ikan->peserta_id, 
                 'nama_peserta'    => $peserta->nama_peserta ?? 'Unknown',
                 'kategori'        => $ikan->kategori,   
-                'kelas'           => $scoring ? $scoring->kelas : $ikan->kelas, // Ambil kelas dari penilaian juri jika ada, jika tidak dari data ikan
+                'kelas'           => $scoring ? $scoring->kelas : $ikan->kelas,
                 'nomor_tank'      => $ikan->nomor_tank, 
                 'detail_anggota'  => $peserta->detail_anggota ?? '—',
                 'juri_nama'       => $scoring?->juri?->name ?? '—',
@@ -193,6 +198,18 @@ class AdminDashboardController extends Controller
                 'total_nilai'     => $scoring?->total_nilai ?? 0,
                 'nilai_detail'    => $scoring?->nilai_detail ?? null,
                 'status'          => $scoring ? ($scoring->edited_by_grand_juri ? 'Grand Juri Edit' : 'Sudah Dinilai') : 'Belum Dinilai',
+                'total_point'     => (float)($nd ? PointCalculator::hitungPoint($ikanKat, $nd) : 0),
+                'point_config'    => $pointConfig ? [
+                    'overall' => (float)$pointConfig->overall_bobot,
+                    'head'    => (float)$pointConfig->head_bobot,
+                    'face'    => (float)$pointConfig->face_bobot,
+                    'body'    => (float)$pointConfig->body_bobot,
+                    'marking' => (float)$pointConfig->marking_bobot,
+                    'pearl'   => (float)$pointConfig->pearl_bobot,
+                    'color'   => (float)$pointConfig->color_bobot,
+                    'finnage' => (float)$pointConfig->finnage_bobot,
+                ] : null,
+                'point_breakdown' => $nd ? PointCalculator::hitungBreakdown($ikanKat, $nd) : null,
             ];
         })->toArray();
 

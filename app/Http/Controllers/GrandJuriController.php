@@ -7,6 +7,8 @@ use App\Models\Scoring;
 use App\Models\Peserta;
 use App\Models\Ikan;
 use App\Models\GrandJuriEdit;
+use App\Helpers\PointCalculator;
+use App\Models\ScoringPointConfig;
 
 class GrandJuriController extends Controller
 {
@@ -117,7 +119,11 @@ class GrandJuriController extends Controller
                 ];
             })->values()->toArray();
 
+            $pointConfig = ScoringPointConfig::where('kategori', $ikan->kategori)->first();
+            $ikanKategori = $ikan->kategori;
+
             return [
+                
                 'id'               => $ikan->id,
                 'nama_peserta'     => $peserta->nama_peserta ?? 'Unknown',
                 'kategori'         => $ikan->kategori,
@@ -139,6 +145,18 @@ class GrandJuriController extends Controller
                 'total_juri_all'       => $totalJuriAll,
                 'submitted_juri_count' => $submittedCount,
                 'all_scorings'         => $allScoringsData,
+                'total_point'     => (float)($latestNilai ? PointCalculator::hitungPoint($ikanKategori, $latestNilai) : 0),
+                'point_config'    => $pointConfig ? [
+                    'overall' => (float)$pointConfig->overall_bobot,
+                    'head'    => (float)$pointConfig->head_bobot,
+                    'face'    => (float)$pointConfig->face_bobot,
+                    'body'    => (float)$pointConfig->body_bobot,
+                    'marking' => (float)$pointConfig->marking_bobot,
+                    'pearl'   => (float)$pointConfig->pearl_bobot,
+                    'color'   => (float)$pointConfig->color_bobot,
+                    'finnage' => (float)$pointConfig->finnage_bobot,
+                ] : null,
+                'point_breakdown' => $latestNilai ? PointCalculator::hitungBreakdown($ikanKategori, $latestNilai) : null,
             ];
         });
 
@@ -188,10 +206,13 @@ class GrandJuriController extends Controller
 
             $totalSebelum = $existing->total_nilai ?? 0;
 
+            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalScores);
+
             $existing->update([
                 'grand_juri_id'        => auth()->id(),
                 'nilai_detail'         => $finalScores,
                 'total_nilai'          => $totalNilai,
+                'total_point'          => $totalPoint,
                 'edited_by_grand_juri' => true,
                 'status'               => 'submitted',
             ]);
@@ -223,6 +244,8 @@ class GrandJuriController extends Controller
             }
         }
 
+        $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $changed);
+
         $newScoring = Scoring::create([
             'ikan_id'              => $ikanId,
             'juri_id'              => auth()->id(),
@@ -230,6 +253,7 @@ class GrandJuriController extends Controller
             'nilai_detail'         => $changed,
             'total_nilai'          => $totalNilai,
             'status'               => 'submitted',
+            'total_point'          => $totalPoint,
             'edited_by_grand_juri' => true,
         ]);
 
@@ -506,5 +530,63 @@ class GrandJuriController extends Controller
         }
 
         return response()->json($data);
+    }
+
+        public function getPointRanking(Request $request)
+    {
+        $scope = $request->query('scope', 'per_kategori_kelas');
+        $filterKategori = $request->query('kategori', '');
+        $filterKelas = $request->query('kelas', '');
+
+        $query = Ikan::where('is_locked', true)
+            ->whereNotNull('nomor_tank')
+            ->whereHas('scorings', function ($q) {
+                $q->where('edited_by_grand_juri', true);
+            })
+            ->with(['peserta', 'scorings' => function ($q) {
+                $q->where('edited_by_grand_juri', true)->latest()->limit(1);
+            }, 'scorings.grandJuri']);
+
+        if ($filterKategori) $query->where('kategori', $filterKategori);
+        if ($filterKelas) $query->where('kelas', $filterKelas);
+
+        $ikans = $query->orderBy('nomor_tank')->get();
+        $groups = [];
+
+        foreach ($ikans as $ikan) {
+            $sc = $ikan->scorings->first();
+            if (!$sc) continue;
+
+            $key = ($scope === 'per_kategori')
+                ? $ikan->kategori
+                : $ikan->kategori . ' - Kelas ' . $ikan->kelas;
+
+            $groups[$key][] = [
+                'ikan_id'       => $ikan->id,
+                'nama_peserta'  => $ikan->peserta->nama_peserta ?? 'Unknown',
+                'detail_anggota'=> $ikan->peserta->detail_anggota ?? '—',
+                'kategori'      => $ikan->kategori,
+                'kelas'         => $ikan->kelas,
+                'nomor_tank'    => $ikan->nomor_tank,
+                'total_nilai'   => $sc->total_nilai ?? 0,
+                'total_point'   => (float)($sc->total_point ?? 0),
+                'grand_juri'    => $sc->grandJuri ? $sc->grandJuri->name : '—',
+            ];
+        }
+
+        $result = [];
+        foreach ($groups as $name => $items) {
+            $ranked = PointCalculator::hitungRankPoints($items);
+            usort($ranked, function ($a, $b) { return $a['rank_point'] > $b['rank_point'] ? -1 : 1; });
+            $result[] = ['group_name' => $name, 'total' => count($ranked), 'data' => $ranked];
+        }
+        usort($result, function ($a, $b) { return strcmp($a['group_name'], $b['group_name']); });
+
+        return response()->json($result);
+    }
+
+    public function getPointConfigs()
+    {
+        return response()->json(ScoringPointConfig::orderBy('kategori')->get());
     }
 }

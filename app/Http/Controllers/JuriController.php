@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Scoring;
 use App\Models\Ikan;
+use App\Helpers\PointCalculator;
 
 class JuriController extends Controller
 {
@@ -99,12 +100,15 @@ public function getJuriData()
             ]);
         }
 
+        $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $allScores);
+
         Scoring::create([
             'ikan_id'      => $ikanId,
             'juri_id'      => auth()->id(),
             'kelas'        => $kelas,
             'nilai_detail' => $allScores,
             'total_nilai'  => $totalNilai,
+            'total_point'  => $totalPoint,
             'status'       => 'submitted'
         ]);
 

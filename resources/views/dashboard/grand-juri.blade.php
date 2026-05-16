@@ -313,6 +313,34 @@
         </div>
     </div>
 
+    <!-- SISTEM POINT RANKING -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title"><i class="fas fa-trophy" style="color:#f59e0b;"></i> Sistem Point Ranking</div>
+                <div class="card-subtitle">Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)</div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+                <div style="display:flex;gap:6px;">
+                    <button class="btn-sm btn-edit" id="btnScopeKelas" onclick="setPointScope('per_kategori_kelas')" style="font-size:11px;padding:7px 14px;">Per Kategori + Kelas</button>
+                    <button class="btn-sm btn-detail" id="btnScopeKat" onclick="setPointScope('per_kategori')" style="font-size:11px;padding:7px 14px;">Per Kategori</button>
+                </div>
+                <select class="filter-select" id="pointFilterKategori" onchange="loadPointRanking()" style="min-width:140px;">
+                    <option value="">Semua Kategori</option>
+                    <option>Cencu</option><option>Chginwa</option><option>Freemarking</option>
+                    <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                </select>
+                <select class="filter-select" id="pointFilterKelas" onchange="loadPointRanking()" style="min-width:100px;">
+                    <option value="">Semua Kelas</option>
+                    <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                </select>
+            </div>
+            <div id="pointRankingContent"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div></div>
+        </div>
+    </div>
+
     <!-- DATA MANAJEMEN -->
     <div class="card">
         <div class="card-header">
@@ -1122,6 +1150,64 @@ function openMvpDetail(idx) {
     document.getElementById('genericContent').innerHTML = html;
     document.getElementById('modalGeneric').classList.add('show');
 }
+
+var pointScope = 'per_kategori_kelas';
+
+function setPointScope(s) {
+    pointScope = s;
+    document.getElementById('btnScopeKelas').className = 'btn-sm ' + (s === 'per_kategori_kelas' ? 'btn-edit' : 'btn-detail');
+    document.getElementById('btnScopeKat').className = 'btn-sm ' + (s === 'per_kategori' ? 'btn-edit' : 'btn-detail');
+    loadPointRanking();
+}
+
+function loadPointRanking() {
+    var kat = document.getElementById('pointFilterKategori').value;
+    var kelas = document.getElementById('pointFilterKelas').value;
+    var params = '?scope=' + pointScope;
+    if (kat) params += '&kategori=' + encodeURIComponent(kat);
+    if (kelas) params += '&kelas=' + kelas;
+
+    var el = document.getElementById('pointRankingContent');
+    el.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
+
+    fetch('/api/grand-juri/point-ranking' + params, {headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(groups){
+        if(!groups||!groups.length){
+            el.innerHTML = '<div class="empty-state"><i class="fas fa-trophy" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Belum ada data ikan yang dikunci.</div>';
+            return;
+        }
+        var html = '';
+        groups.forEach(function(g){
+            html += '<div style="margin-bottom:20px;">';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:10px 10px 0 0;">';
+            html += '<div class="card-title" style="font-size:13px;margin:0;"><i class="fas fa-layer-group" style="color:#f59e0b;"></i> ' + esc(g.group_name) + '</div>';
+            html += '<span style="font-size:11px;color:#92400e;font-weight:700;">' + g.total + ' peserta</span>';
+            html += '</div>';
+            html += '<div class="table-wrap" style="border-radius:0 0 10px 10px;border:1px solid #fde68a;border-top:none;"><table class="result-table" style="min-width:750px;">';
+            html += '<thead><tr><th>#</th><th>PESERTA</th><th>NO. TANK</th><th>KELAS</th><th>ASAL/TEAM</th><th>TOTAL NILAI</th><th>POINT</th><th>RANK</th></tr></thead><tbody>';
+            g.data.forEach(function(d, i){
+                var rankBg = d.rank_point >= 90 ? 'background:#dcfce7;color:#16a34a;' : (d.rank_point >= 70 ? 'background:#fef3c7;color:#d97706;' : 'background:#f1f5f9;color:var(--text-muted);');
+                html += '<tr>';
+                html += '<td style="font-weight:700;color:var(--text-muted);">' + (i+1) + '</td>';
+                html += '<td style="font-weight:700;">' + esc(d.nama_peserta) + '</td>';
+                html += '<td style="font-weight:700;color:var(--purple);">Tank ' + d.nomor_tank + '</td>';
+                html += '<td>' + esc(d.kelas) + '</td>';
+                html += '<td style="font-size:11px;color:var(--text-muted);">' + esc(d.detail_anggota) + '</td>';
+                html += '<td style="font-weight:800;">' + d.total_nilai + '</td>';
+                html += '<td style="font-weight:900;color:var(--primary);">' + d.total_point + '</td>';
+                html += '<td><span style="display:inline-block;padding:4px 12px;border-radius:6px;font-size:13px;font-weight:900;' + rankBg + '">' + d.rank_point + '</span></td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table></div></div>';
+        });
+        el.innerHTML = html;
+    })
+    .catch(function(){
+        el.innerHTML = '<div class="empty-state" style="color:var(--danger);">Gagal memuat data.</div>';
+    });
+}
+
 /* ================================================================
    INIT
    ================================================================ */
@@ -1129,6 +1215,7 @@ loadStats();
 loadPeserta();
 loadJuriSummary();
 loadMvpGj(); // ★ TAMBAHKAN BARIS INI AGAR MVP TERLOAD SAAT BUKA HALAMAN
+loadPointRanking();
 </script>
 </body>
 </html>

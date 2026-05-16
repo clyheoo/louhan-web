@@ -407,7 +407,7 @@
                     <thead>
                         <tr>
                             <th>#</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>TANK</th><th>ASAL / TEAM</th>
-                            <th>DINILAI OLEH</th><th>TOTAL NILAI</th><th>STATUS</th><th>AKSI</th>
+                            <th>DINILAI OLEH</th><th>TOTAL NILAI</th><th>POINT</th><th>STATUS</th><th>AKSI</th>
                         </tr>
                     </thead>
                     <tbody id="tBody"><tr><td colspan="10"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat data...</p></div></td></tr></tbody>
@@ -1168,6 +1168,7 @@ function renderTable(data){
         var sc=p.grand_juri_nama?'s-grand':(p.status==='Sudah Dinilai'?'s-dinilai':'s-belum');
         var st=p.grand_juri_nama?'GRAND EDIT':(p.status==='Sudah Dinilai'?'DINILAI':'BELUM');
         var tv=p.total_nilai>0?'<span class="total-val">'+p.total_nilai+'</span>':'<span class="total-val zero">—</span>';
+        var pv=p.total_point>0?'<span style="font-size:13px;font-weight:900;color:#f59e0b;">'+p.total_point+'</span>':'<span style="font-size:11px;color:var(--light);">—</span>';
 
         /* Kolom: ASAL/TEAM */
         var asalHtml='<span style="color:var(--light);font-size:11px;">—</span>';
@@ -1184,6 +1185,7 @@ function renderTable(data){
             '<td>'+asalHtml+'</td>'+
             '<td>'+jh+'</td>'+
             '<td>'+tv+'</td>'+
+            '<td style="text-align:center;">'+pv+'</td>'+
             '<td><span class="status-badge '+sc+'">'+st+'</span></td>'+
             '<td><button class="btn-xs blue" onclick="openDetail('+i+')"><i class="fas fa-eye"></i></button> <button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button></td>';        tb.appendChild(tr);
     }
@@ -1224,6 +1226,31 @@ function renderDetailView(p){
         html+='<div class="detail-kat"><div class="detail-kat-head"><span class="detail-kat-title"><i class="fas fa-layer-group" style="margin-right:4px;"></i>'+kat.charAt(0).toUpperCase()+kat.slice(1)+'</span><span class="detail-kat-sub">Subtotal: '+sub+'</span></div><div class="detail-kat-body">';
         for(var fj=0;fj<fields.length;fj++){var f=fields[fj],v=kn[f.id],has=(v!=null&&v!=='');html+='<div class="detail-row"><div><div class="label">'+f.label+'</div><div class="meta">Maks '+f.max+'</div></div><span class="val-chip '+(has?'has':'no')+'">'+(has?v:'N/A')+'</span></div>';}
         html+='</div></div>';
+    }
+    // Point breakdown section
+    if(p.point_breakdown){
+        var pb=p.point_breakdown;
+        html+='<div style="margin-top:16px;border:2px solid #fde68a;border-radius:12px;overflow:hidden;">';
+        html+='<div style="padding:10px 16px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border-bottom:1px solid #fde68a;display:flex;justify-content:space-between;align-items:center;">';
+        html+='<span class="detail-kat-title" style="color:#92400e;"><i class="fas fa-trophy" style="margin-right:6px;color:#f59e0b;"></i>SISTEM POINT</span>';
+        html+='<span class="detail-kat-sub" style="color:#92400e;">Total: <b>'+pb.total+'</b> / 100</span>';
+        html+='</div><div style="padding:0;">';
+        
+        var katLabels={'overall':'Overall','head':'Head','face':'Face','body':'Body Shape','marking':'Marking','pearl':'Pearl','color':'Color','finnage':'Finnage'};
+        for(var ki in katLabels){
+            if(!pb[ki])continue;
+            var kd=pb[ki];
+            html+='<div style="display:grid;grid-template-columns:120px 1fr 80px;align-items:center;padding:8px 14px;border-bottom:1px solid #fef3c7;font-size:11px;">';
+            html+='<span style="font-weight:700;color:#92400e;">'+katLabels[ki]+'</span>';
+            html+='<span style="color:var(--text-muted);font-size:10px;">'+kd.parts.join(' + ')+'</span>';
+            html+='<span style="text-align:right;font-weight:900;color:#d97706;">'+kd.point+'</span>';
+            html+='</div>';
+        }
+        
+        html+='<div style="display:grid;grid-template-columns:1fr 80px;align-items:center;padding:10px 14px;font-size:12px;background:#fef9c3;">';
+        html+='<span style="font-weight:800;color:#92400e;">TOTAL POINT</span>';
+        html+='<span style="text-align:right;font-weight:900;font-size:16px;color:#d97706;">'+pb.total+'</span>';
+        html+='</div></div></div>';
     }
     document.getElementById('detailBody').innerHTML=html;
 }

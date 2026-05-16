@@ -90,4 +90,24 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/create-user', [AdminDashboardController::class, 'createUser']);
     Route::post('/api/admin/change-role', [AdminDashboardController::class, 'changeRole']);
     Route::post('/api/admin/delete-user', [AdminDashboardController::class, 'deleteUser']);
+    Route::get('/api/grand-juri/point-ranking', [GrandJuriController::class, 'getPointRanking']);
+    Route::get('/api/scoring-point-configs', [GrandJuriController::class, 'getPointConfigs']);
+});
+
+/* ═══════════════════════════════════════════
+   GRAND JURI (TAMBAHAN POINT RANKING)
+   ═══════════════════════════════════════════ */
+Route::middleware(['auth'])->group(function () {
+    Route::get('/grand-juri', [GrandJuriController::class, 'index'])->name('grand-juri.index');
+    Route::get('/api/grand-juri/stats', [GrandJuriController::class, 'getStats']);
+    Route::get('/api/grand-juri/peserta', [GrandJuriController::class, 'getPeserta']);
+    Route::get('/api/grand-juri/juri-summary', [GrandJuriController::class, 'getJuriSummary']);
+    Route::post('/api/grand-juri/edit-nilai', [GrandJuriController::class, 'editNilai']);
+    Route::get('/api/grand-juri/juri-peserta', [GrandJuriController::class, 'getJuriPeserta']);
+    Route::get('/api/grand-juri/rincian-detail', [GrandJuriController::class, 'getRincianDetail']);
+    Route::get('/api/grand-juri/plot-status', [GrandJuriController::class, 'getPlotStatus']);
+    Route::post('/api/grand-juri/kunci-nilai', [GrandJuriController::class, 'kunciNilai']);
+    Route::get('/api/grand-juri/mvp-ikan', [GrandJuriController::class, 'getMvpIkan']);
+    Route::get('/api/grand-juri/point-ranking', [GrandJuriController::class, 'getPointRanking']);
+    Route::get('/api/scoring-point-configs', [GrandJuriController::class, 'getPointConfigs']);
 });
