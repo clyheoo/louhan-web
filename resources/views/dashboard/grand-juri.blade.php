@@ -228,6 +228,51 @@
         .detail-juri-scores.open { display:block; }
         .status-actions { margin-top:8px; 
         }
+        /* ── CUSTOM SELECT / DROPDOWN ── */
+        .filter-select {
+            padding: 9px 34px 9px 12px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-main);
+            background-color: white;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237c3aed' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 13px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            outline: none;
+            min-width: 140px;
+        }
+        .filter-select:hover {
+            border-color: var(--purple);
+            background-color: var(--purple-light);
+        }
+        .filter-select:focus {
+            border-color: var(--purple);
+            box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+            background-color: white;
+        }
+        .filter-select option {
+            padding: 8px;
+            font-weight: 600;
+            color: var(--text-main);
+            background: white;
+        }
+        .filter-select option:first-child {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        .filter-select option:checked {
+            background: var(--purple-light);
+            color: var(--purple);
+        }
     </style>
 </head>
 <body>
@@ -324,17 +369,30 @@
         <div class="card-body">
             <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
                 <div style="display:flex;gap:6px;">
-                    <button class="btn-sm btn-edit" id="btnScopeKelas" onclick="setPointScope('per_kategori_kelas')" style="font-size:11px;padding:7px 14px;">Per Kategori + Kelas</button>
-                    <button class="btn-sm btn-detail" id="btnScopeKat" onclick="setPointScope('per_kategori')" style="font-size:11px;padding:7px 14px;">Per Kategori</button>
+                    <button class="btn-sm btn-edit" id="btnScopeKelas" onclick="setPointScope('per_kategori_kelas')" style="font-size:11px;padding:7px 14px;">
+                        <i class="fas fa-layer-group" style="font-size:10px;"></i> Per Kategori + Kelas
+                    </button>
+                    <button class="btn-sm btn-detail" id="btnScopeKat" onclick="setPointScope('per_kategori')" style="font-size:11px;padding:7px 14px;">
+                        <i class="fas fa-tags" style="font-size:10px;"></i> Per Kategori
+                    </button>
                 </div>
-                <select class="filter-select" id="pointFilterKategori" onchange="loadPointRanking()" style="min-width:140px;">
-                    <option value="">Semua Kategori</option>
-                    <option>Cencu</option><option>Chginwa</option><option>Freemarking</option>
-                    <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                <select class="filter-select" id="pointFilterKategori" onchange="loadPointRanking()">
+                    <option value="">🏷️ Semua Kategori</option>
+                    <option value="Cencu">Cencu</option>
+                    <option value="Chginwa">Chginwa</option>
+                    <option value="Freemarking">Freemarking</option>
+                    <option value="Goldenbase">Goldenbase</option>
+                    <option value="Klasik">Klasik</option>
+                    <option value="Bonsai">Bonsai</option>
+                    <option value="Jumbo">Jumbo</option>
                 </select>
-                <select class="filter-select" id="pointFilterKelas" onchange="loadPointRanking()" style="min-width:100px;">
-                    <option value="">Semua Kelas</option>
-                    <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                <select class="filter-select" id="pointFilterKelas" onchange="loadPointRanking()" style="min-width:120px;">
+                    <option value="">📐 Semua Kelas</option>
+                    <option value="A">Kelas A</option>
+                    <option value="B">Kelas B</option>
+                    <option value="C">Kelas C</option>
+                    <option value="D">Kelas D</option>
+                    <option value="E">Kelas E</option>
                 </select>
             </div>
             <div id="pointRankingContent"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div></div>

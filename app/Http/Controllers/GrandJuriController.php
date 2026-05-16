@@ -532,7 +532,7 @@ class GrandJuriController extends Controller
         return response()->json($data);
     }
 
-        public function getPointRanking(Request $request)
+    public function getPointRanking(Request $request)
     {
         $scope = $request->query('scope', 'per_kategori_kelas');
         $filterKategori = $request->query('kategori', '');
@@ -541,10 +541,15 @@ class GrandJuriController extends Controller
         $query = Ikan::where('is_locked', true)
             ->whereNotNull('nomor_tank')
             ->whereHas('scorings', function ($q) {
-                $q->where('edited_by_grand_juri', true);
+                // ✅ FIX: Gunakan submitted_to_grand, bukan edited_by_grand_juri
+                $q->where('submitted_to_grand', true);
             })
             ->with(['peserta', 'scorings' => function ($q) {
-                $q->where('edited_by_grand_juri', true)->latest()->limit(1);
+                // ✅ FIX: Prioritaskan scoring yang diedit Grand Juri, fallback ke submitted
+                $q->where('submitted_to_grand', true)
+                ->orderByRaw('edited_by_grand_juri DESC')
+                ->latest()
+                ->limit(1);
             }, 'scorings.grandJuri']);
 
         if ($filterKategori) $query->where('kategori', $filterKategori);
@@ -583,10 +588,5 @@ class GrandJuriController extends Controller
         usort($result, function ($a, $b) { return strcmp($a['group_name'], $b['group_name']); });
 
         return response()->json($result);
-    }
-
-    public function getPointConfigs()
-    {
-        return response()->json(ScoringPointConfig::orderBy('kategori')->get());
     }
 }
