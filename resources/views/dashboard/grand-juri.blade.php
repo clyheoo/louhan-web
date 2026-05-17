@@ -375,6 +375,9 @@
                     <button class="btn-sm btn-detail" id="btnScopeKat" onclick="setPointScope('per_kategori')" style="font-size:11px;padding:7px 14px;">
                         <i class="fas fa-tags" style="font-size:10px;"></i> Per Kategori
                     </button>
+                    <button class="btn-sm" id="btnScopeGlobal" onclick="setPointScope('global')" style="font-size:11px;padding:7px 14px;background:var(--warning-lt);color:#d97706;border:1px solid #fde68a;">
+                        <i class="fas fa-globe" style="font-size:10px;"></i> Rank Global
+                    </button>
                 </div>
                 <select class="filter-select" id="pointFilterKategori" onchange="loadPointRanking()">
                     <option value="">🏷️ Semua Kategori</option>
@@ -394,6 +397,17 @@
                     <option value="D">Kelas D</option>
                     <option value="E">Kelas E</option>
                 </select>
+                <!-- ★ RANK GLOBAL: Top N selector -->
+                <div id="globalTopNWrap" style="display:none;align-items:center;gap:6px;">
+                    <span style="font-size:11px;font-weight:700;color:var(--text-muted);white-space:nowrap;">Tampilkan Top</span>
+                    <input type="number" id="globalTopN" value="10" min="1" max="100" style="width:60px;padding:6px 6px;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:800;color:var(--text);outline:none;text-align:center;" oninput="loadPointRanking()">
+                    <div style="display:flex;gap:3px;">
+                        <button class="btn-sm" onclick="setGlobalTopN(10)" style="font-size:10px;padding:4px 8px;background:var(--warning-lt);color:#d97706;border:1px solid #fde68a;min-width:auto;">10</button>
+                        <button class="btn-sm" onclick="setGlobalTopN(20)" style="font-size:10px;padding:4px 8px;background:var(--warning-lt);color:#d97706;border:1px solid #fde68a;min-width:auto;">20</button>
+                        <button class="btn-sm" onclick="setGlobalTopN(50)" style="font-size:10px;padding:4px 8px;background:var(--warning-lt);color:#d97706;border:1px solid #fde68a;min-width:auto;">50</button>
+                        <button class="btn-sm" onclick="setGlobalTopN(100)" style="font-size:10px;padding:4px 8px;background:var(--warning-lt);color:#d97706;border:1px solid #fde68a;min-width:auto;">100</button>
+                    </div>
+                </div>
             </div>
             <div id="pointRankingContent"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div></div>
         </div>
@@ -1245,6 +1259,18 @@ function setPointScope(s) {
     pointScope = s;
     document.getElementById('btnScopeKelas').className = 'btn-sm ' + (s === 'per_kategori_kelas' ? 'btn-edit' : 'btn-detail');
     document.getElementById('btnScopeKat').className = 'btn-sm ' + (s === 'per_kategori' ? 'btn-edit' : 'btn-detail');
+    document.getElementById('btnScopeGlobal').className = 'btn-sm ' + (s === 'global' ? 'btn-edit' : 'btn-detail');
+    if (s !== 'global') {
+        document.getElementById('btnScopeGlobal').style.cssText = 'font-size:11px;padding:7px 14px;background:var(--warning-lt);color:#d97706;border:1px solid #fde68a;';
+    }
+    document.getElementById('pointFilterKategori').style.display = (s === 'global') ? 'none' : '';
+    document.getElementById('pointFilterKelas').style.display = (s === 'global') ? 'none' : '';
+    document.getElementById('globalTopNWrap').style.display = (s === 'global') ? 'flex' : 'none';
+    loadPointRanking();
+}
+
+function setGlobalTopN(n) {
+    document.getElementById('globalTopN').value = n;
     loadPointRanking();
 }
 
@@ -1254,6 +1280,12 @@ function loadPointRanking() {
     var params = '?scope=' + pointScope;
     if (kat) params += '&kategori=' + encodeURIComponent(kat);
     if (kelas) params += '&kelas=' + kelas;
+    if (pointScope === 'global') {
+        var topN = parseInt(document.getElementById('globalTopN').value) || 10;
+        topN = Math.max(1, Math.min(100, topN));
+        document.getElementById('globalTopN').value = topN;
+        params += '&limit=' + topN;
+    }
 
     var el = document.getElementById('pointRankingContent');
     el.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
@@ -1265,24 +1297,25 @@ function loadPointRanking() {
             el.innerHTML = '<div class="empty-state"><i class="fas fa-trophy" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Belum ada data ikan yang dikunci.</div>';
             return;
         }
+        var isGlobal = (pointScope === 'global');
         var html = '';
         groups.forEach(function(g){
             html += '<div style="margin-bottom:20px;">';
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:10px 10px 0 0;">';
-            html += '<div class="card-title" style="font-size:13px;margin:0;"><i class="fas fa-layer-group" style="color:#f59e0b;"></i> ' + esc(g.group_name) + '</div>';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(135deg,' + (isGlobal ? '#fffbeb,#fef3c7' : '#fffbeb,#fef3c7') + ');border:1px solid #fde68a;border-radius:10px 10px 0 0;">';
+            html += '<div class="card-title" style="font-size:13px;margin:0;"><i class="fas ' + (isGlobal ? 'fa-globe' : 'fa-layer-group') + '" style="color:#f59e0b;"></i> ' + esc(g.group_name) + '</div>';
             html += '<span style="font-size:11px;color:#92400e;font-weight:700;">' + g.total + ' peserta</span>';
             html += '</div>';
             html += '<div class="table-wrap" style="border-radius:0 0 10px 10px;border:1px solid #fde68a;border-top:none;"><table class="result-table" style="min-width:750px;">';
-            html += '<thead><tr><th>#</th><th>PESERTA</th><th>NO. TANK</th><th>KELAS</th><th>ASAL/TEAM</th><th>TOTAL NILAI</th><th>POINT</th><th>RANK</th></tr></thead><tbody>';
+            html += '<thead><tr><th>#</th><th>PESERTA</th>' + (isGlobal ? '<th>KATEGORI</th>' : '') + '<th>NO. TANK</th><th>KELAS</th><th>ASAL/TEAM</th><th>TOTAL NILAI</th><th>POINT</th><th>RANK</th></tr></thead><tbody>';
             g.data.forEach(function(d, i){
                 var rankBg = d.rank_point >= 90 ? 'background:#dcfce7;color:#16a34a;' : (d.rank_point >= 70 ? 'background:#fef3c7;color:#d97706;' : 'background:#f1f5f9;color:var(--text-muted);');
                 html += '<tr>';
                 html += '<td style="font-weight:700;color:var(--text-muted);">' + (i+1) + '</td>';
                 html += '<td style="font-weight:700;">' + esc(d.nama_peserta) + '</td>';
+                if (isGlobal) html += '<td style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;">' + esc(d.kategori) + '</td>';
                 html += '<td style="font-weight:700;color:var(--purple);">Tank ' + d.nomor_tank + '</td>';
                 html += '<td>' + esc(d.kelas) + '</td>';
                 html += '<td style="font-size:11px;color:var(--text-muted);">' + esc(d.detail_anggota) + '</td>';
-                /* ★ FIX: total_nilai_semua dari semua juri + indikator jumlah juri */
                 html += '<td><div style="font-weight:800;">' + (d.total_nilai_semua ?? d.total_nilai ?? 0) + '</div>';
                 if (d.jumlah_juri > 0) {
                     html += '<div style="font-size:9px;color:var(--text-muted);font-weight:600;"><i class="fas fa-users" style="font-size:8px;margin-right:2px;"></i>' + d.jumlah_juri + ' juri</div>';

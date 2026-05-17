@@ -514,7 +514,101 @@ class GrandJuriController extends Controller
         $filterKategori = $request->query('kategori', '');
         $filterKelas = $request->query('kelas', '');
 
-        // ★ FIX: Hapus ->latest()->limit(1), load SEMUA scorings
+        /* ═══════════════════════════════════════════
+        SCOPE: RANK GLOBAL (semua kategori digabung)
+        ═══════════════════════════════════════════ */
+        if ($scope === 'global') {
+            $limit = min(100, max(1, (int)($request->query('limit', 10))));
+
+            $ikans = Ikan::where('is_locked', true)
+                ->whereNotNull('nomor_tank')
+                ->whereHas('scorings', function ($q) {
+                    $q->where('submitted_to_grand', true);
+                })
+                ->with(['peserta', 'scorings' => function ($q) {
+                    $q->where('submitted_to_grand', true);
+                }, 'scorings.juri', 'scorings.grandJuri'])
+                ->orderBy('nomor_tank')
+                ->get();
+
+            $allItems = [];
+            foreach ($ikans as $ikan) {
+                $scorings = $ikan->scorings;
+                if ($scorings->isEmpty()) continue;
+
+                $totalNilaiSemua = 0;
+                $jumlahJuriYangNilai = 0;
+                $avgDetail = [];
+                $grandJuriName = '—';
+
+                foreach ($scorings as $s) {
+                    if ($s->total_nilai) {
+                        $totalNilaiSemua += $s->total_nilai;
+                        $jumlahJuriYangNilai++;
+                    }
+                    if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                        foreach ($s->nilai_detail as $kat => $fields) {
+                            foreach ($fields as $fid => $val) {
+                                if (!isset($avgDetail[$kat][$fid])) {
+                                    $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                                }
+                                $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                                $avgDetail[$kat][$fid]['count']++;
+                            }
+                        }
+                    }
+                    if ($s->edited_by_grand_juri && $s->grandJuri) {
+                        $grandJuriName = $s->grandJuri->name;
+                    }
+                }
+
+                $finalAvgDetail = [];
+                if ($jumlahJuriYangNilai > 0) {
+                    foreach ($avgDetail as $kat => $fields) {
+                        $finalAvgDetail[$kat] = [];
+                        foreach ($fields as $fid => $d) {
+                            $finalAvgDetail[$kat][$fid] = $d['count'] > 0
+                                ? $d['sum'] / $d['count']
+                                : 0;
+                        }
+                    }
+                }
+
+                $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+
+                $allItems[] = [
+                    'ikan_id'           => $ikan->id,
+                    'nama_peserta'      => $ikan->peserta->nama_peserta ?? 'Unknown',
+                    'detail_anggota'    => $ikan->peserta->detail_anggota ?? '—',
+                    'kategori'          => $ikan->kategori,
+                    'kelas'             => $ikan->kelas,
+                    'nomor_tank'        => $ikan->nomor_tank,
+                    'total_nilai_semua' => $totalNilaiSemua,
+                    'total_point'       => (float) $totalPoint,
+                    'jumlah_juri'       => $jumlahJuriYangNilai,
+                    'grand_juri'        => $grandJuriName,
+                ];
+            }
+
+            // Ranking SELURUH ikan bersama
+            $ranked = PointCalculator::hitungRankPoints($allItems);
+            usort($ranked, function ($a, $b) {
+                return $a['rank_point'] > $b['rank_point'] ? -1 : 1;
+            });
+
+            $totalRanked = count($ranked);
+            $topItems = array_slice($ranked, 0, $limit);
+
+            return response()->json([[
+                'group_name' => 'Rank Global — Top ' . $limit,
+                'total'      => $totalRanked,
+                'data'       => $topItems,
+            ]]);
+        }
+
+        /* ═══════════════════════════════════════════
+        SCOPE: PER KATEGORI / PER KATEGORI+KELAS
+        ═══════════════════════════════════════════ */
         $query = Ikan::where('is_locked', true)
             ->whereNotNull('nomor_tank')
             ->whereHas('scorings', function ($q) {
@@ -522,7 +616,7 @@ class GrandJuriController extends Controller
             })
             ->with(['peserta', 'scorings' => function ($q) {
                 $q->where('submitted_to_grand', true);
-            }, 'scorings.juri', 'scorings.grandJuri']);
+            }, 'scorings.grandJuri']);
 
         if ($filterKategori) $query->where('kategori', $filterKategori);
         if ($filterKelas) $query->where('kelas', $filterKelas);
@@ -531,16 +625,14 @@ class GrandJuriController extends Controller
         $groups = [];
 
         foreach ($ikans as $ikan) {
-            $scorings = $ikan->scorings;
-            if ($scorings->isEmpty()) continue;
+            $sc = $ikan->scorings->first();
+            if (!$sc) continue;
 
-            // ★ HITUNG DARI SEMUA JURI (sama persis logika getPeserta)
             $totalNilaiSemua = 0;
             $jumlahJuriYangNilai = 0;
             $avgDetail = [];
-            $grandJuriName = '—';
 
-            foreach ($scorings as $s) {
+            foreach ($ikan->scorings as $s) {
                 if ($s->total_nilai) {
                     $totalNilaiSemua += $s->total_nilai;
                     $jumlahJuriYangNilai++;
@@ -555,9 +647,6 @@ class GrandJuriController extends Controller
                             $avgDetail[$kat][$fid]['count']++;
                         }
                     }
-                }
-                if ($s->edited_by_grand_juri && $s->grandJuri) {
-                    $grandJuriName = $s->grandJuri->name;
                 }
             }
 
@@ -586,25 +675,20 @@ class GrandJuriController extends Controller
                 'kategori'          => $ikan->kategori,
                 'kelas'             => $ikan->kelas,
                 'nomor_tank'        => $ikan->nomor_tank,
-                'total_nilai'       => $totalNilaiSemua,
-                'total_nilai_semua' => $totalNilaiSemua,   // ★ TAMBAH: key yang frontend cari
+                'total_nilai_semua' => $totalNilaiSemua,
                 'total_point'       => (float) $totalPoint,
-                'grand_juri'        => $grandJuriName,
-                'jumlah_juri'       => $jumlahJuriYangNilai, // ★ TAMBAH: info transparansi
+                'jumlah_juri'       => $jumlahJuriYangNilai,
+                'grand_juri'        => $sc->grandJuri ? $sc->grandJuri->name : '—',
             ];
         }
 
         $result = [];
         foreach ($groups as $name => $items) {
             $ranked = PointCalculator::hitungRankPoints($items);
-            usort($ranked, function ($a, $b) {
-                return $a['rank_point'] > $b['rank_point'] ? -1 : 1;
-            });
+            usort($ranked, function ($a, $b) { return $a['rank_point'] > $b['rank_point'] ? -1 : 1; });
             $result[] = ['group_name' => $name, 'total' => count($ranked), 'data' => $ranked];
         }
-        usort($result, function ($a, $b) {
-            return strcmp($a['group_name'], $b['group_name']);
-        });
+        usort($result, function ($a, $b) { return strcmp($a['group_name'], $b['group_name']); });
 
         return response()->json($result);
     }
