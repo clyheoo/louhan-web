@@ -567,6 +567,8 @@
                 const resetInfo = response.reset_info;
                 const mvpOpen = response.mvp_open || false;
                 const mvpSubmitted = response.mvp_submitted || false;
+                
+                if (response.tank_range_max) tankDrawMax = response.tank_range_max;
 
                 if (mvpOpen !== isMvpOpen || mvpSubmitted !== currentMvpSubmitted) {
                     isMvpOpen = mvpOpen;
@@ -728,7 +730,7 @@
         }
 
         // --- RANGE UNDIAN (DEFAULT) ---
-        let tankDrawMax = 1000; 
+        let tankDrawMax = 1000;
 
         // --- LOGIC MESIN UNDIAN ---
         const numberDisplay = document.getElementById('numberDisplay');

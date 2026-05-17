@@ -344,6 +344,7 @@ class DashboardController extends Controller
                 'message' => 'Sesi telah berakhir. Silakan login kembali.'
             ], 401);
         }
+        
         $peserta = Peserta::where('user_id', $userId)->first();
 
         $resetSetting = \DB::table('settings')->where('key', 'tank_reset_info')->first();
@@ -356,12 +357,16 @@ class DashboardController extends Controller
         $mvpOpen = (bool)(\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
         $mvpSubmitted = $peserta ? $peserta->is_mvp_submitted : false;
 
+        // ★ TAMBAHKAN INI (taruh di atas if (!$peserta))
+        $maxTankRange = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+
         if (!$peserta) {
             return response()->json([
                 'ikans' => [], 
                 'reset_info' => $resetInfo, 
                 'mvp_open' => $mvpOpen, 
-                'mvp_submitted' => $mvpSubmitted
+                'mvp_submitted' => $mvpSubmitted,
+                'tank_range_max' => $maxTankRange,  // ★ TAMBAHKAN INI
             ]);
         }
 
@@ -380,7 +385,8 @@ class DashboardController extends Controller
             'ikans' => $ikans,
             'reset_info' => $resetInfo,
             'mvp_open' => $mvpOpen,
-            'mvp_submitted' => $mvpSubmitted
+            'mvp_submitted' => $mvpSubmitted,
+            'tank_range_max' => $maxTankRange,  // ★ TAMBAHKAN INI
         ]);
     }
 }
