@@ -87,23 +87,23 @@ class AdminDashboardController extends Controller
         ]);
     }
 
-    // Update getDashboardStats untuk menghitung max tank per kelas
     public function getDashboardStats()
     {
         $totalIkan = Ikan::whereNotNull('nomor_tank')->count();
 
-        $latestScores = Scoring::selectRaw('ikan_id, MAX(id) as latest_id')
+        $juriAktif = Scoring::whereNotNull('juri_id')->distinct('juri_id')->count('juri_id');
+
+        // Hitung status & kategori dari data yang sudah ada
+        $allIkanIds = Ikan::whereNotNull('nomor_tank')->pluck('id');
+        $latestScorings = Scoring::whereIn('ikan_id', $allIkanIds)
+            ->selectRaw('ikan_id, MAX(id) as latest_id')
             ->groupBy('ikan_id')
             ->pluck('latest_id');
+        $latestScoringList = Scoring::whereIn('id', $latestScorings)->get();
 
-        $scorings = Scoring::whereIn('id', $latestScores)->get();
-
-        $sudahDinilai = $scorings->where('edited_by_grand_juri', false)->count();
-        $grandEdited  = $scorings->where('edited_by_grand_juri', true)->count();
-        $belumDinilai = max(0, $totalIkan - $scorings->count());
-
-        $juriAktif = Scoring::whereNotNull('juri_id')->distinct('juri_id')->count('juri_id');
-        $avgScore = $scorings->count() > 0 ? round($scorings->avg('total_nilai')) : 0;
+        $sudahDinilai = $latestScoringList->where('edited_by_grand_juri', false)->count();
+        $grandEdited  = $latestScoringList->where('edited_by_grand_juri', true)->count();
+        $belumDinilai = max(0, $totalIkan - $latestScoringList->count());
 
         $perKategori = Ikan::whereNotNull('nomor_tank')
             ->selectRaw('kategori, COUNT(*) as total')
@@ -112,22 +112,34 @@ class AdminDashboardController extends Controller
             ->pluck('total', 'kategori')
             ->toArray();
 
-        $top10 = Scoring::with('ikan.peserta')
-            ->whereIn('id', $latestScores)
-            ->whereNotNull('total_nilai')
+        // Hitung total & rata-rata dari SEMUA juri per ikan
+        $ikanTotalMap = Ikan::whereNotNull('nomor_tank')
+            ->whereHas('scorings', function ($q) {
+                $q->whereNotNull('total_nilai');
+            })
+            ->with('scorings')
             ->get()
-            ->groupBy(fn($s) => $s->ikan?->peserta_id)
-            ->map(function ($scores) {
-                $sorted = $scores->sortByDesc('total_nilai');
-                $best = $sorted->first();
-                $ikan = $best?->ikan;
-                $peserta = $ikan?->peserta;
+            ->mapWithKeys(function ($ikan) {
+                $total = 0;
+                foreach ($ikan->scorings as $s) {
+                    $total += $s->total_nilai ?? 0;
+                }
+                return [$ikan->id => $total];
+            })
+            ->filter();
+
+        $avgScore = $ikanTotalMap->count() > 0 ? round($ikanTotalMap->avg()) : 0;
+
+        $top10 = Ikan::whereIn('id', $ikanTotalMap->keys())
+            ->with('peserta')
+            ->get()
+            ->map(function ($ikan) use ($ikanTotalMap) {
                 return [
-                    'nama'       => $peserta?->nama_peserta ?? 'Unknown',
-                    'total'      => $best?->total_nilai ?? 0,
-                    'kategori'   => $ikan?->kategori ?? '—',
-                    'kelas'      => $best?->kelas ?? ($ikan?->kelas ?? '—'),
-                    'nomor_tank' => $ikan?->nomor_tank ?? '—',
+                    'nama'       => $ikan->peserta?->nama_peserta ?? 'Unknown',
+                    'total'      => $ikanTotalMap[$ikan->id],
+                    'kategori'   => $ikan->kategori ?? '—',
+                    'kelas'      => $ikan->kelas ?? '—',
+                    'nomor_tank' => $ikan->nomor_tank ?? '—',
                 ];
             })
             ->sortByDesc('total')
@@ -135,15 +147,15 @@ class AdminDashboardController extends Controller
             ->values()
             ->toArray();
 
-            // SELALU gunakan global range untuk card sisa tank
-            $minGlobal = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
-            $maxGlobal = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
-            $maxTankTotal = $maxGlobal - $minGlobal + 1;
+        // SELALU gunakan global range untuk card sisa tank
+        $minGlobal = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
+        $maxGlobal = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+        $maxTankTotal = $maxGlobal - $minGlobal + 1;
 
-            $sisaTank = max(0, $maxTankTotal - $totalIkan);
+        $sisaTank = max(0, $maxTankTotal - $totalIkan);
 
         return response()->json([
-            'total_peserta'  => $totalIkan, 
+            'total_peserta'  => $totalIkan,
             'sudah_dinilai'  => $sudahDinilai,
             'grand_edited'   => $grandEdited,
             'belum_dinilai'  => $belumDinilai,
@@ -158,13 +170,13 @@ class AdminDashboardController extends Controller
 
     public function getScoringData(Request $request)
     {
-        /* DIPERBAIKI: Tampilkan ikan JIKA sudah dapat nomor tank ATAU sudah pernah dinilai */
         $query = Ikan::where(function($q) {
             $q->whereNotNull('nomor_tank')
-              ->orWhereHas('scorings');
+            ->orWhereHas('scorings');
         })
+            /* ★ FIX: Hapus ->latest()->limit(1), load SEMUA scorings */
             ->with(['peserta', 'scorings' => function ($q) {
-                $q->latest()->limit(1);
+                $q->orderBy('created_at', 'desc');
             }, 'scorings.juri', 'scorings.grandJuri']);
 
         if ($request->filled('search')) {
@@ -179,27 +191,106 @@ class AdminDashboardController extends Controller
 
         $data = $query->orderBy('nomor_tank')->get()->map(function ($ikan) {
             $peserta = $ikan->peserta;
-            $scoring = $ikan->scorings->first();
+            $scorings = $ikan->scorings;
+            $latestScoring = $scorings->first();
+
+            /* ★ Build juri list (semua juri) */
+            $juriList = [];
+            $grandJuriName = null;
+            $latestNilai = null;
+            $latestKelas = null;
+
+            foreach ($scorings as $s) {
+                if ($s->juri) {
+                    $juriList[] = [
+                        'name'     => $s->juri->name,
+                        'is_grand' => ($s->juri->role === 'grand_juri'),
+                    ];
+                }
+                if ($s->edited_by_grand_juri && $s->grandJuri) {
+                    $grandJuriName = $s->grandJuri->name;
+                }
+            }
+
+            if ($latestScoring) {
+                $latestNilai = $latestScoring->nilai_detail;
+                $latestKelas = $latestScoring->kelas;
+            }
+
+            /* ★ Hitung dari SEMUA juri (sama persis logika Grand Jury) */
+            $totalNilaiSemua = 0;
+            $jumlahJuriYangNilai = 0;
+            $avgDetail = [];
+
+            foreach ($scorings as $s) {
+                if ($s->total_nilai) {
+                    $totalNilaiSemua += $s->total_nilai;
+                    $jumlahJuriYangNilai++;
+                }
+                if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                    foreach ($s->nilai_detail as $kat => $fields) {
+                        foreach ($fields as $fid => $val) {
+                            if (!isset($avgDetail[$kat][$fid])) {
+                                $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                            }
+                            $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                            $avgDetail[$kat][$fid]['count']++;
+                        }
+                    }
+                }
+            }
+
+            $finalAvgDetail = [];
+            if ($jumlahJuriYangNilai > 0) {
+                foreach ($avgDetail as $kat => $fields) {
+                    $finalAvgDetail[$kat] = [];
+                    foreach ($fields as $fid => $d) {
+                        $finalAvgDetail[$kat][$fid] = $d['count'] > 0
+                            ? $d['sum'] / $d['count']
+                            : 0;
+                    }
+                }
+            }
+
+            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
 
             $pointConfig = ScoringPointConfig::where('kategori', $ikan->kategori)->first();
-            $ikanKat = $ikan->kategori;
-            $nd = $scoring ? $scoring->nilai_detail : null;
+
+            /* ★ Data untuk detail modal (accordion per juri) */
+            $allScoringsData = $scorings->map(function ($s) {
+                return [
+                    'juri_name'    => $s->juri ? $s->juri->name : '—',
+                    'is_grand'     => ($s->juri && $s->juri->role === 'grand_juri'),
+                    'nilai_detail' => $s->nilai_detail,
+                    'total_nilai'  => $s->total_nilai ?? 0,
+                ];
+            })->values()->toArray();
+
+            $detailListPerJuri = $scorings->map(function ($s) {
+                return [
+                    'juri_name'   => $s->juri ? $s->juri->name : '—',
+                    'is_grand'    => ($s->juri && $s->juri->role === 'grand_juri'),
+                    'total_nilai' => $s->total_nilai ?? 0,
+                ];
+            })->values()->toArray();
 
             return [
-                'id'              => $ikan->id,
-                'peserta_id'      => $ikan->peserta_id, 
-                'nama_peserta'    => $peserta->nama_peserta ?? 'Unknown',
-                'kategori'        => $ikan->kategori,   
-                'kelas'           => $scoring ? $scoring->kelas : $ikan->kelas,
-                'nomor_tank'      => $ikan->nomor_tank, 
-                'detail_anggota'  => $peserta->detail_anggota ?? '—',
-                'juri_nama'       => $scoring?->juri?->name ?? '—',
-                'grand_juri_nama' => $scoring?->grandJuri?->name ?? null,
-                'total_nilai'     => $scoring?->total_nilai ?? 0,
-                'nilai_detail'    => $scoring?->nilai_detail ?? null,
-                'status'          => $scoring ? ($scoring->edited_by_grand_juri ? 'Grand Juri Edit' : 'Sudah Dinilai') : 'Belum Dinilai',
-                'total_point'     => (float)($nd ? PointCalculator::hitungPoint($ikanKat, $nd) : 0),
-                'point_config'    => $pointConfig ? [
+                'id'                 => $ikan->id,
+                'peserta_id'         => $ikan->peserta_id,
+                'nama_peserta'       => $peserta->nama_peserta ?? 'Unknown',
+                'kategori'           => $ikan->kategori,
+                'kelas'              => $latestKelas ?? $ikan->kelas,
+                'nomor_tank'         => $ikan->nomor_tank,
+                'detail_anggota'     => $peserta->detail_anggota ?? '—',
+                'juri_list'          => $juriList,
+                'grand_juri_nama'    => $grandJuriName,
+                'total_nilai'        => $latestScoring?->total_nilai ?? 0,
+                'total_nilai_semua'  => $totalNilaiSemua,
+                'jumlah_juri'        => $jumlahJuriYangNilai,
+                'nilai_detail'       => $latestNilai,
+                'status'             => $latestScoring ? ($latestScoring->edited_by_grand_juri ? 'Grand Juri Edit' : 'Sudah Dinilai') : 'Belum Dinilai',
+                'total_point'        => (float) $totalPoint,
+                'point_config'       => $pointConfig ? [
                     'overall' => (float)$pointConfig->overall_bobot,
                     'head'    => (float)$pointConfig->head_bobot,
                     'face'    => (float)$pointConfig->face_bobot,
@@ -209,7 +300,9 @@ class AdminDashboardController extends Controller
                     'color'   => (float)$pointConfig->color_bobot,
                     'finnage' => (float)$pointConfig->finnage_bobot,
                 ] : null,
-                'point_breakdown' => $nd ? PointCalculator::hitungBreakdown($ikanKat, $nd) : null,
+                'point_breakdown'    => $finalAvgDetail ? PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail) : null,
+                'all_scorings'       => $allScoringsData,
+                'detail_list_per_juri' => $detailListPerJuri,
             ];
         })->toArray();
 

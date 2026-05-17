@@ -317,6 +317,28 @@
     @media(max-width:480px){
         #kelasRangeInputs{ grid-template-columns: 1fr !important; }
     }
+    /* ── JURI ACCORDION (DETAIL MODAL ADMIN) ── */
+    .detail-juri-accordion{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
+    .detail-juri-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;transition:background .2s;user-select:none;}
+    .detail-juri-toggle:hover{background:#f8fafc;}
+    .detail-juri-toggle.open{background:var(--primary-lt);border-bottom:1px solid #bfdbfe;}
+    .detail-juri-toggle .dj-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+    .detail-juri-toggle .dj-total{font-size:14px;font-weight:900;color:var(--primary);}
+    .detail-juri-toggle .dj-arrow{font-size:12px;color:var(--muted);transition:transform .2s;}
+    .detail-juri-toggle.open .dj-arrow{transform:rotate(180deg);}
+    .detail-juri-scores{display:none;}
+    .detail-juri-scores.open{display:block;}
+    .detail-kat-mini-admin{background:#f8fafc;padding:7px 16px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;}
+    .detail-kat-mini-admin span{color:var(--primary);font-weight:900;font-size:11px;}
+    .detail-field-row-admin{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #f8fafc;gap:12px;}
+    .detail-field-row-admin:last-child{border-bottom:none;}
+    .detail-field-row-admin:hover{background:#fafbfd;}
+    .detail-field-admin-name{font-size:12px;font-weight:700;color:var(--text);}
+    .detail-field-admin-meta{font-size:10px;color:var(--light);margin-top:1px;}
+    .score-chip-admin{padding:5px 16px;border-radius:6px;font-size:13px;font-weight:800;min-width:48px;text-align:center;}
+    .score-chip-admin.filled{background:#dbeafe;color:var(--primary);}
+    .score-chip-admin.empty{background:#f1f5f9;color:var(--light);font-size:11px;font-weight:600;
+    }
     </style>
 </head>
 <body>
@@ -959,6 +981,17 @@ var formFields={
     finnage:[{id:'bentuk',label:'Bentuk Sirip & Ekor',max:75},{id:'kecerahan',label:'Kecerahan',max:25}]
 };
 
+/* ── TOGGLE JURI DETAIL (ADMIN) ── */
+function toggleJuriDetailAdmin(uid){
+    var t=document.getElementById(uid+'-toggle');
+    var s=document.getElementById(uid+'-scores');
+    if(t.classList.contains('open')){
+        t.classList.remove('open');s.classList.remove('open');
+    } else {
+        t.classList.add('open');s.classList.add('open');
+    }
+}
+
 /* ═══════════════════════════════════════════════
    PASSWORD VALIDATION (CREATE USER MODAL)
    ═══════════════════════════════════════════════ */
@@ -1156,21 +1189,33 @@ function renderTable(data){
     for(var i=0;i<data.length;i++){
         var p=data[i],tr=document.createElement('tr');
 
-        /* Kolom: Juri */
+        /* ★ FIX: DINILAI OLEH — tampilkan semua juri */
         var jh='<span style="color:var(--light);font-size:11px;">—</span>';
-        if(p.juri_nama&&p.juri_nama!=='—'){
-            jh='<div class="juri-info"><i class="fas fa-user-pen" style="font-size:9px;color:var(--primary);"></i> <span class="j-name">'+esc(p.juri_nama)+'</span>';
-            if(p.grand_juri_nama)jh+='<br><i class="fas fa-crown" style="font-size:9px;"></i> <span class="g-name">'+esc(p.grand_juri_nama)+'</span>';
+        if(p.juri_list&&p.juri_list.length>0){
+            jh='<div class="juri-info">';
+            p.juri_list.forEach(function(j){
+                if(j.is_grand){
+                    jh+='<div class="g-name"><i class="fas fa-crown" style="font-size:9px;"></i> '+esc(j.name)+'</div>';
+                } else {
+                    jh+='<div><i class="fas fa-user-pen" style="font-size:9px;color:var(--primary);margin-right:2px;"></i><span class="j-name">'+esc(j.name)+'</span></div>';
+                }
+            });
             jh+='</div>';
         }
 
-        /* Kolom: Status & Total */
+        /* Status */
         var sc=p.grand_juri_nama?'s-grand':(p.status==='Sudah Dinilai'?'s-dinilai':'s-belum');
-        var st=p.grand_juri_nama?'GRAND EDIT':(p.status==='Sudah Dinilai'?'DINILAI':'BELUM');
-        var tv=p.total_nilai>0?'<span class="total-val">'+p.total_nilai+'</span>':'<span class="total-val zero">—</span>';
+        var st=p.grand_juri_nama?'GRAND EDIT':(p.status==='Sudah Dinilai'?'DINILAI':'BELUM DINILAI');
+
+        /* ★ FIX: TOTAL NILAI — dari semua juri */
+        var tv=p.total_nilai_semua>0
+            ?'<div style="font-weight:800;">'+p.total_nilai_semua+'</div><div style="font-size:9px;color:var(--light);font-weight:600;"><i class="fas fa-users" style="font-size:8px;margin-right:2px;"></i>'+p.jumlah_juri+' juri</div>'
+            :'<span class="total-val zero">—</span>';
+
+        /* ★ FIX: POINT — dari rata-rata semua juri */
         var pv=p.total_point>0?'<span style="font-size:13px;font-weight:900;color:#f59e0b;">'+p.total_point+'</span>':'<span style="font-size:11px;color:var(--light);">—</span>';
 
-        /* Kolom: ASAL/TEAM */
+        /* ASAL/TEAM */
         var asalHtml='<span style="color:var(--light);font-size:11px;">—</span>';
         if(p.detail_anggota&&p.detail_anggota!=='—'){
             asalHtml='<div style="font-size:11px;color:var(--text-muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(p.detail_anggota)+'"><i class="fas fa-building" style="font-size:9px;color:var(--primary);margin-right:3px;"></i>'+esc(p.detail_anggota)+'</div>';
@@ -1187,7 +1232,8 @@ function renderTable(data){
             '<td>'+tv+'</td>'+
             '<td style="text-align:center;">'+pv+'</td>'+
             '<td><span class="status-badge '+sc+'">'+st+'</span></td>'+
-            '<td><button class="btn-xs blue" onclick="openDetail('+i+')"><i class="fas fa-eye"></i></button> <button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button></td>';        tb.appendChild(tr);
+            '<td><button class="btn-xs blue" onclick="openDetail('+i+')"><i class="fas fa-eye"></i></button> <button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button></td>';
+        tb.appendChild(tr);
     }
 }
 
@@ -1207,51 +1253,106 @@ function openDetail(idx){
 }
 
 function renderDetailView(p){
-    var nd=p.nilai_detail;
-    var html='<div class="detail-banner"><div><h4>'+esc(p.nama_peserta)+'</h4><div class="meta"><span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span><span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - Kelas '+esc(p.kelas)+'</span>';
-    
-    if(p.juri_nama&&p.juri_nama!=='—')html+='<span><i class="fas fa-user-pen"></i> '+esc(p.juri_nama)+'</span>';
-    if(p.grand_juri_nama)html+='<span style="color:var(--purple);"><i class="fas fa-crown"></i> '+esc(p.grand_juri_nama)+'</span>';
-    
-    html+='</div></div><div class="detail-total-chip"><i class="fas fa-star" style="margin-right:4px;"></i>'+p.total_nilai+'</div></div>';
-    
-    if(p.grand_juri_nama)html+='<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:11px;color:#92400e;margin-bottom:14px;display:flex;gap:6px;align-items:flex-start;"><i class="fas fa-circle-info" style="margin-top:1px;"></i><span>Nilai final oleh <b>'+esc(p.grand_juri_nama)+'</b>.</span></div>';
-    
-    if(!nd||typeof nd!=='object'){html+='<div class="empty-state" style="padding:30px;"><i class="fas fa-clipboard-list"></i><p>Belum ada nilai.</p></div>';document.getElementById('detailBody').innerHTML=html;return;}
-    
-    var kats=Object.keys(formFields);
-    for(var ki=0;ki<kats.length;ki++){
-        var kat=kats[ki],fields=formFields[kat],kn=nd[kat]||{},sub=0;
-        for(var fi=0;fi<fields.length;fi++){if(kn[fields[fi].id]!=null&&kn[fields[fi].id]!=='')sub+=parseInt(kn[fields[fi].id])||0;}
-        html+='<div class="detail-kat"><div class="detail-kat-head"><span class="detail-kat-title"><i class="fas fa-layer-group" style="margin-right:4px;"></i>'+kat.charAt(0).toUpperCase()+kat.slice(1)+'</span><span class="detail-kat-sub">Subtotal: '+sub+'</span></div><div class="detail-kat-body">';
-        for(var fj=0;fj<fields.length;fj++){var f=fields[fj],v=kn[f.id],has=(v!=null&&v!=='');html+='<div class="detail-row"><div><div class="label">'+f.label+'</div><div class="meta">Maks '+f.max+'</div></div><span class="val-chip '+(has?'has':'no')+'">'+(has?v:'N/A')+'</span></div>';}
-        html+='</div></div>';
+    var html='';
+
+    /* Banner */
+    html+='<div class="detail-banner"><div><h4>'+esc(p.nama_peserta)+'</h4><div class="meta">';
+    html+='<span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span>';
+    html+='<span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - Kelas '+esc(p.kelas)+'</span>';
+    if(p.detail_anggota&&p.detail_anggota!=='—') html+='<span><i class="fas fa-users"></i> '+esc(p.detail_anggota)+'</span>';
+    html+='</div></div>';
+    html+='<div class="detail-total-chip"><i class="fas fa-star" style="margin-right:4px;"></i> '+p.total_nilai_semua+' <span style="font-size:10px;font-weight:600;opacity:.8;">('+p.jumlah_juri+' juri)</span></div></div>';
+
+    if(p.grand_juri_nama) html+='<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:11px;color:#92400e;margin-bottom:14px;display:flex;gap:6px;align-items:flex-start;"><i class="fas fa-circle-info" style="margin-top:1px;"></i><span>Nilai final oleh <b>'+esc(p.grand_juri_nama)+'</b>.</span></div>';
+
+    if(!p.all_scorings||p.all_scorings.length===0){
+        html+='<div class="empty-state" style="padding:30px;"><i class="fas fa-clipboard-list"></i><p>Belum ada nilai.</p></div>';
+        document.getElementById('detailBody').innerHTML=html;return;
     }
-    // Point breakdown section
+
+    /* ★ Accordion per juri */
+    p.all_scorings.forEach(function(sc,idx){
+        var isG=sc.is_grand;
+        var uid='adm-dj-'+idx;
+        var iconCls=isG?'fas fa-crown':'fas fa-user-pen';
+        var label=isG?'Grand Juri: '+esc(sc.juri_name):'Juri: '+esc(sc.juri_name);
+
+        html+='<div class="detail-juri-accordion">';
+        html+='<div class="detail-juri-toggle" id="'+uid+'-toggle" onclick="toggleJuriDetailAdmin(\''+uid+'\')">';
+        html+='<span class="dj-name"><i class="'+iconCls+'" style="font-size:11px;'+(isG?'color:var(--purple);':'color:var(--primary);')+'"></i> '+label+'</span>';
+        html+='<span style="display:flex;align-items:center;gap:10px;"><span class="dj-total">'+sc.total_nilai+'</span><i class="fas fa-chevron-down dj-arrow"></i></span>';
+        html+='</div>';
+
+        html+='<div class="detail-juri-scores" id="'+uid+'-scores">';
+        var nd=sc.nilai_detail;
+        if(!nd||typeof nd!=='object'){
+            html+='<div style="padding:16px;text-align:center;color:var(--light);font-size:12px;">Tidak ada data nilai.</div>';
+        } else {
+            var kats=Object.keys(formFields);
+            for(var ki=0;ki<kats.length;ki++){
+                var kat=kats[ki],fields=formFields[kat],kn=nd[kat]||{},sub=0;
+                for(var fi=0;fi<fields.length;fi++){if(kn[fields[fi].id]!=null&&kn[fields[fi].id]!=='')sub+=parseInt(kn[fields[fi].id])||0;}
+                html+='<div class="detail-kat-mini-admin"><span>'+kat.toUpperCase()+'</span><span>Subtotal: '+sub+'</span></div>';
+                for(var fj=0;fj<fields.length;fj++){
+                    var f=fields[fj],v=kn[f.id],has=(v!=null&&v!=='');
+                    html+='<div class="detail-field-row-admin"><div><div class="detail-field-admin-name">'+f.label+'</div><div class="detail-field-admin-meta">Maks '+f.max+'</div></div><span class="score-chip-admin '+(has?'filled':'empty')+'">'+(has?v:'N/A')+'</span></div>';
+                }
+            }
+        }
+        html+='</div></div>';
+    });
+
+    /* ★ Ringkasan Nilai & Point */
+    if(p.detail_list_per_juri&&p.detail_list_per_juri.length>0){
+        html+='<div style="margin-top:16px;border:2px solid #bfdbfe;border-radius:12px;overflow:hidden;">';
+        html+='<div style="padding:12px 16px;background:linear-gradient(135deg,var(--primary-lt),#dbeafe);border-bottom:1px solid #bfdbfe;display:flex;justify-content:space-between;align-items:center;">';
+        html+='<span style="font-size:13px;font-weight:800;color:var(--primary-dk);"><i class="fas fa-calculator" style="margin-right:6px;"></i>Ringkasan Nilai & Point</span>';
+        html+='<span style="font-size:11px;color:var(--primary);font-weight:700;">'+p.jumlah_juri+' juri</span>';
+        html+='</div><div style="padding:16px;">';
+
+        html+='<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+        html+='<tr style="background:var(--primary-lt);"><th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;">JURI</th><th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;">TOTAL NILAI</th></tr>';
+        var grandTotal=0;
+        p.detail_list_per_juri.forEach(function(j){
+            grandTotal+=j.total_nilai;
+            var style=j.is_grand?'color:var(--purple);font-weight:800;':'font-weight:600;';
+            var prefix=j.is_grand?'<i class="fas fa-crown" style="font-size:9px;margin-right:3px;"></i>':'';
+            html+='<tr><td style="'+style+'">'+prefix+esc(j.juri_name)+'</td><td style="font-weight:800;text-align:right;">'+j.total_nilai+'</td></tr>';
+        });
+        html+='<tr style="background:#dbeafe;"><td style="font-weight:800;color:var(--primary-dk);"><i class="fas fa-calculator" style="margin-right:4px;font-size:10px;"></i> TOTAL SEMUA JURI</td>';
+        html+='<td style="font-weight:900;text-align:right;color:var(--primary-dk);font-size:14px;">'+grandTotal+'</td></tr>';
+        html+='</table>';
+
+        html+='<div style="margin-top:16px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">';
+        html+='<div><div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;">Total Point</div><div style="font-size:10px;color:#d97706;">(dihitung dari rata-rata '+p.jumlah_juri+' juri)</div></div>';
+        html+='<div style="font-size:18px;font-weight:900;color:#d97706;">'+(p.total_point??0)+'</div>';
+        html+='</div></div></div>';
+    }
+
+    /* Point Breakdown */
     if(p.point_breakdown){
         var pb=p.point_breakdown;
         html+='<div style="margin-top:16px;border:2px solid #fde68a;border-radius:12px;overflow:hidden;">';
         html+='<div style="padding:10px 16px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border-bottom:1px solid #fde68a;display:flex;justify-content:space-between;align-items:center;">';
-        html+='<span class="detail-kat-title" style="color:#92400e;"><i class="fas fa-trophy" style="margin-right:6px;color:#f59e0b;"></i>SISTEM POINT</span>';
-        html+='<span class="detail-kat-sub" style="color:#92400e;">Total: <b>'+pb.total+'</b> / 100</span>';
+        html+='<span style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;"><i class="fas fa-trophy" style="margin-right:6px;color:#f59e0b;"></i>SISTEM POINT</span>';
+        html+='<span style="font-size:11px;font-weight:700;color:#92400e;">Total: <b>'+pb.total+'</b> / 100</span>';
         html+='</div><div style="padding:0;">';
-        
         var katLabels={'overall':'Overall','head':'Head','face':'Face','body':'Body Shape','marking':'Marking','pearl':'Pearl','color':'Color','finnage':'Finnage'};
         for(var ki in katLabels){
             if(!pb[ki])continue;
             var kd=pb[ki];
             html+='<div style="display:grid;grid-template-columns:120px 1fr 80px;align-items:center;padding:8px 14px;border-bottom:1px solid #fef3c7;font-size:11px;">';
             html+='<span style="font-weight:700;color:#92400e;">'+katLabels[ki]+'</span>';
-            html+='<span style="color:var(--text-muted);font-size:10px;">'+kd.parts.join(' + ')+'</span>';
+            html+='<span style="color:var(--muted);font-size:10px;">'+kd.parts.join(' + ')+'</span>';
             html+='<span style="text-align:right;font-weight:900;color:#d97706;">'+kd.point+'</span>';
             html+='</div>';
         }
-        
         html+='<div style="display:grid;grid-template-columns:1fr 80px;align-items:center;padding:10px 14px;font-size:12px;background:#fef9c3;">';
         html+='<span style="font-weight:800;color:#92400e;">TOTAL POINT</span>';
         html+='<span style="text-align:right;font-weight:900;font-size:16px;color:#d97706;">'+pb.total+'</span>';
         html+='</div></div></div>';
     }
+
     document.getElementById('detailBody').innerHTML=html;
 }
 
@@ -1573,14 +1674,16 @@ function deleteIkan(ikanId, nama){
    ═══════════════════════════════════════════════ */
 function exportCSV(){
     if(!allScoringData.length){popupInfo('Tidak Ada Data','Tidak ada data penilaian untuk diexport.');return;}
-    var header='No,Nama Peserta,Kategori,Kelas,No Tank,Juri,Grand Juri,Total Nilai,Status\n',rows='';
+    var header='No,Nama Peserta,Kategori,Kelas,No Tank,Asal/Team,Jumlah Juri,Total Nilai (Semua Juri),Point,Status\n',rows='';
     for(var i=0;i<allScoringData.length;i++){
         var p=allScoringData[i];
-        rows+=(i+1)+',"'+(p.nama_peserta||'')+'","'+(p.kategori||'')+'","'+(p.kelas||'')+'","'+(p.nomor_tank||'')+'","'+(p.detail_anggota||'')+'","'+(p.juri_nama||'')+'","'+(p.grand_juri_nama||'')+'",'+(p.total_nilai||0)+',"'+(p.grand_juri_nama?'Grand Juri Edit':p.status)+'"\n';
+        var juriNames=[];
+        if(p.juri_list) p.juri_list.forEach(function(j){juriNames.push(j.name);});
+        rows+=(i+1)+',"'+(p.nama_peserta||'')+'","'+(p.kategori||'')+'","'+(p.kelas||'')+'","'+(p.nomor_tank||'')+'","'+(p.detail_anggota||'')+'","'+(p.jumlah_juri||0)+'",'+(p.total_nilai_semua||0)+','+(p.total_point||0)+',"'+(p.grand_juri_nama?'Grand Juri Edit':p.status)+'"\n';
     }
     var blob=new Blob(['\uFEFF'+header+rows],{type:'text/csv;charset=utf-8;'});
     var url=URL.createObjectURL(blob);
-    var a=document.createElement('a');a.href=url;a.download='LCI_Penilaian_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+    var a=document.createElement('a');a.href=url;a.download='LCI_Penilaian_Keseluruhan_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
     URL.revokeObjectURL(url);
     popupSuccess('Export Berhasil','File CSV (<strong>'+allScoringData.length+' data</strong>) berhasil didownload.');
 }
