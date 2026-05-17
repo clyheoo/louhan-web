@@ -175,9 +175,9 @@ class AdminDashboardController extends Controller
             ->orWhereHas('scorings');
         })
             /* ★ FIX: Hapus ->latest()->limit(1), load SEMUA scorings */
-            ->with(['peserta', 'scorings' => function ($q) {
-                $q->orderBy('created_at', 'desc');
-            }, 'scorings.juri', 'scorings.grandJuri']);
+        ->with(['peserta', 'scorings' => function ($q) {
+            $q->orderBy('created_at', 'desc');
+        }, 'scorings.juri', 'scorings.grandJuri', 'bonusPoints']);
 
         if ($request->filled('search')) {
             $query->whereHas('peserta', function ($q) use ($request) {
@@ -299,6 +299,9 @@ class AdminDashboardController extends Controller
                     'pearl'   => (float)$pointConfig->pearl_bobot,
                     'color'   => (float)$pointConfig->color_bobot,
                     'finnage' => (float)$pointConfig->finnage_bobot,
+                    'bonus_list'    => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                    'total_bonus'   => (int) $ikan->bonusPoints->sum('points'),
+                    'final_point'  => (float) $totalPoint + (int) $ikan->bonusPoints->sum('points'),
                 ] : null,
                 'point_breakdown'    => $finalAvgDetail ? PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail) : null,
                 'all_scorings'       => $allScoringsData,
@@ -410,6 +413,73 @@ class AdminDashboardController extends Controller
         return response()->json([
             'success' => true, 
             'message' => 'Data ikan beserta nilai penilaiannya berhasil dihapus.'
+        ]);
+    }
+
+        const BONUS_TYPES = [
+        'best_of_the_best' => 'BEST OF THE BEST',
+        'best_of_show'     => 'BEST OF SHOW',
+        'grand_champion'   => 'GRAND CHAMPION',
+        'young_champion'   => 'YOUNG CHAMPION',
+        'junior'           => 'JUNIOR',
+        'baby_champion'    => 'BABY CHAMPION',
+        'mini_champion'    => 'MINI CHAMPION',
+    ];
+
+    public function addBonus(Request $request)
+    {
+        $request->validate([
+            'ikan_id'    => 'required|exists:ikans,id',
+            'bonus_type' => 'required|in:best_of_the_best,best_of_show,grand_champion,young_champion,junior,baby_champion,mini_champion',
+        ]);
+
+        $exists = \App\Models\IkanBonusPoint::where('ikan_id', $request->ikan_id)
+            ->where('bonus_type', $request->bonus_type)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" sudah diberikan ke ikan ini.',
+            ], 409);
+        }
+
+        \App\Models\IkanBonusPoint::create([
+            'ikan_id'    => $request->ikan_id,
+            'bonus_type' => $request->bonus_type,
+            'points'     => 100,
+            'added_by'   => auth()->id(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" (+100) berhasil ditambahkan.',
+        ]);
+    }
+
+    public function removeBonus(Request $request)
+    {
+        $request->validate([
+            'ikan_id'    => 'required|exists:ikans,id',
+            'bonus_type' => 'required|in:best_of_the_best,best_of_show,grand_champion,young_champion,junior,baby_champion,mini_champion',
+        ]);
+
+        $bonus = \App\Models\IkanBonusPoint::where('ikan_id', $request->ikan_id)
+            ->where('bonus_type', $request->bonus_type)
+            ->first();
+
+        if (!$bonus) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bonus tidak ditemukan.',
+            ], 404);
+        }
+
+        $bonus->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" berhasil dihapus.',
         ]);
     }
 

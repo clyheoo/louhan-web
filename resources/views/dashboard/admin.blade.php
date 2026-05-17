@@ -742,6 +742,20 @@
     </div>
 </div>
 
+<!-- MODAL: BONUS POINT -->
+<div class="modal-bg" id="modalBonus" style="--mw:520px;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-trophy" style="color:#f59e0b;"></i> Kelola Bonus Point</h3>
+            <button class="modal-close" onclick="closeModal('modalBonus')"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" id="bonusModalBody"></div>
+        <div class="modal-foot">
+            <button class="btn-cancel" onclick="closeModal('modalBonus')">Tutup</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL: RESET NOMOR TANK -->
 <div class="modal-bg" id="modalResetTank" style="--mw:450px;">
     <div class="modal-box">
@@ -969,6 +983,111 @@ function popupConfirm(title,desc,btnText,callback){
 }
 function executeConfirm(){hidePopup('popupConfirm');if(typeof _confirmCallback==='function')_confirmCallback();_confirmCallback=null;}
 function cancelConfirm(){hidePopup('popupConfirm');_confirmCallback=null;}
+
+var currentBonusIkanId = null;
+
+var bonusTypes = [
+    {key:'best_of_the_best', label:'BEST OF THE BEST', icon:'fa-gem'},
+    {key:'best_of_show',     label:'BEST OF SHOW',     icon:'fa-star'},
+    {key:'grand_champion',   label:'GRAND CHAMPION',   icon:'fa-crown'},
+    {key:'young_champion',   label:'YOUNG CHAMPION',   icon:'fa-medal'},
+    {key:'junior',           label:'JUNIOR',           icon:'fa-award'},
+    {key:'baby_champion',    label:'BABY CHAMPION',    icon:'fa-baby'},
+    {key:'mini_champion',    label:'MINI CHAMPION',    icon:'fa-seedling'},
+];
+
+function openBonusModal(idx){
+    var p=allScoringData[idx];
+    if(!p)return;
+    currentBonusIkanId=p.id;
+
+    var html='';
+    html+='<div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">';
+    html+='<div><h4 style="font-size:14px;font-weight:800;color:#92400e;">'+esc(p.nama_peserta)+'</h4>';
+    html+='<div style="font-size:11px;color:#d97706;margin-top:3px;display:flex;gap:12px;"><span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - '+esc(p.kelas)+'</span><span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span></div></div>';
+    html+='<div style="text-align:center;flex-shrink:0;">';
+    html+='<div style="font-size:9px;color:#92400e;font-weight:800;letter-spacing:.5px;">POINT DASAR</div>';
+    html+='<div style="font-size:22px;font-weight:900;color:#92400e;">'+(p.total_point||0)+'</div>';
+    if(p.total_bonus>0){
+        html+='<div style="font-size:9px;color:#16a34a;font-weight:800;margin-top:2px;">+ '+p.total_bonus+' BONUS</div>';
+        html+='<div style="font-size:26px;font-weight:900;color:#16a34a;">'+(p.final_point||0)+'</div>';
+    }
+    html+='</div></div>';
+
+    html+='<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Pilih Bonus Point (+100 per jenis)</div>';
+
+    bonusTypes.forEach(function(bt){
+        var applied=p.bonus_list&&p.bonus_list.indexOf(bt.key)!==-1;
+        if(applied){
+            html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid #bbf7d0;border-radius:10px;margin-bottom:5px;background:#f0fdf4;">';
+            html+='<div style="display:flex;align-items:center;gap:10px;">';
+            html+='<i class="fas fa-check-circle" style="color:#16a34a;font-size:15px;"></i>';
+            html+='<div><div style="font-size:12px;font-weight:800;color:#16a34a;">'+bt.label+'</div><div style="font-size:10px;color:#15803d;">+100 point</div></div></div>';
+            html+='<button class="btn-xs red" onclick="removeBonus(\''+bt.key+'\')" style="padding:5px 10px;"><i class="fas fa-times"></i> Hapus</button>';
+            html+='</div>';
+        } else {
+            html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:all .2s;" onclick="addBonus(\''+bt.key+'\',this)" onmouseover="this.style.borderColor=\'#fde68a\';this.style.background=\'#fffbeb\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'white\'">';
+            html+='<div style="display:flex;align-items:center;gap:10px;">';
+            html+='<i class="fas '+bt.icon+'" style="color:var(--light);font-size:15px;"></i>';
+            html+='<div><div style="font-size:12px;font-weight:700;color:var(--text);">'+bt.label+'</div><div style="font-size:10px;color:var(--light);">+100 point</div></div></div>';
+            html+='<i class="fas fa-plus-circle" style="color:var(--light);font-size:17px;"></i>';
+            html+='</div>';
+        }
+    });
+
+    document.getElementById('bonusModalBody').innerHTML=html;
+    openModal('modalBonus');
+}
+
+function addBonus(type, el){
+    if(!currentBonusIkanId)return;
+    var fd=new FormData();
+    fd.append('_token',getCsrf());
+    fd.append('ikan_id',currentBonusIkanId);
+    fd.append('bonus_type',type);
+    fetch('/api/admin/add-bonus',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+    .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
+    .then(function(d){
+        if(d.success){
+            popupSuccess('Bonus Ditambahkan','<b>'+esc(bonusTypes.find(function(b){return b.key===type;}).label)+'</b> (+100) berhasil ditambahkan.');
+            closeModal('modalBonus');
+            loadScoringData();
+        } else {
+            popupError('Gagal',d.message||'Terjadi kesalahan.');
+        }
+    })
+    .catch(function(e){
+        if(e.message)popupError('Gagal',esc(e.message));
+        else popupError('Kesalahan Jaringan','Gagal menghubungi server.');
+    });
+}
+
+function removeBonus(type){
+    if(!currentBonusIkanId)return;
+    popupConfirm(
+        'Hapus Bonus',
+        'Yakin ingin menghapus bonus ini? Point yang sudah ditambahkan akan dikurangi kembali.',
+        'Ya, Hapus',
+        function(){
+            var fd=new FormData();
+            fd.append('_token',getCsrf());
+            fd.append('ikan_id',currentBonusIkanId);
+            fd.append('bonus_type',type);
+            fetch('/api/admin/remove-bonus',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+            .then(function(r){return r.json();})
+            .then(function(d){
+                if(d.success){
+                    popupSuccess('Bonus Dihapus','Bonus berhasil dihapus.');
+                    closeModal('modalBonus');
+                    loadScoringData();
+                } else {
+                    popupError('Gagal',d.message||'Terjadi kesalahan.');
+                }
+            })
+            .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');});
+        }
+    );
+}
 
 var formFields={
     overall:[{id:'impression',label:'Impression',max:100}],
@@ -1213,7 +1332,15 @@ function renderTable(data){
             :'<span class="total-val zero">—</span>';
 
         /* ★ FIX: POINT — dari rata-rata semua juri */
-        var pv=p.total_point>0?'<span style="font-size:13px;font-weight:900;color:#f59e0b;">'+p.total_point+'</span>':'<span style="font-size:11px;color:var(--light);">—</span>';
+        var pv='';
+        if(p.final_point>0){
+            pv='<div style="font-size:13px;font-weight:900;color:#f59e0b;">'+p.final_point+'</div>';
+            if(p.total_bonus>0) pv+='<div style="font-size:8px;color:#16a34a;font-weight:800;"><i class="fas fa-trophy" style="font-size:7px;"></i> +'+p.total_bonus+'</div>';
+        } else if(p.total_point>0){
+            pv='<span style="font-size:13px;font-weight:900;color:#f59e0b;">'+p.total_point+'</span>';
+        } else {
+            pv='<span style="font-size:11px;color:var(--light);">—</span>';
+        }
 
         /* ASAL/TEAM */
         var asalHtml='<span style="color:var(--light);font-size:11px;">—</span>';
@@ -1232,8 +1359,7 @@ function renderTable(data){
             '<td>'+tv+'</td>'+
             '<td style="text-align:center;">'+pv+'</td>'+
             '<td><span class="status-badge '+sc+'">'+st+'</span></td>'+
-            '<td><button class="btn-xs blue" onclick="openDetail('+i+')"><i class="fas fa-eye"></i></button> <button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button></td>';
-        tb.appendChild(tr);
+            '<td><div style="display:flex;gap:4px;"><button class="btn-xs blue" onclick="openDetail('+i+')"><i class="fas fa-eye"></i></button><button class="btn-xs" style="background:#fffbeb;color:#d97706;border:1px solid #fde68a;" onclick="openBonusModal('+i+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i></button><button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button></div></td>';        tb.appendChild(tr);
     }
 }
 
@@ -1325,7 +1451,12 @@ function renderDetailView(p){
 
         html+='<div style="margin-top:16px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">';
         html+='<div><div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;">Total Point</div><div style="font-size:10px;color:#d97706;">(dihitung dari rata-rata '+p.jumlah_juri+' juri)</div></div>';
-        html+='<div style="font-size:18px;font-weight:900;color:#d97706;">'+(p.total_point??0)+'</div>';
+        var finalPt = p.final_point ?? p.total_point ?? 0;
+        var basePt = p.total_point ?? 0;
+        var bonusPt = p.total_bonus ?? 0;
+        var ptHtml = '<div style="font-size:18px;font-weight:900;color:#d97706;">'+finalPt+'</div>';
+        if(bonusPt > 0) ptHtml += '<div style="font-size:10px;color:#16a34a;font-weight:700;margin-top:2px;">(Dasar '+basePt+' + Bonus +'+bonusPt+')</div>';
+        html += ptHtml;
         html+='</div></div></div>';
     }
 

@@ -91,7 +91,7 @@ class PointCalculator
         $v = (float)($nd['finnage']['kecerahan'] ?? 0);
         $tp += ($v / self::MAX['kecerahan_fn']) * (float)$cfg->finnage_bobot;
 
-        return round($tp, 5);
+        return round($tp);
     }
 
     public static function hitungBreakdown(string $kategori, array $nd): array
@@ -135,13 +135,13 @@ class PointCalculator
                 $v2 = (float)($nd['head']['bentuk'] ?? 0);
                 $p2 = ($v2 / self::MAX['bentuk_head']) * $bobots['head'];
                 $pt = $p1 + $p2;
-                $parts[] = "({$v}/60)×{$bobots['head']}=" . round($p1, 3);
-                $parts[] = "({$v2}/40)×{$bobots['head']}=" . round($p2, 3);
+                $parts[] = "({$v}/60)×{$bobots['head']}=" . round($p1);
+                $parts[] = "({$v2}/40)×{$bobots['head']}=" . round($p2);
             } elseif ($kat === 'face') {
                 foreach (['pipi','mata','bibir','kondisi'] as $k) {
                     $v = (float)($nd['face'][$k] ?? 0);
                     $p = ($v / self::MAX[$k]) * $bobots['face'];
-                    $parts[] = "({$v}/25)=" . round($p, 3);
+                    $parts[] = "({$v}/25)=" . round($p);
                     $pt += $p;
                 }
             } elseif ($kat === 'body') {
@@ -149,7 +149,7 @@ class PointCalculator
                 foreach ($pairs as $pr) {
                     $v = (float)($nd['body'][$pr[0]] ?? 0);
                     $p = ($v / self::MAX[$pr[1]]) * $bobots['body'];
-                    $parts[] = "({$v}/{$pr[2]})=" . round($p, 3);
+                    $parts[] = "({$v}/{$pr[2]})=" . round($p);
                     $pt += $p;
                 }
             } elseif ($kat === 'marking') {
@@ -157,7 +157,7 @@ class PointCalculator
                 foreach ($pairs as $pr) {
                     $v = (float)($nd['marking'][$pr[0]] ?? 0);
                     $p = ($v / self::MAX[$pr[1]]) * $bobots['marking'];
-                    $parts[] = "({$v}/{$pr[2]})=" . round($p, 3);
+                    $parts[] = "({$v}/{$pr[2]})=" . round($p);
                     $pt += $p;
                 }
             } elseif ($kat === 'pearl') {
@@ -165,7 +165,7 @@ class PointCalculator
                 foreach ($pairs as $pr) {
                     $v = (float)($nd['pearl'][$pr[0]] ?? 0);
                     $p = ($v / self::MAX[$pr[1]]) * $bobots['pearl'];
-                    $parts[] = "({$v}/{$pr[2]})=" . round($p, 3);
+                    $parts[] = "({$v}/{$pr[2]})=" . round($p);
                     $pt += $p;
                 }
             } elseif ($kat === 'color') {
@@ -173,7 +173,7 @@ class PointCalculator
                 foreach ($pairs as $pr) {
                     $v = (float)($nd['color'][$pr[0]] ?? 0);
                     $p = ($v / self::MAX[$pr[1]]) * $bobots['color'];
-                    $parts[] = "({$v}/{$pr[2]})=" . round($p, 3);
+                    $parts[] = "({$v}/{$pr[2]})=" . round($p);
                     $pt += $p;
                 }
             } elseif ($kat === 'finnage') {
@@ -181,7 +181,7 @@ class PointCalculator
                 foreach ($pairs as $pr) {
                     $v = (float)($nd['finnage'][$pr[0]] ?? 0);
                     $p = ($v / self::MAX[$pr[1]]) * $bobots['finnage'];
-                    $parts[] = "({$v}/{$pr[2]})=" . round($p, 3);
+                    $parts[] = "({$v}/{$pr[2]})=" . round($p);
                     $pt += $p;
                 }
             }
@@ -189,12 +189,12 @@ class PointCalculator
             $b[$kat] = [
                 'label'  => $label,
                 'bobot'  => $bobots[$kat],
-                'point'  => round($pt, 5),
+                'point'  => round($pt),
                 'parts'  => $parts,
             ];
         }
 
-        $b['total'] = round(array_sum(array_column($b, 'point')), 5);
+        $b['total'] = round(array_sum(array_column($b, 'point')));
         return $b;
     }
 

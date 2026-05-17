@@ -54,8 +54,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/grand-juri/plot-status', [GrandJuriController::class, 'getPlotStatus']);
     Route::post('/api/grand-juri/kunci-nilai', [GrandJuriController::class, 'kunciNilai']);
     Route::get('/api/grand-juri/mvp-ikan', [GrandJuriController::class, 'getMvpIkan']);
+    Route::post('/api/grand-juri/add-bonus', [GrandJuriController::class, 'addBonus']);
+    Route::post('/api/grand-juri/remove-bonus', [GrandJuriController::class, 'removeBonus']);
     Route::get('/api/grand-juri/point-ranking', [GrandJuriController::class, 'getPointRanking']);
     Route::get('/api/scoring-point-configs', [GrandJuriController::class, 'getPointConfigs']);
+});
+
+Route::middleware('auth')->group(function () {
+    Route::post('/api/admin/add-bonus', [AdminDashboardController::class, 'addBonus']);
+    Route::post('/api/admin/remove-bonus', [AdminDashboardController::class, 'removeBonus']);
 });
 
 /* ═══════════════════════════════════════════

@@ -34,4 +34,9 @@ class Ikan extends Model
     {
         return $this->hasMany(Scoring::class);
     }
+
+    public function bonusPoints()
+    {
+        return $this->hasMany(IkanBonusPoint::class);
+    }
 }

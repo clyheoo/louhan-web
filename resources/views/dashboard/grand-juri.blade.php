@@ -500,6 +500,20 @@
     </div>
 </div>
 
+<!-- MODAL: BONUS POINT -->
+<div class="modal-bg" id="modalBonus" style="--mw:520px;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-trophy" style="color:#f59e0b;"></i> Kelola Bonus Point</h3>
+            <button class="modal-close" onclick="closeModal('modalBonus')"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" id="bonusModalBody"></div>
+        <div class="modal-foot">
+            <button class="btn-cancel" onclick="closeModal('modalBonus')">Tutup</button>
+        </div>
+    </div>
+</div>
+
 <!-- POPUP SUKSES -->
 <div class="popup-overlay" id="popupSuccess">
     <div class="popup-card">
@@ -555,6 +569,125 @@ var formFields = {
     color:[{id:'komposisi',label:'Komposisi',desc:'Maks 45',max:45},{id:'kecerahan',label:'Kecerahan',desc:'Maks 35',max:35},{id:'fullness',label:'Fullness',desc:'Maks 20',max:20}],
     finnage:[{id:'bentuk',label:'Bentuk Sirip & Ekor',desc:'Maks 75',max:75},{id:'kecerahan',label:'Kecerahan',desc:'Maks 25',max:25}]
 };
+
+var currentBonusIkanId = null;
+
+var bonusTypes = [
+    {key:'best_of_the_best', label:'BEST OF THE BEST', icon:'fa-gem'},
+    {key:'best_of_show',     label:'BEST OF SHOW',     icon:'fa-star'},
+    {key:'grand_champion',   label:'GRAND CHAMPION',   icon:'fa-crown'},
+    {key:'young_champion',   label:'YOUNG CHAMPION',   icon:'fa-medal'},
+    {key:'junior',           label:'JUNIOR',           icon:'fa-award'},
+    {key:'baby_champion',    label:'BABY CHAMPION',    icon:'fa-baby'},
+    {key:'mini_champion',    label:'MINI CHAMPION',    icon:'fa-seedling'},
+];
+
+function openBonusModalGj(id){
+    currentBonusIkanId=id;
+    fetchSingle(id,function(p){
+        if(!p){
+            document.getElementById('popupErrorDesc').textContent='Data tidak ditemukan.';
+            showPopup('popupError');return;
+        }
+
+        var html='';
+        html+='<div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1px solid #ddd6fe;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">';
+        html+='<div><h4 style="font-size:14px;font-weight:800;color:#4c1d95;">'+esc(p.nama_peserta)+'</h4>';
+        html+='<div style="font-size:11px;color:#7c3aed;margin-top:3px;display:flex;gap:12px;"><span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - '+esc(p.kelas)+'</span><span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span></div></div>';
+        html+='<div style="text-align:center;flex-shrink:0;">';
+        html+='<div style="font-size:9px;color:#7c3aed;font-weight:800;letter-spacing:.5px;">POINT DASAR</div>';
+        html+='<div style="font-size:22px;font-weight:900;color:#4c1d95;">'+(p.total_point||0)+'</div>';
+        if(p.total_bonus>0){
+            html+='<div style="font-size:9px;color:#16a34a;font-weight:800;margin-top:2px;">+ '+p.total_bonus+' BONUS</div>';
+            html+='<div style="font-size:26px;font-weight:900;color:#16a34a;">'+(p.final_point||0)+'</div>';
+        }
+        html+='</div></div>';
+
+        html+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Pilih Bonus Point (+100 per jenis)</div>';
+
+        var blist=p.bonus_list||[];
+        bonusTypes.forEach(function(bt){
+            var applied=blist.indexOf(bt.key)!==-1;
+            if(applied){
+                html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid #bbf7d0;border-radius:10px;margin-bottom:5px;background:#f0fdf4;">';
+                html+='<div style="display:flex;align-items:center;gap:10px;">';
+                html+='<i class="fas fa-check-circle" style="color:#16a34a;font-size:15px;"></i>';
+                html+='<div><div style="font-size:12px;font-weight:800;color:#16a34a;">'+bt.label+'</div><div style="font-size:10px;color:#15803d;">+100 point</div></div></div>';
+                html+='<button class="btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;padding:5px 10px;min-width:auto;" onclick="removeBonusGj(\''+bt.key+'\')"><i class="fas fa-times"></i> Hapus</button>';
+                html+='</div>';
+            } else {
+                html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:all .2s;" onclick="addBonusGj(\''+bt.key+'\',this)" onmouseover="this.style.borderColor=\'#ddd6fe\';this.style.background=\'#f5f3ff\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'white\'">';
+                html+='<div style="display:flex;align-items:center;gap:10px;">';
+                html+='<i class="fas '+bt.icon+'" style="color:var(--light);font-size:15px;"></i>';
+                html+='<div><div style="font-size:12px;font-weight:700;color:var(--text-main);">'+bt.label+'</div><div style="font-size:10px;color:var(--light);">+100 point</div></div></div>';
+                html+='<i class="fas fa-plus-circle" style="color:var(--light);font-size:17px;"></i>';
+                html+='</div>';
+            }
+        });
+
+        document.getElementById('bonusModalBody').innerHTML=html;
+        openModal('modalBonus');
+    });
+}
+
+function addBonusGj(type, el){
+    if(!currentBonusIkanId)return;
+    var fd=new FormData();
+    fd.append('_token',getCsrf());
+    fd.append('ikan_id',currentBonusIkanId);
+    fd.append('bonus_type',type);
+    fetch('/api/grand-juri/add-bonus',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+    .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
+    .then(function(d){
+        if(d.success){
+            document.getElementById('popupSuccessDesc').innerHTML='<b>'+esc(bonusTypes.find(function(b){return b.key===type;}).label)+'</b> (+100) berhasil ditambahkan.';
+            showPopup('popupSuccess');
+            closeModal('modalBonus');
+            loadPeserta(document.getElementById('searchInput').value);
+            loadPointRanking();
+        } else {
+            document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';
+            showPopup('popupError');
+        }
+    })
+    .catch(function(e){
+        document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan.';
+        showPopup('popupError');
+    });
+}
+
+function removeBonusGj(type){
+    if(!currentBonusIkanId)return;
+    popupConfirm(
+        'Hapus Bonus',
+        'Yakin ingin menghapus bonus ini? Point yang sudah ditambahkan akan dikurangi kembali.',
+        'Ya, Hapus',
+        function(){
+            var fd=new FormData();
+            fd.append('_token',getCsrf());
+            fd.append('ikan_id',currentBonusIkanId);
+            fd.append('bonus_type',type);
+            fetch('/api/grand-juri/remove-bonus',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+            .then(function(r){return r.json();})
+            .then(function(d){
+                if(d.success){
+                    document.getElementById('popupSuccessDesc').textContent='Bonus berhasil dihapus.';
+                    showPopup('popupSuccess');
+                    closeModal('modalBonus');
+                    loadPeserta(document.getElementById('searchInput').value);
+                    loadPointRanking();
+                } else {
+                    document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';
+                    showPopup('popupError');
+                }
+            })
+            .catch(function(){
+                document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan.';
+                showPopup('popupError');
+            });
+        }
+    );
+}
 
 /* ================================================================
    STATE
@@ -742,10 +875,11 @@ function loadPeserta(search){
             /* td8 — AKSI */
             var td8=document.createElement('td');
             if(p.is_locked){
-                td8.innerHTML='<div class="action-group">'+
-                    '<button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button>'+
-                    '<button class="btn-sm btn-lock" style="background:#eff6ff;color:#2563eb;border-color:#bfdbfe;" onclick="kunciNilai('+p.id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka Kunci</button>'+
-                    '</div>';
+            td8.innerHTML='<div class="action-group">'+
+                '<button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button>'+
+                '<button class="btn-sm" style="background:#fffbeb;color:#d97706;border:1px solid #fde68a;min-width:auto;" onclick="openBonusModalGj('+p.id+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i></button>'+
+                '<button class="btn-sm btn-lock" style="background:#eff6ff;color:#2563eb;border-color:#bfdbfe;" onclick="kunciNilai('+p.id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka Kunci</button>'+
+                '</div>';
             } else {
                 var canLock=p.submitted_juri_count>=p.total_juri_all;
                 var lockHtml=canLock
@@ -754,6 +888,7 @@ function loadPeserta(search){
                 td8.innerHTML='<div class="action-group">'+
                     '<button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button>'+
                     '<button class="btn-sm btn-edit" onclick="openEdit('+p.id+')"><i class="fas fa-pen-to-square"></i> Edit</button>'+
+                    '<button class="btn-sm" style="background:#fffbeb;color:#d97706;border:1px solid #fde68a;min-width:auto;" onclick="openBonusModalGj('+p.id+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i></button>'+
                     lockHtml+
                     '</div>';
             }
