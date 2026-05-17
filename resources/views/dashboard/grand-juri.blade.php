@@ -868,7 +868,7 @@ function renderDetail(p){
         html += '</table>';
 
         html += '<div style="margin-top:16px;background:linear-gradient(135deg,#fef3c7,#fef9c3);border:1px solid #fde68a;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">';
-        html += '<div><div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;">Total Point</div><div style="font-size:10px;color:#d97706;">(dihitung dari rata-rata '+p.jumlah_juri_yang_nila+' juri)</div></div>';
+        html += '<div><div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;">Total Point</div><div style="font-size:10px;color:#d97706;">(dihitung dari rata-rata '+p.jumlah_juri_yang_nilai+' juri)</div></div>';
         html += '<div style="font-size:18px;font-weight:900;color:#d97706;">' + (p.total_point ?? 0) + '</div>';
         html += '</div></div></div>';
     }
@@ -1282,7 +1282,12 @@ function loadPointRanking() {
                 html += '<td style="font-weight:700;color:var(--purple);">Tank ' + d.nomor_tank + '</td>';
                 html += '<td>' + esc(d.kelas) + '</td>';
                 html += '<td style="font-size:11px;color:var(--text-muted);">' + esc(d.detail_anggota) + '</td>';
-                html += '<td style="font-weight:800;">' + (d.total_nilai_semua ?? d.total_nilai) + '</td>';
+                /* ★ FIX: total_nilai_semua dari semua juri + indikator jumlah juri */
+                html += '<td><div style="font-weight:800;">' + (d.total_nilai_semua ?? d.total_nilai ?? 0) + '</div>';
+                if (d.jumlah_juri > 0) {
+                    html += '<div style="font-size:9px;color:var(--text-muted);font-weight:600;"><i class="fas fa-users" style="font-size:8px;margin-right:2px;"></i>' + d.jumlah_juri + ' juri</div>';
+                }
+                html += '</td>';
                 html += '<td style="font-weight:900;color:var(--primary);">' + (d.total_point ?? 0) + '</td>';
                 html += '<td><span style="display:inline-block;padding:4px 12px;border-radius:6px;font-size:13px;font-weight:900;' + rankBg + '">' + d.rank_point + '</span></td>';
                 html += '</tr>';

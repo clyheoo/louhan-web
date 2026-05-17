@@ -175,7 +175,7 @@ class GrandJuriController extends Controller
                 'nilai_detail'     => $latestNilai,
                 'total_nilai'      => $latestTotal,
                 'total_nilai_semua' => $totalNilaiSemua,
-                'jumlah_juri_yang_niali' => $jumlahJuriYangNilai,
+                'jumlah_juri_yang_nilai' => $jumlahJuriYangNilai,
                 'detail_list_per_juri' => $detailListPerJuri,
                 'is_locked'        => (bool) ($ikan->is_locked ?? false),
                 'status'           => $ikan->is_locked
@@ -514,17 +514,15 @@ class GrandJuriController extends Controller
         $filterKategori = $request->query('kategori', '');
         $filterKelas = $request->query('kelas', '');
 
+        // ★ FIX: Hapus ->latest()->limit(1), load SEMUA scorings
         $query = Ikan::where('is_locked', true)
             ->whereNotNull('nomor_tank')
             ->whereHas('scorings', function ($q) {
                 $q->where('submitted_to_grand', true);
             })
             ->with(['peserta', 'scorings' => function ($q) {
-                $q->where('submitted_to_grand', true)
-                ->orderByRaw('edited_by_grand_juri DESC')
-                ->latest()
-                ->limit(1);
-            }, 'scorings.grandJuri']);
+                $q->where('submitted_to_grand', true);
+            }, 'scorings.juri', 'scorings.grandJuri']);
 
         if ($filterKategori) $query->where('kategori', $filterKategori);
         if ($filterKelas) $query->where('kelas', $filterKelas);
@@ -533,15 +531,16 @@ class GrandJuriController extends Controller
         $groups = [];
 
         foreach ($ikans as $ikan) {
-            $sc = $ikan->scorings->first();
-            if (!$sc) continue;
+            $scorings = $ikan->scorings;
+            if ($scorings->isEmpty()) continue;
 
-            // ★ HITUNG DARI SEMUA JURI (bukan 1 saja)
+            // ★ HITUNG DARI SEMUA JURI (sama persis logika getPeserta)
             $totalNilaiSemua = 0;
             $jumlahJuriYangNilai = 0;
             $avgDetail = [];
+            $grandJuriName = '—';
 
-            foreach ($ikan->scorings as $s) {
+            foreach ($scorings as $s) {
                 if ($s->total_nilai) {
                     $totalNilaiSemua += $s->total_nilai;
                     $jumlahJuriYangNilai++;
@@ -549,11 +548,16 @@ class GrandJuriController extends Controller
                 if ($s->nilai_detail && is_array($s->nilai_detail)) {
                     foreach ($s->nilai_detail as $kat => $fields) {
                         foreach ($fields as $fid => $val) {
-                            if (!isset($avgDetail[$kat][$fid])) $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                            if (!isset($avgDetail[$kat][$fid])) {
+                                $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                            }
                             $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
                             $avgDetail[$kat][$fid]['count']++;
                         }
                     }
+                }
+                if ($s->edited_by_grand_juri && $s->grandJuri) {
+                    $grandJuriName = $s->grandJuri->name;
                 }
             }
 
@@ -562,43 +566,45 @@ class GrandJuriController extends Controller
                 foreach ($avgDetail as $kat => $fields) {
                     $finalAvgDetail[$kat] = [];
                     foreach ($fields as $fid => $d) {
-                        $finalAvgDetail[$kat][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                        $finalAvgDetail[$kat][$fid] = $d['count'] > 0
+                            ? $d['sum'] / $d['count']
+                            : 0;
                     }
                 }
             }
 
             $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
 
-            // ★ Back-fill: simpan ke DB kalau sebelumnya 0/null
-            if ($totalPoint > 0 && (!$sc->total_point || $sc->total_point == 0)) {
-                $sc->total_point = $totalPoint;
-                $sc->saveQuietly();
-            }
-
             $key = ($scope === 'per_kategori')
                 ? $ikan->kategori
                 : $ikan->kategori . ' - Kelas ' . $ikan->kelas;
 
             $groups[$key][] = [
-                'ikan_id'       => $ikan->id,
-                'nama_peserta'  => $ikan->peserta->nama_peserta ?? 'Unknown',
-                'detail_anggota'=> $ikan->peserta->detail_anggota ?? '—',
-                'kategori'      => $ikan->kategori,
-                'kelas'         => $ikan->kelas,
-                'nomor_tank'    => $ikan->nomor_tank,
-                'total_nilai'   => $sc->total_nilai ?? 0,
-                'total_point'   => (float) $totalPoint,
-                'grand_juri'    => $sc->grandJuri ? $sc->grandJuri->name : '—',
+                'ikan_id'           => $ikan->id,
+                'nama_peserta'      => $ikan->peserta->nama_peserta ?? 'Unknown',
+                'detail_anggota'    => $ikan->peserta->detail_anggota ?? '—',
+                'kategori'          => $ikan->kategori,
+                'kelas'             => $ikan->kelas,
+                'nomor_tank'        => $ikan->nomor_tank,
+                'total_nilai'       => $totalNilaiSemua,
+                'total_nilai_semua' => $totalNilaiSemua,   // ★ TAMBAH: key yang frontend cari
+                'total_point'       => (float) $totalPoint,
+                'grand_juri'        => $grandJuriName,
+                'jumlah_juri'       => $jumlahJuriYangNilai, // ★ TAMBAH: info transparansi
             ];
         }
 
         $result = [];
         foreach ($groups as $name => $items) {
             $ranked = PointCalculator::hitungRankPoints($items);
-            usort($ranked, function ($a, $b) { return $a['rank_point'] > $b['rank_point'] ? -1 : 1; });
+            usort($ranked, function ($a, $b) {
+                return $a['rank_point'] > $b['rank_point'] ? -1 : 1;
+            });
             $result[] = ['group_name' => $name, 'total' => count($ranked), 'data' => $ranked];
         }
-        usort($result, function ($a, $b) { return strcmp($a['group_name'], $b['group_name']); });
+        usort($result, function ($a, $b) {
+            return strcmp($a['group_name'], $b['group_name']);
+        });
 
         return response()->json($result);
     }
