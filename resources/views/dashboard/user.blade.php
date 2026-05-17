@@ -451,7 +451,7 @@
             submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>MEMPROSES...';
             const formData = new FormData(regForm);
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-            fetch('{{ route("store.registrasi") }}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
+            apiFetch('{{ route("store.registrasi") }}', { method: 'POST', body: formData })
             .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
             .then(data => { if (data.success) { document.getElementById('successModal').classList.add('show'); lockProfilForm(); } })
             .catch(err => { 
@@ -469,7 +469,7 @@
             btnSubmit.disabled = true; btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
             const formData = new FormData(formIkan);
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-            fetch('{{ route("store.ikan") }}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
+            apiFetch('{{ route("store.ikan") }}', { method: 'POST', body: formData })
             .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
             .then(data => {
                 if (data.success) {
@@ -491,10 +491,38 @@
             .finally(() => { btnSubmit.disabled = false; btnSubmit.innerHTML = 'Simpan Ikan'; });
         });
 
-        // --- REAL-TIME POLLING UNTUK UPDATE DARI ADMIN & MVP LOGIC ---
+        // --- HELPER: API FETCH MENGGUNAKAN XMLHttpRequest ---
+        function apiFetch(url, options = {}) {
+            return new Promise(function(resolve, reject) {
+                var xhr = new XMLHttpRequest();
+                xhr.open(options.method || 'GET', url, true);
+                xhr.setRequestHeader('Accept', 'application/json');
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                if (options.method && options.method.toUpperCase() !== 'GET') {
+                    var csrfToken = document.querySelector('meta[name="csrf-token"]');
+                    if (csrfToken) xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken.getAttribute('content'));
+                }
+                xhr.withCredentials = true;
+                xhr.onload = function() {
+                    resolve({
+                        ok: xhr.status >= 200 && xhr.status < 300,
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        json: function() { return JSON.parse(xhr.responseText); }
+                    });
+                };
+                xhr.onerror = function() { reject(new Error('Network error')); };
+                xhr.send(options.body || null);
+            });
+        }
+
+        // --- REAL-TIME POLLING ---
         let currentIkans = {};
         let isMvpOpen = false;
         let currentMvpSubmitted = false;
+        let pollingInterval = null;
+        let auth401Count = 0;
+        const MAX_401_RETRY = 5;
 
         document.querySelectorAll('.ikan-item').forEach(el => {
             const id = el.id.replace('ikan-item-', '');
@@ -504,9 +532,37 @@
         });
 
         function pollIkans() {
-            fetch('/api/user/my-ikans', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(r => r.json())
-            .then(response => {
+            if (auth401Count >= MAX_401_RETRY) return;
+
+            apiFetch('/api/user/my-ikans')
+            .then(function(r) {
+                if (r.status === 401) {
+                    auth401Count++;
+                    console.warn('Auth 401 count:', auth401Count, '- Session mungkin tidak valid');
+                    if (auth401Count >= MAX_401_RETRY) {
+                        console.error('Session expired confirmed - redirecting to login');
+                        window.location.href = '/login';
+                    }
+                    return null;
+                }
+                
+                // Reset counter on success
+                auth401Count = 0;
+                
+                if (r.status === 419) {
+                    console.warn('CSRF token mismatch - reloading page');
+                    window.location.reload();
+                    return null;
+                }
+                
+                if (!r.ok) {
+                    throw new Error('Server error: ' + r.status);
+                }
+                return r.json();
+            })
+            .then(function(response) {
+                if (!response) return;
+                
                 const data = response.ikans || [];
                 const resetInfo = response.reset_info;
                 const mvpOpen = response.mvp_open || false;
@@ -623,10 +679,29 @@
                 const statusBadge = document.querySelector('.status-badge');
                 if (statusBadge) { statusBadge.textContent = total > 0 ? `${undi}/${total} DIUNDI` : 'MENUNGGU IKAN'; statusBadge.className = 'status-badge ' + (total > 0 ? 'success' : ''); }
             })
-            .catch(err => console.error('Polling error:', err));
+            .catch(function(err) {
+                console.error('Polling error:', err);
+            });
         }
-        setInterval(pollIkans, 5000);
-        pollIkans();
+
+        // ★ TUNGGU 3 DETIK SEBELUM MULAI POLLING
+        setTimeout(function() {
+            console.log('Starting polling...');
+            pollIkans();
+            pollingInterval = setInterval(pollIkans, 5000);
+        }, 3000);
+
+        // ★ STOP SAAT TAB TIDAK AKTIF
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+            } else {
+                if (auth401Count < MAX_401_RETRY && !pollingInterval) {
+                    pollIkans();
+                    pollingInterval = setInterval(pollIkans, 5000);
+                }
+            }
+        });
 
         // --- LOGIC TOGGLE MVP ---
         function toggleMvp(ikanId, btnElement) {
@@ -637,7 +712,7 @@
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
             formData.append('ikan_id', ikanId);
 
-            fetch('/api/toggle-mvp-ikan', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
+            apiFetch('/api/toggle-mvp-ikan', { method: 'POST', body: formData })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
@@ -652,11 +727,10 @@
             .finally(() => { btnElement.disabled = false; });
         }
 
-        // --- AMBIL RANGE UNDIAN DARI SERVER ---
+        // --- RANGE UNDIAN (DEFAULT) ---
         let tankDrawMax = 1000; 
-        fetch('/api/tank-range', { headers: { 'Accept': 'application/json' } }).then(r => r.json()).then(d => { if(d.max) tankDrawMax = d.max; }).catch(() => {});
 
-        // --- LOGIC MESIN UNDIAN PER IKAN ---
+        // --- LOGIC MESIN UNDIAN ---
         const numberDisplay = document.getElementById('numberDisplay');
         const lcdInfo = document.getElementById('lcdInfo');
 
@@ -667,7 +741,7 @@
             var maxForAnim = tankDrawMax || 1000; var rolling = true;
             var rollTimer = setInterval(function() { numberDisplay.textContent = Math.floor(Math.random() * maxForAnim) + 1; }, 40);
             var formData = new FormData(); formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content')); formData.append('ikan_id', ikanId);
-            fetch('{{ route("api.acak.tank.user") }}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
+            apiFetch('{{ route("api.acak.tank.user") }}', { method: 'POST', body: formData })
             .then(function(res) { return res.json(); })
             .then(function(data) {
                 if (!data.success) throw new Error(data.message || 'Gagal mengacak nomor.');
@@ -714,18 +788,15 @@
             var formData = new FormData();
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
 
-            fetch('/api/submit-mvp-ikan', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formData })
+            apiFetch('/api/submit-mvp-ikan', { method: 'POST', body: formData })
             .then(res => res.json())
             .then(data => {
                 if(data.success) {
                     document.getElementById('modalConfirmMvp').classList.remove('show');
-                    
-                    // ★ GANTI ALERT BIASA DENGAN POPUP CUSTOM
                     var modalTitle = document.getElementById('successModalTitle');
                     var modalDesc = document.getElementById('successModalDesc');
                     if(modalTitle) modalTitle.textContent = 'Data MVP Terkirim!';
                     if(modalDesc) modalDesc.innerHTML = 'Pilihan ikan MVP Anda berhasil dikirim dan sudah <b style="color:#b45309;">TERKUNCI</b>. Data tidak dapat diubah lagi.';
-                    
                     document.getElementById('successModal').classList.add('show');
                     pollIkans(); 
                 } else {

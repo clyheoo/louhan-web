@@ -335,12 +335,15 @@ class DashboardController extends Controller
         return response()->json(['success' => true, 'message' => 'Data ikan MVP berhasil dikirim! Pilihan tidak dapat diubah lagi.']);
     }
 
-    // ★ UPDATE getMyIkans
     public function getMyIkans()
     {
         $userId = Auth::id();
-        if (!$userId) return response()->json(['ikans' => [], 'reset_info' => null, 'mvp_open' => false, 'mvp_submitted' => false], 401);
-
+        if (!$userId) {
+            return response()->json([
+                'error' => 'unauthenticated',
+                'message' => 'Sesi telah berakhir. Silakan login kembali.'
+            ], 401);
+        }
         $peserta = Peserta::where('user_id', $userId)->first();
 
         $resetSetting = \DB::table('settings')->where('key', 'tank_reset_info')->first();
@@ -351,17 +354,33 @@ class DashboardController extends Controller
         }
 
         $mvpOpen = (bool)(\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
-        $mvpSubmitted = $peserta ? $peserta->is_mvp_submitted : false; // ★ Cek status kirim
+        $mvpSubmitted = $peserta ? $peserta->is_mvp_submitted : false;
 
-        if (!$peserta) return response()->json(['ikans' => [], 'reset_info' => $resetInfo, 'mvp_open' => $mvpOpen, 'mvp_submitted' => $mvpSubmitted]);
+        if (!$peserta) {
+            return response()->json([
+                'ikans' => [], 
+                'reset_info' => $resetInfo, 
+                'mvp_open' => $mvpOpen, 
+                'mvp_submitted' => $mvpSubmitted
+            ]);
+        }
 
-        $ikans = $peserta->ikans()->orderBy('created_at', 'desc')->get();
+        $ikans = $peserta->ikans()->orderBy('created_at', 'desc')->get()->map(function($ikan) {
+            return [
+                'id' => $ikan->id,
+                'kategori' => $ikan->kategori,
+                'kelas' => $ikan->kelas,
+                'nomor_tank' => $ikan->nomor_tank,
+                'is_mvp' => $ikan->is_mvp ?? false,
+                'dibuat_oleh' => $ikan->dibuat_oleh ?? 'user',
+            ];
+        });
 
         return response()->json([
-            'ikans'      => $ikans,
+            'ikans' => $ikans,
             'reset_info' => $resetInfo,
-            'mvp_open'   => $mvpOpen,
-            'mvp_submitted' => $mvpSubmitted // ★ Kirim ke frontend
+            'mvp_open' => $mvpOpen,
+            'mvp_submitted' => $mvpSubmitted
         ]);
     }
 }
