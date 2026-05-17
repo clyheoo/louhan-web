@@ -711,7 +711,7 @@ function loadPeserta(search){
 
             /* td6 — TOTAL */
             var td6=document.createElement('td');
-            td6.innerHTML=p.total_nilai>0?'<span class="total-cell">'+p.total_nilai+'</span>':'<span class="total-cell zero">—</span>';
+            td6.innerHTML=p.total_nilai_semua>0?'<span class="total-cell">'+p.total_nilai_semua+'</span>':'<span class="total-cell zero">—</span>';
             tr.appendChild(td6);
 
             /* td7 — STATUS (badge saja, tanpa aksi) */
@@ -842,6 +842,36 @@ function renderDetail(p){
         }
         html+='</div></div>';
     });
+
+        // ★ TAMBAHAN: Ringkasan Nilai dari Semua Juri + Total Point
+    if(p.detail_list_per_juri && p.detail_list_per_juri.length > 0) {
+        html += '<div style="margin-top:16px;border:2px solid #ddd6fe;border-radius:12px;overflow:hidden;">';
+        html += '<div style="padding:12px 16px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-bottom:1px solid #ddd6fe;display:flex;justify-content:space-between;align-items:center;">';
+        html += '<div><span style="font-size:13px;font-weight:800;color:#4c1d95;"><i class="fas fa-calculator" style="margin-right:6px;"></i>Ringkasan Nilai & Point</span></div>';
+        html += '<span style="font-size:11px;color:#7c3aed;font-weight:700;">'+p.jumlah_juri_yang_nila+' juri</span>';
+        html += '</div>';
+        html += '<div style="padding:16px;">';
+
+        html += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+        html += '<tr style="background:#f5f3ff;"><th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;">JURI</th><th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;">TOTAL NILAI</th></tr>';
+        
+        var grandTotalNilai = 0;
+        p.detail_list_per_juri.forEach(function(j) {
+            if (!j.is_grand) {
+                grandTotalNilai += j.total_nilai;
+                html += '<tr><td style="font-weight:600;">' + esc(j.juri_name) + '</td>';
+                html += '<td style="font-weight:800;text-align:right;">' + j.total_nilai + '</td></tr>';
+            }
+        });
+        html += '<tr style="background:#ede9fe;"><td style="font-weight:800;color:#4c1d95;"><i class="fas fa-crown" style="margin-right:4px;font-size:10px;"></i> TOTAL SEMUA JURI</td>';
+        html += '<td style="font-weight:900;text-align:right;color:#4c1d95;font-size:14px;">' + grandTotalNilai + '</td></tr>';
+        html += '</table>';
+
+        html += '<div style="margin-top:16px;background:linear-gradient(135deg,#fef3c7,#fef9c3);border:1px solid #fde68a;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">';
+        html += '<div><div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;">Total Point</div><div style="font-size:10px;color:#d97706;">(dihitung dari rata-rata '+p.jumlah_juri_yang_nila+' juri)</div></div>';
+        html += '<div style="font-size:18px;font-weight:900;color:#d97706;">' + (p.total_point ?? 0) + '</div>';
+        html += '</div></div></div>';
+    }
 
     document.getElementById('detailContent').innerHTML=html;
 }
@@ -1252,8 +1282,8 @@ function loadPointRanking() {
                 html += '<td style="font-weight:700;color:var(--purple);">Tank ' + d.nomor_tank + '</td>';
                 html += '<td>' + esc(d.kelas) + '</td>';
                 html += '<td style="font-size:11px;color:var(--text-muted);">' + esc(d.detail_anggota) + '</td>';
-                html += '<td style="font-weight:800;">' + d.total_nilai + '</td>';
-                html += '<td style="font-weight:900;color:var(--primary);">' + d.total_point + '</td>';
+                html += '<td style="font-weight:800;">' + (d.total_nilai_semua ?? d.total_nilai) + '</td>';
+                html += '<td style="font-weight:900;color:var(--primary);">' + (d.total_point ?? 0) + '</td>';
                 html += '<td><span style="display:inline-block;padding:4px 12px;border-radius:6px;font-size:13px;font-weight:900;' + rankBg + '">' + d.rank_point + '</span></td>';
                 html += '</tr>';
             });

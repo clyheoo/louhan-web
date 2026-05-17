@@ -84,7 +84,6 @@ class GrandJuriController extends Controller
 
             foreach ($scorings as $s) {
                 if ($s->juri) {
-                    // ★ FIX: is_grand cek role user, bukan flag edited_by_grand_juri
                     $juriList[] = [
                         'name'     => $s->juri->name,
                         'is_grand' => ($s->juri->role === 'grand_juri'),
@@ -105,11 +104,9 @@ class GrandJuriController extends Controller
                 $latestKelas = $latest->kelas;
             }
 
-            // ★ Hitung total juri aktif dan yang sudah kirim
             $totalJuriAll = \App\Models\User::where('role', 'juri')->count();
             $submittedCount = $scorings->count();
 
-            // ★ Kumpulkan semua scoring untuk detail modal (per-juri)
             $allScoringsData = $scorings->map(function ($s) {
                 return [
                     'juri_name'    => $s->juri ? $s->juri->name : '—',
@@ -122,8 +119,51 @@ class GrandJuriController extends Controller
             $pointConfig = ScoringPointConfig::where('kategori', $ikan->kategori)->first();
             $ikanKategori = $ikan->kategori;
 
+            // ★ HITUNG DARI SEMUA JURI (bukan hanya 1)
+            $totalNilaiSemua = 0;
+            $jumlahJuriYangNilai = 0;
+            $detailListPerJuri = [];
+
+            foreach ($scorings as $s) {
+                if ($s->total_nilai) {
+                    $totalNilaiSemua += $s->total_nilai;
+                    $jumlahJuriYangNilai++;
+                }
+                if ($s->juri) {
+                    $detailListPerJuri[] = [
+                        'juri_name'    => $s->juri->name,
+                        'is_grand'     => ($s->juri->role === 'grand_juri'),
+                        'total_nilai'  => $s->total_nilai ?? 0,
+                        'nilai_detail' => $s->nilai_detail,
+                    ];
+                }
+            }
+
+            // ★ HITUNG POINT DARI RATA-RATA SEMUA JURI
+            $totalPointSemua = 0;
+            if ($jumlahJuriYangNilai > 0) {
+                $avgDetail = [];
+                foreach ($scorings as $s) {
+                    if (!$s->nilai_detail || !is_array($s->nilai_detail)) continue;
+                    foreach ($s->nilai_detail as $kat => $fields) {
+                        foreach ($fields as $fid => $val) {
+                            if (!isset($avgDetail[$kat][$fid])) $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                            $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                            $avgDetail[$kat][$fid]['count']++;
+                        }
+                    }
+                }
+                $finalAvgDetail = [];
+                foreach ($avgDetail as $kat => $fields) {
+                    $finalAvgDetail[$kat] = [];
+                    foreach ($fields as $fid => $d) {
+                        $finalAvgDetail[$kat][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                    }
+                }
+                $totalPointSemua = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+            }
+
             return [
-                
                 'id'               => $ikan->id,
                 'nama_peserta'     => $peserta->nama_peserta ?? 'Unknown',
                 'kategori'         => $ikan->kategori,
@@ -134,7 +174,9 @@ class GrandJuriController extends Controller
                 'grand_juri_nama'  => $grandJuriName,
                 'nilai_detail'     => $latestNilai,
                 'total_nilai'      => $latestTotal,
-                'total_juri'       => $scorings->count(),
+                'total_nilai_semua' => $totalNilaiSemua,
+                'jumlah_juri_yang_niali' => $jumlahJuriYangNilai,
+                'detail_list_per_juri' => $detailListPerJuri,
                 'is_locked'        => (bool) ($ikan->is_locked ?? false),
                 'status'           => $ikan->is_locked
                                     ? 'NILAI FINAL (TERKUNCI)'
@@ -145,7 +187,7 @@ class GrandJuriController extends Controller
                 'total_juri_all'       => $totalJuriAll,
                 'submitted_juri_count' => $submittedCount,
                 'all_scorings'         => $allScoringsData,
-                'total_point'     => (float)($latestNilai ? PointCalculator::hitungPoint($ikanKategori, $latestNilai) : 0),
+                'total_point'     => (float) $totalPointSemua,
                 'point_config'    => $pointConfig ? [
                     'overall' => (float)$pointConfig->overall_bobot,
                     'head'    => (float)$pointConfig->head_bobot,
@@ -156,14 +198,14 @@ class GrandJuriController extends Controller
                     'color'   => (float)$pointConfig->color_bobot,
                     'finnage' => (float)$pointConfig->finnage_bobot,
                 ] : null,
-                'point_breakdown' => $latestNilai ? PointCalculator::hitungBreakdown($ikanKategori, $latestNilai) : null,
+                'point_breakdown' => $finalAvgDetail ? PointCalculator::hitungBreakdown($ikanKategori, $finalAvgDetail) : null,
             ];
         });
 
         return response()->json($data);
     }
 
-    /* ═══════════════════════════════════════════
+    /* ═════════════════════════════════════════
        EDIT NILAI (UPDATE: BERDASARKAN IKAN_ID)
        ═══════════════════════════════════════════ */
     public function editNilai(Request $request)
@@ -172,7 +214,6 @@ class GrandJuriController extends Controller
         $ikanId    = $data['ikan_id'] ?? null;
         $changed   = $data['changed_fields'] ?? null;
 
-        /* ── KASUS 2: Belum ada scoring sama sekali ── */
         $ikan = Ikan::find($ikanId);
         $totalNilai = 0;
         foreach ($changed as $fields) {
@@ -190,7 +231,7 @@ class GrandJuriController extends Controller
             'nilai_detail'         => $changed,
             'total_nilai'          => $totalNilai,
             'status'               => 'submitted',
-            'total_point'          => $totalPoint,        // ★ Sekarang ada di $fillable
+            'total_point'          => $totalPoint,
             'edited_by_grand_juri' => true,
         ]);
 
@@ -355,7 +396,7 @@ class GrandJuriController extends Controller
 
     /* ═══════════════════════════════════════════
     RINCIAN DETAIL (Klik kartu kategori → sudah/belum dinilai)
-    ═══════════════════════════════════════════ */
+    ═════════════════════════════════════════ */
     public function getRincianDetail(Request $request)
     {
         $kategori = $request->query('kategori');
@@ -364,7 +405,6 @@ class GrandJuriController extends Controller
             return response()->json(['error' => 'kategori wajib diisi'], 422);
         }
 
-        // ★ FIX: Satu query saja, hanya ikan yang sudah submitted_to_grand
         $ikans = Ikan::whereNotNull('nomor_tank')
             ->whereHas('scorings', function ($q) {
                 $q->where('submitted_to_grand', true);
@@ -394,7 +434,7 @@ class GrandJuriController extends Controller
     }
 
     /* ═══════════════════════════════════════════
-    PLOT STATUS (Klik stat Sudah/Belum Plot → daftar peserta)
+    PLOT STATUS (Klik stat Sudah/Belum Plot → daftar peserta
     ═══════════════════════════════════════════ */
     public function getPlotStatus(Request $request)
     {
@@ -437,14 +477,13 @@ class GrandJuriController extends Controller
 
     public function getMvpIkan()
     {
-        // ★ Hanya ambil ikan dari peserta yang SUDAH MENGIRIM (is_mvp_submitted = true)
         $ikans = Ikan::where('is_mvp', true)
             ->whereHas('peserta', function($q) {
                 $q->where('is_mvp_submitted', true);
             })
             ->with('peserta')
             ->get()
-            ->groupBy('peserta_id'); // ★ Kelompokkan berdasarkan peserta
+            ->groupBy('peserta_id');
 
         $data = [];
         foreach ($ikans as $pesertaId => $ikanList) {
@@ -462,7 +501,7 @@ class GrandJuriController extends Controller
                 'nama_peserta' => $peserta->nama_peserta ?? '-',
                 'detail_anggota' => $peserta->detail_anggota ?? '-',
                 'total_mvp' => $ikanList->count(),
-                'ikans' => $ikanDetails // ★ Array detail ikan
+                'ikans' => $ikanDetails
             ];
         }
 
@@ -497,13 +536,43 @@ class GrandJuriController extends Controller
             $sc = $ikan->scorings->first();
             if (!$sc) continue;
 
-            // ★ FIX: Hitung point on-the-fly, bukan rely pada stored value
-            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $sc->nilai_detail ?? []);
+            // ★ HITUNG DARI SEMUA JURI (bukan 1 saja)
+            $totalNilaiSemua = 0;
+            $jumlahJuriYangNilai = 0;
+            $avgDetail = [];
+
+            foreach ($ikan->scorings as $s) {
+                if ($s->total_nilai) {
+                    $totalNilaiSemua += $s->total_nilai;
+                    $jumlahJuriYangNilai++;
+                }
+                if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                    foreach ($s->nilai_detail as $kat => $fields) {
+                        foreach ($fields as $fid => $val) {
+                            if (!isset($avgDetail[$kat][$fid])) $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                            $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                            $avgDetail[$kat][$fid]['count']++;
+                        }
+                    }
+                }
+            }
+
+            $finalAvgDetail = [];
+            if ($jumlahJuriYangNilai > 0) {
+                foreach ($avgDetail as $kat => $fields) {
+                    $finalAvgDetail[$kat] = [];
+                    foreach ($fields as $fid => $d) {
+                        $finalAvgDetail[$kat][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                    }
+                }
+            }
+
+            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
 
             // ★ Back-fill: simpan ke DB kalau sebelumnya 0/null
             if ($totalPoint > 0 && (!$sc->total_point || $sc->total_point == 0)) {
                 $sc->total_point = $totalPoint;
-                $sc->saveQuietly(); // tanpa trigger events
+                $sc->saveQuietly();
             }
 
             $key = ($scope === 'per_kategori')
@@ -518,7 +587,7 @@ class GrandJuriController extends Controller
                 'kelas'         => $ikan->kelas,
                 'nomor_tank'    => $ikan->nomor_tank,
                 'total_nilai'   => $sc->total_nilai ?? 0,
-                'total_point'   => (float) $totalPoint,   // ★ Pakai hasil kalkulasi
+                'total_point'   => (float) $totalPoint,
                 'grand_juri'    => $sc->grandJuri ? $sc->grandJuri->name : '—',
             ];
         }
