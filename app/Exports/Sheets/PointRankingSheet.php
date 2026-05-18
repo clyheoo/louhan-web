@@ -7,16 +7,14 @@ use App\Models\ScoringPointConfig;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles, WithColumnWidths
+class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoSize
 {
     private $scope;
     private $mergeRanges = [];
@@ -53,31 +51,6 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
         };
     }
 
-    public function columnWidths(): array
-    {
-        $w = [
-            'A' => 6, 'B' => 22, 'C' => 14, 'D' => 8, 'E' => 9, 'F' => 18, 'G' => 8,
-        ];
-        $col = 8;
-        foreach (self::CATS as $info) {
-            foreach ($info['fields'] as $f) {
-                $letter = Coordinate::stringFromColumnIndex($col++);
-                $w[$letter] = 11;
-                $letter = Coordinate::stringFromColumnIndex($col++);
-                $w[$letter] = 9;
-            }
-            $letter = Coordinate::stringFromColumnIndex($col++);
-            $w[$letter] = 11;
-        }
-        $endLetters = ['TOTAL POINT','BONUS','FINAL POINT','RANK POINT'];
-        foreach ($endLetters as $i => $label) {
-            $letter = Coordinate::stringFromColumnIndex($col++);
-            $w[$letter] = $label === 'TOTAL POINT' ? 13 : 10;
-        }
-        return $w;
-    }
-
-    /* ── Hitung data per ikan ── */
     private function calcIkan($ikan, $configs)
     {
         $scorings = $ikan->scorings->filter(fn($s) => $s->submitted_to_grand);
@@ -91,7 +64,6 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
             $bobots[$kat] = (float)($cfg->$key ?? 0);
         }
 
-        // Rata-rata per komponen
         $avg = [];
         foreach ($scorings as $s) {
             $nd = $s->nilai_detail;
@@ -111,7 +83,6 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
         }
         unset($fields, $d);
 
-        // Point per komponen
         $compPoints = [];
         $catSubs = [];
         $totalPoint = 0;
@@ -145,7 +116,6 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
         ];
     }
 
-    /* ── Build header rows ── */
     private function buildRows(): array
     {
         $configs = ScoringPointConfig::all()->keyBy('kategori');
@@ -157,7 +127,6 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
             ->orderBy('kategori')->orderBy('kelas')->orderBy('nomor_tank')
             ->get();
 
-        // Group
         $groups = [];
         foreach ($ikans as $ikan) {
             $d = $this->calcIkan($ikan, $configs);
@@ -171,8 +140,8 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
         }
         if ($this->scope !== 'global') ksort($groups);
 
-        // ─ Row 1: Category merged headers ─
-        $fixedH = ['RANK','PESERTA','KATEGORI','KELAS','NO TANK','ASAL / TEAM','JML JURI'];
+        // ── Row 1: Merged category headers ──
+        $fixedH = ['RANK', 'PESERTA', 'KATEGORI', 'KELAS', 'NO TANK', 'ASAL / TEAM', 'JML JURI'];
         $catRow = $fixedH;
         $this->mergeRanges = [];
         $col = 8;
@@ -184,9 +153,9 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
             $this->mergeRanges[] = [$startC, $col + $n - 1];
             $col += $n;
         }
-        foreach (['TOTAL POINT','BONUS','FINAL POINT','RANK POINT'] as $h) $catRow[] = $h;
+        foreach (['TOTAL POINT', 'BONUS', 'FINAL POINT', 'RANK POINT'] as $h) $catRow[] = $h;
 
-        // ─ Row 2: Component headers ─
+        // ── Row 2: Component detail headers ──
         $compRow = $fixedH;
         foreach (self::CATS as $info) {
             foreach ($info['fields'] as $f) {
@@ -197,8 +166,8 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
         }
 
         $rows = [$catRow, $compRow];
+        $colCount = count($catRow);
 
-        // ─ Data rows ─
         foreach ($groups as $groupName => $items) {
             usort($items, fn($a, $b) => $b['final_point'] <=> $a['final_point']);
             $ranked = [];
@@ -208,7 +177,7 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
             }
 
             // Group separator
-            $sep = array_fill(0, count($catRow), '');
+            $sep = array_fill(0, $colCount, '');
             $sep[0] = '▶ ' . strtoupper($groupName) . ' (' . count($ranked) . ' peserta)';
             $rows[] = $sep;
 
@@ -228,7 +197,7 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
                 $row[] = $d['rank_point'];
                 $rows[] = $row;
             }
-            $rows[] = array_fill(0, count($catRow), '');
+            $rows[] = array_fill(0, $colCount, '');
         }
 
         return $rows;
@@ -245,30 +214,47 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet;
                 $lastCol = $sheet->getHighestColumn();
+                $lastColIdx = Coordinate::columnIndexFromString($lastCol);
                 $lastRow = $sheet->getHighestRow();
 
-                // Merge category headers in row 1
+                // ── Set minimum width for ALL columns ──
+                for ($c = 1; $c <= $lastColIdx; $c++) {
+                    $letter = Coordinate::stringFromColumnIndex($c);
+                    $current = $sheet->getColumnDimension($letter)->getWidth();
+                    if ($current === -1 || $current < 10) {
+                        // Fixed columns wider
+                        if ($c <= 2) {
+                            $sheet->getColumnDimension($letter)->setAutoSize(false)->setWidth(14);
+                        } elseif ($c <= 7) {
+                            $sheet->getColumnDimension($letter)->setAutoSize(false)->setWidth(12);
+                        } else {
+                            $sheet->getColumnDimension($letter)->setAutoSize(false)->setWidth(11);
+                        }
+                    }
+                }
+
+                // ── Merge category headers in row 1 ──
                 foreach ($this->mergeRanges as $range) {
                     $s = Coordinate::stringFromColumnIndex($range[0]);
                     $e = Coordinate::stringFromColumnIndex($range[1]);
                     $sheet->mergeCells("{$s}1:{$e}1");
                 }
 
-                // Style row 1 (category headers)
+                // ── Style row 1: Category headers ──
                 $sheet->getStyle("A1:{$lastCol}1")->applyFromArray([
                     'font'      => ['bold' => true, 'size' => 10, 'color' => ['rgb' => 'FFFFFF']],
                     'fill'      => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => '6D28D9']],
                     'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
                 ]);
 
-                // Style row 2 (component headers)
+                // ── Style row 2: Component headers ──
                 $sheet->getStyle("A2:{$lastCol}2")->applyFromArray([
                     'font'      => ['bold' => true, 'size' => 9, 'color' => ['rgb' => 'FFFFFF']],
                     'fill'      => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => '7C3AED']],
                     'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
                 ]);
 
-                // Style group separator rows
+                // ── Style group separator rows ──
                 for ($r = 3; $r <= $lastRow; $r++) {
                     $val = $sheet->getCell("A{$r}")->getValue();
                     if ($val && str_starts_with($val, '▶')) {
@@ -281,44 +267,44 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, WithStyles,
                     }
                 }
 
-                // Alternating row colors for data
+                // ── Alternating row colors for data ──
                 $dataStart = 3;
+                $colorToggle = false;
                 for ($r = $dataStart; $r <= $lastRow; $r++) {
                     $val = $sheet->getCell("A{$r}")->getValue();
-                    if ($val === '' || ($val && str_starts_with($val, '▶'))) continue;
-                    if (($r - $dataStart) % 2 === 0) {
+                    if ($val === '' || ($val && str_starts_with($val, '▶'))) {
+                        $colorToggle = false;
+                        continue;
+                    }
+                    if ($colorToggle) {
                         $sheet->getStyle("A{$r}:{$lastCol}{$r}")->applyFromArray([
                             'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FAF5FF']],
                         ]);
                     }
+                    $colorToggle = !$colorToggle;
                 }
 
-                // Borders for all used cells
+                // ── Thin borders for data area ──
                 $sheet->getStyle("A2:{$lastCol}{$lastRow}")->applyFromArray([
                     'borders' => [
-                        'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E2E8F0']],
+                        'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'DDD6FE']],
                     ],
                 ]);
 
-                // Number format for point columns (2 decimal)
-                for ($c = 8; $c <= Coordinate::columnIndexFromString($lastCol) - 4; $c++) {
+                // ── Number format: 2 decimal for point columns ──
+                for ($c = 8; $c <= $lastColIdx - 4; $c++) {
                     $colLetter = Coordinate::stringFromColumnIndex($c);
                     $sheet->getStyle("{$colLetter}3:{$colLetter}{$lastRow}")->getNumberFormat()
                         ->setFormatCode('0.00');
                 }
 
-                // Freeze top 2 rows
+                // ── Freeze panes ──
                 $sheet->freezePane('H3');
 
-                // Row height for header rows
-                $sheet->getRowDimension(1)->setRowHeight(22);
-                $sheet->getRowDimension(2)->setRowHeight(40);
+                // ── Row heights ──
+                $sheet->getRowDimension(1)->setRowHeight(20);
+                $sheet->getRowDimension(2)->setRowHeight(45);
             },
         ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [];
     }
 }
