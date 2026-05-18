@@ -518,7 +518,7 @@ class GrandJuriController extends Controller
         $filterKelas = $request->query('kelas', '');
 
         /* ═══════════════════════════════════════════
-        SCOPE: RANK GLOBAL (semua kategori digabung)
+        SCOPE: RANK GLOBAL
         ═══════════════════════════════════════════ */
         if ($scope === 'global') {
             $limit = min(100, max(1, (int)($request->query('limit', 10))));
@@ -531,7 +531,6 @@ class GrandJuriController extends Controller
                 ->with(['peserta', 'scorings' => function ($q) {
                     $q->where('submitted_to_grand', true);
                 }, 'scorings.juri', 'scorings.grandJuri', 'bonusPoints'])
-                ->orderBy('nomor_tank')
                 ->get();
 
             $allItems = [];
@@ -542,7 +541,6 @@ class GrandJuriController extends Controller
                 $totalNilaiSemua = 0;
                 $jumlahJuriYangNilai = 0;
                 $avgDetail = [];
-                $grandJuriName = '—';
 
                 foreach ($scorings as $s) {
                     if ($s->total_nilai) {
@@ -559,9 +557,6 @@ class GrandJuriController extends Controller
                                 $avgDetail[$kat][$fid]['count']++;
                             }
                         }
-                    }
-                    if ($s->edited_by_grand_juri && $s->grandJuri) {
-                        $grandJuriName = $s->grandJuri->name;
                     }
                 }
 
@@ -593,21 +588,17 @@ class GrandJuriController extends Controller
                     'total_bonus'       => $totalBonus,
                     'final_point'       => (float) $finalPoint,
                     'jumlah_juri'       => $jumlahJuriYangNilai,
-                    'grand_juri'        => $grandJuriName,
                 ];
             }
 
-            // Ranking SELURUH ikan bersama
+            // ★ Pakai helper: sort DESC by final_point, rank 100 menurun
             $ranked = PointCalculator::hitungRankPoints($allItems, 'final_point');
-            usort($ranked, function ($a, $b) {
-                return $a['rank_point'] > $b['rank_point'] ? -1 : 1;
-            });
 
             $totalRanked = count($ranked);
             $topItems = array_slice($ranked, 0, $limit);
 
             return response()->json([[
-                'group_name' => 'Rank Global — Top ' . $limit,
+                'group_name' => 'Rank Global — Top ' . $limit . ' dari ' . $totalRanked,
                 'total'      => $totalRanked,
                 'data'       => $topItems,
             ]]);
@@ -632,14 +623,14 @@ class GrandJuriController extends Controller
         $groups = [];
 
         foreach ($ikans as $ikan) {
-            $sc = $ikan->scorings->first();
-            if (!$sc) continue;
+            $scorings = $ikan->scorings;
+            if ($scorings->isEmpty()) continue;
 
             $totalNilaiSemua = 0;
             $jumlahJuriYangNilai = 0;
             $avgDetail = [];
 
-            foreach ($ikan->scorings as $s) {
+            foreach ($scorings as $s) {
                 if ($s->total_nilai) {
                     $totalNilaiSemua += $s->total_nilai;
                     $jumlahJuriYangNilai++;
@@ -689,14 +680,13 @@ class GrandJuriController extends Controller
                 'total_bonus'       => $totalBonus,
                 'final_point'       => (float) $finalPoint,
                 'jumlah_juri'       => $jumlahJuriYangNilai,
-                'grand_juri'        => $sc->grandJuri ? $sc->grandJuri->name : '—',
             ];
         }
 
         $result = [];
         foreach ($groups as $name => $items) {
+            // ★ Pakai helper: sort DESC by final_point, rank 100 menurun per group
             $ranked = PointCalculator::hitungRankPoints($items, 'final_point');
-            usort($ranked, function ($a, $b) { return $a['rank_point'] > $b['rank_point'] ? -1 : 1; });
             $result[] = ['group_name' => $name, 'total' => count($ranked), 'data' => $ranked];
         }
         usort($result, function ($a, $b) { return strcmp($a['group_name'], $b['group_name']); });

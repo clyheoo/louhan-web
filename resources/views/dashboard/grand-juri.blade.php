@@ -523,9 +523,6 @@
             <button class="modal-close" onclick="closeModal('modalBonus')"><i class="fas fa-xmark"></i></button>
         </div>
         <div class="modal-body" id="bonusModalBody"></div>
-        <div class="modal-foot">
-            <button class="btn-cancel" onclick="closeModal('modalBonus')">Tutup</button>
-        </div>
     </div>
 </div>
 
@@ -667,18 +664,20 @@ function addBonusGj(type, el){
     .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
     .then(function(d){
         if(d.success){
-            document.getElementById('popupSuccessDesc').innerHTML='<b>'+esc(bonusTypes.find(function(b){return b.key===type;}).label)+'</b> (+100) berhasil ditambahkan.';
+            /* ★ LANGSUNG REFRESH ranking sebelum popup */
+            loadPointRanking();
+            loadPeserta(document.getElementById('searchInput').value);
+            document.getElementById('popupSuccessDesc').innerHTML='<b>'+esc(bonusTypes.find(function(b){return b.key===type;}).label)+'</b> (+100) berhasil ditambahkan.<br><span style="font-size:11px;color:var(--text-muted);">Ranking sudah diperbarui otomatis.</span>';
             showPopup('popupSuccess');
             closeModal('modalBonus');
-            loadPeserta(document.getElementById('searchInput').value);
-            loadPointRanking();
         } else {
             document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';
             showPopup('popupError');
         }
     })
     .catch(function(e){
-        document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan.';
+        var msg = (e && e.message) ? e.message : 'Kesalahan jaringan.';
+        document.getElementById('popupErrorDesc').textContent=msg;
         showPopup('popupError');
     });
 }
@@ -687,7 +686,7 @@ function removeBonusGj(type){
     if(!currentBonusIkanId)return;
     popupConfirm(
         'Hapus Bonus',
-        'Yakin ingin menghapus bonus ini? Point yang sudah ditambahkan akan dikurangi kembali.',
+        'Yakin ingin menghapus bonus ini? Point yang sudah ditambahkan akan dikurangi kembali dan ranking akan otomatis berubah.',
         'Ya, Hapus',
         function(){
             var fd=new FormData();
@@ -698,11 +697,12 @@ function removeBonusGj(type){
             .then(function(r){return r.json();})
             .then(function(d){
                 if(d.success){
-                    document.getElementById('popupSuccessDesc').textContent='Bonus berhasil dihapus.';
+                    /* ★ LANGSUNG REFRESH ranking sebelum popup */
+                    loadPointRanking();
+                    loadPeserta(document.getElementById('searchInput').value);
+                    document.getElementById('popupSuccessDesc').textContent='Bonus berhasil dihapus. Ranking sudah diperbarui otomatis.';
                     showPopup('popupSuccess');
                     closeModal('modalBonus');
-                    loadPeserta(document.getElementById('searchInput').value);
-                    loadPointRanking();
                 } else {
                     document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';
                     showPopup('popupError');
@@ -1502,7 +1502,7 @@ function loadPointRanking() {
     }
 
     var el = document.getElementById('pointRankingContent');
-    el.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
+    el.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat ranking...</p></div>';
 
     fetch('/api/grand-juri/point-ranking' + params, {headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
@@ -1513,34 +1513,74 @@ function loadPointRanking() {
         }
         var isGlobal = (pointScope === 'global');
         var html = '';
+
         groups.forEach(function(g){
             html += '<div style="margin-bottom:20px;">';
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(135deg,' + (isGlobal ? '#fffbeb,#fef3c7' : '#fffbeb,#fef3c7') + ');border:1px solid #fde68a;border-radius:10px 10px 0 0;">';
+            /* Header group */
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:10px 10px 0 0;">';
             html += '<div class="card-title" style="font-size:13px;margin:0;"><i class="fas ' + (isGlobal ? 'fa-globe' : 'fa-layer-group') + '" style="color:#f59e0b;"></i> ' + esc(g.group_name) + '</div>';
             html += '<span style="font-size:11px;color:#92400e;font-weight:700;">' + g.total + ' peserta</span>';
             html += '</div>';
-            html += '<div class="table-wrap" style="border-radius:0 0 10px 10px;border:1px solid #fde68a;border-top:none;"><table class="result-table" style="min-width:750px;">';
-            html += '<thead><tr><th>#</th><th>PESERTA</th>' + (isGlobal ? '<th>KATEGORI</th>' : '') + '<th>NO. TANK</th><th>KELAS</th><th>ASAL/TEAM</th><th>TOTAL NILAI</th><th>POINT</th><th>RANK</th></tr></thead><tbody>';
+
+            /* Tabel */
+            html += '<div class="table-wrap" style="border-radius:0 0 10px 10px;border:1px solid #fde68a;border-top:none;"><table class="result-table" style="min-width:800px;">';
+            html += '<thead><tr><th style="width:40px;text-align:center;">#</th><th>PESERTA</th>' + (isGlobal ? '<th>KATEGORI</th>' : '') + '<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:90px;text-align:center;">POINT</th><th style="width:80px;text-align:center;">RANK</th></tr></thead>';
+            html += '<tbody>';
+
             g.data.forEach(function(d, i){
-                var rankBg = d.rank_point >= 90 ? 'background:#dcfce7;color:#16a34a;' : (d.rank_point >= 70 ? 'background:#fef3c7;color:#d97706;' : 'background:#f1f5f9;color:var(--text-muted);');
+                var rank = d.rank_point ?? 0; /* ★ Sudah bilangan bulat dari helper */
+                var fp = d.final_point ?? 0;
+                var bonus = d.total_bonus || 0;
+                var posisi = i + 1;
+
+                /* Warna badge rank */
+                var rankBg, rankColor, rankBorder;
+                if (rank >= 98) {
+                    rankBg = 'linear-gradient(135deg,#dcfce7,#bbf7d0)';
+                    rankColor = '#16a34a';
+                    rankBorder = '#86efac';
+                } else if (rank >= 90) {
+                    rankBg = 'linear-gradient(135deg,#fef3c7,#fde68a)';
+                    rankColor = '#d97706';
+                    rankBorder = '#fcd34d';
+                } else if (rank >= 75) {
+                    rankBg = 'linear-gradient(135deg,#e0e7ff,#c7d2fe)';
+                    rankColor = '#4f46e5';
+                    rankBorder = '#a5b4fc';
+                } else {
+                    rankBg = '#f1f5f9';
+                    rankColor = '#64748b';
+                    rankBorder = '#e2e8f0';
+                }
+
+                /* Medal untuk rank 100, 99, 98 */
+                var medalHtml = '';
+                if (rank === 100) medalHtml = '<i class="fas fa-medal" style="color:#f59e0b;font-size:12px;margin-right:4px;" title="Rank 100"></i>';
+                else if (rank === 99) medalHtml = '<i class="fas fa-medal" style="color:#94a3b8;font-size:12px;margin-right:4px;" title="Rank 99"></i>';
+                else if (rank === 98) medalHtml = '<i class="fas fa-medal" style="color:#d97706;font-size:12px;margin-right:4px;" title="Rank 98"></i>';
+
                 html += '<tr>';
-                html += '<td style="font-weight:700;color:var(--text-muted);">' + (i+1) + '</td>';
-                html += '<td style="font-weight:700;">' + esc(d.nama_peserta) + '</td>';
-                if (isGlobal) html += '<td style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;">' + esc(d.kategori) + '</td>';
-                html += '<td style="font-weight:700;color:var(--purple);">Tank ' + d.nomor_tank + '</td>';
-                html += '<td>' + esc(d.kelas) + '</td>';
+                html += '<td style="text-align:center;font-weight:800;color:var(--text-muted);">' + posisi + '</td>';
+                html += '<td style="font-weight:700;">' + medalHtml + esc(d.nama_peserta) + '</td>';
+                if (isGlobal) html += '<td style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">' + esc(d.kategori) + '</td>';
+                html += '<td style="font-weight:700;color:var(--purple);text-align:center;">' + (d.nomor_tank || '—') + '</td>';
+                html += '<td style="text-align:center;">' + esc(d.kelas) + '</td>';
                 html += '<td style="font-size:11px;color:var(--text-muted);">' + esc(d.detail_anggota) + '</td>';
-                html += '<td><div style="font-weight:800;">' + (d.total_nilai_semua ?? d.total_nilai ?? 0) + '</div>';
+                /* Total Nilai */
+                html += '<td style="text-align:center;"><div style="font-weight:800;">' + (d.total_nilai_semua ?? 0) + '</div>';
                 if (d.jumlah_juri > 0) {
-                    html += '<div style="font-size:9px;color:var(--text-muted);font-weight:600;"><i class="fas fa-users" style="font-size:8px;margin-right:2px;"></i>' + d.jumlah_juri + ' juri</div>';
+                    html += '<div style="font-size:9px;color:var(--text-muted);font-weight:600;">' + d.jumlah_juri + ' juri</div>';
                 }
                 html += '</td>';
-                var rpFinal = d.final_point ?? d.total_point ?? 0;
-                var rpBonus = d.total_bonus || 0;
-                var rpHtml = '<div style="font-weight:900;color:'+(rpBonus>0?'#16a34a':'var(--primary)')+';">'+rpFinal+'</div>';
-                if(rpBonus > 0) rpHtml += '<div style="font-size:9px;color:#16a34a;font-weight:800;"><i class="fas fa-trophy" style="font-size:7px;"></i> +'+rpBonus+'</div>';
-                html += '<td style="text-align:center;">' + rpHtml + '</td>';
-                html += '<td><span style="display:inline-block;padding:4px 12px;border-radius:6px;font-size:13px;font-weight:900;' + rankBg + '">' + d.rank_point + '</span></td>';
+                /* Point */
+                html += '<td style="text-align:center;">';
+                html += '<div style="font-weight:900;font-size:15px;color:' + (bonus > 0 ? '#16a34a' : 'var(--primary)') + ';">' + fp + '</div>';
+                if (bonus > 0) {
+                    html += '<div style="font-size:9px;color:#16a34a;font-weight:800;"><i class="fas fa-trophy" style="font-size:7px;"></i> +' + bonus + '</div>';
+                }
+                html += '</td>';
+                /* ★ RANK: bilangan bulat, bukan desimal */
+                html += '<td style="text-align:center;"><span style="display:inline-block;padding:5px 14px;border-radius:8px;font-size:14px;font-weight:900;background:' + rankBg + ';color:' + rankColor + ';border:1px solid ' + rankBorder + ';">' + rank + '</span></td>';
                 html += '</tr>';
             });
             html += '</tbody></table></div></div>';
@@ -1548,7 +1588,7 @@ function loadPointRanking() {
         el.innerHTML = html;
     })
     .catch(function(){
-        el.innerHTML = '<div class="empty-state" style="color:var(--danger);">Gagal memuat data.</div>';
+        el.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation" style="font-size:28px;display:block;margin-bottom:8px;"></i>Gagal memuat data ranking.</div>';
     });
 }
 

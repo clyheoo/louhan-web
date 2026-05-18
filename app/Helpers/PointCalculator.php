@@ -200,14 +200,19 @@ class PointCalculator
 
     public static function hitungRankPoints(array $items, string $key = 'total_point'): array
     {
+        // Sort DESC: final_point tertinggi di index 0
         usort($items, function ($a, $b) use ($key) {
-            return ($b[$key] ?? 0) <=> ($a[$key] ?? 0);
+            $va = $a[$key] ?? 0;
+            $vb = $b[$key] ?? 0;
+            if ($va === $vb) return 0;
+            return $va < $vb ? 1 : -1;
         });
-        $total = count($items);
-        $start = max(0, 100 - $total + 1);
+
+        // Rank: tertinggi = 100, menurun, minimum 1
         foreach ($items as $i => &$item) {
-            $item['rank_point'] = $start + $i;
+            $item['rank_point'] = max(1, 100 - $i);
         }
+
         return $items;
     }
 }
