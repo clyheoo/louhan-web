@@ -88,6 +88,15 @@
         .badge-success { background:#dcfce7; color:#16a34a; }
         .badge-warning { background:#fef3c7; color:#d97706; }
         .badge-purple { background:var(--purple-light); color:var(--purple); }
+        .btn-xs{padding:5px 9px;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;transition:all .15s;}
+        .btn-xs.blue{background:var(--primary-lt);color:var(--primary);}
+        .btn-xs.blue:hover{background:var(--primary);color:#fff;}
+        .btn-xs.green{background:var(--success-lt);color:#16a34a;}
+        .btn-xs.green:hover{background:var(--success);color:#fff;}
+        .btn-xs.red{background:var(--danger-lt);color:var(--danger);}
+        .btn-xs.red:hover{background:var(--danger);color:#fff;}
+        .btn-xs.purple{background:var(--purple-lt);color:var(--purple);}
+        .btn-xs.purple:hover{background:var(--purple);color:#fff;}
         .btn-sm { padding:6px 10px; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:4px; transition:all .2s; white-space:nowrap; }
         .btn-edit { background:var(--purple-light); color:var(--purple); }
         .btn-edit:hover { background:var(--purple); color:white; }
@@ -109,7 +118,8 @@
         .modal-head h3 i { color:var(--purple); }
         .modal-close { background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-muted); width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; transition:all .2s; }
         .modal-close:hover { background:rgba(0,0,0,.08); }
-        .modal-content { padding:20px; overflow-y:auto; }
+        .modal-content, .modal-body { padding:20px; overflow-y:auto; }
+        .modal-body{padding:20px;overflow-y:auto;}
         .modal-footer { padding:14px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px; background:var(--bg-main); }
 
         /* ── DETAIL MODAL ── */
@@ -507,7 +517,7 @@
 
 <!-- MODAL: BONUS POINT -->
 <div class="modal-bg" id="modalBonus" style="--mw:520px;">
-    <div class="modal-box">
+    <div class="modal-box" style="--mw:520px;">
         <div class="modal-head" style="background:linear-gradient(135deg,#f8fafc,#f1f9f9);">
             <h3><i class="fas fa-trophy" style="color:#f59e0b;"></i> Kelola Bonus Point</h3>
             <button class="modal-close" onclick="closeModal('modalBonus')"><i class="fas fa-xmark"></i></button>
