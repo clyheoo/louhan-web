@@ -12,7 +12,7 @@ class Scoring extends Model
         'kelas',
         'nilai_detail',
         'total_nilai',
-        'total_point',           // ✅ TAMBAHKAN
+        'total_point',
         'status',
         'submitted_to_grand',
         'edited_by_grand_juri',
@@ -22,8 +22,8 @@ class Scoring extends Model
     protected $casts = [
         'nilai_detail'         => 'array',
         'edited_by_grand_juri' => 'boolean',
-        'submitted_to_grand'   => 'boolean',   // ✅ TAMBAHKAN
-        'total_point'          => 'float',     // ✅ TAMBAHKAN
+        'submitted_to_grand'   => 'boolean',
+        'total_point'          => 'float',
     ];
     
     public function ikan()

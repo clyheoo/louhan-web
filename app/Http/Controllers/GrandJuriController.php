@@ -188,6 +188,9 @@ class GrandJuriController extends Controller
                 'submitted_juri_count' => $submittedCount,
                 'all_scorings'         => $allScoringsData,
                 'total_point'     => (float) $totalPointSemua,
+                'bonus_list'      => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                'total_bonus'     => (int) $ikan->bonusPoints->sum('points'),
+                'final_point'     => (float) $totalPointSemua + (int) $ikan->bonusPoints->sum('points'),
                 'point_config'    => $pointConfig ? [
                     'overall' => (float)$pointConfig->overall_bobot,
                     'head'    => (float)$pointConfig->head_bobot,
@@ -197,9 +200,6 @@ class GrandJuriController extends Controller
                     'pearl'   => (float)$pointConfig->pearl_bobot,
                     'color'   => (float)$pointConfig->color_bobot,
                     'finnage' => (float)$pointConfig->finnage_bobot,
-                    'bonus_list'    => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
-                    'total_bonus'   => (int) $ikan->bonusPoints->sum('points'),
-                    'final_point'  => (float) $totalPointSemua + (int) $ikan->bonusPoints->sum('points'),
                 ] : null,
                 'point_breakdown' => $finalAvgDetail ? PointCalculator::hitungBreakdown($ikanKategori, $finalAvgDetail) : null,
             ];
@@ -511,6 +511,58 @@ class GrandJuriController extends Controller
         return response()->json($data);
     }
 
+    public function getIkanBonusData(Request $request)
+    {
+        $ikanId = $request->query('id');
+        if (!$ikanId) {
+            return response()->json(null);
+        }
+
+        $ikan = Ikan::with(['peserta', 'bonusPoints'])->find($ikanId);
+        if (!$ikan) {
+            return response()->json(null);
+        }
+
+        $avgDetail = [];
+        foreach ($ikan->scorings as $s) {
+            if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                foreach ($s->nilai_detail as $kat => $fields) {
+                    foreach ($fields as $fid => $val) {
+                        if (!isset($avgDetail[$kat][$fid])) {
+                            $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                        }
+                        $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                        $avgDetail[$kat][$fid]['count']++;
+                    }
+                }
+            }
+        }
+
+        $finalAvgDetail = [];
+        foreach ($avgDetail as $kat => $fields) {
+            $finalAvgDetail[$kat] = [];
+            foreach ($fields as $fid => $d) {
+                $finalAvgDetail[$kat][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+            }
+        }
+
+        $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+        $totalBonus = (int) $ikan->bonusPoints->sum('points');
+
+        return response()->json([
+            'id'               => $ikan->id,
+            'nama_peserta'     => $ikan->peserta->nama_peserta ?? 'Unknown',
+            'kategori'         => $ikan->kategori,
+            'kelas'            => $ikan->kelas,
+            'nomor_tank'       => $ikan->nomor_tank,
+            'detail_anggota'   => $ikan->peserta->detail_anggota ?? '—',
+            'total_point'      => (float) $totalPoint,
+            'total_bonus'      => $totalBonus,
+            'final_point'      => (float) $totalPoint + $totalBonus,
+            'bonus_list'       => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+        ]);
+    }
+
     public function getPointRanking(Request $request)
     {
         $scope = $request->query('scope', 'per_kategori_kelas');
@@ -530,7 +582,7 @@ class GrandJuriController extends Controller
                 })
                 ->with(['peserta', 'scorings' => function ($q) {
                     $q->where('submitted_to_grand', true);
-                }, 'scorings.juri', 'scorings.grandJuri'])
+                }, 'scorings.juri', 'scorings.grandJuri', 'bonusPoints'])
                 ->orderBy('nomor_tank')
                 ->get();
 
@@ -578,6 +630,8 @@ class GrandJuriController extends Controller
                 }
 
                 $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+                $totalBonus = (int) $ikan->bonusPoints->sum('points');
+                $finalPoint = $totalPoint + $totalBonus;
 
                 $allItems[] = [
                     'ikan_id'           => $ikan->id,
@@ -588,13 +642,15 @@ class GrandJuriController extends Controller
                     'nomor_tank'        => $ikan->nomor_tank,
                     'total_nilai_semua' => $totalNilaiSemua,
                     'total_point'       => (float) $totalPoint,
+                    'total_bonus'       => $totalBonus,
+                    'final_point'       => (float) $finalPoint,
                     'jumlah_juri'       => $jumlahJuriYangNilai,
                     'grand_juri'        => $grandJuriName,
                 ];
             }
 
             // Ranking SELURUH ikan bersama
-            $ranked = PointCalculator::hitungRankPoints($allItems);
+            $ranked = PointCalculator::hitungRankPoints($allItems, 'final_point');
             usort($ranked, function ($a, $b) {
                 return $a['rank_point'] > $b['rank_point'] ? -1 : 1;
             });
@@ -619,7 +675,7 @@ class GrandJuriController extends Controller
             })
             ->with(['peserta', 'scorings' => function ($q) {
                 $q->where('submitted_to_grand', true);
-            }, 'scorings.grandJuri']);
+            }, 'scorings.grandJuri', 'bonusPoints']);
 
         if ($filterKategori) $query->where('kategori', $filterKategori);
         if ($filterKelas) $query->where('kelas', $filterKelas);
@@ -666,6 +722,8 @@ class GrandJuriController extends Controller
             }
 
             $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+            $totalBonus = (int) $ikan->bonusPoints->sum('points');
+            $finalPoint = $totalPoint + $totalBonus;
 
             $key = ($scope === 'per_kategori')
                 ? $ikan->kategori
@@ -680,6 +738,8 @@ class GrandJuriController extends Controller
                 'nomor_tank'        => $ikan->nomor_tank,
                 'total_nilai_semua' => $totalNilaiSemua,
                 'total_point'       => (float) $totalPoint,
+                'total_bonus'       => $totalBonus,
+                'final_point'       => (float) $finalPoint,
                 'jumlah_juri'       => $jumlahJuriYangNilai,
                 'grand_juri'        => $sc->grandJuri ? $sc->grandJuri->name : '—',
             ];
@@ -687,7 +747,7 @@ class GrandJuriController extends Controller
 
         $result = [];
         foreach ($groups as $name => $items) {
-            $ranked = PointCalculator::hitungRankPoints($items);
+            $ranked = PointCalculator::hitungRankPoints($items, 'final_point');
             usort($ranked, function ($a, $b) { return $a['rank_point'] > $b['rank_point'] ? -1 : 1; });
             $result[] = ['group_name' => $name, 'total' => count($ranked), 'data' => $ranked];
         }

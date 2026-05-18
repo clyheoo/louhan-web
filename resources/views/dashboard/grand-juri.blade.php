@@ -204,8 +204,12 @@
         .err-list { list-style:none; text-align:left; margin-bottom:16px; display:flex; flex-direction:column; gap:7px; max-height:170px; overflow-y:auto; }
         .err-item { display:flex; align-items:flex-start; gap:9px; padding:9px 11px; background:#faf5ff; border:1px solid #ede9fe; border-radius:9px; font-size:12px; }
         .err-item i { color:var(--purple); margin-top:1px; flex-shrink:0; }
-        .err-item span { color:#4c1d95; font-weight:600; line-height:1.4; }
-
+        .err-item span { color:#4c1d95; font-weight:600; line-height:1.4; 
+        }
+        .popup-btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+        .popup-btn.cancel{background:var(--bg);color:var(--text-muted);border:1px solid var(--border);box-shadow:none;}
+        .popup-btn.cancel:hover{background:var(--border);color:var(--text-main);
+        }
         @media (max-width:1024px) { .stats-grid{grid-template-columns:repeat(3,1fr);} .content-grid{grid-template-columns:1fr;} .split-view{grid-template-columns:1fr;} }
         @media (max-width:640px) { .stats-grid{grid-template-columns:1fr 1fr;} .main-container{padding:12px;} 
         }
@@ -432,7 +436,8 @@
                             <th>NO. TANK</th>
                             <th>ASAL/TEAM</th>
                             <th>DINILAI OLEH</th>
-                            <th>TOTAL</th>
+                            <th>TOTAL NILAI</th>
+                            <th>POINT</th>
                             <th>STATUS</th>
                             <th>AKSI</th>
                         </tr>
@@ -555,6 +560,19 @@
     </div>
 </div>
 
+<!-- POPUP KONFIRMASI -->
+<div class="popup-overlay" id="popupConfirm">
+    <div class="popup-card">
+        <div class="popup-icon warning"><i class="fas fa-question"></i></div>
+        <h2 class="popup-title" id="popupConfirmTitle">Konfirmasi</h2>
+        <p class="popup-desc" id="popupConfirmDesc">Apakah Anda yakin?</p>
+        <div class="popup-btn-row">
+            <button class="popup-btn cancel" onclick="cancelConfirm()"><i class="fas fa-xmark"></i> Batal</button>
+            <button class="popup-btn warning" id="popupConfirmBtn" onclick="executeConfirm()"><i class="fas fa-check"></i> Ya, Lanjutkan</button>
+        </div>
+    </div>
+</div>
+
 <script>
 /* ================================================================
    FORM FIELDS
@@ -584,9 +602,11 @@ var bonusTypes = [
 
 function openBonusModalGj(id){
     currentBonusIkanId=id;
-    fetchSingle(id,function(p){
-        if(!p){
-            document.getElementById('popupErrorDesc').textContent='Data tidak ditemukan.';
+    fetch('/api/grand-juri/ikan-bonus-data?id='+id,{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(p){
+        if(!p||!p.id){
+            document.getElementById('popupErrorDesc').textContent='Data ikan tidak ditemukan.';
             showPopup('popupError');return;
         }
 
@@ -618,15 +638,19 @@ function openBonusModalGj(id){
             } else {
                 html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:all .2s;" onclick="addBonusGj(\''+bt.key+'\',this)" onmouseover="this.style.borderColor=\'#ddd6fe\';this.style.background=\'#f5f3ff\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'white\'">';
                 html+='<div style="display:flex;align-items:center;gap:10px;">';
-                html+='<i class="fas '+bt.icon+'" style="color:var(--light);font-size:15px;"></i>';
-                html+='<div><div style="font-size:12px;font-weight:700;color:var(--text-main);">'+bt.label+'</div><div style="font-size:10px;color:var(--light);">+100 point</div></div></div>';
-                html+='<i class="fas fa-plus-circle" style="color:var(--light);font-size:17px;"></i>';
+                html+='<i class="fas '+bt.icon+'" style="color:var(--purple);font-size:15px;"></i>';
+                html+='<div><div style="font-size:12px;font-weight:700;color:var(--text-main);">'+bt.label+'</div><div style="font-size:10px;color:var(--text-muted);">+100 point</div></div></div>';
+                html+='<i class="fas fa-plus-circle" style="color:var(--purple);font-size:17px;"></i>';
                 html+='</div>';
             }
         });
 
         document.getElementById('bonusModalBody').innerHTML=html;
         openModal('modalBonus');
+    })
+    .catch(function(){
+        document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan.';
+        showPopup('popupError');
     });
 }
 
@@ -697,6 +721,17 @@ var currentPData    = null;
 var editMemory      = {};
 var originalValues  = {};
 var currentEditKat  = 'overall';
+var _confirmCallback=null;
+
+function popupConfirm(title,desc,btnText,callback){
+    document.getElementById('popupConfirmTitle').textContent=title||'Konfirmasi';
+    document.getElementById('popupConfirmDesc').innerHTML=desc||'';
+    document.getElementById('popupConfirmBtn').innerHTML='<i class="fas fa-check"></i> '+(btnText||'Ya, Lanjutkan');
+    _confirmCallback=callback;
+    showPopup('popupConfirm');
+}
+function executeConfirm(){hidePopup('popupConfirm');if(typeof _confirmCallback==='function')_confirmCallback();_confirmCallback=null;}
+function cancelConfirm(){hidePopup('popupConfirm');_confirmCallback=null;}
 
 /* ================================================================
    HELPERS
@@ -820,7 +855,7 @@ function loadPeserta(search){
         var tbody=document.getElementById('tbodyPeserta');
         tbody.innerHTML='';
         if(!data||data.length===0){
-            tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Tidak ada data ditemukan.</div></td></tr>';
+            tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Tidak ada data ditemukan.</div></td></tr>';
             return;
         }
         data.forEach(function(p){
@@ -856,10 +891,25 @@ function loadPeserta(search){
             } else { td5.innerHTML='<span style="font-size:12px;color:var(--text-muted);">—</span>'; }
             tr.appendChild(td5);
 
-            /* td6 — TOTAL */
+            /* td6 — TOTAL NILAI */
             var td6=document.createElement('td');
-            td6.innerHTML=p.total_nilai_semua>0?'<span class="total-cell">'+p.total_nilai_semua+'</span>':'<span class="total-cell zero">—</span>';
+            var totalHtml=p.total_nilai_semua>0?'<span class="total-cell">'+p.total_nilai_semua+'</span>':'<span class="total-cell zero">—</span>';
+            if(p.jumlah_juri_yang_nilai>1) totalHtml+='<div style="font-size:9px;color:var(--text-muted);font-weight:600;"><i class="fas fa-users" style="font-size:8px;margin-right:2px;"></i>'+p.jumlah_juri_yang_nilai+' juri</div>';
+            td6.innerHTML=totalHtml;
             tr.appendChild(td6);
+
+            /* td6b — POINT (termasuk bonus) */
+            var td6b=document.createElement('td');
+            var finalPt=p.final_point||p.total_point||0;
+            var bonusPt=p.total_bonus||0;
+            if(finalPt>0){
+                var ptHtml='<div style="font-size:16px;font-weight:900;color:'+(bonusPt>0?'#16a34a':'var(--primary)')+';">'+finalPt+'</div>';
+                if(bonusPt>0) ptHtml+='<div style="font-size:9px;color:#16a34a;font-weight:800;"><i class="fas fa-trophy" style="font-size:7px;"></i> +'+bonusPt+' bonus</div>';
+                td6b.innerHTML=ptHtml;
+            } else {
+                td6b.innerHTML='<span style="font-size:12px;color:var(--text-muted);">—</span>';
+            }
+            tr.appendChild(td6b);
 
             /* td7 — STATUS (badge saja, tanpa aksi) */
             var td7=document.createElement('td');
@@ -897,7 +947,7 @@ function loadPeserta(search){
         });
     })
     .catch(function(){
-        document.getElementById('tbodyPeserta').innerHTML='<tr><td colspan="8"><div class="empty-state">Gagal memuat data.</div></td></tr>';
+        document.getElementById('tbodyPeserta').innerHTML='<tr><td colspan="9"><div class="empty-state">Gagal memuat data.</div></td></tr>';
     });
 }
 
@@ -1016,10 +1066,33 @@ function renderDetail(p){
         html += '<td style="font-weight:900;text-align:right;color:#4c1d95;font-size:14px;">' + grandTotalNilai + '</td></tr>';
         html += '</table>';
 
+        /* ★ Total Point dengan bonus */
+        var basePoint = p.total_point ?? 0;
+        var bonusTotal = p.total_bonus || 0;
+        var finalPoint = p.final_point || basePoint;
+
         html += '<div style="margin-top:16px;background:linear-gradient(135deg,#fef3c7,#fef9c3);border:1px solid #fde68a;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">';
-        html += '<div><div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;">Total Point</div><div style="font-size:10px;color:#d97706;">(dihitung dari rata-rata '+p.jumlah_juri_yang_nilai+' juri)</div></div>';
-        html += '<div style="font-size:18px;font-weight:900;color:#d97706;">' + (p.total_point ?? 0) + '</div>';
+        html += '<div><div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;">Total Point</div><div style="font-size:10px;color:#d97706;">(dihitung dari rata-rata '+p.jumlah_juri_yang_nilai+' juri)</div>';
+        if(bonusTotal > 0) html += '<div style="font-size:9px;color:#16a34a;font-weight:700;margin-top:2px;">+ '+bonusTotal+' bonus point</div>';
+        html += '</div>';
+        html += '<div style="text-align:right;"><div style="font-size:22px;font-weight:900;color:'+(bonusTotal>0?'#16a34a':'#d97706')+';">'+finalPoint+'</div>';
+        if(bonusTotal > 0) html += '<div style="font-size:10px;color:#92400e;font-weight:600;">(dasar '+basePoint+' + '+bonusTotal+')</div>';
         html += '</div></div></div>';
+
+        /* ★ Daftar bonus yang diberikan */
+        if(p.bonus_list && p.bonus_list.length > 0){
+            html += '<div style="margin-top:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;">';
+            html += '<div style="font-size:11px;font-weight:800;color:#166534;text-transform:uppercase;margin-bottom:8px;"><i class="fas fa-trophy" style="color:#f59e0b;margin-right:4px;"></i>Bonus Point Diberikan</div>';
+            p.bonus_list.forEach(function(btKey){
+                var btInfo = bonusTypes.find(function(b){return b.key===btKey;});
+                if(btInfo){
+                    html += '<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:#dcfce7;border-radius:8px;margin:0 6px 6px 0;font-size:11px;font-weight:700;color:#16a34a;">';
+                    html += '<i class="fas '+btInfo.icon+'" style="font-size:10px;"></i> '+btInfo.label+' (+100)';
+                    html += '</div>';
+                }
+            });
+            html += '</div>';
+        }
     }
 
     document.getElementById('detailContent').innerHTML=html;
@@ -1456,7 +1529,11 @@ function loadPointRanking() {
                     html += '<div style="font-size:9px;color:var(--text-muted);font-weight:600;"><i class="fas fa-users" style="font-size:8px;margin-right:2px;"></i>' + d.jumlah_juri + ' juri</div>';
                 }
                 html += '</td>';
-                html += '<td style="font-weight:900;color:var(--primary);">' + (d.total_point ?? 0) + '</td>';
+                var rpFinal = d.final_point ?? d.total_point ?? 0;
+                var rpBonus = d.total_bonus || 0;
+                var rpHtml = '<div style="font-weight:900;color:'+(rpBonus>0?'#16a34a':'var(--primary)')+';">'+rpFinal+'</div>';
+                if(rpBonus > 0) rpHtml += '<div style="font-size:9px;color:#16a34a;font-weight:800;"><i class="fas fa-trophy" style="font-size:7px;"></i> +'+rpBonus+'</div>';
+                html += '<td style="text-align:center;">' + rpHtml + '</td>';
                 html += '<td><span style="display:inline-block;padding:4px 12px;border-radius:6px;font-size:13px;font-weight:900;' + rankBg + '">' + d.rank_point + '</span></td>';
                 html += '</tr>';
             });

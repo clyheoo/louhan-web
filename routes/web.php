@@ -56,7 +56,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/grand-juri/mvp-ikan', [GrandJuriController::class, 'getMvpIkan']);
     Route::post('/api/grand-juri/add-bonus', [GrandJuriController::class, 'addBonus']);
     Route::post('/api/grand-juri/remove-bonus', [GrandJuriController::class, 'removeBonus']);
-    Route::get('/api/grand-juri/point-ranking', [GrandJuriController::class, 'getPointRanking']);
+    Route::get('/api/grand-juri/ikan-bonus-data', [GrandJuriController::class, 'getIkanBonusData']);
     Route::get('/api/scoring-point-configs', [GrandJuriController::class, 'getPointConfigs']);
 });
 
