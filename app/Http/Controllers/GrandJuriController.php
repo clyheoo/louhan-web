@@ -511,58 +511,6 @@ class GrandJuriController extends Controller
         return response()->json($data);
     }
 
-    public function getIkanBonusData(Request $request)
-    {
-        $ikanId = $request->query('id');
-        if (!$ikanId) {
-            return response()->json(null);
-        }
-
-        $ikan = Ikan::with(['peserta', 'bonusPoints'])->find($ikanId);
-        if (!$ikan) {
-            return response()->json(null);
-        }
-
-        $avgDetail = [];
-        foreach ($ikan->scorings as $s) {
-            if ($s->nilai_detail && is_array($s->nilai_detail)) {
-                foreach ($s->nilai_detail as $kat => $fields) {
-                    foreach ($fields as $fid => $val) {
-                        if (!isset($avgDetail[$kat][$fid])) {
-                            $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
-                        }
-                        $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
-                        $avgDetail[$kat][$fid]['count']++;
-                    }
-                }
-            }
-        }
-
-        $finalAvgDetail = [];
-        foreach ($avgDetail as $kat => $fields) {
-            $finalAvgDetail[$kat] = [];
-            foreach ($fields as $fid => $d) {
-                $finalAvgDetail[$kat][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
-            }
-        }
-
-        $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
-        $totalBonus = (int) $ikan->bonusPoints->sum('points');
-
-        return response()->json([
-            'id'               => $ikan->id,
-            'nama_peserta'     => $ikan->peserta->nama_peserta ?? 'Unknown',
-            'kategori'         => $ikan->kategori,
-            'kelas'            => $ikan->kelas,
-            'nomor_tank'       => $ikan->nomor_tank,
-            'detail_anggota'   => $ikan->peserta->detail_anggota ?? '—',
-            'total_point'      => (float) $totalPoint,
-            'total_bonus'      => $totalBonus,
-            'final_point'      => (float) $totalPoint + $totalBonus,
-            'bonus_list'       => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
-        ]);
-    }
-
     public function getPointRanking(Request $request)
     {
         $scope = $request->query('scope', 'per_kategori_kelas');

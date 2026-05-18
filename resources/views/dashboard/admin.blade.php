@@ -122,14 +122,14 @@
         .user-list{max-height:460px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
         .user-list::-webkit-scrollbar{width:4px;}
         .user-list::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
-.user-card{display:flex;flex-direction:column;align-items:stretch;padding:12px;border:1px solid var(--border);border-radius:10px;transition:all .2s;background:#fff;}
-.user-card:hover{border-color:#c7d2fe;box-shadow:0 2px 8px rgba(37,99,235,.06);}
-.user-card-top{display:flex;align-items:center;gap:10px;min-width:0;}
-.user-avatar{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
-.user-card-body{flex:1;min-width:0;}
-.user-card-body h4{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.user-card-body span{font-size:10px;color:var(--light);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.user-card-bottom{display:flex;justify-content:flex-end;align-items:center;gap:4px;margin-top:8px;padding-left:44px;flex-wrap:wrap;}
+        .user-card{display:flex;flex-direction:column;align-items:stretch;padding:12px;border:1px solid var(--border);border-radius:10px;transition:all .2s;background:#fff;}
+        .user-card:hover{border-color:#c7d2fe;box-shadow:0 2px 8px rgba(37,99,235,.06);}
+        .user-card-top{display:flex;align-items:center;gap:10px;min-width:0;}
+        .user-avatar{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+        .user-card-body{flex:1;min-width:0;}
+        .user-card-body h4{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .user-card-body span{font-size:10px;color:var(--light);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .user-card-bottom{display:flex;justify-content:flex-end;align-items:center;gap:4px;margin-top:8px;padding-left:44px;flex-wrap:wrap;}
 
         /* ── MODALS ── */
         .modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:99;display:none;place-items:center;}
