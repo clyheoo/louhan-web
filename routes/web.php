@@ -57,6 +57,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/grand-juri/add-bonus', [GrandJuriController::class, 'addBonus']);
     Route::post('/api/grand-juri/remove-bonus', [GrandJuriController::class, 'removeBonus']);
     Route::get('/api/grand-juri/point-ranking', [GrandJuriController::class, 'getPointRanking']);
+    Route::get('/api/grand-juri/export', [GrandJuriController::class, 'exportExcel']);
     Route::get('/api/scoring-point-configs', [GrandJuriController::class, 'getPointConfigs']);
 });
 

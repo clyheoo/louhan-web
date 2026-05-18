@@ -287,6 +287,16 @@
             background: var(--purple-light);
             color: var(--purple);
         }
+        .export-wrap{position:relative;}
+        .export-btn{padding:8px 16px;border-radius:8px;border:1px solid #16a34a;background:#dcfce7;font-size:12px;font-weight:700;cursor:pointer;color:#16a34a;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:all .2s;}
+        .export-btn:hover{background:#16a34a;color:#fff;border-color:#16a34a;transform:translateY(-1px);box-shadow:0 4px 12px rgba(22,163,74,.25);}
+        .export-dd{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.15);min-width:240px;z-index:200;display:none;overflow:hidden;}
+        .export-dd.show{display:block;}
+        .export-dd-item{padding:10px 16px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .12s;font-weight:600;color:var(--text-main);}
+        .export-dd-item:hover{background:var(--purple-light);color:var(--purple);}
+        .export-dd-item i{width:16px;text-align:center;font-size:12px;}
+        .export-dd-sep{height:1px;background:var(--border);margin:4px 0;
+        }
     </style>
 </head>
 <body>
@@ -295,8 +305,35 @@
         <h1><i class="fas fa-crown"></i> GRAND JURY</h1>
         <span>Otoritas Tertinggi Sistem Penilaian Kontes LCI</span>
     </div>
-    <div class="nav-right">
-        <div class="info"><h4>{{ $user->name }}</h4><span>GRAND JURI</span></div>
+        <div class="nav-right">
+            <div class="info"><h4>{{ $user->name }}</h4><span>GRAND JURI</span></div>
+            <div class="export-wrap">
+        <button class="export-btn" onclick="document.getElementById('exportDD').classList.toggle('show')">
+            <i class="fas fa-file-excel"></i> Export Excel
+        </button>
+        <div class="export-dd" id="exportDD">
+            <div class="export-dd-item" onclick="doExport('all')">
+                <i class="fas fa-layer-group" style="color:var(--purple);"></i> Export Semua Data
+            </div>
+            <div class="export-dd-sep"></div>
+            <div class="export-dd-item" onclick="doExport('daftar')">
+                <i class="fas fa-list" style="color:var(--primary);"></i> Daftar Ikan
+            </div>
+            <div class="export-dd-item" onclick="doExport('mvp')">
+                <i class="fas fa-star" style="color:#f59e0b;"></i> Data Ikan MVP
+            </div>
+            <div class="export-dd-sep"></div>
+            <div class="export-dd-item" onclick="doExport('ranking_kk')">
+                <i class="fas fa-layer-group" style="color:var(--success);"></i> Ranking: Per Kat + Kelas
+            </div>
+            <div class="export-dd-item" onclick="doExport('ranking_k')">
+                <i class="fas fa-tags" style="color:var(--warning);"></i> Ranking: Per Kategori
+            </div>
+            <div class="export-dd-item" onclick="doExport('ranking_global')">
+                <i class="fas fa-globe" style="color:#ef4444;"></i> Ranking: Global
+            </div>
+        </div>
+    </div>
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Keluar</button>
@@ -1591,6 +1628,16 @@ function loadPointRanking() {
         el.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation" style="font-size:28px;display:block;margin-bottom:8px;"></i>Gagal memuat data ranking.</div>';
     });
 }
+
+function doExport(sheets){
+    document.getElementById('exportDD').classList.remove('show');
+    window.location.href='/api/grand-juri/export?sheets='+sheets;
+}
+document.addEventListener('click',function(e){
+    if(!e.target.closest('.export-wrap')){
+        document.getElementById('exportDD').classList.remove('show');
+    }
+});
 
 /* ================================================================
    INIT

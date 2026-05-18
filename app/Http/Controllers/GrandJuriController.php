@@ -9,6 +9,8 @@ use App\Models\Ikan;
 use App\Models\GrandJuriEdit;
 use App\Helpers\PointCalculator;
 use App\Models\ScoringPointConfig;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\GrandJuriExport;
 
 class GrandJuriController extends Controller
 {
@@ -758,5 +760,28 @@ class GrandJuriController extends Controller
             'success' => true,
             'message' => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" berhasil dihapus.',
         ]);
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $sheets = $request->query('sheets', 'all');
+        $valid  = ['all', 'daftar', 'mvp', 'ranking_kk', 'ranking_k', 'ranking_global'];
+
+        if (!in_array($sheets, $valid)) {
+            $sheets = 'all';
+        }
+
+        $label = match ($sheets) {
+            'daftar'         => 'Daftar_Ikan',
+            'mvp'            => 'Data_MVP',
+            'ranking_kk'     => 'Ranking_Per_Kat_Kelas',
+            'ranking_k'      => 'Ranking_Per_Kategori',
+            'ranking_global' => 'Rank_Global',
+            default          => 'Semua_Data',
+        };
+
+        $fileName = 'LCI_GrandJuri_' . $label . '_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new GrandJuriExport($sheets), $fileName);
     }
 }
