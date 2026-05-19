@@ -30,68 +30,188 @@ class PointCalculator
         'kecerahan_fn'   => 25,
     ];
 
-    public static function hitungPoint(string $kategori, array $nd): float
+    // ★ DAFTAR DEFECT MINOR
+    const MINOR_DEFECTS = [
+        'Kutil', 
+        'Bibir Miring', 
+        'Katarak', 
+        'Abses / Luka', 
+        'Fintail Bleaching', 
+        'Pangkal Ekor Naik/Trn', 
+        'Dayung Tdk Seimbang'
+    ];
+
+    // ★ DAFTAR DEFECT MAYOR
+    const MAYOR_DEFECTS = [
+        'Bagian Bibir Hilang', 
+        'Mulut Terbuka Terus', 
+        'Muka Miring', 
+        'Pangkal Bengkok/Patah', 
+        'Fin/Tulang Hilang 1 Ruas'
+    ];
+
+    public static function hitungPoint(string $kategori, array $nd, array $defectData = []): float
     {
         $cfg = ScoringPointConfig::where('kategori', $kategori)->first();
         if (!$cfg || empty($nd)) return 0;
 
-        $tp = 0;
+        // ★ HITUNG POINT PER KATEGORI DULU (SEBELUM DEFECT)
+        $categoryPoints = [];
 
-        // Overall
+        // Overall (tidak ada defect)
         $v = (float)($nd['overall']['impression'] ?? 0);
-        $tp += ($v / self::MAX['impression']) * (float)$cfg->overall_bobot;
+        $categoryPoints['overall'] = ($v / self::MAX['impression']) * (float)$cfg->overall_bobot;
 
         // Head
+        $headPt = 0;
         $v = (float)($nd['head']['size'] ?? 0);
-        $tp += ($v / self::MAX['size']) * (float)$cfg->head_bobot;
+        $headPt += ($v / self::MAX['size']) * (float)$cfg->head_bobot;
         $v = (float)($nd['head']['bentuk'] ?? 0);
-        $tp += ($v / self::MAX['bentuk_head']) * (float)$cfg->head_bobot;
+        $headPt += ($v / self::MAX['bentuk_head']) * (float)$cfg->head_bobot;
+        $categoryPoints['head'] = $headPt;
 
         // Face
-        foreach (['pipi','mata','bibir','kondisi'] as $k) {
-            $v = (float)($nd['face'][$k] ?? 0);
-            $tp += ($v / self::MAX[$k]) * (float)$cfg->face_bobot;
+        if (isset($nd['face']['face'])) {
+            $v = (float)$nd['face']['face'];
+            $categoryPoints['face'] = ($v / 90) * (float)$cfg->face_bobot;
+        } else {
+            $facePt = 0;
+            foreach (['pipi','mata','bibir','kondisi'] as $k) {
+                $v = (float)($nd['face'][$k] ?? 0);
+                $facePt += ($v / self::MAX[$k]) * (float)$cfg->face_bobot;
+            }
+            $categoryPoints['face'] = $facePt;
         }
 
         // Body
+        $bodyPt = 0;
         $v = (float)($nd['body']['bentuk'] ?? 0);
-        $tp += ($v / self::MAX['bentuk_body']) * (float)$cfg->body_bobot;
+        $bodyPt += ($v / self::MAX['bentuk_body']) * (float)$cfg->body_bobot;
         $v = (float)($nd['body']['proporsi'] ?? 0);
-        $tp += ($v / self::MAX['proporsi']) * (float)$cfg->body_bobot;
+        $bodyPt += ($v / self::MAX['proporsi']) * (float)$cfg->body_bobot;
         $v = (float)($nd['body']['pangkal'] ?? 0);
-        $tp += ($v / self::MAX['pangkal']) * (float)$cfg->body_bobot;
+        $bodyPt += ($v / self::MAX['pangkal']) * (float)$cfg->body_bobot;
+        $categoryPoints['body'] = $bodyPt;
 
         // Marking
+        $markingPt = 0;
         $v = (float)($nd['marking']['fullness'] ?? 0);
-        $tp += ($v / self::MAX['fullness_m']) * (float)$cfg->marking_bobot;
+        $markingPt += ($v / self::MAX['fullness_m']) * (float)$cfg->marking_bobot;
         $v = (float)($nd['marking']['contrast'] ?? 0);
-        $tp += ($v / self::MAX['contrast']) * (float)$cfg->marking_bobot;
+        $markingPt += ($v / self::MAX['contrast']) * (float)$cfg->marking_bobot;
         $v = (float)($nd['marking']['bentuk'] ?? 0);
-        $tp += ($v / self::MAX['bentuk_m']) * (float)$cfg->marking_bobot;
+        $markingPt += ($v / self::MAX['bentuk_m']) * (float)$cfg->marking_bobot;
+        $categoryPoints['marking'] = $markingPt;
 
         // Pearl
+        $pearlPt = 0;
         $v = (float)($nd['pearl']['shining'] ?? 0);
-        $tp += ($v / self::MAX['shining']) * (float)$cfg->pearl_bobot;
+        $pearlPt += ($v / self::MAX['shining']) * (float)$cfg->pearl_bobot;
         $v = (float)($nd['pearl']['fullness'] ?? 0);
-        $tp += ($v / self::MAX['fullness_p']) * (float)$cfg->pearl_bobot;
+        $pearlPt += ($v / self::MAX['fullness_p']) * (float)$cfg->pearl_bobot;
         $v = (float)($nd['pearl']['bentuk'] ?? 0);
-        $tp += ($v / self::MAX['bentuk_p']) * (float)$cfg->pearl_bobot;
+        $pearlPt += ($v / self::MAX['bentuk_p']) * (float)$cfg->pearl_bobot;
+        $categoryPoints['pearl'] = $pearlPt;
 
         // Color
+        $colorPt = 0;
         $v = (float)($nd['color']['komposisi'] ?? 0);
-        $tp += ($v / self::MAX['komposisi']) * (float)$cfg->color_bobot;
+        $colorPt += ($v / self::MAX['komposisi']) * (float)$cfg->color_bobot;
         $v = (float)($nd['color']['kecerahan'] ?? 0);
-        $tp += ($v / self::MAX['kecerahan_c']) * (float)$cfg->color_bobot;
+        $colorPt += ($v / self::MAX['kecerahan_c']) * (float)$cfg->color_bobot;
         $v = (float)($nd['color']['fullness'] ?? 0);
-        $tp += ($v / self::MAX['fullness_c']) * (float)$cfg->color_bobot;
+        $colorPt += ($v / self::MAX['fullness_c']) * (float)$cfg->color_bobot;
+        $categoryPoints['color'] = $colorPt;
 
         // Finnage
+        $finnagePt = 0;
         $v = (float)($nd['finnage']['bentuk'] ?? 0);
-        $tp += ($v / self::MAX['bentuk_fn']) * (float)$cfg->finnage_bobot;
+        $finnagePt += ($v / self::MAX['bentuk_fn']) * (float)$cfg->finnage_bobot;
         $v = (float)($nd['finnage']['kecerahan'] ?? 0);
-        $tp += ($v / self::MAX['kecerahan_fn']) * (float)$cfg->finnage_bobot;
+        $finnagePt += ($v / self::MAX['kecerahan_fn']) * (float)$cfg->finnage_bobot;
+        $categoryPoints['finnage'] = $finnagePt;
 
-        return round($tp);
+        // ★ TERAPKAN DEFECT PENALTY (PENGURANGAN POINT)
+        if (!empty($defectData)) {
+            $evaluated = self::evaluateDefects($defectData);
+            $defectParts = ['head', 'face', 'body', 'finnage'];
+            
+            foreach ($defectParts as $p) {
+                $penaltyKey = "{$p}_penalty";
+                if (!empty($evaluated[$penaltyKey])) {
+                    // Ekstrak persen dari string "10%" atau "30%"
+                    $penaltyPercent = (float)str_replace('%', '', $evaluated[$penaltyKey]);
+                    
+                    // Kurangi point kategori tersebut
+                    // MINOR 10% → point × 0.90
+                    // MAYOR 30% → point × 0.70
+                    $categoryPoints[$p] = $categoryPoints[$p] * (1 - ($penaltyPercent / 100));
+                }
+            }
+        }
+
+        // ★ TOTAL POINT AKHIR (SETELAH DEFECT)
+        $tp = array_sum($categoryPoints);
+        
+        return round($tp, 2);
+    }
+
+    // ★ FUNGSI BARU: Evaluasi Defect (Sama dengan kode React pertama)
+    public static function evaluateDefects(array $defectData): array
+    {
+        $parts = ['head', 'face', 'body', 'finnage'];
+        
+        $partStatus = [
+            'head'    => ['minor' => false, 'mayor' => false, 'items' => []],
+            'face'    => ['minor' => false, 'mayor' => false, 'items' => []],
+            'body'    => ['minor' => false, 'mayor' => false, 'items' => []],
+            'finnage' => ['minor' => false, 'mayor' => false, 'items' => []],
+        ];
+        
+        $minorCount = 0;
+        
+        foreach ($parts as $p) {
+            $key = "raw_{$p}_penalty";
+            $defs = $defectData[$key] ?? ['0'];
+            
+            if (is_string($defs)) {
+                $defs = [$defs];
+            }
+            
+            foreach ($defs as $d) {
+                if ($d && $d !== '0') {
+                    $partStatus[$p]['items'][] = $d;
+                    if (in_array($d, self::MINOR_DEFECTS)) {
+                        $minorCount++;
+                        $partStatus[$p]['minor'] = true;
+                    }
+                    if (in_array($d, self::MAYOR_DEFECTS)) {
+                        $partStatus[$p]['mayor'] = true;
+                    }
+                }
+            }
+        }
+        
+        // ★ LOGIKA GLOBAL MAYOR: 3+ minor di bagian berbeda = semua minor jadi mayor
+        $isGlobalMayor = $minorCount >= 3;
+        $results = [];
+        $globalNotes = [];
+        
+        foreach ($parts as $p) {
+            if (count($partStatus[$p]['items']) > 0) {
+                $isMayor = $partStatus[$p]['mayor'] || ($partStatus[$p]['minor'] && $isGlobalMayor);
+                $score = $isMayor ? '30%' : '10%';
+                
+                $results["{$p}_penalty"] = $score;
+                $globalNotes[] = strtoupper($p) . ': ' . implode(', ', $partStatus[$p]['items']);
+            } else {
+                $results["{$p}_penalty"] = '';
+            }
+        }
+        
+        $results['keterangan'] = implode(' | ', $globalNotes);
+        
+        return $results;
     }
 
     public static function hitungBreakdown(string $kategori, array $nd): array
@@ -138,11 +258,20 @@ class PointCalculator
                 $parts[] = "({$v}/60)×{$bobots['head']}=" . round($p1);
                 $parts[] = "({$v2}/40)×{$bobots['head']}=" . round($p2);
             } elseif ($kat === 'face') {
-                foreach (['pipi','mata','bibir','kondisi'] as $k) {
-                    $v = (float)($nd['face'][$k] ?? 0);
-                    $p = ($v / self::MAX[$k]) * $bobots['face'];
-                    $parts[] = "({$v}/25)=" . round($p);
-                    $pt += $p;
+                if (isset($nd['face']['face'])) {
+                    // Format baru
+                    $v = (float)$nd['face']['face'];
+                    $p = ($v / 90) * $bobots['face'];
+                    $parts[] = "({$v}/90)=" . round($p);
+                    $pt = $p;
+                } else {
+                    // Format lama
+                    foreach (['pipi','mata','bibir','kondisi'] as $k) {
+                        $v = (float)($nd['face'][$k] ?? 0);
+                        $p = ($v / self::MAX[$k]) * $bobots['face'];
+                        $parts[] = "({$v}/25)=" . round($p);
+                        $pt += $p;
+                    }
                 }
             } elseif ($kat === 'body') {
                 $pairs = [['bentuk','bentuk_body',50],['proporsi','proporsi',40],['pangkal','pangkal',10]];
@@ -200,7 +329,6 @@ class PointCalculator
 
     public static function hitungRankPoints(array $items, string $key = 'total_point'): array
     {
-        // Sort DESC: final_point tertinggi di index 0
         usort($items, function ($a, $b) use ($key) {
             $va = $a[$key] ?? 0;
             $vb = $b[$key] ?? 0;
@@ -208,7 +336,6 @@ class PointCalculator
             return $va < $vb ? 1 : -1;
         });
 
-        // Rank: tertinggi = 100, menurun, minimum 1
         foreach ($items as $i => &$item) {
             $item['rank_point'] = max(1, 100 - $i);
         }

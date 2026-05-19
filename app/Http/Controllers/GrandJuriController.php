@@ -119,7 +119,6 @@ class GrandJuriController extends Controller
             })->values()->toArray();
 
             $pointConfig = ScoringPointConfig::where('kategori', $ikan->kategori)->first();
-            $ikanKategori = $ikan->kategori;
 
             // ★ HITUNG DARI SEMUA JURI (bukan hanya 1)
             $totalNilaiSemua = 0;
@@ -141,28 +140,16 @@ class GrandJuriController extends Controller
                 }
             }
 
-            // ★ HITUNG POINT DARI RATA-RATA SEMUA JURI
+            // (total_point sudah termasuk pengurangan defect dari masing-masing juri)
             $totalPointSemua = 0;
             if ($jumlahJuriYangNilai > 0) {
-                $avgDetail = [];
+                $sumTotalPoint = 0;
                 foreach ($scorings as $s) {
-                    if (!$s->nilai_detail || !is_array($s->nilai_detail)) continue;
-                    foreach ($s->nilai_detail as $kat => $fields) {
-                        foreach ($fields as $fid => $val) {
-                            if (!isset($avgDetail[$kat][$fid])) $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
-                            $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
-                            $avgDetail[$kat][$fid]['count']++;
-                        }
+                    if ($s->total_point) {
+                        $sumTotalPoint += (float) $s->total_point;
                     }
                 }
-                $finalAvgDetail = [];
-                foreach ($avgDetail as $kat => $fields) {
-                    $finalAvgDetail[$kat] = [];
-                    foreach ($fields as $fid => $d) {
-                        $finalAvgDetail[$kat][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
-                    }
-                }
-                $totalPointSemua = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+                $totalPointSemua = round($sumTotalPoint / $jumlahJuriYangNilai, 2);
             }
 
             return [
@@ -203,7 +190,6 @@ class GrandJuriController extends Controller
                     'color'   => (float)$pointConfig->color_bobot,
                     'finnage' => (float)$pointConfig->finnage_bobot,
                 ] : null,
-                'point_breakdown' => $finalAvgDetail ? PointCalculator::hitungBreakdown($ikanKategori, $finalAvgDetail) : null,
             ];
         });
 
@@ -227,7 +213,24 @@ class GrandJuriController extends Controller
             }
         }
 
-        $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $changed);
+        // ★ Grand Juri edit tidak mengubah defect, gunakan defect dari scoring terakhir
+        $lastScoring = Scoring::where('ikan_id', $ikanId)
+            ->where('submitted_to_grand', true)
+            ->whereNotNull('raw_head_penalty')
+            ->orderByDesc('created_at')
+            ->first();
+
+        $defectDataForEdit = [];
+        if ($lastScoring) {
+            $defectDataForEdit = [
+                'raw_head_penalty'    => $lastScoring->raw_head_penalty ?: ['0'],
+                'raw_face_penalty'    => $lastScoring->raw_face_penalty ?: ['0'],
+                'raw_body_penalty'    => $lastScoring->raw_body_penalty ?: ['0'],
+                'raw_finnage_penalty' => $lastScoring->raw_finnage_penalty ?: ['0'],
+            ];
+        }
+
+        $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $changed, $defectDataForEdit);
 
         $newScoring = Scoring::create([
             'ikan_id'              => $ikanId,
@@ -574,7 +577,16 @@ class GrandJuriController extends Controller
                     }
                 }
 
-                $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+                $totalPoint = 0;
+                if ($jumlahJuriYangNilai > 0) {
+                    $sumTotalPoint = 0;
+                    foreach ($scorings as $s) {
+                        if ($s->total_point) {
+                            $sumTotalPoint += (float) $s->total_point;
+                        }
+                    }
+                    $totalPoint = round($sumTotalPoint / $jumlahJuriYangNilai, 2);
+                }
                 $totalBonus = (int) $ikan->bonusPoints->sum('points');
                 $finalPoint = $totalPoint + $totalBonus;
 
@@ -662,7 +674,16 @@ class GrandJuriController extends Controller
                 }
             }
 
-            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+                $totalPoint = 0;
+                if ($jumlahJuriYangNilai > 0) {
+                    $sumTotalPoint = 0;
+                    foreach ($scorings as $s) {
+                        if ($s->total_point) {
+                            $sumTotalPoint += (float) $s->total_point;
+                        }
+                    }
+                    $totalPoint = round($sumTotalPoint / $jumlahJuriYangNilai, 2);
+                }
             $totalBonus = (int) $ikan->bonusPoints->sum('points');
             $finalPoint = $totalPoint + $totalBonus;
 

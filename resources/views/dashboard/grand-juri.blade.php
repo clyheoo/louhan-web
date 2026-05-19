@@ -1080,6 +1080,38 @@ function renderDetail(p){
                         var val=katNilai[f.id];var has=(val!==undefined&&val!==null&&val!=='');
                         html+='<div class="detail-field-row"><div class="detail-field-left"><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
                     });
+                    
+                    // ★ TAMPILKAN DEFECT JIKA ADA DI SCORING INI
+                    var defectKey = 'raw_' + kat + '_penalty';
+                    if (sc[defectKey]) {
+                        var defs = sc[defectKey];
+                        if (!Array.isArray(defs)) defs = [defs];
+                        var defectItems = defs.filter(function(v) { return v && v !== '0'; });
+                        if (defectItems.length > 0) {
+                            // Cari penalty dari keterangan
+                            var ket = sc.keterangan || '';
+                            var penaltyStr = '';
+                            var parts = ket.split(' | ');
+                            parts.forEach(function(part) {
+                                if (part.startsWith(kat.toUpperCase() + ':')) {
+                                    var pStr = part.replace(kat.toUpperCase() + ': ', '');
+                                    // Cari persen
+                                    if (pStr.indexOf('30%') !== -1) penaltyStr = '30%';
+                                    else if (pStr.indexOf('10%') !== -1) penaltyStr = '10%';
+                                }
+                            });
+                            
+                            if (penaltyStr) {
+                                var isMayor = penaltyStr === '30%';
+                                var persen = isMayor ? 30 : 10;
+                                html += '<div class="detail-field-row" style="background:#fef2f2;">';
+                                html += '<div class="detail-field-left"><div class="detail-field-name" style="color:#dc2626;"><i class="fas fa-exclamation-triangle" style="margin-right:4px;font-size:10px;"></i>Defect</div>';
+                                html += '<div class="detail-field-meta" style="color:#b91c1c;font-weight:600;">' + defectItems.join(', ') + '</div></div>';
+                                html += '<span class="score-chip" style="background:#fef2f2;color:#dc2626;font-weight:800;">-' + persen + '%</span>';
+                                html += '</div>';
+                            }
+                        }
+                    }
                 });
         }
         html+='</div></div>';

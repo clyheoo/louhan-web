@@ -49,19 +49,53 @@
         .score-grid:last-child { border-bottom: none; }
         .score-label h4 { font-size: 13px; font-weight: 700; }
         .score-label p { font-size: 11px; color: var(--text-light); margin-top: 2px; }
-        .score-input { width: 100%; padding: 10px; text-align: center; border: 2px solid var(--border); border-radius: 10px; font-size: 15px; font-weight: 800; color: var(--primary); outline: none; transition: 0.2s; }
-        .score-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-       }
-        .score-input.error-input { border-color: var(--danger); background: #fef2f2; }
-                .score-input::-webkit-outer-spin-button,
-        .score-input::-webkit-inner-spin-button {
+        
+        /* ★ DROPDOWN STYLE */
+        .score-select {
+            width: 100%;
+            padding: 10px 8px;
+            text-align: center;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--primary);
+            outline: none;
+            transition: 0.2s;
+            background: white;
+            cursor: pointer;
+            appearance: none;
             -webkit-appearance: none;
-            margin: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
         }
-        .score-input[type=number] {
-            -moz-appearance: textfield;
+        .score-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .score-select optgroup { font-weight: 700; font-size: 11px; color: var(--text-muted); }
+        .score-select option { font-weight: 600; }
+        
+        /* ★ DEFECT BUTTON STYLE */
+        .defect-btn {
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.2s;
+            background: white;
+            color: var(--text-muted);
         }
-        .submit-area { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }        .btn-primary { padding: 14px 30px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
+        .defect-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .defect-btn.minor { background: #fff7ed; color: #c2410c; border-color: #fb923c; }
+        .defect-btn.minor:hover { background: #fed7aa; }
+        .defect-btn.mayor { background: #fef2f2; color: #dc2626; border-color: #f87171; }
+        .defect-btn.mayor:hover { background: #fecaca; }
+        
+        .submit-area { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .btn-primary { padding: 14px 30px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
         .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
         .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
         .result-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -83,6 +117,14 @@
         .detail-table th { background: #f8fafc; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
         .detail-table tr:hover td { background: #fafafa; }
         .grand-total { text-align: right; font-size: 18px; font-weight: 900; color: var(--primary); padding-top: 10px; border-top: 2px solid var(--primary); }
+
+        /* ★ DEFECT INFO IN DETAIL */
+        .defect-badge { display: inline-block; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 11px; }
+        .defect-badge.minor { background: #fff7ed; color: #c2410c; border: 2px solid #fb923c; }
+        .defect-badge.mayor { background: #fef2f2; color: #dc2626; border: 2px solid #f87171; }
+        .keterangan-box { margin-top: 16px; padding: 12px 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; }
+        .keterangan-box .label { font-size: 11px; font-weight: 700; color: #991b1b; margin-bottom: 4px; }
+        .keterangan-box .value { font-size: 12px; color: #b91c1c; font-weight: 500; }
 
         /* ── LOCKED BANNER ── */
         .locked-banner {
@@ -165,18 +207,26 @@
         .popup-title { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 8px; }
         .popup-desc { font-size: 13.5px; color: #64748b; line-height: 1.6; margin-bottom: 28px; }
         .popup-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border: none; border-radius: 14px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
-        .popup-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.35); 
-        }
+        .popup-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.35); }
         .btn-kirim { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; padding:6px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all .2s; font-family:inherit; }
         .btn-kirim:hover { background:#16a34a; color:white; border-color:#16a34a; }
         .btn-kirim:disabled { background:#f1f5f9; color:#94a3b8; border-color:#e2e8f0; cursor:not-allowed; }
-        .badge-terkirim { background:#f5f3ff; color:#7c3aed; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:700; display:inline-flex; align-items:center; gap:3px; 
-        }
+        .badge-terkirim { background:#f5f3ff; color:#7c3aed; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:700; display:inline-flex; align-items:center; gap:3px; }
         .popup-icon.confirm { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 8px 24px rgba(59,130,246,0.3); }
         .popup-btn-outline { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border: 2px solid #e2e8f0; border-radius: 14px; background: white; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s; color: var(--text-muted); }
         .popup-btn-outline:hover { border-color: #94a3b8; color: var(--text-main); }
-        .popup-actions { display: flex; gap: 12px; justify-content: center; 
-        }
+        .popup-actions { display: flex; gap: 12px; justify-content: center; }
+
+        /* ★ DEFECT MODAL STYLES */
+        .defect-modal-box { max-width: 450px; }
+        .defect-group { margin-bottom: 20px; }
+        .defect-group-title { font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .defect-options { display: flex; flex-direction: column; gap: 8px; }
+        .defect-option { display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid var(--border); border-radius: 10px; cursor: pointer; background: white; transition: 0.2s; }
+        .defect-option:hover { border-color: var(--primary); }
+        .defect-option.selected { border-color: var(--primary); background: var(--primary-light); }
+        .defect-option input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+        .defect-option span { font-size: 13px; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -209,7 +259,8 @@
                 <div class="form-row" style="grid-template-columns: 2fr 1fr 0.8fr 1fr 1.5fr;">
                     <div class="form-group">
                         <label class="form-label">Nomor Tank (Ikan)</label>
-                        <select id="selectTank" class="form-control"><option value="">-- Pilih Ikan Berdasarkan Tank --</option></select>                    </div>
+                        <select id="selectTank" class="form-control"><option value="">-- Pilih Ikan Berdasarkan Tank --</option></select>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">Kelas Penilaian</label>
                         <select id="selectKelas" class="form-control">
@@ -237,7 +288,7 @@
                     <span id="warningKelasText"></span>
                 </div>
 
-                <!-- ★ LOCKED BANNER — tampil saat ikan sudah dinilai -->
+                <!-- ★ LOCKED BANNER -->
                 <div class="locked-banner" id="lockedBanner">
                     <div class="lock-icon"><i class="fas fa-lock"></i></div>
                     <h3>Peserta Ini Sudah Dinilai</h3>
@@ -245,7 +296,7 @@
                     <div class="locked-note">Nilai tidak dapat diubah atau diinput ulang. Silakan pilih ikan lain yang belum dinilai.</div>
                 </div>
 
-                <!-- AREA FORM (sembunyikan saat locked) -->
+                <!-- AREA FORM -->
                 <div id="formArea">
                     <div class="content-grid">
                         <div class="kategori-list" id="katListContainer"></div>
@@ -296,6 +347,17 @@
         </div>
     </div>
 
+    <!-- ★ MODAL DEFECT -->
+    <div class="modal-bg" id="modalDefect">
+        <div class="modal-box defect-modal-box">
+            <div class="modal-head">
+                <h3 id="defectModalTitle">Pilih Defect</h3>
+                <button class="modal-close" onclick="closeDefectModal()"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="modal-content" id="defectModalBody"></div>
+        </div>
+    </div>
+
     <!-- Modal Peringatan -->
     <div class="warning-overlay" id="warningModal">
         <div class="warning-card">
@@ -326,23 +388,26 @@
             </button>
         </div>
     </div>
+
     <!-- Popup Konfirmasi Kirim -->
-<div class="popup-overlay" id="popupConfirm">
-    <div class="popup-card">
-        <div class="popup-icon confirm"><i class="fas fa-paper-plane"></i></div>
-        <h2 class="popup-title">Kirim ke Grand Juri?</h2>
-        <p class="popup-desc">Nilai yang sudah Anda simpan akan dikirim ke Grand Juri untuk ditinjau. Tindakan ini tidak dapat dibatalkan.</p>
-        <div class="popup-actions">
-            <button class="popup-btn-outline" onclick="document.getElementById('popupConfirm').classList.remove('show')">
-                <i class="fas fa-xmark"></i> Batal
-            </button>
-            <button class="popup-btn" id="btnConfirmKirim" style="background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 12px rgba(34,197,94,0.25);">
-                <i class="fas fa-paper-plane"></i> Ya, Kirim
-            </button>
+    <div class="popup-overlay" id="popupConfirm">
+        <div class="popup-card">
+            <div class="popup-icon confirm"><i class="fas fa-paper-plane"></i></div>
+            <h2 class="popup-title">Kirim ke Grand Juri?</h2>
+            <p class="popup-desc">Nilai yang sudah Anda simpan akan dikirim ke Grand Juri untuk ditinjau. Tindakan ini tidak dapat dibatalkan.</p>
+            <div class="popup-actions">
+                <button class="popup-btn-outline" onclick="document.getElementById('popupConfirm').classList.remove('show')">
+                    <i class="fas fa-xmark"></i> Batal
+                </button>
+                <button class="popup-btn" id="btnConfirmKirim" style="background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 12px rgba(34,197,94,0.25);">
+                    <i class="fas fa-paper-plane"></i> Ya, Kirim
+                </button>
+            </div>
         </div>
     </div>
-</div>
+
 <script>
+// ==================== PEDOMAN DATA ====================
 const pedomanData = {
     overall: { title: "Pedoman: OVERALL IMPRESSION", list: "<li>IMPRESSION (100%): Menarik perhatian pada pandangan pertama.</li><li>Memiliki keistimewaan yang menarik.</li><li>MENTAL: Ikan tidak takut, aktif berinteraksi, menguasai area.</li><li>KESEHATAN: Tidak terkena penyakit, tidak luka, performa bagus.</li>" },
     head: { title: "Pedoman: HEAD (KEPALA)", list: "<li>SIZE (60%): Ukuran kepala menjadi prioritas utama.</li><li>BENTUK (40%):<ul><li>Kepala Bulat Bola (Nilai 85 - 95)</li><li>Kepala Swan Head (Nilai 70 - 80)</li><li>Kepala Tidak Simetris (Nilai 60 - 70)</li></ul></li>" },
@@ -354,26 +419,263 @@ const pedomanData = {
     finnage: { title: "Pedoman: FINNAGE (SIRIP)", list: "<li>BENTUK (75%):<ul><li>Sirip atas & bawah menutup ekor (wrapping).</li><li>Ekor mekar (seperti kipas).</li><li>Dayung seimbang.</li></ul></li><li>KECERAHAN (25%): Bersih, tidak ada bercak/jamur.</li>" }
 };
 
-const formFields = {
-    overall: [{id:'impression', label:'Impression (Mental & Kesehatan)', desc:'0 - 100', max: 100}],
-    head: [{id:'size', label:'Size (Ukuran)', desc:'0 - 60', max: 60}, {id:'bentuk', label:'Bentuk Kepala', desc:'0 - 40', max: 40}],
-    face: [{id:'pipi', label:'Pipi', desc:'0 - 25', max: 25}, {id:'mata', label:'Mata', desc:'0 - 25', max: 25}, {id:'bibir', label:'Bibir', desc:'0 - 25', max: 25}, {id:'kondisi', label:'Kondisi Mata & Insang', desc:'0 - 25', max: 25}],
-    body: [{id:'bentuk', label:'Bentuk Badan', desc:'0 - 50', max: 50}, {id:'proporsi', label:'Proporsional', desc:'0 - 40', max: 40}, {id:'pangkal', label:'Pangkal', desc:'0 - 10', max: 10}],
-    marking: [{id:'fullness', label:'Fullness', desc:'0 - 40', max: 40}, {id:'contrast', label:'Contrast', desc:'0 - 40', max: 40}, {id:'bentuk', label:'Bentuk', desc:'0 - 20', max: 20}],
-    pearl: [{id:'shining', label:'Shining', desc:'0 - 45', max: 45}, {id:'fullness', label:'Fullness', desc:'0 - 35', max: 35}, {id:'bentuk', label:'Bentuk', desc:'0 - 20', max: 20}],
-    color: [{id:'komposisi', label:'Komposisi', desc:'0 - 45', max: 45}, {id:'kecerahan', label:'Kecerahan', desc:'0 - 35', max: 35}, {id:'fullness', label:'Fullness', desc:'0 - 20', max: 20}],
-    finnage: [{id:'bentuk', label:'Bentuk Sirip & Ekor', desc:'0 - 75', max: 75}, {id:'kecerahan', label:'Kecerahan', desc:'0 - 25', max: 25}]
+// ==================== ★ DEFECT DATA ====================
+const MINOR_DEFECTS = [
+    'Kutil', 'Bibir Miring', 'Katarak', 'Abses / Luka',
+    'Fintail Bleaching', 'Pangkal Ekor Naik/Trn', 'Dayung Tdk Seimbang'
+];
+
+const MAYOR_DEFECTS = [
+    'Bagian Bibir Hilang', 'Mulut Terbuka Terus', 'Muka Miring',
+    'Pangkal Bengkok/Patah', 'Fin/Tulang Hilang 1 Ruas'
+];
+
+const DEFECT_OPTIONS = {
+    raw_head_penalty: [
+        { label: '--- AMAN ---', options: [{ value: '0', label: 'Aman (0)' }] },
+        { label: '--- MINOR ---', options: [{ value: 'Kutil', label: 'Kutil' }] }
+    ],
+    raw_face_penalty: [
+        { label: '--- AMAN ---', options: [{ value: '0', label: 'Aman (0)' }] },
+        { label: '--- MINOR ---', options: [
+            { value: 'Bibir Miring', label: 'Bibir Miring' },
+            { value: 'Katarak', label: 'Katarak' }
+        ]},
+        { label: '--- MAYOR ---', options: [
+            { value: 'Bagian Bibir Hilang', label: 'Bagian Bibir Hilang' },
+            { value: 'Mulut Terbuka Terus', label: 'Mulut Terbuka Terus' },
+            { value: 'Muka Miring', label: 'Muka Miring' }
+        ]}
+    ],
+    raw_body_penalty: [
+        { label: '--- AMAN ---', options: [{ value: '0', label: 'Aman (0)' }] },
+        { label: '--- MINOR ---', options: [
+            { value: 'Kutil', label: 'Kutil' },
+            { value: 'Abses / Luka', label: 'Abses / Luka' }
+        ]},
+        { label: '--- MAYOR ---', options: [
+            { value: 'Pangkal Bengkok/Patah', label: 'Pangkal Bengkok/Patah' }
+        ]}
+    ],
+    raw_finnage_penalty: [
+        { label: '--- AMAN ---', options: [{ value: '0', label: 'Aman (0)' }] },
+        { label: '--- MINOR ---', options: [
+            { value: 'Kutil', label: 'Kutil' },
+            { value: 'Fintail Bleaching', label: 'Fintail Bleaching' },
+            { value: 'Pangkal Ekor Naik/Trn', label: 'Pangkal Ekor Naik/Trn' },
+            { value: 'Dayung Tdk Seimbang', label: 'Dayung Tdk Seimbang' }
+        ]},
+        { label: '--- MAYOR ---', options: [
+            { value: 'Fin/Tulang Hilang 1 Ruas', label: 'Fin/Tulang Hilang 1 Ruas' }
+        ]}
+    ]
 };
 
+// ==================== ★ DROPDOWN OPTIONS GENERATOR ====================
+function getStandardOptions() {
+    const options = [];
+    for (let i = 90; i >= 10; i -= 5) {
+        options.push({ value: i.toString(), label: i.toString() });
+    }
+    return options;
+}
+
+// ==================== ★ FORM FIELDS (UPDATED) ====================
+const formFields = {
+    overall: [{id:'impression', label:'Impression (Mental & Kesehatan)', desc:'Kelipatan 5 (10-90)', type: 'standard'}],
+    head: [
+        {id:'size', label:'Size (Ukuran)', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'bentuk', label:'Bentuk Kepala', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'defect', label:'Defect', desc:'Pilih jika ada defect', type: 'defect', defectKey: 'raw_head_penalty'}
+    ],
+    face: [
+        {id:'face', label:'Face', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'defect', label:'Defect', desc:'Pilih jika ada defect', type: 'defect', defectKey: 'raw_face_penalty'}
+    ],
+    body: [
+        {id:'bentuk', label:'Bentuk Badan', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'proporsi', label:'Proporsional', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'pangkal', label:'Pangkal', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'defect', label:'Defect', desc:'Pilih jika ada defect', type: 'defect', defectKey: 'raw_body_penalty'}
+    ],
+    marking: [
+        {id:'fullness', label:'Fullness', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'contrast', label:'Contrast', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'bentuk', label:'Bentuk', desc:'Kelipatan 5 (10-90)', type: 'standard'}
+    ],
+    pearl: [
+        {id:'shining', label:'Shining', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'fullness', label:'Fullness', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'bentuk', label:'Bentuk', desc:'Kelipatan 5 (10-90)', type: 'standard'}
+    ],
+    color: [
+        {id:'komposisi', label:'Komposisi', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'kecerahan', label:'Kecerahan', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'fullness', label:'Fullness', desc:'Kelipatan 5 (10-90)', type: 'standard'}
+    ],
+    finnage: [
+        {id:'bentuk', label:'Bentuk Sirip & Ekor', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'kecerahan', label:'Kecerahan', desc:'Kelipatan 5 (10-90)', type: 'standard'},
+        {id:'defect', label:'Defect', desc:'Pilih jika ada defect', type: 'defect', defectKey: 'raw_finnage_penalty'}
+    ]
+};
+
+// ==================== STATE ====================
 let currentTab = 'overall';
 let memoryScores = { overall: {}, head: {}, face: {}, body: {}, marking: {}, pearl: {}, color: {}, finnage: {} };
+let defectData = {
+    raw_head_penalty: ['0'],
+    raw_face_penalty: ['0'],
+    raw_body_penalty: ['0'],
+    raw_finnage_penalty: ['0']
+};
 let detailDataStorage = {};
 let myScoredMap = {};
 let scoredCounts = {};
+let activeDefectKey = null;
 
 var pendingKirimId = null;
 var pendingKirimBtn = null;
 
+// ==================== ★ DEFECT EVALUATION ====================
+function evaluateDefects() {
+    const parts = ['head', 'face', 'body', 'finnage'];
+    let partStatus = {
+        head: { minor: false, mayor: false, items: [] },
+        face: { minor: false, mayor: false, items: [] },
+        body: { minor: false, mayor: false, items: [] },
+        finnage: { minor: false, mayor: false, items: [] }
+    };
+
+    let minorCount = 0;
+
+    parts.forEach(p => {
+        let defs = defectData['raw_' + p + '_penalty'] || ['0'];
+        if (!Array.isArray(defs)) defs = [defs];
+
+        defs.forEach(d => {
+            if (d && d !== '0') {
+                partStatus[p].items.push(d);
+                if (MINOR_DEFECTS.includes(d)) {
+                    minorCount++;
+                    partStatus[p].minor = true;
+                }
+                if (MAYOR_DEFECTS.includes(d)) {
+                    partStatus[p].mayor = true;
+                }
+            }
+        });
+    });
+
+    const isGlobalMayor = minorCount >= 3;
+    let results = {};
+    let globalNotes = [];
+
+    parts.forEach(p => {
+        if (partStatus[p].items.length > 0) {
+            let isMayor = partStatus[p].mayor || (partStatus[p].minor && isGlobalMayor);
+            results[p + '_penalty'] = isMayor ? '30%' : '10%';
+            globalNotes.push(p.toUpperCase() + ': ' + partStatus[p].items.join(', '));
+        } else {
+            results[p + '_penalty'] = '';
+        }
+    });
+
+    results.keterangan = globalNotes.join(' | ');
+    return results;
+}
+
+function evaluateDefectsFromData(data) {
+    const parts = ['head', 'face', 'body', 'finnage'];
+    let partStatus = {};
+    parts.forEach(p => { partStatus[p] = { minor: false, mayor: false, items: [] }; });
+
+    let minorCount = 0;
+
+    parts.forEach(p => {
+        let defs = data['raw_' + p + '_penalty'] || ['0'];
+        if (!Array.isArray(defs)) defs = [defs];
+
+        defs.forEach(d => {
+            if (d && d !== '0') {
+                partStatus[p].items.push(d);
+                if (MINOR_DEFECTS.includes(d)) { minorCount++; partStatus[p].minor = true; }
+                if (MAYOR_DEFECTS.includes(d)) { partStatus[p].mayor = true; }
+            }
+        });
+    });
+
+    const isGlobalMayor = minorCount >= 3;
+    let results = {};
+
+    parts.forEach(p => {
+        if (partStatus[p].items.length > 0) {
+            let isMayor = partStatus[p].mayor || (partStatus[p].minor && isGlobalMayor);
+            results['raw_' + p + '_penalty'] = isMayor ? '30%' : '10%';
+        } else {
+            results['raw_' + p + '_penalty'] = '';
+        }
+    });
+
+    return results;
+}
+
+// ==================== DEFECT MODAL FUNCTIONS ====================
+function openDefectModal(defectKey) {
+    activeDefectKey = defectKey;
+    const partName = defectKey.replace('raw_', '').replace('_penalty', '').toUpperCase();
+    document.getElementById('defectModalTitle').innerText = 'Pilih Defect - ' + partName;
+
+    const options = DEFECT_OPTIONS[defectKey];
+    const currentValues = defectData[defectKey] || ['0'];
+
+    let html = '';
+    options.forEach(function(group) {
+        html += '<div class="defect-group">';
+        html += '<div class="defect-group-title">' + group.label + '</div>';
+        html += '<div class="defect-options">';
+
+        group.options.forEach(function(opt) {
+            const isChecked = currentValues.includes(opt.value);
+            html += '<label class="defect-option ' + (isChecked ? 'selected' : '') + '" onclick="toggleDefect(\'' + defectKey + '\', \'' + opt.value.replace(/'/g, "\\'") + '\')">';
+            html += '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="event.stopPropagation(); toggleDefect(\'' + defectKey + '\', \'' + opt.value.replace(/'/g, "\\'") + '\')">';
+            html += '<span>' + opt.label + '</span>';
+            html += '</label>';
+        });
+
+        html += '</div></div>';
+    });
+
+    document.getElementById('defectModalBody').innerHTML = html;
+    document.getElementById('modalDefect').classList.add('show');
+}
+
+function closeDefectModal() {
+    document.getElementById('modalDefect').classList.remove('show');
+    activeDefectKey = null;
+    renderFormInputs(currentTab);
+}
+
+function toggleDefect(defectKey, value) {
+    let current = defectData[defectKey] || ['0'];
+
+    if (value === '0') {
+        defectData[defectKey] = ['0'];
+    } else {
+        current = current.filter(v => v !== '0');
+        if (current.includes(value)) {
+            current = current.filter(v => v !== value);
+        } else {
+            current.push(value);
+        }
+        if (current.length === 0) current = ['0'];
+        defectData[defectKey] = current;
+    }
+
+    openDefectModal(defectKey);
+}
+
+// ==================== KIRIM KE GRAND ====================
 function kirimKeGrand(scoringId, btnEl) {
     pendingKirimId = scoringId;
     pendingKirimBtn = btnEl;
@@ -442,14 +744,52 @@ function changeKat(kat) {
     renderFormInputs(kat);
 }
 
+// ★ FUNGSI RENDER FORM INPUTS (DENGAN DROPDOWN)
 function renderFormInputs(kat) {
     if (!formFields[kat]) return;
     if (!memoryScores[kat]) { memoryScores[kat] = {}; }
     let html = '';
+    
     formFields[kat].forEach(function(field) {
-        const val = memoryScores[kat][field.id] || '';
-        html += '<div class="score-grid"><div class="score-label"><h4>' + field.label + '</h4><p>' + field.desc + '</p></div><input type="number" class="score-input" id="input-' + field.id + '" value="' + val + '" min="0" max="' + field.max + '" oninput="updateMemory()"></div>';
+        if (field.type === 'defect') {
+            // ★ RENDER TOMBOL DEFECT DENGAN INFO PENGURANGAN
+            const defectKey = field.defectKey;
+            const currentValues = defectData[defectKey] || ['0'];
+            const isAman = currentValues.includes('0') || currentValues.length === 0;
+            const evaluated = evaluateDefects();
+            const evalString = evaluated[defectKey];
+            
+            let btnLabel = 'AMAN';
+            let btnClass = 'defect-btn';
+            
+            if (!isAman && evalString && evalString !== '') {
+                const isMayor = evalString === '30%';
+                const persen = isMayor ? 30 : 10;
+                const defectNames = currentValues.filter(v => v !== '0').join(', ');
+                btnLabel = defectNames + ' (-' + persen + '%)';
+                btnClass = 'defect-btn ' + (isMayor ? 'mayor' : 'minor');
+            }
+            
+            html += '<div class="score-grid">';
+            html += '<div class="score-label"><h4>' + field.label + '</h4><p>' + field.desc + '</p></div>';
+            html += '<button type="button" class="' + btnClass + '" onclick="openDefectModal(\'' + defectKey + '\')">' + btnLabel + '</button>';
+            html += '</div>';
+            
+        } else {
+            // ★ RENDER DROPDOWN STANDAR (10-90 KELIPATAN 5)
+            const options = getStandardOptions();
+            const val = memoryScores[kat][field.id] || '';
+            html += '<div class="score-grid">';
+            html += '<div class="score-label"><h4>' + field.label + '</h4><p>' + field.desc + '</p></div>';
+            html += '<select class="score-select" id="input-' + field.id + '" onchange="updateMemory()">';
+            html += '<option value="">-</option>';
+            options.forEach(function(opt) {
+                html += '<option value="' + opt.value + '"' + (val == opt.value ? ' selected' : '') + '>' + opt.label + '</option>';
+            });
+            html += '</select></div>';
+        }
     });
+    
     document.getElementById('form-input-area').innerHTML = html;
 }
 
@@ -457,15 +797,10 @@ function updateMemory() {
     if (!formFields[currentTab]) return;
     if (!memoryScores[currentTab]) { memoryScores[currentTab] = {}; }
     formFields[currentTab].forEach(function(field) {
+        if (field.type === 'defect') return; // Skip defect field
         const el = document.getElementById('input-' + field.id);
         if (el) {
-            let val = el.value;
-            if (val.length > 1 && val.charAt(0) === '0') {
-                val = val.replace(/^0+/, '') || '0';
-                el.value = val;
-            }
-            memoryScores[currentTab][field.id] = val;
-            el.classList.remove('error-input');
+            memoryScores[currentTab][field.id] = el.value;
         }
     });
     updateFilledBadges();
@@ -475,6 +810,7 @@ function saveCurrentTabToMemory() {
     if (!formFields[currentTab]) return;
     if (!memoryScores[currentTab]) { memoryScores[currentTab] = {}; }
     formFields[currentTab].forEach(function(field) {
+        if (field.type === 'defect') return;
         const el = document.getElementById('input-' + field.id);
         if (el) memoryScores[currentTab][field.id] = el.value;
     });
@@ -486,7 +822,10 @@ function updateFilledBadges() {
         if (!btn) return;
         if (!memoryScores[kat]) { memoryScores[kat] = {}; }
         let isFilled = true;
-        formFields[kat].forEach(function(f) { if (!memoryScores[kat][f.id] && memoryScores[kat][f.id] !== 0) isFilled = false; });
+        formFields[kat].forEach(function(f) {
+            if (f.type === 'defect') return; // Skip defect dari pengecekan filled
+            if (!memoryScores[kat][f.id] && memoryScores[kat][f.id] !== 0) isFilled = false;
+        });
         if (isFilled) btn.classList.add('filled'); else btn.classList.remove('filled');
     });
 }
@@ -506,23 +845,44 @@ function submitAllScores() {
 
     let errors = [];
     let grandTotal = 0;
+    let grandTotalAfterDefect = 0;
 
     Object.keys(formFields).forEach(function(kat) {
         if (!memoryScores[kat]) { memoryScores[kat] = {}; }
+        let subTotal = 0;
+        
         formFields[kat].forEach(function(field) {
+            if (field.type === 'defect') return;
             const val = memoryScores[kat][field.id];
             const namaKat = kat.charAt(0).toUpperCase() + kat.slice(1);
-            if (val === "" || val === null || val === undefined) { errors.push({ type: 'empty', msg: 'Menu <b>' + namaKat + '</b>, kolom: <b>' + field.label + '</b>' }); }
-            else if (parseInt(val) < 0) { errors.push({ type: 'minus', msg: 'Menu <b>' + namaKat + '</b>, kolom: <b>' + field.label + '</b> (Tidak boleh minus)' }); }
-            else if (parseInt(val) > field.max) { errors.push({ type: 'limit', msg: 'Menu <b>' + namaKat + '</b>, kolom: <b>' + field.label + '</b> (Maks ' + field.max + ')' }); }
-            else { grandTotal += parseInt(val); }
+            if (val === "" || val === null || val === undefined) {
+                errors.push({ type: 'empty', msg: 'Menu <b>' + namaKat + '</b>, kolom: <b>' + field.label + '</b>' });
+            } else if (parseInt(val) < 0) {
+                errors.push({ type: 'minus', msg: 'Menu <b>' + namaKat + '</b>, kolom: <b>' + field.label + '</b> (Tidak boleh minus)' });
+            } else {
+                subTotal += parseInt(val);
+            }
         });
+        
+        grandTotal += subTotal;
+        
+        // ★ KURANGI DEFECT DARI SUBTOTAL KATEGORI
+        const evaluated = evaluateDefects();
+        const penaltyKey = kat + '_penalty';
+        const penaltyStr = evaluated[penaltyKey];
+        if (penaltyStr && penaltyStr !== '') {
+            const persen = parseInt(penaltyStr);
+            subTotal = subTotal * (1 - persen / 100);
+        }
+        
+        grandTotalAfterDefect += subTotal;
     });
 
     if (errors.length > 0) { showWarningModal(errors); return; }
 
     const btn = document.getElementById('btnSaveAll');
-    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> MEMPROSES...';
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> MEMPROSES...';
 
     const dropdownKelas = document.getElementById('selectKelas');
     const elKelasAsli = document.getElementById('inputKelas');
@@ -534,7 +894,8 @@ function submitAllScores() {
         _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
         ikan_id: document.getElementById('selectTank').value,
         kelas: kelasAkhir,
-        all_scores: memoryScores
+        all_scores: memoryScores,
+        defect_data: defectData // ★ KIRIM DEFECT DATA
     };
 
     fetch('/api/juri/simpan-nilai', {
@@ -546,9 +907,13 @@ function submitAllScores() {
     .then(function(d) {
         if (d.success) {
             document.getElementById('popupTitle').innerHTML = 'Nilai Berhasil Disimpan!';
-            document.getElementById('popupDesc').innerHTML = 'Total nilai seluruh kategori: <strong style="color:#2563eb; font-size:18px;">' + grandTotal + '</strong>';
+            document.getElementById('popupDesc').innerHTML = 
+                'Total nilai mentah: <strong style="color:var(--text-main); font-size:15px;">' + grandTotal + '</strong>' +
+                '<br>Setelah defect: <strong style="color:#2563eb; font-size:18px;">' + Math.round(grandTotalAfterDefect) + '</strong>' +
+                '<br><span style="font-size:11px;color:var(--text-muted);">Point final akan dihitung oleh sistem menggunakan bobot kategori.</span>';
             document.getElementById('successPopup').classList.add('show');
             memoryScores = { overall: {}, head: {}, face: {}, body: {}, marking: {}, pearl: {}, color: {}, finnage: {} };
+            defectData = { raw_head_penalty: ['0'], raw_face_penalty: ['0'], raw_body_penalty: ['0'], raw_finnage_penalty: ['0'] };
             document.getElementById('checkConfirm').checked = false;
             changeKat('overall');
             loadJuriData();
@@ -570,7 +935,6 @@ function loadJuriData() {
     fetch('/api/juri/data', { headers: { 'Accept': 'application/json' } })
     .then(function(res) { return res.json(); })
     .then(function(data) {
-    console.log('API RESPONSE:', data);
         const sel = document.getElementById('selectTank');
         sel.innerHTML = '<option value="">-- Pilih Ikan Berdasarkan Tank --</option>';
         sel.disabled = false;
@@ -582,10 +946,8 @@ function loadJuriData() {
             });
         }
 
-        /* ★ BARU: Simpan jumlah juri per tank */
         scoredCounts = data.scored_counts || {};
 
-        /* Populate dropdown */
         data.available_tanks.forEach(function(t) {
             const opt = document.createElement('option');
             opt.value = t.id;
@@ -593,35 +955,28 @@ function loadJuriData() {
             opt.setAttribute('data-kelas', t.kelas);
             opt.textContent = 'Tank ' + t.nomor_tank;
 
-            /*
-             ★ LOGIKA DROPDOWN:
-             1. Juri ini sudah menilai → disabled + label "Sudah Anda Nilai"
-             2. Juri lain sudah menilai → normal (bisa dipilih) + label jumlah juri
-             3. Belum ada yang menilai → normal tanpa label
-            */
             if (myScoredMap[t.id] && myScoredMap[t.id].is_mine) {
                 opt.disabled = true;
-                opt.textContent += '  [\u2713 Sudah Anda Nilai]';
+                opt.textContent += '  [✓ Sudah Anda Nilai]';
             } else if (scoredCounts[t.id]) {
                 var jml = scoredCounts[t.id];
                 var labelJuri = jml === 1 ? '1 juri' : jml + ' juri';
-                opt.textContent += '  \u00b7 Sudah dinilai oleh ' + labelJuri;
+                opt.textContent += '  · Sudah dinilai oleh ' + labelJuri;
             }
 
             sel.appendChild(opt);
         });
 
-        /* Reset form state */
         document.getElementById('inputKategori').value = '- Pilih Ikan -';
         document.getElementById('inputKelas').value = '- Pilih Ikan -';
         document.getElementById('selectKelas').value = '';
         document.getElementById('warningKelasBox').style.display = 'none';
         showIdleState();
         memoryScores = { overall: {}, head: {}, face: {}, body: {}, marking: {}, pearl: {}, color: {}, finnage: {} };
+        defectData = { raw_head_penalty: ['0'], raw_face_penalty: ['0'], raw_body_penalty: ['0'], raw_finnage_penalty: ['0'] };
         renderFormInputs(currentTab);
         updateFilledBadges();
 
-        /* Onchange handler */
         sel.onchange = function() {
             const selectedId = this.value;
 
@@ -664,6 +1019,7 @@ function loadJuriData() {
             }
 
             memoryScores = { overall: {}, head: {}, face: {}, body: {}, marking: {}, pearl: {}, color: {}, finnage: {} };
+            defectData = { raw_head_penalty: ['0'], raw_face_penalty: ['0'], raw_body_penalty: ['0'], raw_finnage_penalty: ['0'] };
             document.getElementById('checkConfirm').checked = false;
             document.getElementById('lockedBanner').style.display = 'none';
             document.getElementById('formArea').style.display = 'block';
@@ -671,7 +1027,6 @@ function loadJuriData() {
             updateFilledBadges();
         };
 
-        /* Riwayat tabel */
         const tbody = document.getElementById('tbody-scores');
         tbody.innerHTML = '';
         detailDataStorage = {};
@@ -682,7 +1037,18 @@ function loadJuriData() {
         }
 
         data.my_scores.forEach(function(s) {
-            detailDataStorage[s.ikan_id] = { tank: s.ikan.nomor_tank, nama: s.ikan.peserta.nama_peserta, kategori: s.ikan.kategori, nilai: s.nilai_detail, total: s.total_nilai };
+            detailDataStorage[s.ikan_id] = {
+                tank: s.ikan.nomor_tank,
+                nama: s.ikan.peserta.nama_peserta,
+                kategori: s.ikan.kategori,
+                nilai: s.nilai_detail,
+                total: s.total_nilai,
+                keterangan: s.keterangan || '',
+                raw_head_penalty: s.raw_head_penalty || ['0'],
+                raw_face_penalty: s.raw_face_penalty || ['0'],
+                raw_body_penalty: s.raw_body_penalty || ['0'],
+                raw_finnage_penalty: s.raw_finnage_penalty || ['0']
+            };
 
             var statusHtml = '<span class="badge-success">SUBMITTED</span>';
             if (s.edited_by_grand_juri) {
@@ -737,7 +1103,7 @@ function showIdleState() {
 }
 
 /* ================================================================
-   MODAL DETAIL
+   MODAL DETAIL (DITAMBAH INFO DEFECT)
    ================================================================ */
 function showDetail(id) {
     const data = detailDataStorage[id];
@@ -748,13 +1114,51 @@ function showDetail(id) {
         let subTotal = 0;
         html += '<tr style="background:#f8fafc;"><td colspan="3" style="font-weight:800; text-transform:uppercase; font-size:12px; color:var(--primary); letter-spacing:1px; padding:12px;"><i class="fas fa-tag" style="margin-right:6px;"></i>' + kat.toUpperCase() + '</td></tr>';
         formFields[kat].forEach(function(field) {
-            const val = data.nilai[kat] ? (data.nilai[kat][field.id] || 0) : 0;
+            if (field.type === 'defect') return;
+            let val = 0;
+            if (data.nilai[kat]) {
+                if (data.nilai[kat][field.id] !== undefined) {
+                    val = data.nilai[kat][field.id];
+                }
+            }
             subTotal += parseInt(val);
             html += '<tr><td style="padding-left:20px; font-weight:600;">' + field.label + '</td><td style="font-size:12px; color:var(--text-light);">' + field.desc + '</td><td style="text-align:center; font-weight:800; font-size:15px; color:var(--text-main);">' + val + '</td></tr>';
         });
-        html += '<tr style="background:#eff6ff;"><td colspan="2" style="text-align:right; font-weight:700; font-size:12px; padding:10px;">Subtotal ' + kat.toUpperCase() + '</td><td style="text-align:center; font-weight:800; color:var(--primary); font-size:13px; padding:10px;">' + subTotal + '</td></tr>';
+        
+        // ★ TAMPILKAN DEFECT JIKA ADA DI KOMPONEN INI
+        const defectKeyForKat = 'raw_' + kat + '_penalty';
+        let hasDefect = false;
+        let defectPersen = 0;
+        if (data[defectKeyForKat]) {
+            let defs = data[defectKeyForKat];
+            if (!Array.isArray(defs)) defs = [defs];
+            const defectItems = defs.filter(v => v !== '0');
+            if (defectItems.length > 0) {
+                hasDefect = true;
+                const evaluated = evaluateDefectsFromData(data);
+                const penaltyStr = evaluated[defectKeyForKat] || '';
+                const isMayor = penaltyStr === '30%';
+                defectPersen = isMayor ? 30 : 10;
+                html += '<tr style="background:#fef2f2;"><td style="padding-left:20px; font-weight:700; color:#dc2626;"><i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>Defect</td><td style="font-size:12px; color:#b91c1c; font-weight:600;">' + defectItems.join(', ') + '</td><td style="text-align:center; font-weight:800; font-size:14px; color:#dc2626;">-' + defectPersen + '%</td></tr>';
+            }
+        }
+        
+        // ★ HITUNG SUBTOTAL SETELAH DEFECT
+        let displaySubtotal = subTotal;
+        let subLabel = 'Subtotal';
+        if (hasDefect) {
+            displaySubtotal = Math.round(subTotal * (1 - defectPersen / 100) * 10) / 10;
+            subLabel = 'Subtotal (setelah defect)';
+        }
+        
+        html += '<tr style="background:#eff6ff;"><td colspan="2" style="text-align:right; font-weight:700; font-size:12px; padding:10px;">' + subLabel + ' ' + kat.toUpperCase() + '</td>';
+        if (hasDefect) {
+            html += '<td style="text-align:right; font-size:10px; color:var(--text-muted); text-decoration:line-through; padding:10px 8px 10px 0;">' + subTotal + '</td>';
+        }
+        html += '<td style="text-align:center; font-weight:800; color:var(--primary); font-size:13px; padding:10px;">' + displaySubtotal + '</td></tr>';
     });
     html += '</tbody></table><div class="grand-total">TOTAL NILAI: ' + data.total + '</div>';
+    
     document.getElementById('modalBodyContent').innerHTML = html;
     document.getElementById('modalDetail').classList.add('show');
 }
@@ -782,7 +1186,9 @@ function closeWarningModal() { document.getElementById('warningModal').classList
 
 document.getElementById('warningModal').addEventListener('click', function(e) { if (e.target === this) closeWarningModal(); });
 document.getElementById('modalDetail').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
+document.getElementById('modalDefect').addEventListener('click', function(e) { if (e.target === this) closeDefectModal(); });
 
+// INISIALISASI
 renderKategoriList();
 changeKat('overall');
 loadJuriData();

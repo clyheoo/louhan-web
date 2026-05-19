@@ -17,6 +17,11 @@ class Scoring extends Model
         'submitted_to_grand',
         'edited_by_grand_juri',
         'grand_juri_id',
+        'raw_head_penalty',
+        'raw_face_penalty',
+        'raw_body_penalty',
+        'raw_finnage_penalty',
+        'keterangan',
     ];
 
     protected $casts = [
@@ -24,6 +29,10 @@ class Scoring extends Model
         'edited_by_grand_juri' => 'boolean',
         'submitted_to_grand'   => 'boolean',
         'total_point'          => 'float',
+        'raw_head_penalty'     => 'array',
+        'raw_face_penalty'     => 'array',
+        'raw_body_penalty'     => 'array',
+        'raw_finnage_penalty'  => 'array',
     ];
     
     public function ikan()
