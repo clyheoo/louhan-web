@@ -234,28 +234,59 @@ class GrandJuriController extends Controller
        ═══════════════════════════════════════════ */
     public function editNilai(Request $request)
     {
-        $data      = $request->json()->all();
-        $ikanId    = $data['ikan_id'] ?? null;
-        $changed   = $data['changed_fields'] ?? null;
+        $data            = $request->json()->all();
+        $ikanId          = $data['ikan_id'] ?? null;
+        $changed         = $data['changed_fields'] ?? null;
+        $defectFromReq   = $data['defect_data'] ?? null; // ← AMBIL DEFECT DARI FRONTEND
 
         $ikan = Ikan::find($ikanId);
-        $totalNilai = 0;
-        foreach ($changed as $fields) {
-            if (is_array($fields)) {
-                foreach ($fields as $val) $totalNilai += (int) $val;
-            }
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
         }
 
-        // ★ Grand Juri edit tidak mengubah defect, gunakan defect dari scoring terakhir
+        // ★ 1. AMBIL NILAI DETAIL LENGKAP DARI SCORING TERAKHIR
         $lastScoring = Scoring::where('ikan_id', $ikanId)
             ->where('submitted_to_grand', true)
-            ->whereNotNull('raw_head_penalty')
             ->orderByDesc('created_at')
             ->first();
 
-        $defectDataForEdit = [];
-        if ($lastScoring) {
-            $defectDataForEdit = [
+        $fullNilaiDetail = [];
+        if ($lastScoring && $lastScoring->nilai_detail) {
+            $fullNilaiDetail = $lastScoring->nilai_detail;
+            if (is_string($fullNilaiDetail)) {
+                $fullNilaiDetail = json_decode($fullNilaiDetail, true) ?? [];
+            }
+        }
+
+        // ★ 2. OVERRIDE DENGAN NILAI YANG DIUBAH GRAND JURI
+        if ($changed && is_array($changed)) {
+            foreach ($changed as $kat => $fields) {
+                if (!isset($fullNilaiDetail[$kat])) {
+                    $fullNilaiDetail[$kat] = [];
+                }
+                foreach ($fields as $fieldId => $val) {
+                    $fullNilaiDetail[$kat][$fieldId] = $val;
+                }
+            }
+        }
+
+        // ★ 3. HITUNG TOTAL NILAI DARI NILAI DETAIL LENGKAP (bukan hanya changed_fields)
+        $totalNilai = 0;
+        foreach ($fullNilaiDetail as $kat => $fields) {
+            if (is_array($fields)) {
+                foreach ($fields as $key => $val) {
+                    if ($key === 'defect') continue;
+                    $totalNilai += (int) $val;
+                }
+            }
+        }
+
+        // ★ 4. GUNAKAN DEFECT DARI REQUEST JIKA ADA, FALLBACK KE SCORING TERAKHIR
+        $defectDataForCalc = [];
+        if ($defectFromReq && is_array($defectFromReq)) {
+            $defectDataForCalc = $defectFromReq;
+        } elseif ($lastScoring) {
+            $defectDataForCalc = [
                 'raw_head_penalty'    => $lastScoring->raw_head_penalty ?: ['0'],
                 'raw_face_penalty'    => $lastScoring->raw_face_penalty ?: ['0'],
                 'raw_body_penalty'    => $lastScoring->raw_body_penalty ?: ['0'],
@@ -263,34 +294,53 @@ class GrandJuriController extends Controller
             ];
         }
 
-        $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $changed, $defectDataForEdit);
+        // ★ 5. HITUNG POINT DARI NILAI LENGKAP + DEFECT YANG BENAR
+        $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $fullNilaiDetail, $defectDataForCalc);
 
-        $newScoring = Scoring::create([
+        // ★ 6. SIAPKAN DATA SCORING BARU
+        $scoringData = [
             'ikan_id'              => $ikanId,
             'juri_id'              => auth()->id(),
             'grand_juri_id'        => auth()->id(),
-            'nilai_detail'         => $changed,
+            'kelas'                => $ikan->kelas ?? '-',
+            'nilai_detail'         => $fullNilaiDetail,
             'total_nilai'          => $totalNilai,
             'status'               => 'submitted',
             'total_point'          => $totalPoint,
             'edited_by_grand_juri' => true,
-        ]);
+        ];
+
+        // ★ 7. SIMPAN DEFECT DATA KE SCORING BARU (supaya next edit baca yang terbaru)
+        if ($defectDataForCalc) {
+            $evaluated = PointCalculator::evaluateDefects($defectDataForCalc);
+            $scoringData['raw_head_penalty']    = $defectDataForCalc['raw_head_penalty'] ?? ['0'];
+            $scoringData['raw_face_penalty']    = $defectDataForCalc['raw_face_penalty'] ?? ['0'];
+            $scoringData['raw_body_penalty']    = $defectDataForCalc['raw_body_penalty'] ?? ['0'];
+            $scoringData['raw_finnage_penalty'] = $defectDataForCalc['raw_finnage_penalty'] ?? ['0'];
+            $scoringData['keterangan']          = $evaluated['keterangan'] ?? '';
+        }
+
+        $newScoring = Scoring::create($scoringData);
+
+        // ★ 8. SIMPAN LOG EDIT
+        $totalSebelum = $lastScoring ? ($lastScoring->total_nilai ?? 0) : 0;
 
         GrandJuriEdit::create([
             'scoring_id'     => $newScoring->id,
             'peserta_id'     => $ikan->peserta_id,
             'grand_juri_id'  => auth()->id(),
-            'nilai_sebelum'  => null,
-            'nilai_sesudah'  => $changed,
+            'nilai_sebelum'  => $lastScoring ? $lastScoring->nilai_detail : null,
+            'nilai_sesudah'  => $fullNilaiDetail,
             'changed_fields' => $changed,
-            'total_sebelum'  => 0,
+            'total_sebelum'  => $totalSebelum,
             'total_sesudah'  => $totalNilai,
         ]);
 
         return response()->json([
-            'success' => true,
-            'message' => 'Nilai baru berhasil disimpan oleh Grand Juri!',
-            'total'   => $totalNilai,
+            'success'     => true,
+            'message'     => 'Nilai baru berhasil disimpan oleh Grand Juri!',
+            'total'       => $totalNilai,
+            'total_point' => $totalPoint,
         ]);
     }
 

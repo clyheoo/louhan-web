@@ -297,6 +297,30 @@
         .export-dd-item i{width:16px;text-align:center;font-size:12px;}
         .export-dd-sep{height:1px;background:var(--border);margin:4px 0;
         }
+        /* ── GRAND JURI: DROPDOWN SCORE ── */
+        .gj-score-select{width:100%;padding:9px 28px 9px 8px;text-align:center;border:2px solid var(--border);border-radius:10px;font-size:15px;font-weight:800;color:var(--purple);outline:none;transition:.2s;background:white;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237c3aed' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;font-family:inherit;}
+        .gj-score-select:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(124,58,237,.1);}
+        .gj-score-select.changed{border-color:var(--success);background:#f0fdf4;color:#16a34a;}
+        .gj-score-select option{font-weight:600;}
+
+        /* ── GRAND JURI: DEFECT BUTTON ── */
+        .gj-defect-btn{width:100%;padding:9px;text-align:center;border:2px solid var(--border);border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;transition:.2s;background:white;color:var(--text-muted);font-family:inherit;}
+        .gj-defect-btn:hover{border-color:var(--purple);color:var(--purple);}
+        .gj-defect-btn.minor{background:#fff7ed;color:#c2410c;border-color:#fb923c;}
+        .gj-defect-btn.minor:hover{background:#fed7aa;}
+        .gj-defect-btn.mayor{background:#fef2f2;color:#dc2626;border-color:#f87171;}
+        .gj-defect-btn.mayor:hover{background:#fecaca;}
+
+        /* ── GRAND JURI: DEFECT MODAL ── */
+        .gj-defect-modal-box{max-width:450px;}
+        .gj-defect-group{margin-bottom:20px;}
+        .gj-defect-group-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;letter-spacing:.5px;}
+        .gj-defect-options{display:flex;flex-direction:column;gap:8px;}
+        .gj-defect-option{display:flex;align-items:center;gap:12px;padding:12px;border:2px solid var(--border);border-radius:10px;cursor:pointer;background:white;transition:.2s;}
+        .gj-defect-option:hover{border-color:var(--purple);}
+        .gj-defect-option.selected{border-color:var(--purple);background:var(--purple-light);}
+        .gj-defect-option input[type="checkbox"]{width:18px;height:18px;accent-color:var(--purple);cursor:pointer;}
+        .gj-defect-option span{font-size:13px;font-weight:600;}
     </style>
 </head>
 <body>
@@ -563,6 +587,17 @@
     </div>
 </div>
 
+<!-- MODAL DEFECT (Grand Juri Edit) -->
+<div class="modal-bg" id="modalDefectGJ">
+    <div class="modal-box gj-defect-modal-box">
+        <div class="modal-head">
+            <h3 id="defectModalTitleGJ">Pilih Defect</h3>
+            <button class="modal-close" onclick="closeDefectModalGJ()"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-content" id="defectModalBodyGJ"></div>
+    </div>
+</div>
+
 <!-- POPUP SUKSES -->
 <div class="popup-overlay" id="popupSuccess">
     <div class="popup-card">
@@ -618,24 +653,40 @@
 </div>
 
 <script>
-/* ================================================================
-   FORM FIELDS
-   ================================================================ */
+
 var formFields = {
     overall:[{id:'impression',label:'Impression',desc:'Kelipatan 5 (10-90)'}],
-    head:[{id:'size',label:'Size',desc:'Kelipatan 5 (10-90)'},{id:'bentuk',label:'Bentuk Kepala',desc:'Kelipatan 5 (10-90)'}],
-    face:[{id:'face',label:'Face',desc:'Kelipatan 5 (10-90)'}],
-    body:[{id:'bentuk',label:'Bentuk Badan',desc:'Kelipatan 5 (10-90)'},{id:'proporsi',label:'Proporsional',desc:'Kelipatan 5 (10-90)'},{id:'pangkal',label:'Pangkal',desc:'Kelipatan 5 (10-90)'}],
+    head:[{id:'size',label:'Size (Ukuran)',desc:'Kelipatan 5 (10-90)'},{id:'bentuk',label:'Bentuk Kepala',desc:'Kelipatan 5 (10-90)'},{id:'defect',label:'Defect',desc:'Pilih jika ada defect',type:'defect',defectKey:'raw_head_penalty'}],
+    face:[{id:'face',label:'Face',desc:'Kelipatan 5 (10-90)'},{id:'defect',label:'Defect',desc:'Pilih jika ada defect',type:'defect',defectKey:'raw_face_penalty'}],
+    body:[{id:'bentuk',label:'Bentuk Badan',desc:'Kelipatan 5 (10-90)'},{id:'proporsi',label:'Proporsional',desc:'Kelipatan 5 (10-90)'},{id:'pangkal',label:'Pangkal',desc:'Kelipatan 5 (10-90)'},{id:'defect',label:'Defect',desc:'Pilih jika ada defect',type:'defect',defectKey:'raw_body_penalty'}],
     marking:[{id:'fullness',label:'Fullness',desc:'Kelipatan 5 (10-90)'},{id:'contrast',label:'Contrast',desc:'Kelipatan 5 (10-90)'},{id:'bentuk',label:'Bentuk',desc:'Kelipatan 5 (10-90)'}],
     pearl:[{id:'shining',label:'Shining',desc:'Kelipatan 5 (10-90)'},{id:'fullness',label:'Fullness',desc:'Kelipatan 5 (10-90)'},{id:'bentuk',label:'Bentuk',desc:'Kelipatan 5 (10-90)'}],
     color:[{id:'komposisi',label:'Komposisi',desc:'Kelipatan 5 (10-90)'},{id:'kecerahan',label:'Kecerahan',desc:'Kelipatan 5 (10-90)'},{id:'fullness',label:'Fullness',desc:'Kelipatan 5 (10-90)'}],
-    finnage:[{id:'bentuk',label:'Bentuk Sirip & Ekor',desc:'Kelipatan 5 (10-90)'},{id:'kecerahan',label:'Kecerahan',desc:'Kelipatan 5 (10-90)'}]
+    finnage:[{id:'bentuk',label:'Bentuk Sirip & Ekor',desc:'Kelipatan 5 (10-90)'},{id:'kecerahan',label:'Kecerahan',desc:'Kelipatan 5 (10-90)'},{id:'defect',label:'Defect',desc:'Pilih jika ada defect',type:'defect',defectKey:'raw_finnage_penalty'}]
 };
 
 // ★ Legacy fields untuk data lama (backward compatibility di tampilan saja)
 var formFieldsLegacy = {
     face:[{id:'pipi',label:'Pipi'},{id:'mata',label:'Mata'},{id:'bibir',label:'Bibir'},{id:'kondisi',label:'Kondisi Mata & Insang'}]
 };
+
+var MINOR_DEFECTS=['Kutil','Bibir Miring','Katarak','Abses / Luka','Fintail Bleaching','Pangkal Ekor Naik/Trn','Dayung Tdk Seimbang'];
+var MAYOR_DEFECTS=['Bagian Bibir Hilang','Mulut Terbuka Terus','Muka Miring','Pangkal Bengkok/Patah','Fin/Tulang Hilang 1 Ruas'];
+var DEFECT_OPTIONS={
+    raw_head_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'}]}],
+    raw_face_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Bibir Miring',label:'Bibir Miring'},{value:'Katarak',label:'Katarak'}]},{label:'--- MAYOR ---',options:[{value:'Bagian Bibir Hilang',label:'Bagian Bibir Hilang'},{value:'Mulut Terbuka Terus',label:'Mulut Terbuka Terus'},{value:'Muka Miring',label:'Muka Miring'}]}],
+    raw_body_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Abses / Luka',label:'Abses / Luka'}]},{label:'--- MAYOR ---',options:[{value:'Pangkal Bengkok/Patah',label:'Pangkal Bengkok/Patah'}]}],
+    raw_finnage_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Fintail Bleaching',label:'Fintail Bleaching'},{value:'Pangkal Ekor Naik/Trn',label:'Pangkal Ekor Naik/Trn'},{value:'Dayung Tdk Seimbang',label:'Dayung Tdk Seimbang'}]},{label:'--- MAYOR ---',options:[{value:'Fin/Tulang Hilang 1 Ruas',label:'Fin/Tulang Hilang 1 Ruas'}]}]
+};
+function getStandardOptionsGJ(){var o=[];for(var i=90;i>=10;i-=5)o.push({value:i.toString(),label:i.toString()});return o;}
+function normDefArr(v){if(!v)return['0'];if(typeof v==='string')return[v];if(Array.isArray(v))return v;return['0'];}
+var editDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};
+var originalDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};
+var activeDefectKeyGJ=null;
+function evaluateDefectsGJ(){var parts=['head','face','body','finnage'];var partStatus={};parts.forEach(function(p){partStatus[p]={minor:false,mayor:false,items:[]};});var minorCount=0;parts.forEach(function(p){var defs=normDefArr(editDefectData['raw_'+p+'_penalty']);defs.forEach(function(d){if(d&&d!=='0'){partStatus[p].items.push(d);if(MINOR_DEFECTS.indexOf(d)!==-1){minorCount++;partStatus[p].minor=true;}if(MAYOR_DEFECTS.indexOf(d)!==-1)partStatus[p].mayor=true;}});});var isGlobalMayor=minorCount>=3;var results={};parts.forEach(function(p){if(partStatus[p].items.length>0){var isM=partStatus[p].mayor||(partStatus[p].minor&&isGlobalMayor);results[p+'_penalty']=isM?'30%':'10%';}else{results[p+'_penalty']='';}});return results;}
+function openDefectModalGJ(defectKey){activeDefectKeyGJ=defectKey;var partName=defectKey.replace('raw_','').replace('_penalty','').toUpperCase();document.getElementById('defectModalTitleGJ').innerText='Pilih Defect - '+partName;var options=DEFECT_OPTIONS[defectKey];var currentValues=editDefectData[defectKey]||['0'];var html='';options.forEach(function(group){html+='<div class="gj-defect-group"><div class="gj-defect-group-title">'+group.label+'</div><div class="gj-defect-options">';group.options.forEach(function(opt){var isChecked=currentValues.indexOf(opt.value)!==-1;html+='<label class="gj-defect-option '+(isChecked?'selected':'')+'" onclick="toggleDefectGJ(\''+defectKey+'\',\''+opt.value.replace(/'/g,"\\'")+'\')"><input type="checkbox" '+(isChecked?'checked':'')+' onclick="event.stopPropagation();toggleDefectGJ(\''+defectKey+'\',\''+opt.value.replace(/'/g,"\\'")+'\')"><span>'+opt.label+'</span></label>';});html+='</div></div>';});document.getElementById('defectModalBodyGJ').innerHTML=html;openModal('modalDefectGJ');}
+function closeDefectModalGJ(){closeModal('modalDefectGJ');activeDefectKeyGJ=null;renderEditInputs(currentEditKat);}
+function toggleDefectGJ(defectKey,value){var current=editDefectData[defectKey]||['0'];if(value==='0'){editDefectData[defectKey]=['0'];}else{current=current.filter(function(v){return v!=='0';});if(current.indexOf(value)!==-1){current=current.filter(function(v){return v!==value;});}else{current.push(value);}if(current.length===0)current=['0'];editDefectData[defectKey]=current;}openDefectModalGJ(defectKey);}
 
 var currentBonusIkanId = null;
 
@@ -793,16 +844,23 @@ function openModal(id){document.getElementById(id).classList.add('show');}
 ['modalDetail','modalEdit','modalGeneric','modalBonus'].forEach(function(id){
     document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});
 });
+// ★ Modal defect GJ harus panggil closeDefectModalGJ() agar tombol defect ter-update
+document.getElementById('modalDefectGJ').addEventListener('click',function(e){
+    if(e.target===this) closeDefectModalGJ();
+});
+
 function freshMemory(){
     var m={};
     Object.keys(formFields).forEach(function(k){m[k]={};});
     return m;
 }
+
 function cloneValues(source){
     var m={};
     Object.keys(formFields).forEach(function(k){
         m[k]={};
         formFields[k].forEach(function(f){
+            if(f.type==='defect')return;
             var v=(source&&source[k]&&source[k][f.id]);
             m[k][f.id]=(v!==undefined&&v!==null&&v!=='')?String(v):'';
         });
@@ -1220,10 +1278,22 @@ function openEdit(id){
         }
         currentPData=p;
 
-        if(p.nilai_detail&&typeof p.nilai_detail==='object'){
-            editMemory=cloneValues(p.nilai_detail);
-        } else { editMemory=freshMemory(); }
+        // ★ LOAD NILAI
+        if(p.nilai_detail&&typeof p.nilai_detail==='object'){editMemory=cloneValues(p.nilai_detail);}else{editMemory=freshMemory();}
         originalValues=cloneValues(editMemory);
+
+        // ★ LOAD DEFECT DATA DARI SCORING YANG SEDANG DIEDIT
+        editDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};
+        if(p.all_scorings&&p.all_scorings.length>0){
+            var targetSc=p.all_scorings.find(function(s){return s.is_grand;})||p.all_scorings[0];
+            if(targetSc){
+                editDefectData.raw_head_penalty=normDefArr(targetSc.raw_head_penalty);
+                editDefectData.raw_face_penalty=normDefArr(targetSc.raw_face_penalty);
+                editDefectData.raw_body_penalty=normDefArr(targetSc.raw_body_penalty);
+                editDefectData.raw_finnage_penalty=normDefArr(targetSc.raw_finnage_penalty);
+            }
+        }
+        originalDefectData=JSON.parse(JSON.stringify(editDefectData));
 
         var info='<b>'+esc(p.nama_peserta)+'</b> — Tank '+(p.nomor_tank||'—');
         info+='<br><span style="font-size:11px;color:#6d28d9;">'+esc(p.kategori)+' - '+(p.kelas||'—')+' | '+esc(p.detail_anggota||'—')+'</span>';
@@ -1268,26 +1338,46 @@ function renderEditInputs(kat){
     if(!editMemory[kat])editMemory[kat]={};if(!originalValues[kat])originalValues[kat]={};
     var html='';
     formFields[kat].forEach(function(f){
-        var currentVal=editMemory[kat][f.id]||'';var origVal=originalValues[kat][f.id]||'';
-        var isChanged=(currentVal!==''&&currentVal!==origVal);
-        html+='<div class="score-row"><div class="score-label"><h4>'+f.label+'</h4>';
-        html+='<p>'+f.desc;
-        if(origVal!=='') html+=' &nbsp;|&nbsp; <span class="orig-val">Nilai juri: <strong>'+origVal+'</strong></span>';
-        html+='</p></div>';
-        html+='<input type="number" class="score-input'+(isChanged?' changed':'')+'" id="edit-'+f.id+'" '+
-            'value="'+currentVal+'" min="0" max="'+f.max+'" '+
-            'oninput="onInput(this,\''+kat+'\',\''+f.id+'\','+f.max+')"></div>';
+        if(f.type==='defect'){
+            var defectKey=f.defectKey;
+            var currentValues=editDefectData[defectKey]||['0'];
+            var isAman=currentValues.indexOf('0')!==-1||currentValues.length===0;
+            var evaluated=evaluateDefectsGJ();
+            var evalKey=defectKey.substring(4);
+            var evalString=evaluated[evalKey];
+            var btnLabel='AMAN';var btnClass='gj-defect-btn';
+            if(!isAman&&evalString&&evalString!==''){
+                var isMayor=evalString==='30%';var persen=isMayor?30:10;
+                var defectNames=currentValues.filter(function(v){return v!=='0';}).join(', ');
+                btnLabel=defectNames+' (-'+persen+'%)';btnClass='gj-defect-btn '+(isMayor?'mayor':'minor');
+            }
+            html+='<div class="score-row"><div class="score-label"><h4>'+f.label+'</h4><p>'+f.desc+'</p></div>';
+            html+='<button type="button" class="'+btnClass+'" onclick="openDefectModalGJ(\''+defectKey+'\')">'+btnLabel+'</button></div>';
+        } else {
+            var options=getStandardOptionsGJ();
+            var currentVal=editMemory[kat][f.id]||'';
+            var origVal=originalValues[kat][f.id]||'';
+            var isChanged=(currentVal!==''&&currentVal!==origVal);
+            html+='<div class="score-row"><div class="score-label"><h4>'+f.label+'</h4>';
+            html+='<p>'+f.desc;
+            if(origVal!=='')html+=' &nbsp;|&nbsp; <span class="orig-val">Nilai juri: <strong>'+origVal+'</strong></span>';
+            html+='</p></div>';
+            html+='<select class="gj-score-select'+(isChanged?' changed':'')+'" id="edit-'+f.id+'" onchange="onEditInput(this,\''+kat+'\',\''+f.id+'\')">';
+            html+='<option value="">-</option>';
+            options.forEach(function(opt){html+='<option value="'+opt.value+'"'+(currentVal==opt.value?' selected':'')+'>'+opt.label+'</option>';});
+            html+='</select></div>';
+        }
     });
     html+='<div class="subtotal-bar">Subtotal <em>'+kat+'</em>: <span id="subVal">0</span></div>';
-    document.getElementById('editFormArea').innerHTML=html;updateSub(kat);
+    document.getElementById('editFormArea').innerHTML=html;
+    updateSub(kat);
 }
 
-function onInput(el,kat,fid){
+function onEditInput(el,kat,fid){
     var cur=el.value;var ori=originalValues[kat]?String(originalValues[kat][fid]||''):'';
     el.classList.remove('changed');if(cur!==''&&cur!==ori)el.classList.add('changed');
-    var v=parseInt(cur);
-    if(!isNaN(v)&&v<0){v=0;el.value=v;}
-    if(!editMemory[kat])editMemory[kat]={};editMemory[kat][fid]=el.value;updateSub(kat);renderEditList();
+    if(!editMemory[kat])editMemory[kat]={};editMemory[kat][fid]=el.value;
+    updateSub(kat);renderEditList();
 }
 
 function updateSub(kat){
@@ -1307,64 +1397,29 @@ document.getElementById('btnSaveGrand').addEventListener('click',function(){subm
 
 function submitEdit(){
     saveCurrentTab();
-    var payload={};var limitErrors=[];var totalChanged=0;
-
+    var payload={};var totalChanged=0;
     Object.keys(formFields).forEach(function(kat){
         formFields[kat].forEach(function(f){
-            var cur=editMemory[kat]?editMemory[kat][f.id]:'';var ori=originalValues[kat]?originalValues[kat][f.id]:'';
+            if(f.type==='defect')return;
+            var cur=editMemory[kat]?editMemory[kat][f.id]:'';
+            var ori=originalValues[kat]?originalValues[kat][f.id]:'';
             if(cur===''&&ori==='')return;if(String(cur)===String(ori))return;
-            var val=parseInt(cur);if(isNaN(val)){return;}
-            if(val<0){limitErrors.push(f.label+' ('+kat+'): tidak boleh negatif');return;}
-            if(val>f.max){limitErrors.push(f.label+' ('+kat+'): maks '+f.max+', diisi '+val);return;}
+            var val=parseInt(cur);if(isNaN(val))return;if(val<0)return;
             if(!payload[kat])payload[kat]={};payload[kat][f.id]=val;totalChanged++;
         });
     });
-
-    if(totalChanged===0&&limitErrors.length===0){showPopup('popupEmpty');return;}
-    if(limitErrors.length>0){
-        var ul=document.getElementById('limitList');ul.innerHTML='';
-        limitErrors.forEach(function(e){ul.innerHTML+='<li class="err-item"><i class="fas fa-circle-xmark"></i><span>'+e+'</span></li>';});
-        showPopup('popupLimit');return;
-    }
-
-    var btn=document.getElementById('btnSaveGrand');
-    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> MENYIMPAN...';
-
-    /* ★ BUG FIX: ikan_id (bukan peserta_id) sesuai yang controller expect */
+    var defectChanged=false;
+    ['raw_head_penalty','raw_face_penalty','raw_body_penalty','raw_finnage_penalty'].forEach(function(key){
+        var cur=JSON.stringify(editDefectData[key]||['0']);
+        var ori=JSON.stringify(originalDefectData[key]||['0']);
+        if(cur!==ori)defectChanged=true;
+    });
+    if(totalChanged===0&&!defectChanged){showPopup('popupEmpty');return;}
+    var btn=document.getElementById('btnSaveGrand');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> MENYIMPAN...';
     fetch('/api/grand-juri/edit-nilai',{
-        method:'POST',
-        headers:{
-            'Content-Type':'application/json',
-            'Accept':'application/json',
-            'X-Requested-With':'XMLHttpRequest'
-        },
-        body:JSON.stringify({
-            _token:getCsrf(),
-            ikan_id:currentId,
-            changed_fields:payload
-        })
-    })
-    .then(function(res){
-        if(!res.ok)return res.json().then(function(d){d._err=true;return d;});
-        return res.json();
-    })
-    .then(function(d){
-        if(d._err||!d.success){
-            document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan pada server.';
-            showPopup('popupError');return;
-        }
-        closeModal('modalEdit');
-        document.getElementById('popupSuccessDesc').innerHTML=
-            'Total nilai akhir: <strong style="color:var(--purple);font-size:18px;">'+d.total+'</strong><br>'+
-            '<span style="font-size:12px;color:var(--text-muted);">'+totalChanged+' komponen diperbarui</span>';
-        showPopup('popupSuccess');
-        loadPeserta(document.getElementById('searchInput').value);loadStats();loadJuriSummary();
-    })
-    .catch(function(){
-        document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan. Periksa koneksi Anda.';
-        showPopup('popupError');
-    })
-    .finally(function(){btn.disabled=false;btn.innerHTML='<i class="fas fa-save"></i> SIMPAN PERUBAHAN';});
+        method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+        body:JSON.stringify({_token:getCsrf(),ikan_id:currentId,changed_fields:payload,defect_data:defectChanged?editDefectData:null})
+    }).then(function(res){if(!res.ok)return res.json().then(function(d){d._err=true;return d;});return res.json();}).then(function(d){if(d._err||!d.success){document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan pada server.';showPopup('popupError');return;}closeModal('modalEdit');document.getElementById('popupSuccessDesc').innerHTML='Total nilai akhir: <strong style="color:var(--purple);font-size:18px;">'+d.total+'</strong><br><span style="font-size:12px;color:var(--text-muted);">'+totalChanged+' komponen diperbarui'+(defectChanged?' + defect data diperbarui':'')+'</span>';showPopup('popupSuccess');loadPeserta(document.getElementById('searchInput').value);loadStats();loadJuriSummary();}).catch(function(){document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan.';showPopup('popupError');}).finally(function(){btn.disabled=false;btn.innerHTML='<i class="fas fa-save"></i> SIMPAN PERUBAHAN';});
 }
 
 /* ================================================================
