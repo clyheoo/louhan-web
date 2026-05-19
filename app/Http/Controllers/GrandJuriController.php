@@ -110,11 +110,25 @@ class GrandJuriController extends Controller
             $submittedCount = $scorings->count();
 
             $allScoringsData = $scorings->map(function ($s) {
+                // ★ Evaluasi defect di backend agar JS tidak perlu hitung ulang
+                $defectRaw = [
+                    'raw_head_penalty'    => $s->raw_head_penalty ?: ['0'],
+                    'raw_face_penalty'    => $s->raw_face_penalty ?: ['0'],
+                    'raw_body_penalty'    => $s->raw_body_penalty ?: ['0'],
+                    'raw_finnage_penalty' => $s->raw_finnage_penalty ?: ['0'],
+                ];
+                $defectEval = PointCalculator::evaluateDefects($defectRaw);
+
                 return [
-                    'juri_name'    => $s->juri ? $s->juri->name : '—',
-                    'is_grand'     => ($s->juri && $s->juri->role === 'grand_juri'),
-                    'nilai_detail' => $s->nilai_detail,
-                    'total_nilai'  => $s->total_nilai ?? 0,
+                    'juri_name'          => $s->juri ? $s->juri->name : '—',
+                    'is_grand'           => ($s->juri && $s->juri->role === 'grand_juri'),
+                    'nilai_detail'       => $s->nilai_detail,
+                    'total_nilai'        => $s->total_nilai ?? 0,
+                    'raw_head_penalty'   => $s->raw_head_penalty ?: ['0'],
+                    'raw_face_penalty'   => $s->raw_face_penalty ?: ['0'],
+                    'raw_body_penalty'   => $s->raw_body_penalty ?: ['0'],
+                    'raw_finnage_penalty'=> $s->raw_finnage_penalty ?: ['0'],
+                    'defect_eval'        => $defectEval,
                 ];
             })->values()->toArray();
 

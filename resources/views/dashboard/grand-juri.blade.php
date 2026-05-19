@@ -1085,40 +1085,54 @@ function renderDetail(p){
                             fields = formFieldsLegacy.face;
                         }
                     }
+
+                    html += '<div style="margin-bottom:10px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">';
                     
                     var katNilai=nd[kat]||{};var sub=0;
                     fields.forEach(function(f){if(katNilai[f.id]!==undefined&&katNilai[f.id]!==null)sub+=parseInt(katNilai[f.id])||0;});
-                    html+='<div class="detail-kat-mini"><span>'+kat.toUpperCase()+'</span><span>Subtotal: '+sub+'</span></div>';
+
+                    // ★ BACA HASIL EVALUASI DEFECT DARI BACKEND
+                    var defectEval = sc.defect_eval || {};
+                    var penaltyKey = kat + '_penalty';
+                    var penaltyStr = defectEval[penaltyKey] || '';
+                    var defectPersen = 0;
+                    var hasDefect = false;
+                    var defectNames = [];
+
+                    if (penaltyStr && penaltyStr !== '') {
+                        hasDefect = true;
+                        defectPersen = parseInt(penaltyStr) || 0;
+                        var rawKey = 'raw_' + kat + '_penalty';
+                        var rawDefs = sc[rawKey];
+                        if (rawDefs) {
+                            if (!Array.isArray(rawDefs)) rawDefs = [rawDefs];
+                            defectNames = rawDefs.filter(function(v) { return v && v !== '0'; });
+                        }
+                    }
+
+                    // ★ HITUNG SUBTOTAL SETELAH DEFECT
+                    var displaySub = sub;
+                    if (hasDefect && defectPersen > 0) {
+                        displaySub = Math.round(sub * (1 - defectPersen / 100) * 10) / 10;
+                    }
+
+                    // ★ TAMPILKAN SUBTOTAL (nama komponen tetap normal, defect hanya di nilai akhir)
+                    if (hasDefect && defectPersen > 0) {
+                        html += '<div class="detail-kat-mini"><span>' + kat.toUpperCase() + '</span><span>Subtotal: <s style="color:#94a3b8;font-size:10px;">' + sub + '</s> → <strong style="color:var(--purple);">' + displaySub + '</strong> <span style="color:#dc2626;font-weight:700;">(-' + defectPersen + '%)</span></span></div>';
+                    } else {
+                        html += '<div class="detail-kat-mini"><span>' + kat.toUpperCase() + '</span><span>Subtotal: ' + sub + '</span></div>';
+                    }
+
                     fields.forEach(function(f){
                         var val=katNilai[f.id];var has=(val!==undefined&&val!==null&&val!=='');
                         html+='<div class="detail-field-row"><div class="detail-field-left"><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
                     });
-                    
-                    // ★ TAMPILKAN DEFECT JIKA ADA
-                    var defectKey = 'raw_' + kat + '_penalty';
-                    if (sc[defectKey]) {
-                        var defs = sc[defectKey];
-                        if (!Array.isArray(defs)) defs = [defs];
-                        var defectItems = defs.filter(function(v) { return v && v !== '0'; });
-                        if (defectItems.length > 0) {
-                            var ket = sc.keterangan || '';
-                            var penaltyStr = '';
-                            var parts = ket.split(' | ');
-                            parts.forEach(function(part) {
-                                if (part.startsWith(kat.toUpperCase() + ':')) {
-                                    var pStr = part.replace(kat.toUpperCase() + ': ', '');
-                                    if (pStr.indexOf('30%') !== -1) penaltyStr = '30%';
-                                    else if (pStr.indexOf('10%') !== -1) penaltyStr = '10%';
-                                }
-                            });
-                            
-                            if (penaltyStr) {
-                                var isMayor = penaltyStr === '30%';
-                                var persen = isMayor ? 30 : 10;
-                                html += '<div class="detail-field-row" style="background:#fef2f2;"><div class="detail-field-left"><div class="detail-field-name" style="color:#dc2626;"><i class="fas fa-exclamation-triangle" style="margin-right:4px;font-size:10px;"></i>Defect</div><div class="detail-field-meta" style="color:#b91c1c;font-weight:600;">' + defectItems.join(', ') + '</div></div><span class="score-chip" style="background:#fef2f2;color:#dc2626;font-weight:800;">-' + persen + '%</span></div>';
-                            }
-                        }
+
+                    // ★ TAMPILKAN BARIS DEFECT
+                    if (hasDefect && defectPersen > 0 && defectNames.length > 0) {
+                        html += '<div class="detail-field-row" style="background:#fef2f2;"><div class="detail-field-left"><div class="detail-field-name" style="color:#dc2626;"><i class="fas fa-exclamation-triangle" style="margin-right:4px;font-size:10px;"></i>Defect</div><div class="detail-field-meta" style="color:#b91c1c;font-weight:600;">' + defectNames.join(', ') + '</div></div><span class="score-chip" style="background:#fef2f2;color:#dc2626;font-weight:800;">-' + defectPersen + '%</span></div>';
                     }
+                    html += '</div>';
                 });
         }
         html+='</div></div>';
