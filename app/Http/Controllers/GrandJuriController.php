@@ -154,17 +154,35 @@ class GrandJuriController extends Controller
                 }
             }
 
-            // (total_point sudah termasuk pengurangan defect dari masing-masing juri)
-            $totalPointSemua = 0;
-            if ($jumlahJuriYangNilai > 0) {
-                $sumTotalPoint = 0;
-                foreach ($scorings as $s) {
-                    if ($s->total_point) {
-                        $sumTotalPoint += (float) $s->total_point;
+            // ★ FIX: Hitung POINT REAL-TIME menggunakan PointCalculator (SAMA PERSIS DENGAN ADMIN)
+            $avgDetail = [];
+            foreach ($scorings as $s) {
+                if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                    foreach ($s->nilai_detail as $kat => $fields) {
+                        foreach ($fields as $fid => $val) {
+                            if (!isset($avgDetail[$kat][$fid])) {
+                                $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                            }
+                            $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                            $avgDetail[$kat][$fid]['count']++;
+                        }
                     }
                 }
-                $totalPointSemua = round($sumTotalPoint / $jumlahJuriYangNilai, 2);
             }
+
+            $finalAvgDetail = [];
+            if ($jumlahJuriYangNilai > 0) {
+                foreach ($avgDetail as $kat => $fields) {
+                    $finalAvgDetail[$kat] = [];
+                    foreach ($fields as $fid => $d) {
+                        $finalAvgDetail[$kat][$fid] = $d['count'] > 0
+                            ? $d['sum'] / $d['count']
+                            : 0;
+                    }
+                }
+            }
+
+            $totalPointSemua = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
 
             return [
                 'id'               => $ikan->id,
@@ -194,6 +212,7 @@ class GrandJuriController extends Controller
                 'bonus_list'      => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
                 'total_bonus'     => (int) $ikan->bonusPoints->sum('points'),
                 'final_point'     => (float) $totalPointSemua + (int) $ikan->bonusPoints->sum('points'),
+                'point_breakdown' => $finalAvgDetail ? PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail) : null,
                 'point_config'    => $pointConfig ? [
                     'overall' => (float)$pointConfig->overall_bobot,
                     'head'    => (float)$pointConfig->head_bobot,
@@ -591,16 +610,7 @@ class GrandJuriController extends Controller
                     }
                 }
 
-                $totalPoint = 0;
-                if ($jumlahJuriYangNilai > 0) {
-                    $sumTotalPoint = 0;
-                    foreach ($scorings as $s) {
-                        if ($s->total_point) {
-                            $sumTotalPoint += (float) $s->total_point;
-                        }
-                    }
-                    $totalPoint = round($sumTotalPoint / $jumlahJuriYangNilai, 2);
-                }
+                $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
                 $totalBonus = (int) $ikan->bonusPoints->sum('points');
                 $finalPoint = $totalPoint + $totalBonus;
 
@@ -688,16 +698,7 @@ class GrandJuriController extends Controller
                 }
             }
 
-                $totalPoint = 0;
-                if ($jumlahJuriYangNilai > 0) {
-                    $sumTotalPoint = 0;
-                    foreach ($scorings as $s) {
-                        if ($s->total_point) {
-                            $sumTotalPoint += (float) $s->total_point;
-                        }
-                    }
-                    $totalPoint = round($sumTotalPoint / $jumlahJuriYangNilai, 2);
-                }
+            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
             $totalBonus = (int) $ikan->bonusPoints->sum('points');
             $finalPoint = $totalPoint + $totalBonus;
 

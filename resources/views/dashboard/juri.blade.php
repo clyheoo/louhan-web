@@ -672,7 +672,7 @@ function toggleDefect(defectKey, value) {
         defectData[defectKey] = current;
     }
 
-    openDefectModal(defectKey);
+    closeDefectModal();
 }
 
 // ==================== KIRIM KE GRAND ====================
@@ -757,7 +757,8 @@ function renderFormInputs(kat) {
             const currentValues = defectData[defectKey] || ['0'];
             const isAman = currentValues.includes('0') || currentValues.length === 0;
             const evaluated = evaluateDefects();
-            const evalString = evaluated[defectKey];
+            const evalKey = defectKey.replace('raw_', '') + '_penalty';
+            const evalString = evaluated[evalKey];
             
             let btnLabel = 'AMAN';
             let btnClass = 'defect-btn';
@@ -868,7 +869,7 @@ function submitAllScores() {
         
         // ★ KURANGI DEFECT DARI SUBTOTAL KATEGORI
         const evaluated = evaluateDefects();
-        const penaltyKey = kat + '_penalty';
+        const penaltyKey = 'raw_' + kat + '_penalty';
         const penaltyStr = evaluated[penaltyKey];
         if (penaltyStr && penaltyStr !== '') {
             const persen = parseInt(penaltyStr);

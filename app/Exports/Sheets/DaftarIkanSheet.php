@@ -10,50 +10,41 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class DaftarIkanSheet implements FromArray, WithTitle, WithStyles, ShouldAutoSize
 {
-    public function title(): string
-    {
-        return 'DAFTAR IKAN';
-    }
+    public function title(): string { return 'DAFTAR IKAN'; }
 
     public function array(): array
     {
-        $ikans = Ikan::with('peserta')
-            ->orderBy('kategori')
-            ->orderBy('kelas')
-            ->orderBy('nomor_tank')
-            ->get();
-
-        $rows = [];
-        $rows[] = ['NO', 'NAMA PESERTA', 'KATEGORI', 'KELAS', 'NO TANK', 'JENIS KEANGGOTAAN', 'DETAIL ANGGOTA (TEAM)', 'STATUS NILAI'];
-
+        $ikans = Ikan::with('peserta')->orderBy('kategori')->orderBy('kelas')->orderBy('nomor_tank')->get();
+        $rows = [['NO', 'NAMA PESERTA', 'KATEGORI', 'KELAS', 'NO TANK', 'JENIS KEANGGOTAAN', 'DETAIL ANGGOTA (TEAM)', 'STATUS NILAI']];
         $no = 1;
         foreach ($ikans as $ikan) {
-            $status = $ikan->is_locked ? 'TERKUNCI (FINAL)' : 'Belum Dikunci';
-            $rows[] = [
-                $no++,
-                $ikan->peserta->nama_peserta ?? '—',
-                strtoupper($ikan->kategori),
-                $ikan->kelas ?? '—',
-                $ikan->nomor_tank ?? '—',
-                $ikan->peserta->jenis_keanggotaan ?? '—',
-                $ikan->peserta->detail_anggota ?? '—',
-                $status,
-            ];
+            $rows[] = [$no++, $ikan->peserta->nama_peserta ?? '—', strtoupper($ikan->kategori), $ikan->kelas ?? '—', $ikan->nomor_tank ?? '—', $ikan->peserta->jenis_keanggotaan ?? '—', $ikan->peserta->detail_anggota ?? '—', $ikan->is_locked ? 'TERKUNCI (FINAL)' : 'Belum Dikunci'];
         }
-
         return $rows;
     }
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('1:1')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
+        $lastCol = $sheet->getHighestColumn();
+        $lastRow = $sheet->getHighestRow();
+
+        // Header
+        $sheet->getStyle("A1:{$lastCol}1")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => '4C1D95']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
         ]);
+
+        // Semua data: center
+        $sheet->getStyle("A2:{$lastCol}{$lastRow}")->applyFromArray([
+            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'DDD6FE']]],
+        ]);
+
         $sheet->freezePane('A2');
     }
 }

@@ -9,55 +9,45 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class MvpIkanSheet implements FromArray, WithTitle, WithStyles, ShouldAutoSize
 {
-    public function title(): string
-    {
-        return 'DATA IKAN MVP';
-    }
+    public function title(): string { return 'DATA IKAN MVP'; }
 
     public function array(): array
     {
-        $ikans = Ikan::where('is_mvp', true)
-            ->whereHas('peserta', fn($q) => $q->where('is_mvp_submitted', true))
-            ->with('peserta')
-            ->orderBy('peserta_id')
-            ->orderBy('kategori')
-            ->get()
-            ->groupBy('peserta_id');
-
-        $rows = [];
-        $rows[] = ['NO', 'NAMA PESERTA', 'DETAIL ANGGOTA (TEAM)', 'TOTAL IKAN MVP', 'DAFTAR IKAN (KATEGORI - KELAS - TANK)'];
-
+        $ikans = Ikan::where('is_mvp', true)->whereHas('peserta', fn($q) => $q->where('is_mvp_submitted', true))->with('peserta')->orderBy('peserta_id')->orderBy('kategori')->get()->groupBy('peserta_id');
+        $rows = [['NO', 'NAMA PESERTA', 'DETAIL ANGGOTA (TEAM)', 'TOTAL IKAN MVP', 'DAFTAR IKAN (KATEGORI - KELAS - TANK)']];
         $no = 1;
-        foreach ($ikans as $pesertaId => $ikanList) {
+        foreach ($ikans as $ikanList) {
             $peserta = $ikanList->first()->peserta;
-            $daftarIkan = [];
-            foreach ($ikanList as $ikan) {
-                $daftarIkan[] = $ikan->kategori . ' - ' . ($ikan->kelas ?? '—') . ' - Tank ' . ($ikan->nomor_tank ?? '—');
-            }
-
-            $rows[] = [
-                $no++,
-                $peserta->nama_peserta ?? '—',
-                $peserta->detail_anggota ?? '—',
-                $ikanList->count(),
-                implode("\n", $daftarIkan),
-            ];
+            $daftar = [];
+            foreach ($ikanList as $ikan) $daftar[] = $ikan->kategori . ' - ' . ($ikan->kelas ?? '—') . ' - Tank ' . ($ikan->nomor_tank ?? '—');
+            $rows[] = [$no++, $peserta->nama_peserta ?? '—', $peserta->detail_anggota ?? '—', $ikanList->count(), implode("\n", $daftar)];
         }
-
         return $rows;
     }
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('1:1')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
+        $lastCol = $sheet->getHighestColumn();
+        $lastRow = $sheet->getHighestRow();
+
+        $sheet->getStyle("A1:{$lastCol}1")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => '4C1D95']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
         ]);
-        $sheet->getStyle('E:E')->getAlignment()->setWrapText(true);
+
+        // Semua data: center, E wrap text
+        $sheet->getStyle("A2:{$lastCol}{$lastRow}")->applyFromArray([
+            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'DDD6FE']]],
+        ]);
+        $sheet->getStyle("E2:E{$lastRow}")->getAlignment()->setWrapText(true);
+
         $sheet->freezePane('A2');
     }
 }
