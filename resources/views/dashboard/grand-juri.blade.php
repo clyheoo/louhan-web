@@ -1129,7 +1129,7 @@ function renderDetail(p){
         html += '<div style="margin-top:16px;border:2px solid #ddd6fe;border-radius:12px;overflow:hidden;">';
         html += '<div style="padding:12px 16px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-bottom:1px solid #ddd6fe;display:flex;justify-content:space-between;align-items:center;">';
         html += '<div><span style="font-size:13px;font-weight:800;color:#4c1d95;"><i class="fas fa-calculator" style="margin-right:6px;"></i>Ringkasan Nilai & Point</span></div>';
-        html += '<span style="font-size:11px;color:#7c3aed;font-weight:700;">'+p.jumlah_juri_yang_nila+' juri</span>';
+        html += '<span style="font-size:11px;color:#7c3aed;font-weight:700;">'+p.jumlah_juri_yang_nilai+' juri</span>';
         html += '</div>';
         html += '<div style="padding:16px;">';
 
