@@ -1145,17 +1145,11 @@ function showDetail(id) {
         
         // ★ HITUNG SUBTOTAL SETELAH DEFECT
         let displaySubtotal = subTotal;
-        let subLabel = 'Subtotal';
         if (hasDefect) {
             displaySubtotal = Math.round(subTotal * (1 - defectPersen / 100) * 10) / 10;
-            subLabel = 'Subtotal (setelah defect)';
         }
         
-        html += '<tr style="background:#eff6ff;"><td colspan="2" style="text-align:right; font-weight:700; font-size:12px; padding:10px;">' + subLabel + ' ' + kat.toUpperCase() + '</td>';
-        if (hasDefect) {
-            html += '<td style="text-align:right; font-size:10px; color:var(--text-muted); text-decoration:line-through; padding:10px 8px 10px 0;">' + subTotal + '</td>';
-        }
-        html += '<td style="text-align:center; font-weight:800; color:var(--primary); font-size:13px; padding:10px;">' + displaySubtotal + '</td></tr>';
+        html += '<tr style="background:#eff6ff;"><td colspan="2" style="text-align:right; font-weight:700; font-size:12px; padding:10px;">Subtotal ' + kat.toUpperCase() + '</td><td style="text-align:center; font-weight:800; color:var(--primary); font-size:13px; padding:10px;">' + displaySubtotal + '</td></tr>';
     });
     html += '</tbody></table><div class="grand-total">TOTAL NILAI: ' + data.total + '</div>';
     

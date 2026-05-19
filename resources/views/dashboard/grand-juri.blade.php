@@ -622,14 +622,19 @@
    FORM FIELDS
    ================================================================ */
 var formFields = {
-    overall:[{id:'impression',label:'Impression',desc:'Maks 100',max:100}],
-    head:[{id:'size',label:'Size',desc:'Maks 60',max:60},{id:'bentuk',label:'Bentuk Kepala',desc:'Maks 40',max:40}],
-    face:[{id:'pipi',label:'Pipi',desc:'Maks 25',max:25},{id:'mata',label:'Mata',desc:'Maks 25',max:25},{id:'bibir',label:'Bibir',desc:'Maks 25',max:25},{id:'kondisi',label:'Kondisi Mata & Insang',desc:'Maks 25',max:25}],
-    body:[{id:'bentuk',label:'Bentuk Badan',desc:'Maks 50',max:50},{id:'proporsi',label:'Proporsional',desc:'Maks 40',max:40},{id:'pangkal',label:'Pangkal',desc:'Maks 10',max:10}],
-    marking:[{id:'fullness',label:'Fullness',desc:'Maks 40',max:40},{id:'contrast',label:'Contrast',desc:'Maks 40',max:40},{id:'bentuk',label:'Bentuk',desc:'Maks 20',max:20}],
-    pearl:[{id:'shining',label:'Shining',desc:'Maks 45',max:45},{id:'fullness',label:'Fullness',desc:'Maks 35',max:35},{id:'bentuk',label:'Bentuk',desc:'Maks 20',max:20}],
-    color:[{id:'komposisi',label:'Komposisi',desc:'Maks 45',max:45},{id:'kecerahan',label:'Kecerahan',desc:'Maks 35',max:35},{id:'fullness',label:'Fullness',desc:'Maks 20',max:20}],
-    finnage:[{id:'bentuk',label:'Bentuk Sirip & Ekor',desc:'Maks 75',max:75},{id:'kecerahan',label:'Kecerahan',desc:'Maks 25',max:25}]
+    overall:[{id:'impression',label:'Impression',desc:'Kelipatan 5 (10-90)'}],
+    head:[{id:'size',label:'Size',desc:'Kelipatan 5 (10-90)'},{id:'bentuk',label:'Bentuk Kepala',desc:'Kelipatan 5 (10-90)'}],
+    face:[{id:'face',label:'Face',desc:'Kelipatan 5 (10-90)'}],
+    body:[{id:'bentuk',label:'Bentuk Badan',desc:'Kelipatan 5 (10-90)'},{id:'proporsi',label:'Proporsional',desc:'Kelipatan 5 (10-90)'},{id:'pangkal',label:'Pangkal',desc:'Kelipatan 5 (10-90)'}],
+    marking:[{id:'fullness',label:'Fullness',desc:'Kelipatan 5 (10-90)'},{id:'contrast',label:'Contrast',desc:'Kelipatan 5 (10-90)'},{id:'bentuk',label:'Bentuk',desc:'Kelipatan 5 (10-90)'}],
+    pearl:[{id:'shining',label:'Shining',desc:'Kelipatan 5 (10-90)'},{id:'fullness',label:'Fullness',desc:'Kelipatan 5 (10-90)'},{id:'bentuk',label:'Bentuk',desc:'Kelipatan 5 (10-90)'}],
+    color:[{id:'komposisi',label:'Komposisi',desc:'Kelipatan 5 (10-90)'},{id:'kecerahan',label:'Kecerahan',desc:'Kelipatan 5 (10-90)'},{id:'fullness',label:'Fullness',desc:'Kelipatan 5 (10-90)'}],
+    finnage:[{id:'bentuk',label:'Bentuk Sirip & Ekor',desc:'Kelipatan 5 (10-90)'},{id:'kecerahan',label:'Kecerahan',desc:'Kelipatan 5 (10-90)'}]
+};
+
+// ★ Legacy fields untuk data lama (backward compatibility di tampilan saja)
+var formFieldsLegacy = {
+    face:[{id:'pipi',label:'Pipi'},{id:'mata',label:'Mata'},{id:'bibir',label:'Bibir'},{id:'kondisi',label:'Kondisi Mata & Insang'}]
 };
 
 var currentBonusIkanId = null;
@@ -1073,7 +1078,15 @@ function renderDetail(p){
             html+='<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada data nilai.</div>';
         } else {
                 Object.keys(formFields).forEach(function(kat){
-                    var fields=formFields[kat];var katNilai=nd[kat]||{};var sub=0;
+                    // ★ BACKWARD COMPATIBILITY: Cek format lama untuk face
+                    var fields = formFields[kat];
+                    if (kat === 'face' && nd.face) {
+                        if (nd.face.face === undefined && (nd.face.pipi !== undefined || nd.face.mata !== undefined)) {
+                            fields = formFieldsLegacy.face;
+                        }
+                    }
+                    
+                    var katNilai=nd[kat]||{};var sub=0;
                     fields.forEach(function(f){if(katNilai[f.id]!==undefined&&katNilai[f.id]!==null)sub+=parseInt(katNilai[f.id])||0;});
                     html+='<div class="detail-kat-mini"><span>'+kat.toUpperCase()+'</span><span>Subtotal: '+sub+'</span></div>';
                     fields.forEach(function(f){
@@ -1081,21 +1094,19 @@ function renderDetail(p){
                         html+='<div class="detail-field-row"><div class="detail-field-left"><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
                     });
                     
-                    // ★ TAMPILKAN DEFECT JIKA ADA DI SCORING INI
+                    // ★ TAMPILKAN DEFECT JIKA ADA
                     var defectKey = 'raw_' + kat + '_penalty';
                     if (sc[defectKey]) {
                         var defs = sc[defectKey];
                         if (!Array.isArray(defs)) defs = [defs];
                         var defectItems = defs.filter(function(v) { return v && v !== '0'; });
                         if (defectItems.length > 0) {
-                            // Cari penalty dari keterangan
                             var ket = sc.keterangan || '';
                             var penaltyStr = '';
                             var parts = ket.split(' | ');
                             parts.forEach(function(part) {
                                 if (part.startsWith(kat.toUpperCase() + ':')) {
                                     var pStr = part.replace(kat.toUpperCase() + ': ', '');
-                                    // Cari persen
                                     if (pStr.indexOf('30%') !== -1) penaltyStr = '30%';
                                     else if (pStr.indexOf('10%') !== -1) penaltyStr = '10%';
                                 }
@@ -1104,11 +1115,7 @@ function renderDetail(p){
                             if (penaltyStr) {
                                 var isMayor = penaltyStr === '30%';
                                 var persen = isMayor ? 30 : 10;
-                                html += '<div class="detail-field-row" style="background:#fef2f2;">';
-                                html += '<div class="detail-field-left"><div class="detail-field-name" style="color:#dc2626;"><i class="fas fa-exclamation-triangle" style="margin-right:4px;font-size:10px;"></i>Defect</div>';
-                                html += '<div class="detail-field-meta" style="color:#b91c1c;font-weight:600;">' + defectItems.join(', ') + '</div></div>';
-                                html += '<span class="score-chip" style="background:#fef2f2;color:#dc2626;font-weight:800;">-' + persen + '%</span>';
-                                html += '</div>';
+                                html += '<div class="detail-field-row" style="background:#fef2f2;"><div class="detail-field-left"><div class="detail-field-name" style="color:#dc2626;"><i class="fas fa-exclamation-triangle" style="margin-right:4px;font-size:10px;"></i>Defect</div><div class="detail-field-meta" style="color:#b91c1c;font-weight:600;">' + defectItems.join(', ') + '</div></div><span class="score-chip" style="background:#fef2f2;color:#dc2626;font-weight:800;">-' + persen + '%</span></div>';
                             }
                         }
                     }
@@ -1250,7 +1257,7 @@ function renderEditInputs(kat){
         var currentVal=editMemory[kat][f.id]||'';var origVal=originalValues[kat][f.id]||'';
         var isChanged=(currentVal!==''&&currentVal!==origVal);
         html+='<div class="score-row"><div class="score-label"><h4>'+f.label+'</h4>';
-        html+='<p>'+f.desc+' (Maks: '+f.max+')';
+        html+='<p>'+f.desc;
         if(origVal!=='') html+=' &nbsp;|&nbsp; <span class="orig-val">Nilai juri: <strong>'+origVal+'</strong></span>';
         html+='</p></div>';
         html+='<input type="number" class="score-input'+(isChanged?' changed':'')+'" id="edit-'+f.id+'" '+
@@ -1261,10 +1268,11 @@ function renderEditInputs(kat){
     document.getElementById('editFormArea').innerHTML=html;updateSub(kat);
 }
 
-function onInput(el,kat,fid,maxVal){
+function onInput(el,kat,fid){
     var cur=el.value;var ori=originalValues[kat]?String(originalValues[kat][fid]||''):'';
     el.classList.remove('changed');if(cur!==''&&cur!==ori)el.classList.add('changed');
-    var v=parseInt(cur);if(!isNaN(v)&&v>maxVal){v=maxVal;el.value=v;}if(!isNaN(v)&&v<0){v=0;el.value=v;}
+    var v=parseInt(cur);
+    if(!isNaN(v)&&v<0){v=0;el.value=v;}
     if(!editMemory[kat])editMemory[kat]={};editMemory[kat][fid]=el.value;updateSub(kat);renderEditList();
 }
 
