@@ -394,7 +394,7 @@
             <div class="section-body"><div class="chart-box"><canvas id="chartStatus"></canvas></div></div>
         </div>
         <div class="section-card">
-            <div class="section-head"><div class="section-title"><i class="fas fa-ranking-star"></i> Top 10 Nilai Tertinggi</div></div>
+            <div class="section-head"><div class="section-title"><i class="fas fa-ranking-star"></i> Top 10 Point Tertinggi</div></div>
             <div class="section-body"><div class="chart-box"><canvas id="chartTop"></canvas></div></div>
         </div>
     </div>
@@ -1217,18 +1217,19 @@ function renderChartTop(data){
     var labels=[],vals=[],extras=[];
     for(var i=0;i<data.length;i++){
         labels.push(data[i].nama);
-        vals.push(data[i].total);
+        vals.push(data[i].point);
         extras.push({
+            point: data[i].point || 0,
+            total: data[i].total || 0,
             kategori: data[i].kategori || '—',
             kelas: data[i].kelas || '—',
             tank: data[i].nomor_tank || '—'
         });
     }
 
-    /* Warna gradien per bar */
     var barColors = [
-        '#2563eb','#3b82f6','#6366f1','#7c3aed','#8b5cf6',
-        '#2563eb','#3b82f6','#6366f1','#7c3aed','#8b5cf6'
+        '#f59e0b','#d97706','#b45309','#92400e','#78350f',
+        '#f59e0b','#d97706','#b45309','#92400e','#78350f'
     ];
 
     if(chartTop)chartTop.destroy();
@@ -1237,6 +1238,7 @@ function renderChartTop(data){
         data:{
             labels:labels,
             datasets:[{
+                label:'Point',
                 data:vals,
                 backgroundColor:barColors,
                 borderRadius:4,
@@ -1264,11 +1266,12 @@ function renderChartTop(data){
                         },
                         label:function(item){
                             var e=extras[item.dataIndex];
-                            return 'Total Nilai: '+item.raw;
+                            return 'Point: '+e.point;
                         },
                         afterLabel:function(item){
                             var e=extras[item.dataIndex];
                             return [
+                                'Total Nilai: '+e.total,
                                 'Kategori: '+e.kategori,
                                 'Kelas: '+e.kelas,
                                 'No. Tank: '+e.tank
@@ -1280,6 +1283,7 @@ function renderChartTop(data){
             scales:{
                 x:{
                     beginAtZero:true,
+                    title:{display:true,text:'POINT',font:{size:10,family:'Plus Jakarta Sans',weight:'800'},color:'#d97706'},
                     ticks:{font:{size:10,family:'Plus Jakarta Sans'}},
                     grid:{color:'#f1f5f9'}
                 },

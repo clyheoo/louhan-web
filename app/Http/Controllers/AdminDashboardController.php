@@ -131,18 +131,47 @@ class AdminDashboardController extends Controller
         $avgScore = $ikanTotalMap->count() > 0 ? round($ikanTotalMap->avg()) : 0;
 
         $top10 = Ikan::whereIn('id', $ikanTotalMap->keys())
-            ->with('peserta')
+            ->whereNotNull('nomor_tank')
+            ->with(['peserta', 'scorings' => function ($q) {
+                $q->whereNotNull('total_nilai');
+            }])
             ->get()
             ->map(function ($ikan) use ($ikanTotalMap) {
+                $avgDetail = [];
+                foreach ($ikan->scorings as $s) {
+                    if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                        foreach ($s->nilai_detail as $kat => $fields) {
+                            foreach ($fields as $fid => $val) {
+                                if (!isset($avgDetail[$kat][$fid])) {
+                                    $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                                }
+                                $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                                $avgDetail[$kat][$fid]['count']++;
+                            }
+                        }
+                    }
+                }
+                $finalAvgDetail = [];
+                foreach ($avgDetail as $kat => $fields) {
+                    $finalAvgDetail[$kat] = [];
+                    foreach ($fields as $fid => $d) {
+                        $finalAvgDetail[$kat][$fid] = $d['count'] > 0
+                            ? $d['sum'] / $d['count']
+                            : 0;
+                    }
+                }
+                $point = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+
                 return [
                     'nama'       => $ikan->peserta?->nama_peserta ?? 'Unknown',
                     'total'      => $ikanTotalMap[$ikan->id],
+                    'point'      => (float) $point,
                     'kategori'   => $ikan->kategori ?? '—',
                     'kelas'      => $ikan->kelas ?? '—',
                     'nomor_tank' => $ikan->nomor_tank ?? '—',
                 ];
             })
-            ->sortByDesc('total')
+            ->sortByDesc('point')
             ->take(10)
             ->values()
             ->toArray();
