@@ -1450,7 +1450,7 @@ function renderDetailView(p){
         html+='</table>';
 
         html+='<div style="margin-top:16px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">';
-        html+='<div><div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;">Total Point</div><div style="font-size:10px;color:#d97706;">(dihitung dari rata-rata '+p.jumlah_juri+' juri)</div></div>';
+        html+='<div><div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;">Total Point</div><div style="font-size:10px;color:#d97706;">(dihitung dari '+p.jumlah_juri+' juri)</div></div>';
         var finalPt = p.final_point ?? p.total_point ?? 0;
         var basePt = p.total_point ?? 0;
         var bonusPt = p.total_bonus ?? 0;

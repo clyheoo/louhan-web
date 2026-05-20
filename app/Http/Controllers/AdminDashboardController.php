@@ -196,6 +196,7 @@ class AdminDashboardController extends Controller
 
             /* ★ Build juri list (semua juri) */
             $juriList = [];
+            $grandJuriEditors = [];
             $grandJuriName = null;
             $latestNilai = null;
             $latestKelas = null;
@@ -204,12 +205,24 @@ class AdminDashboardController extends Controller
                 if ($s->juri) {
                     $juriList[] = [
                         'name'     => $s->juri->name,
-                        'is_grand' => ($s->juri->role === 'grand_juri'),
+                        'is_grand' => false,
                     ];
                 }
                 if ($s->edited_by_grand_juri && $s->grandJuri) {
-                    $grandJuriName = $s->grandJuri->name;
+                    $gjName = $s->grandJuri->name;
+                    if (!in_array($gjName, $grandJuriEditors)) {
+                        $grandJuriEditors[] = $gjName;
+                    }
+                    $grandJuriName = $gjName;
                 }
+            }
+
+            foreach ($grandJuriEditors as $gjName) {
+                $juriList[] = [
+                    'name'      => $gjName,
+                    'is_grand'  => true,
+                    'is_editor' => true,
+                ];
             }
 
             if ($latestScoring) {
@@ -256,20 +269,21 @@ class AdminDashboardController extends Controller
 
             $pointConfig = ScoringPointConfig::where('kategori', $ikan->kategori)->first();
 
-            /* ★ Data untuk detail modal (accordion per juri) */
             $allScoringsData = $scorings->map(function ($s) {
                 return [
-                    'juri_name'    => $s->juri ? $s->juri->name : '—',
-                    'is_grand'     => ($s->juri && $s->juri->role === 'grand_juri'),
-                    'nilai_detail' => $s->nilai_detail,
-                    'total_nilai'  => $s->total_nilai ?? 0,
+                    'juri_name'       => $s->juri ? $s->juri->name : '—',
+                    'is_grand'        => false,
+                    'edited_by_grand' => (bool) $s->edited_by_grand_juri,
+                    'grand_juri_name' => ($s->edited_by_grand_juri && $s->grandJuri) ? $s->grandJuri->name : null,
+                    'nilai_detail'    => $s->nilai_detail,
+                    'total_nilai'     => $s->total_nilai ?? 0,
                 ];
             })->values()->toArray();
 
             $detailListPerJuri = $scorings->map(function ($s) {
                 return [
                     'juri_name'   => $s->juri ? $s->juri->name : '—',
-                    'is_grand'    => ($s->juri && $s->juri->role === 'grand_juri'),
+                    'is_grand'    => false,
                     'total_nilai' => $s->total_nilai ?? 0,
                 ];
             })->values()->toArray();
