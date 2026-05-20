@@ -444,7 +444,99 @@ class AdminDashboardController extends Controller
 
         return response()->json(['success' => true, 'message' => 'User "' . $name . '" berhasil dihapus.']);
     }
-        public function deleteIkan(Request $request)
+
+        public function getStatDetail(Request $request)
+    {
+        $type = $request->query('type');
+        if (!$type) return response()->json(['error' => 'Tipe wajib'], 422);
+
+        $allIkanIds = Ikan::whereNotNull('nomor_tank')->pluck('id');
+        $latestRows = Scoring::whereIn('ikan_id', $allIkanIds)
+            ->selectRaw('ikan_id, MAX(id) as lid, MAX(CASE WHEN edited_by_grand_juri = 1 THEN 1 ELSE 0 END) as edited_by_grand_juri')
+            ->groupBy('ikan_id')
+            ->get()
+            ->keyBy('ikan_id');
+
+        switch ($type) {
+            case 'total_ikan':
+                $rows = Ikan::whereNotNull('nomor_tank')->with('peserta')->orderBy('nomor_tank')->get()->map(function ($i, $idx) {
+                    return [$idx + 1, $i->peserta->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—'];
+                })->toArray();
+                return response()->json(['title' => 'Total Ikan Terdaftar', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS'], 'rows' => $rows]);
+
+            case 'total_peserta':
+                $rows = Ikan::whereNotNull('nomor_tank')
+                    ->selectRaw('peserta_id, COUNT(*) as jml')
+                    ->groupBy('peserta_id')
+                    ->with('peserta')
+                    ->orderByDesc('jml')
+                    ->get()
+                    ->map(function ($i, $idx) {
+                        return [$idx + 1, $i->peserta->nama_peserta ?? 'Unknown', $i->jml];
+                    })->toArray();
+                return response()->json(['title' => 'Total Peserta', 'columns' => ['#', 'PESERTA', 'JUMLAH IKAN'], 'rows' => $rows]);
+
+            case 'sudah_dinilai':
+                $sudahIds = $latestRows->filter(fn($r) => !$r->edited_by_grand_juri)->keys()->toArray();
+                $stats = Scoring::whereIn('ikan_id', $sudahIds)
+                    ->where('submitted_to_grand', true)
+                    ->selectRaw('ikan_id, COUNT(DISTINCT juri_id) as jml, COALESCE(SUM(total_nilai),0) as total')
+                    ->groupBy('ikan_id')->get()->keyBy('ikan_id');
+                $rows = Ikan::whereIn('id', $sudahIds)->with('peserta')->orderBy('nomor_tank')->get()->map(function ($i, $idx) use ($stats) {
+                    $s = $stats[$i->id];
+                    return [$idx + 1, $i->peserta->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—', $s ? $s->jml : 0, $s ? $s->total : 0];
+                })->toArray();
+                return response()->json(['title' => 'Sudah Dinilai Juri', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS', 'JURI', 'TOTAL NILAI'], 'rows' => $rows]);
+
+            case 'grand_edit':
+                $grandIds = $latestRows->filter(fn($r) => $r->edited_by_grand_juri)->keys()->toArray();
+                $grandLatestIds = Scoring::whereIn('ikan_id', $grandIds)
+                    ->where('edited_by_grand_juri', true)
+                    ->selectRaw('ikan_id, MAX(id) as lid')
+                    ->groupBy('ikan_id')
+                    ->pluck('lid');
+                $rows = Scoring::whereIn('id', $grandLatestIds)
+                    ->with(['ikan.peserta', 'grandJuri'])
+                    ->orderByDesc('total_nilai')
+                    ->get()
+                    ->map(function ($s, $idx) {
+                        return [$idx + 1, $s->ikan->peserta->nama_peserta ?? 'Unknown', $s->ikan->nomor_tank, $s->ikan->kategori ?? '—', $s->kelas ?? $s->ikan->kelas ?? '—', $s->grandJuri ? $s->grandJuri->name : '—', $s->total_nilai ?? 0];
+                    })->toArray();
+                return response()->json(['title' => 'Grand Juri Edit', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS', 'GRAND JURI EDITOR', 'TOTAL NILAI'], 'rows' => $rows]);
+
+            case 'belum_dinilai':
+                $scoredIds = $latestRows->keys()->toArray();
+                $rows = Ikan::whereNotNull('nomor_tank')
+                    ->whereNotIn('id', $scoredIds)
+                    ->with('peserta')
+                    ->orderBy('nomor_tank')
+                    ->get()
+                    ->map(function ($i, $idx) {
+                        return [$idx + 1, $i->peserta->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—'];
+                    })->toArray();
+                return response()->json(['title' => 'Belum Dinilai', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS'], 'rows' => $rows]);
+
+            case 'juri_aktif':
+                $rows = \DB::table('scorings')
+                    ->join('users', 'scorings.juri_id', '=', 'users.id')
+                    ->whereNotNull('scorings.juri_id')
+                    ->where('scorings.submitted_to_grand', true)
+                    ->selectRaw('scorings.juri_id, users.name, users.role, COUNT(DISTINCT scorings.ikan_id) as total')
+                    ->groupBy('scorings.juri_id', 'users.name', 'users.role')
+                    ->orderByDesc('total')
+                    ->get()
+                    ->map(function ($r, $idx) {
+                        $rl = ['juri' => 'Juri', 'grand_juri' => 'Grand Juri', 'admin' => 'Admin'];
+                        return [$idx + 1, $r->name, $rl[$r->role] ?? $r->role, $r->total];
+                    })->toArray();
+                return response()->json(['title' => 'Juri Aktif', 'columns' => ['#', 'NAMA JURI', 'ROLE', 'PESERTA DINILAI'], 'rows' => $rows]);
+
+            default:
+                return response()->json(['error' => 'Tipe tidak valid'], 422);
+        }
+    }
+
+    public function deleteIkan(Request $request)
     {
         $request->validate([
             'ikan_id' => 'required|exists:ikans,id',

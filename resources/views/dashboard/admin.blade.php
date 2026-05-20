@@ -361,12 +361,12 @@
 
     <!-- ── STATISTIK ── -->
     <div class="stats-row">
-        <div class="stat-card c-blue"><div class="stat-icon blue"><i class="fas fa-fish"></i></div><div class="stat-num" id="sTotal">0</div><div class="stat-lbl">Total Ikan Terdaftar</div></div>
-        <div class="stat-card c-teal"><div class="stat-icon teal"><i class="fas fa-users"></i></div><div class="stat-num" id="sPesertaUnik">0</div><div class="stat-lbl">Total Peserta</div></div>
-        <div class="stat-card c-green"><div class="stat-icon green"><i class="fas fa-check-double"></i></div><div class="stat-num" id="sDinilai">0</div><div class="stat-lbl">Sudah Dinilai Juri</div></div>
-        <div class="stat-card c-purple"><div class="stat-icon purple"><i class="fas fa-crown"></i></div><div class="stat-num" id="sGrand">0</div><div class="stat-lbl">Grand Juri Edit</div></div>
-        <div class="stat-card c-red"><div class="stat-icon red"><i class="fas fa-clock"></i></div><div class="stat-num" id="sBelum">0</div><div class="stat-lbl">Belum Dinilai</div></div>
-        <div class="stat-card c-amber"><div class="stat-icon amber"><i class="fas fa-user-pen"></i></div><div class="stat-num" id="sJuri">0</div><div class="stat-lbl">Juri Aktif</div></div>
+        <div class="stat-card c-blue" style="cursor:pointer;" onclick="openStatPopup('total_ikan','Total Ikan Terdaftar')"><div class="stat-icon blue"><i class="fas fa-fish"></i></div><div class="stat-num" id="sTotal">0</div><div class="stat-lbl">Total Ikan Terdaftar</div></div>
+        <div class="stat-card c-teal" style="cursor:pointer;" onclick="openStatPopup('total_peserta','Total Peserta')"><div class="stat-icon teal"><i class="fas fa-users"></i></div><div class="stat-num" id="sPesertaUnik">0</div><div class="stat-lbl">Total Peserta</div></div>
+        <div class="stat-card c-green" style="cursor:pointer;" onclick="openStatPopup('sudah_dinilai','Sudah Dinilai Juri')"><div class="stat-icon green"><i class="fas fa-check-double"></i></div><div class="stat-num" id="sDinilai">0</div><div class="stat-lbl">Sudah Dinilai Juri</div></div>
+        <div class="stat-card c-purple" style="cursor:pointer;" onclick="openStatPopup('grand_edit','Grand Juri Edit')"><div class="stat-icon purple"><i class="fas fa-crown"></i></div><div class="stat-num" id="sGrand">0</div><div class="stat-lbl">Grand Juri Edit</div></div>
+        <div class="stat-card c-red" style="cursor:pointer;" onclick="openStatPopup('belum_dinilai','Belum Dinilai')"><div class="stat-icon red"><i class="fas fa-clock"></i></div><div class="stat-num" id="sBelum">0</div><div class="stat-lbl">Belum Dinilai</div></div>
+        <div class="stat-card c-amber" style="cursor:pointer;" onclick="openStatPopup('juri_aktif','Juri Aktif')"><div class="stat-icon amber"><i class="fas fa-user-pen"></i></div><div class="stat-num" id="sJuri">0</div><div class="stat-lbl">Juri Aktif</div></div>
     </div>
     <div class="stats-row" style="grid-template-columns:1fr 1fr 1fr 1fr;">
         <div class="stat-card" style="cursor:pointer;border-color:var(--success);border-width:2px;" onclick="openModal('modalOld')">
@@ -889,6 +889,20 @@
             <button class="popup-btn cancel" onclick="cancelConfirm()"><i class="fas fa-xmark"></i> Batal</button>
             <button class="popup-btn warning" id="popupConfirmBtn" onclick="executeConfirm()"><i class="fas fa-check"></i> Ya, Lanjutkan</button>
         </div>
+    </div>
+</div>
+
+<!-- POPUP: STAT DETAIL -->
+<div class="popup-overlay" id="popupStatDetail">
+    <div class="popup-card" style="max-width:720px;padding:0;text-align:left;">
+        <div style="padding:18px 24px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;">
+            <div style="min-width:0;">
+                <h2 class="popup-title" id="statDetailTitle" style="text-align:left;font-size:16px;margin-bottom:2px;">Detail</h2>
+                <p id="statDetailCount" style="font-size:12px;color:var(--muted);margin:0;"></p>
+            </div>
+            <button class="popup-btn cancel" onclick="hidePopup('popupStatDetail')" style="padding:8px 16px;min-width:auto;"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div id="statDetailBody" style="max-height:60vh;overflow-y:auto;padding:0;"></div>
     </div>
 </div>
 
@@ -1816,6 +1830,37 @@ function deleteIkan(ikanId, nama){
 /* ═══════════════════════════════════════════════
    EXPORT CSV
    ═══════════════════════════════════════════════ */
+function openStatPopup(type, title){
+    document.getElementById('statDetailTitle').textContent=title;
+    document.getElementById('statDetailCount').textContent='Memuat...';
+    document.getElementById('statDetailBody').innerHTML='<div class="empty-state" style="padding:30px;"><i class="fas fa-spinner fa-spin" style="font-size:20px;"></i></div>';
+    showPopup('popupStatDetail');
+    fetch('/api/admin/stat-detail?type='+type,{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.error){document.getElementById('statDetailBody').innerHTML='<div class="empty-state">Data tidak valid.</div>';return;}
+        document.getElementById('statDetailCount').textContent=d.rows.length+' data ditemukan';
+        var numCols=[];
+        d.columns.forEach(function(c,i){if(['JURI','TOTAL NILAI','JUMLAH IKAN','PESERTA DINILAI'].indexOf(c)!==-1)numCols.push(i);});
+        var h='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>';
+        d.columns.forEach(function(c,i){h+='<th style="padding:8px 12px;text-align:'+(numCols.indexOf(i)!==-1?'right':'left')+';font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);white-space:nowrap;">'+c+'</th>';});
+        h+='</tr></thead><tbody>';
+        d.rows.forEach(function(row){
+            h+='<tr>';
+            row.forEach(function(cell,ci){
+                var isFirst=ci===0;
+                var isNum=numCols.indexOf(ci)!==-1;
+                h+='<td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;'+(isFirst?'color:var(--light);font-weight:700;font-size:11px;':'')+(isNum?'text-align:right;font-weight:800;':'')+'">'+esc(String(cell))+'</td>';
+            });
+            h+='</tr>';
+        });
+        if(!d.rows.length) h+='<tr><td colspan="'+d.columns.length+'" style="text-align:center;padding:20px;color:var(--light);">Tidak ada data.</td></tr>';
+        h+='</tbody></table>';
+        document.getElementById('statDetailBody').innerHTML=h;
+    })
+    .catch(function(){document.getElementById('statDetailBody').innerHTML='<div class="empty-state">Gagal memuat data.</div>';});
+}
+
 function exportCSV(){
     if(!allScoringData.length){popupInfo('Tidak Ada Data','Tidak ada data penilaian untuk diexport.');return;}
     var header='No,Nama Peserta,Kategori,Kelas,No Tank,Asal/Team,Jumlah Juri,Total Nilai (Semua Juri),Point,Status\n',rows='';

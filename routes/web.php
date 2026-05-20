@@ -90,6 +90,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/delete-mvp-ikan', [AdminDashboardController::class, 'deleteMvpIkan']);
     Route::get('/api/admin/mvp-submitted-peserta', [AdminDashboardController::class, 'getMvpSubmittedPeserta']);
     Route::post('/api/admin/unlock-mvp-peserta', [AdminDashboardController::class, 'unlockMvpPeserta']);
+    Route::get('/api/admin/stat-detail', [AdminDashboardController::class, 'getStatDetail']);
 });
 
 /* ═══════════════════════════════════════════
