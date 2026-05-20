@@ -85,7 +85,7 @@ class GrandJuriController extends Controller
             $latestKelas = null;
             $juriList = [];
 
-            // ★ Loop semua scoring (sekarang jumlahnya SAMA dengan jumlah juri)
+            // ★ Loop semua scoring
             foreach ($scorings as $s) {
                 // Track Grand Juri yang pernah edit
                 if ($s->edited_by_grand_juri && $s->grandJuri) {
@@ -135,7 +135,7 @@ class GrandJuriController extends Controller
 
             $pointConfig = ScoringPointConfig::where('kategori', $ikan->kategori)->first();
 
-            // ★ Hitung total dari SEMUA scoring (sekarang benar karena tidak ada duplikat)
+            // ★ Hitung total dari SEMUA scoring (sekarang aman karena tidak ada duplikat)
             $totalNilaiSemua = 0;
             $jumlahJuriYangNilai = 0;
             $detailListPerJuri = [];
@@ -211,7 +211,7 @@ class GrandJuriController extends Controller
                 'bonus_list'            => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
                 'total_bonus'           => (int) $ikan->bonusPoints->sum('points'),
                 'final_point'           => (float) $totalPointSemua + (int) $ikan->bonusPoints->sum('points'),
-                'point_breakdown'       => $finalAvgDetail ? PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail) : null,
+                'point_breakdown'       => !empty($finalAvgDetail) ? PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail) : null,
                 'point_config'          => $pointConfig ? [
                     'overall' => (float)$pointConfig->overall_bobot,
                     'head'    => (float)$pointConfig->head_bobot,
@@ -229,8 +229,8 @@ class GrandJuriController extends Controller
     }
 
     /* ═════════════════════════════════════════
-       EDIT NILAI (UPDATE: BERDASARKAN IKAN_ID)
-       ═══════════════════════════════════════════ */
+    EDIT NILAI (UPDATE: BERDASARKAN IKAN_ID)
+    ═══════════════════════════════════════════ */
     public function editNilai(Request $request)
     {
         $data            = $request->json()->all();
@@ -243,32 +243,29 @@ class GrandJuriController extends Controller
             return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
         }
 
-        // ★★★ 1. HAPUS SEMUA SCORING GRAND JURI LAMA (clean up duplikat) ★★★
-        Scoring::where('ikan_id', $ikanId)
-            ->where('edited_by_grand_juri', true)
-            ->delete();
+        // ★★★ TIDAK ADA DELETE DI SINI! ★★★
 
-        // ★★★ 2. CARI SCORING JURI ASLI TERAKHIR ★★★
+        // ★ 1. CARI SCORING JURI ASLI TERAKHIR
         $targetScoring = Scoring::where('ikan_id', $ikanId)
             ->where('submitted_to_grand', true)
             ->latest()
             ->first();
 
         if (!$targetScoring) {
-            return response()->json(['success' => false, 'message' => 'Tidak ada nilai yang bisa diedit.'], 422);
+            return response()->json(['success' => false, 'message' => 'Tidak ada nilai juri yang bisa diedit.'], 422);
         }
 
-        // ★ 3. SIMPAN NILAI SEBELUM UNTUK LOG
+        // ★ 2. SIMPAN NILAI SEBELUM UNTUK LOG
         $nilaiSebelum = $targetScoring->nilai_detail;
         $totalSebelum = $targetScoring->total_nilai ?? 0;
 
-        // ★ 4. AMBIL NILAI DETAIL LENGKAP DARI SCORING TERSEBUT
+        // ★ 3. AMBIL NILAI DETAIL LENGKAP DARI SCORING INI
         $fullNilaiDetail = $targetScoring->nilai_detail ?: [];
         if (is_string($fullNilaiDetail)) {
             $fullNilaiDetail = json_decode($fullNilaiDetail, true) ?? [];
         }
 
-        // ★ 5. OVERRIDE DENGAN NILAI YANG DIUBAH GRAND JURI
+        // ★ 4. OVERRIDE DENGAN NILAI YANG DIUBAH GRAND JURI
         if ($changed && is_array($changed)) {
             foreach ($changed as $kat => $fields) {
                 if (!isset($fullNilaiDetail[$kat])) {
@@ -280,7 +277,7 @@ class GrandJuriController extends Controller
             }
         }
 
-        // ★ 6. HITUNG TOTAL NILAI
+        // ★ 5. HITUNG TOTAL NILAI
         $totalNilai = 0;
         foreach ($fullNilaiDetail as $kat => $fields) {
             if (is_array($fields)) {
@@ -291,7 +288,7 @@ class GrandJuriController extends Controller
             }
         }
 
-        // ★ 7. DEFECT DATA
+        // ★ 6. DEFECT DATA
         $defectDataForCalc = [];
         if ($defectFromReq && is_array($defectFromReq)) {
             $defectDataForCalc = $defectFromReq;
@@ -304,10 +301,10 @@ class GrandJuriController extends Controller
             ];
         }
 
-        // ★ 8. HITUNG POINT
+        // ★ 7. HITUNG POINT
         $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $fullNilaiDetail, $defectDataForCalc);
 
-        // ★ 9. SIAPKAN DATA UPDATE
+        // ★ 8. SIAPKAN DATA UPDATE
         $updateData = [
             'nilai_detail'         => $fullNilaiDetail,
             'total_nilai'          => $totalNilai,
@@ -316,7 +313,7 @@ class GrandJuriController extends Controller
             'grand_juri_id'        => auth()->id(),
         ];
 
-        // ★ 10. UPDATE DEFECT DATA
+        // ★ 9. UPDATE DEFECT DATA
         if ($defectDataForCalc) {
             $evaluated = PointCalculator::evaluateDefects($defectDataForCalc);
             $updateData['raw_head_penalty']    = $defectDataForCalc['raw_head_penalty'] ?? ['0'];
@@ -326,10 +323,10 @@ class GrandJuriController extends Controller
             $updateData['keterangan']          = $evaluated['keterangan'] ?? '';
         }
 
-        // ★★★ 11. UPDATE (BUKAN CREATE!) ★★★
+        // ★ 10. UPDATE SCORING (BUKAN DELETE, BUKAN CREATE!)
         $targetScoring->update($updateData);
 
-        // ★ 12. SIMPAN LOG EDIT
+        // ★ 11. SIMPAN LOG EDIT
         GrandJuriEdit::create([
             'scoring_id'     => $targetScoring->id,
             'peserta_id'     => $ikan->peserta_id,
