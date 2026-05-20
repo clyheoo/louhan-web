@@ -1181,14 +1181,39 @@ function renderDetail(p){
                         html += '<div class="detail-kat-mini"><span>' + kat.toUpperCase() + '</span><span>Subtotal: ' + sub + '</span></div>';
                     }
 
+                    // ★ Cek apakah kategori ini punya field defect
+                    var hasDefectField = fields.some(function(f){ return f.type === 'defect'; });
+
                     fields.forEach(function(f){
+                        // ★ SKIP field defect karena ditangani terpisah di bawah
+                        if(f.type === 'defect') return;
+                        
                         var val=katNilai[f.id];var has=(val!==undefined&&val!==null&&val!=='');
                         html+='<div class="detail-field-row"><div class="detail-field-left"><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
                     });
 
-                    // ★ TAMPILKAN BARIS DEFECT
-                    if (hasDefect && defectPersen > 0 && defectNames.length > 0) {
-                        html += '<div class="detail-field-row" style="background:#fef2f2;"><div class="detail-field-left"><div class="detail-field-name" style="color:#dc2626;"><i class="fas fa-exclamation-triangle" style="margin-right:4px;font-size:10px;"></i>Defect</div><div class="detail-field-meta" style="color:#b91c1c;font-weight:600;">' + defectNames.join(', ') + '</div></div><span class="score-chip" style="background:#fef2f2;color:#dc2626;font-weight:800;">-' + defectPersen + '%</span></div>';
+                    // ★ TAMPILKAN BARIS DEFECT (selalu tampilkan jika kategori punya field defect)
+                    if (hasDefectField) {
+                        if (hasDefect && defectPersen > 0 && defectNames.length > 0) {
+                            // Ada defect - tampilkan detail defect
+                            var isMayor = defectPersen >= 30;
+                            html += '<div class="detail-field-row" style="background:' + (isMayor ? '#fef2f2' : '#fff7ed') + ';">';
+                            html += '<div class="detail-field-left">';
+                            html += '<div class="detail-field-name" style="color:' + (isMayor ? '#dc2626' : '#c2410c') + ';"><i class="fas fa-exclamation-triangle" style="margin-right:4px;font-size:10px;"></i>Defect ' + (isMayor ? '(MAYOR)' : '(MINOR)') + '</div>';
+                            html += '<div class="detail-field-meta" style="color:' + (isMayor ? '#b91c1c' : '#9a3412') + ';font-weight:600;">' + defectNames.join(', ') + '</div>';
+                            html += '</div>';
+                            html += '<span class="score-chip" style="background:' + (isMayor ? '#fef2f2' : '#fff7ed') + ';color:' + (isMayor ? '#dc2626' : '#c2410c') + ';font-weight:800;">-' + defectPersen + '%</span>';
+                            html += '</div>';
+                        } else {
+                            // Tidak ada defect - tampilkan status AMAN
+                            html += '<div class="detail-field-row" style="background:#f0fdf4;">';
+                            html += '<div class="detail-field-left">';
+                            html += '<div class="detail-field-name" style="color:#16a34a;"><i class="fas fa-check-circle" style="margin-right:4px;font-size:10px;"></i>Defect</div>';
+                            html += '<div class="detail-field-meta" style="color:#15803d;font-weight:600;">Tidak ada defect</div>';
+                            html += '</div>';
+                            html += '<span class="score-chip" style="background:#f0fdf4;color:#16a34a;font-weight:800;">AMAN</span>';
+                            html += '</div>';
+                        }
                     }
                     html += '</div>';
                 });

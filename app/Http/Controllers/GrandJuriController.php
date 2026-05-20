@@ -78,25 +78,44 @@ class GrandJuriController extends Controller
             $peserta = $ikan->peserta;
             $scorings = $ikan->scorings;
 
+            // ★ Pisahkan scoring juri asli dan scoring Grand Juri
+            $juriScorings = $scorings->filter(function ($s) {
+                return !$s->edited_by_grand_juri;
+            });
+            $grandJuriScorings = $scorings->filter(function ($s) {
+                return $s->edited_by_grand_juri;
+            });
+
             $juriList = [];
             $grandJuriName = null;
             $latestNilai = null;
             $latestTotal = 0;
             $latestKelas = null;
 
-            foreach ($scorings as $s) {
+            // ★ Hanya tambahkan juri asli ke juriList (bukan Grand Juri)
+            foreach ($juriScorings as $s) {
                 if ($s->juri) {
                     $juriList[] = [
                         'name'     => $s->juri->name,
-                        'is_grand' => ($s->juri->role === 'grand_juri'),
+                        'is_grand' => false,
                     ];
                 }
-                if ($s->edited_by_grand_juri && $s->grandJuri) {
-                    $grandJuriName = $s->grandJuri->name;
+                if (!$latestNilai) {
                     $latestNilai = $s->nilai_detail;
                     $latestTotal = $s->total_nilai ?? 0;
                     $latestKelas = $s->kelas;
                 }
+            }
+
+            // ★ Cek apakah ada edit dari Grand Juri
+            if ($grandJuriScorings->isNotEmpty()) {
+                $latestGrand = $grandJuriScorings->last();
+                if ($latestGrand->grandJuri) {
+                    $grandJuriName = $latestGrand->grandJuri->name;
+                }
+                $latestNilai = $latestGrand->nilai_detail;
+                $latestTotal = $latestGrand->total_nilai ?? 0;
+                $latestKelas = $latestGrand->kelas;
             }
 
             if (!$latestNilai && $scorings->isNotEmpty()) {
@@ -107,10 +126,14 @@ class GrandJuriController extends Controller
             }
 
             $totalJuriAll = \App\Models\User::where('role', 'juri')->count();
-            $submittedCount = $scorings->count();
+            // ★ FIX: submittedCount hanya dari juri asli (bukan termasuk Grand Juri)
+            $submittedCount = $juriScorings->count();
 
-            $allScoringsData = $scorings->map(function ($s) {
-                // ★ Evaluasi defect di backend agar JS tidak perlu hitung ulang
+            // ★ Siapkan allScoringsData untuk tampilan detail
+            $allScoringsData = [];
+            
+            // Tambahkan scoring juri asli
+            foreach ($juriScorings as $s) {
                 $defectRaw = [
                     'raw_head_penalty'    => $s->raw_head_penalty ?: ['0'],
                     'raw_face_penalty'    => $s->raw_face_penalty ?: ['0'],
@@ -119,9 +142,9 @@ class GrandJuriController extends Controller
                 ];
                 $defectEval = PointCalculator::evaluateDefects($defectRaw);
 
-                return [
+                $allScoringsData[] = [
                     'juri_name'          => $s->juri ? $s->juri->name : '—',
-                    'is_grand'           => ($s->juri && $s->juri->role === 'grand_juri'),
+                    'is_grand'           => false,
                     'nilai_detail'       => $s->nilai_detail,
                     'total_nilai'        => $s->total_nilai ?? 0,
                     'raw_head_penalty'   => $s->raw_head_penalty ?: ['0'],
@@ -130,16 +153,39 @@ class GrandJuriController extends Controller
                     'raw_finnage_penalty'=> $s->raw_finnage_penalty ?: ['0'],
                     'defect_eval'        => $defectEval,
                 ];
-            })->values()->toArray();
+            }
+            
+            // Tambahkan scoring Grand Juri (jika ada)
+            foreach ($grandJuriScorings as $s) {
+                $defectRaw = [
+                    'raw_head_penalty'    => $s->raw_head_penalty ?: ['0'],
+                    'raw_face_penalty'    => $s->raw_face_penalty ?: ['0'],
+                    'raw_body_penalty'    => $s->raw_body_penalty ?: ['0'],
+                    'raw_finnage_penalty' => $s->raw_finnage_penalty ?: ['0'],
+                ];
+                $defectEval = PointCalculator::evaluateDefects($defectRaw);
+
+                $allScoringsData[] = [
+                    'juri_name'          => $s->grandJuri ? $s->grandJuri->name : '—',
+                    'is_grand'           => true,
+                    'nilai_detail'       => $s->nilai_detail,
+                    'total_nilai'        => $s->total_nilai ?? 0,
+                    'raw_head_penalty'   => $s->raw_head_penalty ?: ['0'],
+                    'raw_face_penalty'   => $s->raw_face_penalty ?: ['0'],
+                    'raw_body_penalty'   => $s->raw_body_penalty ?: ['0'],
+                    'raw_finnage_penalty'=> $s->raw_finnage_penalty ?: ['0'],
+                    'defect_eval'        => $defectEval,
+                ];
+            }
 
             $pointConfig = ScoringPointConfig::where('kategori', $ikan->kategori)->first();
 
-            // ★ HITUNG DARI SEMUA JURI (bukan hanya 1)
+            // ★ FIX: Hitung total dari juri asli SAJA (bukan termasuk Grand Juri)
             $totalNilaiSemua = 0;
             $jumlahJuriYangNilai = 0;
             $detailListPerJuri = [];
 
-            foreach ($scorings as $s) {
+            foreach ($juriScorings as $s) {
                 if ($s->total_nilai) {
                     $totalNilaiSemua += $s->total_nilai;
                     $jumlahJuriYangNilai++;
@@ -147,16 +193,16 @@ class GrandJuriController extends Controller
                 if ($s->juri) {
                     $detailListPerJuri[] = [
                         'juri_name'    => $s->juri->name,
-                        'is_grand'     => ($s->juri->role === 'grand_juri'),
+                        'is_grand'     => false,
                         'total_nilai'  => $s->total_nilai ?? 0,
                         'nilai_detail' => $s->nilai_detail,
                     ];
                 }
             }
 
-            // ★ FIX: Hitung POINT REAL-TIME menggunakan PointCalculator (SAMA PERSIS DENGAN ADMIN)
+            // ★ HITUNG DARI SEMUA JURI (bukan hanya 1) - untuk point calculation
             $avgDetail = [];
-            foreach ($scorings as $s) {
+            foreach ($juriScorings as $s) {
                 if ($s->nilai_detail && is_array($s->nilai_detail)) {
                     foreach ($s->nilai_detail as $kat => $fields) {
                         foreach ($fields as $fid => $val) {
