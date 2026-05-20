@@ -233,112 +233,112 @@
         .popup-btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
         .popup-detail{font-size:12px;color:var(--muted);text-align:left;background:var(--bg);padding:12px;border-radius:10px;margin-bottom:16px;line-height:1.6;max-height:120px;overflow-y:auto;
         }
+            /* ═══════════════════════════════════════════════
+        PASSWORD VALIDATION (MODAL CREATE USER)
+        ═══════════════════════════════════════════════ */
+        .input-wrapper{position:relative;}
+        .input-wrapper i.input-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--light);transition:color .3s;pointer-events:none;z-index:1;}
+        .form-input-modal{width:100%;padding:10px 40px 10px 38px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);outline:none;transition:all .3s;}
+        .form-input-modal::placeholder{color:var(--light);}
+        .form-input-modal:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+        .form-input-modal:focus~i.input-icon{color:var(--primary);}
+        .form-input-modal.input-error{border-color:var(--danger);box-shadow:0 0 0 3px rgba(239,68,68,.1);}
+        .form-input-modal.input-error~i.input-icon{color:var(--danger);}
+        .form-input-modal.input-success{border-color:var(--success);box-shadow:0 0 0 3px rgba(34,197,94,.1);}
+        .form-input-modal.input-success~i.input-icon{color:var(--success);}
+        .pwd-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--light);font-size:13px;padding:4px 5px;z-index:2;transition:color .2s;}
+        .pwd-toggle:hover{color:var(--primary);}
+        .pwd-error-msg{font-size:11px;color:var(--danger);margin-top:4px;display:none;align-items:center;gap:4px;}
+        .pwd-error-msg i{font-size:10px;}
+        .str-bar{display:flex;gap:3px;margin-top:6px;}
+        .str-seg{flex:1;height:3px;border-radius:3px;background:var(--border);transition:background .3s;}
+        .str-seg.w{background:var(--danger);}
+        .str-seg.m{background:var(--warning);}
+        .str-seg.s{background:var(--success);}
+        .str-text{font-size:10px;font-weight:700;margin-top:3px;text-transform:uppercase;letter-spacing:.5px;transition:color .3s;}
+        .str-text.w{color:var(--danger);}
+        .str-text.m{color:var(--warning);}
+        .str-text.s{color:var(--success);}
+        .match-ind{font-size:11px;font-weight:600;margin-top:4px;display:none;align-items:center;gap:4px;}
+        .match-ind.ok{color:var(--success);display:flex;}
+        .match-ind.no{color:var(--danger);display:flex;
+        }
+        /* ── TOGGLE GROUP (dari user.blade) ── */
+        .toggle-group{display:flex;background:var(--bg);border-radius:12px;padding:4px;border:1px solid var(--border);}
+        .toggle-option{flex:1;text-align:center;}
+        .toggle-option input{display:none;}
+        .toggle-option label{display:block;padding:9px;border-radius:10px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .3s;}
+        .toggle-option input:checked+label{background:var(--card);color:var(--primary-dk);box-shadow:0 2px 8px rgba(0,0,0,.05);
+        }
+        .search-dropdown{position:relative;}
+        .dropdown-list{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-top:4px;max-height:200px;overflow-y:auto;display:none;z-index:100;box-shadow:0 10px 25px rgba(0,0,0,.1);}
+        .dropdown-list::-webkit-scrollbar{width:4px;}
+        .dropdown-list::-webkit-scrollbar-thumb{background:var(--gray-300);border-radius:10px;}
+        .dropdown-list.show{display:block;}
+        .dropdown-item{padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;transition:background .15s;border-bottom:1px solid #f1f5f9;}
+        .dropdown-item:last-child{border-bottom:none;}
+        .dropdown-item:hover{background:var(--primary-lt);}
+        .dropdown-item.active{background:var(--primary-lt);color:var(--primary-dk);}
+        .dropdown-item .di-avatar{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;}
+        .dropdown-item .di-info{flex:1;min-width:0;}
+        .dropdown-item .di-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .dropdown-item .di-email{font-size:10px;color:var(--light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .dropdown-item .di-role{font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;flex-shrink:0;}
+        .dropdown-empty{padding:20px;text-align:center;font-size:12px;color:var(--light);
+        }
         /* ═══════════════════════════════════════════════
-    PASSWORD VALIDATION (MODAL CREATE USER)
+    FORCE WHITE TEXT UNTUK AREA HITAM (UNDIAN)
     ═══════════════════════════════════════════════ */
-    .input-wrapper{position:relative;}
-    .input-wrapper i.input-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--light);transition:color .3s;pointer-events:none;z-index:1;}
-    .form-input-modal{width:100%;padding:10px 40px 10px 38px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);outline:none;transition:all .3s;}
-    .form-input-modal::placeholder{color:var(--light);}
-    .form-input-modal:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
-    .form-input-modal:focus~i.input-icon{color:var(--primary);}
-    .form-input-modal.input-error{border-color:var(--danger);box-shadow:0 0 0 3px rgba(239,68,68,.1);}
-    .form-input-modal.input-error~i.input-icon{color:var(--danger);}
-    .form-input-modal.input-success{border-color:var(--success);box-shadow:0 0 0 3px rgba(34,197,94,.1);}
-    .form-input-modal.input-success~i.input-icon{color:var(--success);}
-    .pwd-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--light);font-size:13px;padding:4px 5px;z-index:2;transition:color .2s;}
-    .pwd-toggle:hover{color:var(--primary);}
-    .pwd-error-msg{font-size:11px;color:var(--danger);margin-top:4px;display:none;align-items:center;gap:4px;}
-    .pwd-error-msg i{font-size:10px;}
-    .str-bar{display:flex;gap:3px;margin-top:6px;}
-    .str-seg{flex:1;height:3px;border-radius:3px;background:var(--border);transition:background .3s;}
-    .str-seg.w{background:var(--danger);}
-    .str-seg.m{background:var(--warning);}
-    .str-seg.s{background:var(--success);}
-    .str-text{font-size:10px;font-weight:700;margin-top:3px;text-transform:uppercase;letter-spacing:.5px;transition:color .3s;}
-    .str-text.w{color:var(--danger);}
-    .str-text.m{color:var(--warning);}
-    .str-text.s{color:var(--success);}
-    .match-ind{font-size:11px;font-weight:600;margin-top:4px;display:none;align-items:center;gap:4px;}
-    .match-ind.ok{color:var(--success);display:flex;}
-    .match-ind.no{color:var(--danger);display:flex;
-    }
-    /* ── TOGGLE GROUP (dari user.blade) ── */
-    .toggle-group{display:flex;background:var(--bg);border-radius:12px;padding:4px;border:1px solid var(--border);}
-    .toggle-option{flex:1;text-align:center;}
-    .toggle-option input{display:none;}
-    .toggle-option label{display:block;padding:9px;border-radius:10px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .3s;}
-    .toggle-option input:checked+label{background:var(--card);color:var(--primary-dk);box-shadow:0 2px 8px rgba(0,0,0,.05);
-    }
-    .search-dropdown{position:relative;}
-    .dropdown-list{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-top:4px;max-height:200px;overflow-y:auto;display:none;z-index:100;box-shadow:0 10px 25px rgba(0,0,0,.1);}
-    .dropdown-list::-webkit-scrollbar{width:4px;}
-    .dropdown-list::-webkit-scrollbar-thumb{background:var(--gray-300);border-radius:10px;}
-    .dropdown-list.show{display:block;}
-    .dropdown-item{padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;transition:background .15s;border-bottom:1px solid #f1f5f9;}
-    .dropdown-item:last-child{border-bottom:none;}
-    .dropdown-item:hover{background:var(--primary-lt);}
-    .dropdown-item.active{background:var(--primary-lt);color:var(--primary-dk);}
-    .dropdown-item .di-avatar{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;}
-    .dropdown-item .di-info{flex:1;min-width:0;}
-    .dropdown-item .di-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .dropdown-item .di-email{font-size:10px;color:var(--light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .dropdown-item .di-role{font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;flex-shrink:0;}
-    .dropdown-empty{padding:20px;text-align:center;font-size:12px;color:var(--light);
-    }
-    /* ═══════════════════════════════════════════════
-   FORCE WHITE TEXT UNTUK AREA HITAM (UNDIAN)
-   ═══════════════════════════════════════════════ */
-    .dark-input-area .form-control,
-    .dark-input-area input[type="number"] {
-        background: rgba(0,0,0,.3) !important;
-        color: #ffffff !important;
-        border-color: rgba(255,255,255,.15) !important;
-        font-weight: 700;
-    }
-    .dark-input-area input[type="number"]::placeholder {
-        color: rgba(255,255,255,.4);
-    }
-    .dark-input-area input[type="number"]::-webkit-inner-spin-button,
-    .dark-input-area input[type="number"]::-webkit-outer-spin-button {
-        opacity: 1;
-        filter: invert(1);
-    }
-    .dark-input-area .btn-acak-kecil {
-        color: #ffffff !important;
-        border-color: rgba(255,255,255,.25) !important;
-    }
-    .dark-input-area .btn-acak-kecil:hover {
-        background: rgba(255,255,255,.1) !important;
-    }
-    @media(max-width:768px){
-    #kelasRangeInputs{ grid-template-columns: repeat(2, 1fr) !important; }
-    }
-    @media(max-width:480px){
-        #kelasRangeInputs{ grid-template-columns: 1fr !important; }
-    }
-    /* ── JURI ACCORDION (DETAIL MODAL ADMIN) ── */
-    .detail-juri-accordion{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
-    .detail-juri-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;transition:background .2s;user-select:none;}
-    .detail-juri-toggle:hover{background:#f8fafc;}
-    .detail-juri-toggle.open{background:var(--primary-lt);border-bottom:1px solid #bfdbfe;}
-    .detail-juri-toggle .dj-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
-    .detail-juri-toggle .dj-total{font-size:14px;font-weight:900;color:var(--primary);}
-    .detail-juri-toggle .dj-arrow{font-size:12px;color:var(--muted);transition:transform .2s;}
-    .detail-juri-toggle.open .dj-arrow{transform:rotate(180deg);}
-    .detail-juri-scores{display:none;}
-    .detail-juri-scores.open{display:block;}
-    .detail-kat-mini-admin{background:#f8fafc;padding:7px 16px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;}
-    .detail-kat-mini-admin span{color:var(--primary);font-weight:900;font-size:11px;}
-    .detail-field-row-admin{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #f8fafc;gap:12px;}
-    .detail-field-row-admin:last-child{border-bottom:none;}
-    .detail-field-row-admin:hover{background:#fafbfd;}
-    .detail-field-admin-name{font-size:12px;font-weight:700;color:var(--text);}
-    .detail-field-admin-meta{font-size:10px;color:var(--light);margin-top:1px;}
-    .score-chip-admin{padding:5px 16px;border-radius:6px;font-size:13px;font-weight:800;min-width:48px;text-align:center;}
-    .score-chip-admin.filled{background:#dbeafe;color:var(--primary);}
-    .score-chip-admin.empty{background:#f1f5f9;color:var(--light);font-size:11px;font-weight:600;
-    }
+        .dark-input-area .form-control,
+        .dark-input-area input[type="number"] {
+            background: rgba(0,0,0,.3) !important;
+            color: #ffffff !important;
+            border-color: rgba(255,255,255,.15) !important;
+            font-weight: 700;
+        }
+        .dark-input-area input[type="number"]::placeholder {
+            color: rgba(255,255,255,.4);
+        }
+        .dark-input-area input[type="number"]::-webkit-inner-spin-button,
+        .dark-input-area input[type="number"]::-webkit-outer-spin-button {
+            opacity: 1;
+            filter: invert(1);
+        }
+        .dark-input-area .btn-acak-kecil {
+            color: #ffffff !important;
+            border-color: rgba(255,255,255,.25) !important;
+        }
+        .dark-input-area .btn-acak-kecil:hover {
+            background: rgba(255,255,255,.1) !important;
+        }
+        @media(max-width:768px){
+        #kelasRangeInputs{ grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media(max-width:480px){
+            #kelasRangeInputs{ grid-template-columns: 1fr !important; }
+        }
+        /* ── JURI ACCORDION (DETAIL MODAL ADMIN) ── */
+        .detail-juri-accordion{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
+        .detail-juri-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;transition:background .2s;user-select:none;}
+        .detail-juri-toggle:hover{background:#f8fafc;}
+        .detail-juri-toggle.open{background:var(--primary-lt);border-bottom:1px solid #bfdbfe;}
+        .detail-juri-toggle .dj-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+        .detail-juri-toggle .dj-total{font-size:14px;font-weight:900;color:var(--primary);}
+        .detail-juri-toggle .dj-arrow{font-size:12px;color:var(--muted);transition:transform .2s;}
+        .detail-juri-toggle.open .dj-arrow{transform:rotate(180deg);}
+        .detail-juri-scores{display:none;}
+        .detail-juri-scores.open{display:block;}
+        .detail-kat-mini-admin{background:#f8fafc;padding:7px 16px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;}
+        .detail-kat-mini-admin span{color:var(--primary);font-weight:900;font-size:11px;}
+        .detail-field-row-admin{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #f8fafc;gap:12px;}
+        .detail-field-row-admin:last-child{border-bottom:none;}
+        .detail-field-row-admin:hover{background:#fafbfd;}
+        .detail-field-admin-name{font-size:12px;font-weight:700;color:var(--text);}
+        .detail-field-admin-meta{font-size:10px;color:var(--light);margin-top:1px;}
+        .score-chip-admin{padding:5px 16px;border-radius:6px;font-size:13px;font-weight:800;min-width:48px;text-align:center;}
+        .score-chip-admin.filled{background:#dbeafe;color:var(--primary);}
+        .score-chip-admin.empty{background:#f1f5f9;color:var(--light);font-size:11px;font-weight:600;
+        }
     </style>
 </head>
 <body>
@@ -350,8 +350,6 @@
         <span>Pusat Kontrol Sistem Kontes LCI</span>
     </div>
     <div class="nav-actions">
-        <button class="nav-btn green" onclick="openModal('modalOld')"><i class="fas fa-database"></i> <span>Undian & Registrasi</span></button>
-        <button class="nav-btn" onclick="openModal('modalMvp')" style="background:#fffbeb;color:#b45309;border-color:#fde68a;"><i class="fas fa-star" style="color:#f59e0b;"></i> <span>Kelola MVP</span></button>
         <button class="nav-btn accent" onclick="exportCSV()"><i class="fas fa-download"></i> <span>Export CSV</span></button>
         <div class="nav-user"><b>{{ $user->name }}</b><small>Administrator</small></div>
         <form method="POST" action="{{ route('logout') }}" style="display:inline;">@csrf<button type="submit" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button></form>
@@ -364,19 +362,25 @@
     <!-- ── STATISTIK ── -->
     <div class="stats-row">
         <div class="stat-card c-blue"><div class="stat-icon blue"><i class="fas fa-fish"></i></div><div class="stat-num" id="sTotal">0</div><div class="stat-lbl">Total Ikan Terdaftar</div></div>
+        <div class="stat-card c-teal"><div class="stat-icon teal"><i class="fas fa-users"></i></div><div class="stat-num" id="sPesertaUnik">0</div><div class="stat-lbl">Total Peserta</div></div>
         <div class="stat-card c-green"><div class="stat-icon green"><i class="fas fa-check-double"></i></div><div class="stat-num" id="sDinilai">0</div><div class="stat-lbl">Sudah Dinilai Juri</div></div>
         <div class="stat-card c-purple"><div class="stat-icon purple"><i class="fas fa-crown"></i></div><div class="stat-num" id="sGrand">0</div><div class="stat-lbl">Grand Juri Edit</div></div>
         <div class="stat-card c-red"><div class="stat-icon red"><i class="fas fa-clock"></i></div><div class="stat-num" id="sBelum">0</div><div class="stat-lbl">Belum Dinilai</div></div>
         <div class="stat-card c-amber"><div class="stat-icon amber"><i class="fas fa-user-pen"></i></div><div class="stat-num" id="sJuri">0</div><div class="stat-lbl">Juri Aktif</div></div>
-        <div class="stat-card c-teal"><div class="stat-icon teal"><i class="fas fa-chart-line"></i></div><div class="stat-num" id="sAvg">0</div><div class="stat-lbl">Rata-rata Nilai</div></div>
-            <!-- CARD SISA TANK (DINAMIS) -->
-        <div style="display:flex;justify-content:center;margin-top:-6px;">
-            <div class="stat-card c-teal" style="width:220px;">
-                <div class="stat-icon teal"><i class="fas fa-boxes-stacked"></i></div>
-                <div class="stat-num" id="sSisaTank">0</div>
-                <div class="stat-lbl" id="sSisaTankLabel">Sisa Tank (Max 1000)</div>
-            </div>
+    </div>
+    <div class="stats-row" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+        <div class="stat-card" style="cursor:pointer;border-color:var(--success);border-width:2px;" onclick="openModal('modalOld')">
+            <div class="stat-icon green"><i class="fas fa-database"></i></div>
+            <div class="stat-num" style="font-size:16px;color:var(--success);">Undian &<br>Registrasi</div>
+            <div class="stat-lbl" style="color:var(--success);">Klik untuk buka modul</div>
         </div>
+        <div class="stat-card" style="cursor:pointer;border-color:#f59e0b;border-width:2px;" onclick="openModal('modalMvp')">
+            <div class="stat-icon amber"><i class="fas fa-star"></i></div>
+            <div class="stat-num" style="font-size:16px;color:#d97706;">Kelola<br>MVP</div>
+            <div class="stat-lbl" style="color:#d97706;">Klik untuk buka modul</div>
+        </div>
+        <div class="stat-card c-teal"><div class="stat-icon teal"><i class="fas fa-chart-line"></i></div><div class="stat-num" id="sAvg">0</div><div class="stat-lbl">Rata-rata Nilai</div></div>
+        <div class="stat-card c-teal"><div class="stat-icon teal"><i class="fas fa-boxes-stacked"></i></div><div class="stat-num" id="sSisaTank">0</div><div class="stat-lbl" id="sSisaTankLabel">Sisa Tank (Max 100)</div></div>
     </div>
 
     <!-- ── GRAFIK ── -->
@@ -386,7 +390,7 @@
             <div class="section-body"><div class="chart-box"><canvas id="chartKategori"></canvas></div></div>
         </div>
         <div class="section-card">
-            <div class="section-head"><div class="section-title"><i class="fas fa-chart-pie"></i> Status Penilaian</div></div>
+            <div class="section-head"><div class="section-title"><i class="fas fa-chart-pie"></i> Diagram Status Penilaian</div></div>
             <div class="section-body"><div class="chart-box"><canvas id="chartStatus"></canvas></div></div>
         </div>
         <div class="section-card">
@@ -1183,6 +1187,7 @@ function loadDashboard(){
         document.getElementById('sJuri').innerText=d.juri_aktif||0;
         document.getElementById('sAvg').innerText=d.rata_rata||0;
         document.getElementById('sSisaTank').innerText=d.sisa_tank||0;
+        document.getElementById('sPesertaUnik').innerText=d.total_peserta_unik||0;
         document.getElementById('sSisaTankLabel').innerText='Sisa Tank (Max '+(d.max_tank||1000)+')';
         renderChartKategori(d.per_kategori||{});
         renderChartStatus(d.sudah_dinilai||0,d.grand_edited||0,d.belum_dinilai||0);
@@ -1313,7 +1318,9 @@ function renderTable(data){
         if(p.juri_list&&p.juri_list.length>0){
             jh='<div class="juri-info">';
             p.juri_list.forEach(function(j){
-                if(j.is_grand){
+                if(j.is_grand && j.is_editor){
+                    jh+='<div class="g-name"><i class="fas fa-pen-to-square" style="font-size:9px;"></i> '+esc(j.name)+' <span style="font-size:9px;opacity:.7;">(edit)</span></div>';
+                } else if(j.is_grand){
                     jh+='<div class="g-name"><i class="fas fa-crown" style="font-size:9px;"></i> '+esc(j.name)+'</div>';
                 } else {
                     jh+='<div><i class="fas fa-user-pen" style="font-size:9px;color:var(--primary);margin-right:2px;"></i><span class="j-name">'+esc(j.name)+'</span></div>';
@@ -1396,16 +1403,18 @@ function renderDetailView(p){
         document.getElementById('detailBody').innerHTML=html;return;
     }
 
-    /* ★ Accordion per juri */
     p.all_scorings.forEach(function(sc,idx){
-        var isG=sc.is_grand;
         var uid='adm-dj-'+idx;
-        var iconCls=isG?'fas fa-crown':'fas fa-user-pen';
-        var label=isG?'Grand Juri: '+esc(sc.juri_name):'Juri: '+esc(sc.juri_name);
+        var iconCls='fas fa-user-pen';
+        var label='Juri: '+esc(sc.juri_name);
+
+        if(sc.edited_by_grand && sc.grand_juri_name){
+            label+=' <span style="color:var(--purple);font-size:11px;font-weight:600;"><i class="fas fa-pen-to-square" style="font-size:9px;"></i> diedit: '+esc(sc.grand_juri_name)+'</span>';
+        }
 
         html+='<div class="detail-juri-accordion">';
         html+='<div class="detail-juri-toggle" id="'+uid+'-toggle" onclick="toggleJuriDetailAdmin(\''+uid+'\')">';
-        html+='<span class="dj-name"><i class="'+iconCls+'" style="font-size:11px;'+(isG?'color:var(--purple);':'color:var(--primary);')+'"></i> '+label+'</span>';
+        html+='<span class="dj-name"><i class="'+iconCls+'" style="font-size:11px;color:var(--primary);"></i> '+label+'</span>';
         html+='<span style="display:flex;align-items:center;gap:10px;"><span class="dj-total">'+sc.total_nilai+'</span><i class="fas fa-chevron-down dj-arrow"></i></span>';
         html+='</div>';
 
@@ -1440,10 +1449,10 @@ function renderDetailView(p){
         html+='<tr style="background:var(--primary-lt);"><th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;">JURI</th><th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;">TOTAL NILAI</th></tr>';
         var grandTotal=0;
         p.detail_list_per_juri.forEach(function(j){
-            grandTotal+=j.total_nilai;
-            var style=j.is_grand?'color:var(--purple);font-weight:800;':'font-weight:600;';
-            var prefix=j.is_grand?'<i class="fas fa-crown" style="font-size:9px;margin-right:3px;"></i>':'';
-            html+='<tr><td style="'+style+'">'+prefix+esc(j.juri_name)+'</td><td style="font-weight:800;text-align:right;">'+j.total_nilai+'</td></tr>';
+            if(!j.is_grand){
+                grandTotal+=j.total_nilai;
+                html+='<tr><td style="font-weight:600;">'+esc(j.juri_name)+'</td><td style="font-weight:800;text-align:right;">'+j.total_nilai+'</td></tr>';
+            }
         });
         html+='<tr style="background:#dbeafe;"><td style="font-weight:800;color:var(--primary-dk);"><i class="fas fa-calculator" style="margin-right:4px;font-size:10px;"></i> TOTAL SEMUA JURI</td>';
         html+='<td style="font-weight:900;text-align:right;color:var(--primary-dk);font-size:14px;">'+grandTotal+'</td></tr>';

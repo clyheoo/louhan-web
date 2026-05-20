@@ -152,6 +152,10 @@ class AdminDashboardController extends Controller
         $maxGlobal = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
         $maxTankTotal = $maxGlobal - $minGlobal + 1;
 
+        $totalPesertaUnik = Ikan::whereNotNull('nomor_tank')
+            ->distinct('peserta_id')
+            ->count('peserta_id');
+
         $sisaTank = max(0, $maxTankTotal - $totalIkan);
 
         return response()->json([
@@ -161,7 +165,8 @@ class AdminDashboardController extends Controller
             'belum_dinilai'  => $belumDinilai,
             'juri_aktif'     => $juriAktif,
             'rata_rata'      => $avgScore,
-            'sisa_tank'      => $sisaTank,
+            'total_peserta_unik' => $totalPesertaUnik,
+            'sisa_tank'          => $sisaTank,
             'max_tank'       => $maxTankTotal,
             'per_kategori'   => $perKategori,
             'top_10'         => $top10,
