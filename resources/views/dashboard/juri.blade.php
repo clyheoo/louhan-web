@@ -277,7 +277,7 @@
                         <input type="text" id="inputKelas" class="form-control" value="- Pilih Ikan -" disabled style="font-weight: 700;">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Identitas Juri</label>
+                        <label class="form-label">Nama Juri</label>
                         <input type="text" class="form-control" value="{{ $user->name }}" disabled>
                     </div>
                 </div>

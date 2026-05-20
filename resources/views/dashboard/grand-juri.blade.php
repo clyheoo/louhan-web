@@ -982,12 +982,14 @@ function loadPeserta(search){
             td4.style.cssText='font-size:12px;color:var(--text-muted);';
             td4.innerText=p.detail_anggota||'—';tr.appendChild(td4);
 
-            /* td5 — DINILAI OLEH (nama juri langsung, tanpa label grand edit) */
+            /* td5 — DINILAI OLEH (nama juri asli + grand juri editor) */
             var td5=document.createElement('td');
             if(p.juri_list&&p.juri_list.length>0){
                 var jHtml='<div class="juri-cell">';
                 p.juri_list.forEach(function(j){
-                    if(j.is_grand){
+                    if(j.is_grand && j.is_editor){
+                        jHtml+='<div class="grand-line"><i class="fas fa-pen-to-square"></i> '+esc(j.name)+' <span style="font-size:9px;opacity:.7;">(edit)</span></div>';
+                    } else if(j.is_grand){
                         jHtml+='<div class="grand-line"><i class="fas fa-crown"></i> '+esc(j.name)+'</div>';
                     } else {
                         jHtml+='<div><i class="fas fa-user-pen" style="font-size:10px;margin-right:3px;"></i>'+esc(j.name)+'</div>';
@@ -1117,12 +1119,15 @@ function renderDetail(p){
         document.getElementById('detailContent').innerHTML=html;return;
     }
 
-    /* ★ Accordion: daftar juri yang bisa diklik */
     p.all_scorings.forEach(function(sc,idx){
-        var isG=sc.is_grand;
         var uid='dj-'+idx;
-        var iconCls=isG?'fas fa-crown':'fas fa-user-pen';
-        var label=isG?'Grand Juri: '+esc(sc.juri_name):'Juri: '+esc(sc.juri_name);
+        var iconCls='fas fa-user-pen';
+        var label='Juri: '+esc(sc.juri_name);
+        
+        // ★ FIX: Tambahkan indikator jika diedit oleh grand juri
+        if(sc.edited_by_grand && sc.grand_juri_name){
+            label+=' <span style="color:var(--purple);font-size:11px;font-weight:600;"><i class="fas fa-pen-to-square" style="font-size:9px;"></i> diedit: '+esc(sc.grand_juri_name)+'</span>';
+        }
 
         html+='<div class="detail-juri-accordion">';
         html+='<div class="detail-juri-toggle" id="'+uid+'-toggle" onclick="toggleJuriDetail(\''+uid+'\')">';

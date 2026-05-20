@@ -79,6 +79,7 @@ class GrandJuriController extends Controller
             $scorings = $ikan->scorings;
 
             // ★ Variabel tracking
+            $grandJuriEditors = [];
             $grandJuriName = null;
             $latestNilai = null;
             $latestTotal = 0;
@@ -87,24 +88,36 @@ class GrandJuriController extends Controller
 
             // ★ Loop semua scoring
             foreach ($scorings as $s) {
-                // Track Grand Juri yang pernah edit
-                if ($s->edited_by_grand_juri && $s->grandJuri) {
-                    $grandJuriName = $s->grandJuri->name;
-                }
-
-                // Daftar juri untuk tampilan
+                // ★ Daftar juri ASLI untuk tampilan
                 $juriName = $s->juri ? $s->juri->name : '—';
-                $isGrand = (bool) $s->edited_by_grand_juri;
-                
+
                 $juriList[] = [
                     'name'     => $juriName,
-                    'is_grand' => $isGrand,
+                    'is_grand' => false,
                 ];
+
+                // ★ Track SEMUA grand juri yang pernah edit
+                if ($s->edited_by_grand_juri && $s->grandJuri) {
+                    $gjName = $s->grandJuri->name;
+                    if (!in_array($gjName, $grandJuriEditors)) {
+                        $grandJuriEditors[] = $gjName;
+                    }
+                    $grandJuriName = $gjName;
+                }
 
                 // Ambil nilai terakhir
                 $latestNilai = $s->nilai_detail;
                 $latestTotal = $s->total_nilai ?? 0;
                 $latestKelas = $s->kelas;
+            }
+
+            // ★ Tambahkan semua grand juri editors ke juriList
+            foreach ($grandJuriEditors as $gjName) {
+                $juriList[] = [
+                    'name'      => $gjName,
+                    'is_grand'  => true,
+                    'is_editor' => true,
+                ];
             }
 
             $totalJuriAll = \App\Models\User::where('role', 'juri')->count();
@@ -122,7 +135,9 @@ class GrandJuriController extends Controller
 
                 return [
                     'juri_name'          => $s->juri ? $s->juri->name : '—',
-                    'is_grand'           => (bool) $s->edited_by_grand_juri,
+                    'is_grand'           => false,
+                    'edited_by_grand'    => (bool) $s->edited_by_grand_juri,
+                    'grand_juri_name'    => ($s->edited_by_grand_juri && $s->grandJuri) ? $s->grandJuri->name : null,
                     'nilai_detail'       => $s->nilai_detail,
                     'total_nilai'        => $s->total_nilai ?? 0,
                     'raw_head_penalty'   => $s->raw_head_penalty ?: ['0'],
@@ -135,7 +150,7 @@ class GrandJuriController extends Controller
 
             $pointConfig = ScoringPointConfig::where('kategori', $ikan->kategori)->first();
 
-            // ★ Hitung total dari SEMUA scoring (sekarang aman karena tidak ada duplikat)
+            // ★ Hitung total dari SEMUA scoring
             $totalNilaiSemua = 0;
             $jumlahJuriYangNilai = 0;
             $detailListPerJuri = [];
@@ -149,12 +164,11 @@ class GrandJuriController extends Controller
 
                 $detailListPerJuri[] = [
                     'juri_name'    => $s->juri ? $s->juri->name : '—',
-                    'is_grand'     => (bool) $s->edited_by_grand_juri,
+                    'is_grand'     => false,  // ← FIX: Ini data juri asli, selalu false
                     'total_nilai'  => $s->total_nilai ?? 0,
                     'nilai_detail' => $s->nilai_detail,
                 ];
 
-                // Untuk hitung rata-rata point
                 if ($s->nilai_detail && is_array($s->nilai_detail)) {
                     foreach ($s->nilai_detail as $kat => $fields) {
                         if (!is_array($fields)) continue;
