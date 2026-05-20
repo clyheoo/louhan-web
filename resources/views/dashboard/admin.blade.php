@@ -287,8 +287,8 @@
         .dropdown-empty{padding:20px;text-align:center;font-size:12px;color:var(--light);
         }
         /* ═══════════════════════════════════════════════
-    FORCE WHITE TEXT UNTUK AREA HITAM (UNDIAN)
-    ═══════════════════════════════════════════════ */
+        FORCE WHITE TEXT UNTUK AREA HITAM (UNDIAN)
+        ═══════════════════════════════════════════════ */
         .dark-input-area .form-control,
         .dark-input-area input[type="number"] {
             background: rgba(0,0,0,.3) !important;
@@ -339,6 +339,42 @@
         .score-chip-admin.filled{background:#dbeafe;color:var(--primary);}
         .score-chip-admin.empty{background:#f1f5f9;color:var(--light);font-size:11px;font-weight:600;
         }
+        .stat-detail-popup{background:#fff;border-radius:20px;width:92%;max-width:740px;max-height:82vh;overflow:hidden;display:grid;grid-template-rows:auto 1fr;box-shadow:0 25px 60px rgba(0,0,0,.15);transform:scale(.9) translateY(20px);transition:transform .4s cubic-bezier(.16,1,.3,1);}
+        .popup-overlay.show .stat-detail-popup{transform:scale(1) translateY(0);}
+        .stat-detail-head{padding:16px 20px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;}
+        .stat-detail-body{overflow-y:auto;padding:16px 20px;display:flex;justify-content:center;}
+        .sd-table-wrap{overflow-x:auto;width:100%;max-width:680px;}
+        .stat-detail-body::-webkit-scrollbar{width:5px;}
+        .stat-detail-body::-webkit-scrollbar-track{background:transparent;}
+        .stat-detail-body::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
+        .stat-detail-body::-webkit-scrollbar-thumb:hover{background:#94a3b8;}
+        .sd-table-wrap{overflow-x:auto;}
+        .sd-table{width:100%;border-collapse:collapse;font-size:12px;min-width:100%;}
+        .sd-table thead{position:sticky;top:0;z-index:2;}
+        .sd-table th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);background:#fff;white-space:nowrap;}
+        .sd-table th.num{text-align:center;width:44px;}
+        .sd-table th.right{text-align:right;}
+        .sd-table td{padding:10px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+        .sd-table tbody tr:hover td{background:#f8fafc;}
+        .sd-table tbody tr:last-child td{border-bottom:none;}
+        .td-num{color:var(--light);font-weight:700;font-size:11px;text-align:center;}
+        .td-name{font-weight:700;color:var(--text);}
+        .td-val{font-weight:800;text-align:right;color:var(--text);}
+        .td-val.primary{color:var(--primary);}
+        .td-val.purple{color:var(--purple);}
+        .td-val.success{color:var(--success);}
+        .td-val.danger{color:var(--danger);}
+        .td-val.amber{color:var(--warning);}
+        .td-val.teal{color:#14b8a6;}
+        .sd-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:800;white-space:nowrap;}
+        .sd-badge.blue{background:var(--primary);color:#fff;}
+        .sd-badge.green{background:var(--success);color:#fff;}
+        .sd-badge.purple{background:var(--purple);color:#fff;}
+        .sd-badge.amber{background:var(--warning);color:#fff;}
+        .sd-empty{text-align:center;padding:40px 20px;color:var(--light);}
+        .sd-empty i{font-size:28px;margin-bottom:8px;display:block;opacity:.3;}
+        .sd-empty p{font-size:12px;
+    }
     </style>
 </head>
 <body>
@@ -894,15 +930,22 @@
 
 <!-- POPUP: STAT DETAIL -->
 <div class="popup-overlay" id="popupStatDetail">
-    <div class="popup-card" style="max-width:720px;padding:0;text-align:left;">
-        <div style="padding:18px 24px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;">
-            <div style="min-width:0;">
-                <h2 class="popup-title" id="statDetailTitle" style="text-align:left;font-size:16px;margin-bottom:2px;">Detail</h2>
-                <p id="statDetailCount" style="font-size:12px;color:var(--muted);margin:0;"></p>
+    <div class="stat-detail-popup">
+        <div class="stat-detail-head">
+            <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+                <div id="statDetailIcon" style="width:40px;height:40px;border-radius:12px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-fish" style="color:#fff;font-size:16px;" id="statDetailIconI"></i>
+                </div>
+                <div style="min-width:0;">
+                    <h3 id="statDetailTitle" style="font-size:15px;font-weight:800;color:var(--text);margin:0;line-height:1.3;">Detail</h3>
+                    <p id="statDetailCount" style="font-size:11px;color:var(--muted);margin:2px 0 0;">Memuat...</p>
+                </div>
             </div>
-            <button class="popup-btn cancel" onclick="hidePopup('popupStatDetail')" style="padding:8px 16px;min-width:auto;"><i class="fas fa-xmark"></i></button>
+            <button onclick="hidePopup('popupStatDetail')" style="width:32px;height:32px;border-radius:10px;border:1px solid var(--border);background:white;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:14px;transition:all .2s;flex-shrink:0;" onmouseover="this.style.background='#f1f5f9';this.style.color='var(--text)'" onmouseout="this.style.background='white';this.style.color='var(--muted)'"><i class="fas fa-xmark"></i></button>
         </div>
-        <div id="statDetailBody" style="max-height:60vh;overflow-y:auto;padding:0;"></div>
+        <div class="stat-detail-body" id="statDetailBody">
+            <div class="empty-state" style="padding:30px;"><i class="fas fa-spinner fa-spin" style="font-size:18px;"></i></div>
+        </div>
     </div>
 </div>
 
@@ -1830,35 +1873,64 @@ function deleteIkan(ikanId, nama){
 /* ═══════════════════════════════════════════════
    EXPORT CSV
    ═══════════════════════════════════════════════ */
+var statTypeIcons={total_ikan:'fa-fish',total_peserta:'fa-users',sudah_dinilai:'fa-check-double',grand_edit:'fa-crown',belum_dinilai:'fa-clock',juri_aktif:'fa-user-pen'};
+var statTypeColors={total_ikan:'var(--primary)',total_peserta:'#14b8a6',sudah_dinilai:'var(--success)',grand_edit:'var(--purple)',belum_dinilai:'var(--danger)',juri_aktif:'var(--warning)'};
+
 function openStatPopup(type, title){
+    var iconEl=document.getElementById('statDetailIcon');
+    var iconI=document.getElementById('statDetailIconI');
+    if(iconEl&&iconI){iconEl.style.background=statTypeColors[type]||'var(--primary)';}
+    if(iconI){iconI.className='fas '+(statTypeIcons[type]||'fa-chart-bar')+' style="color:#fff;font-size:16px;"';}
     document.getElementById('statDetailTitle').textContent=title;
     document.getElementById('statDetailCount').textContent='Memuat...';
-    document.getElementById('statDetailBody').innerHTML='<div class="empty-state" style="padding:30px;"><i class="fas fa-spinner fa-spin" style="font-size:20px;"></i></div>';
+    document.getElementById('statDetailBody').innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i></div>';
     showPopup('popupStatDetail');
     fetch('/api/admin/stat-detail?type='+type,{headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
     .then(function(d){
-        if(d.error){document.getElementById('statDetailBody').innerHTML='<div class="empty-state">Data tidak valid.</div>';return;}
-        document.getElementById('statDetailCount').textContent=d.rows.length+' data ditemukan';
-        var numCols=[];
-        d.columns.forEach(function(c,i){if(['JURI','TOTAL NILAI','JUMLAH IKAN','PESERTA DINILAI'].indexOf(c)!==-1)numCols.push(i);});
-        var h='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>';
-        d.columns.forEach(function(c,i){h+='<th style="padding:8px 12px;text-align:'+(numCols.indexOf(i)!==-1?'right':'left')+';font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);white-space:nowrap;">'+c+'</th>';});
-        h+='</tr></thead><tbody>';
-        d.rows.forEach(function(row){
-            h+='<tr>';
-            row.forEach(function(cell,ci){
-                var isFirst=ci===0;
-                var isNum=numCols.indexOf(ci)!==-1;
-                h+='<td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;'+(isFirst?'color:var(--light);font-weight:700;font-size:11px;':'')+(isNum?'text-align:right;font-weight:800;':'')+'">'+esc(String(cell))+'</td>';
-            });
-            h+='</tr>';
+        if(d.error){document.getElementById('statDetailBody').innerHTML='<div class="sd-empty"><i class="fas fa-triangle-exclamation"></i><p>Data tidak valid.</p></div>';return;}
+        document.getElementById('statDetailCount').innerHTML='Menampilkan <b style="color:'+(statTypeColors[type]||'var(--primary)')+';">'+d.rows.length+'</b> data';
+        var numCols={};
+        d.columns.forEach(function(c,i){
+            if(['JURI','TOTAL NILAI','JUMLAH IKAN','PESERTA DINILAI'].indexOf(c)!==-1)numCols[i]=true;
         });
-        if(!d.rows.length) h+='<tr><td colspan="'+d.columns.length+'" style="text-align:center;padding:20px;color:var(--light);">Tidak ada data.</td></tr>';
-        h+='</tbody></table>';
+        var valColor={};
+        if(type==='sudah_dinilai')valColor={5:'success',6:'primary'};
+        else if(type==='grand_edit')valColor={5:'purple',6:'primary'};
+        else if(type==='belum_dinilai')valColor={};
+        else if(type==='juri_aktif')valColor={2:'purple',3:'amber'};
+
+        var h='<div class="sd-table-wrap"><table class="sd-table"><thead><tr>';
+        d.columns.forEach(function(c,i){
+            var cls='';if(i===0)cls=' num';if(numCols[i])cls=' right';
+            h+='<th class="'+cls+'">'+c+'</th>';
+        });
+        h+='</tr></thead><tbody>';
+        if(!d.rows.length){
+            h+='<tr><td colspan="'+d.columns.length+'"><div class="sd-empty"><i class="fas fa-inbox"></i><p>Tidak ada data untuk ditampilkan.</p></div></td></tr>';
+        } else {
+            d.rows.forEach(function(row){
+                h+='<tr>';
+                row.forEach(function(cell,ci){
+                    if(ci===0){
+                        h+='<td class="td-num">'+esc(String(cell))+'</td>';
+                    } else if(type==='juri_aktif'&&ci===2){
+                        var roleColors={Juri:'blue',GrandJuri:'purple',Admin:'blue'};
+                        h+='<td><span class="sd-badge '+(roleColors[cell]||'blue')+'">'+esc(String(cell))+'</span></td>';
+                    } else if(numCols[ci]){
+                        var vc=valColor[ci]||'';
+                        h+='<td class="td-val '+(vc?' '+vc:'')+'">'+esc(String(cell))+'</td>';
+                    } else {
+                        h+='<td class="td-name">'+esc(String(cell))+'</td>';
+                    }
+                });
+                h+='</tr>';
+            });
+        }
+        h+='</tbody></table></div>';
         document.getElementById('statDetailBody').innerHTML=h;
     })
-    .catch(function(){document.getElementById('statDetailBody').innerHTML='<div class="empty-state">Gagal memuat data.</div>';});
+    .catch(function(){document.getElementById('statDetailBody').innerHTML='<div class="sd-empty"><i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i><p style="color:var(--danger);">Gagal memuat data.</p></div>';});
 }
 
 function exportCSV(){
