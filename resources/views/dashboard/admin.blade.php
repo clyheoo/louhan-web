@@ -311,6 +311,16 @@
         .dark-input-area .btn-acak-kecil:hover {
             background: rgba(255,255,255,.1) !important;
         }
+        .export-wrap{position:relative;}
+        .export-btn{padding:7px 14px;border-radius:8px;border:1px solid #16a34a;background:#dcfce7;font-size:11px;font-weight:700;cursor:pointer;color:#16a34a;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:all .2s;}
+        .export-btn:hover{background:#16a34a;color:#fff;border-color:#16a34a;transform:translateY(-1px);box-shadow:0 4px 12px rgba(22,163,74,.25);}
+        .export-dd{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.15);min-width:240px;z-index:200;display:none;overflow:hidden;}
+        .export-dd.show{display:block;}
+        .export-dd-item{padding:10px 16px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .12s;font-weight:600;color:var(--text);}
+        .export-dd-item:hover{background:var(--primary-lt);color:var(--primary);}
+        .export-dd-item i{width:16px;text-align:center;font-size:12px;}
+        .export-dd-sep{height:1px;background:var(--border);margin:4px 0;
+        }
         @media(max-width:768px){
         #kelasRangeInputs{ grid-template-columns: repeat(2, 1fr) !important; }
         }
@@ -384,9 +394,39 @@
     <div class="brand">
         <h1><i class="fas fa-shield-halved"></i> ADMIN DASHBOARD</h1>
         <span>Pusat Kontrol Sistem Kontes LCI</span>
-    </div>
-    <div class="nav-actions">
-        <button class="nav-btn accent" onclick="exportCSV()"><i class="fas fa-download"></i> <span>Export CSV</span></button>
+        </div>
+            <div class="nav-actions">
+                <div class="export-wrap">
+            <button class="export-btn" onclick="document.getElementById('exportDD').classList.toggle('show')">
+                <i class="fas fa-file-excel"></i> <span>Export Excel</span>
+            </button>
+            <div class="export-dd" id="exportDD">
+                <div class="export-dd-item" onclick="doExport('all')">
+                    <i class="fas fa-layer-group" style="color:var(--primary);"></i> Export Semua Data
+                </div>
+                <div class="export-dd-sep"></div>
+                <div class="export-dd-item" onclick="doExport('daftar')">
+                    <i class="fas fa-list" style="color:var(--primary);"></i> Daftar Ikan
+                </div>
+                <div class="export-dd-item" onclick="doExport('mvp')">
+                    <i class="fas fa-star" style="color:#f59e0b;"></i> Data Ikan MVP
+                </div>
+                <div class="export-dd-sep"></div>
+                <div class="export-dd-item" onclick="doExport('ranking_kk')">
+                    <i class="fas fa-layer-group" style="color:var(--success);"></i> Ranking: Per Kat + Kelas
+                </div>
+                <div class="export-dd-item" onclick="doExport('ranking_k')">
+                    <i class="fas fa-tags" style="color:var(--warning);"></i> Ranking: Per Kategori
+                </div>
+                <div class="export-dd-item" onclick="doExport('ranking_global')">
+                    <i class="fas fa-globe" style="color:var(--danger);"></i> Ranking: Global
+                </div>
+                <div class="export-dd-sep"></div>
+                <div class="export-dd-item" onclick="doExport('users')">
+                    <i class="fas fa-users" style="color:var(--purple);"></i> Detail Pengguna
+                </div>
+            </div>
+        </div>
         <div class="nav-user"><b>{{ $user->name }}</b><small>Administrator</small></div>
         <form method="POST" action="{{ route('logout') }}" style="display:inline;">@csrf<button type="submit" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button></form>
     </div>
@@ -1988,21 +2028,15 @@ function openStatPopup(type, title){
     .catch(function(){document.getElementById('statDetailBody').innerHTML='<div class="sd-empty"><i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i><p style="color:var(--danger);">Gagal memuat data.</p></div>';});
 }
 
-function exportCSV(){
-    if(!allScoringData.length){popupInfo('Tidak Ada Data','Tidak ada data penilaian untuk diexport.');return;}
-    var header='No,Nama Peserta,Kategori,Kelas,No Tank,Asal/Team,Jumlah Juri,Total Nilai (Semua Juri),Point,Status\n',rows='';
-    for(var i=0;i<allScoringData.length;i++){
-        var p=allScoringData[i];
-        var juriNames=[];
-        if(p.juri_list) p.juri_list.forEach(function(j){juriNames.push(j.name);});
-        rows+=(i+1)+',"'+(p.nama_peserta||'')+'","'+(p.kategori||'')+'","'+(p.kelas||'')+'","'+(p.nomor_tank||'')+'","'+(p.detail_anggota||'')+'","'+(p.jumlah_juri||0)+'",'+(p.total_nilai_semua||0)+','+(p.total_point||0)+',"'+(p.grand_juri_nama?'Grand Juri Edit':p.status)+'"\n';
-    }
-    var blob=new Blob(['\uFEFF'+header+rows],{type:'text/csv;charset=utf-8;'});
-    var url=URL.createObjectURL(blob);
-    var a=document.createElement('a');a.href=url;a.download='LCI_Penilaian_Keseluruhan_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
-    URL.revokeObjectURL(url);
-    popupSuccess('Export Berhasil','File CSV (<strong>'+allScoringData.length+' data</strong>) berhasil didownload.');
+function doExport(sheets){
+    document.getElementById('exportDD').classList.remove('show');
+    window.location.href='/api/admin/export?sheets='+sheets;
 }
+document.addEventListener('click',function(e){
+    if(!e.target.closest('.export-wrap')){
+        document.getElementById('exportDD').classList.remove('show');
+    }
+});
 
 // 2. Load Dropdown Ikan yang belum dapat tank
 function loadPesertaOld(){

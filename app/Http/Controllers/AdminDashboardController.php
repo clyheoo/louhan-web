@@ -9,6 +9,8 @@ use App\Models\Ikan;
 use App\Models\User;
 use App\Helpers\PointCalculator;
 use App\Models\ScoringPointConfig;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AdminExport;
 
 class AdminDashboardController extends Controller
 {
@@ -905,5 +907,29 @@ class AdminDashboardController extends Controller
             'success' => true,
             'message' => 'Peserta "' . $peserta->nama_peserta . '" dapat kembali mendaftarkan ikan MVP.',
         ]);
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $sheets = $request->query('sheets', 'all');
+        $valid  = ['all', 'daftar', 'mvp', 'ranking_kk', 'ranking_k', 'ranking_global', 'users'];
+
+        if (!in_array($sheets, $valid)) {
+            $sheets = 'all';
+        }
+
+        $label = match ($sheets) {
+            'daftar'         => 'Daftar_Ikan',
+            'mvp'            => 'Data_MVP',
+            'ranking_kk'     => 'Ranking_Per_Kat_Kelas',
+            'ranking_k'      => 'Ranking_Per_Kategori',
+            'ranking_global' => 'Rank_Global',
+            'users'          => 'Detail_Pengguna',
+            default          => 'Semua_Data',
+        };
+
+        $fileName = 'LCI_Admin_' . $label . '_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new AdminExport($sheets), $fileName);
     }
 }
