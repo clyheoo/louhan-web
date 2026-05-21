@@ -752,9 +752,18 @@
                                     </div>
                                 </div>
                             </div>
-                            <button type="submit" class="btn-primary" style="width:100%; justify-content:center; margin-top:18px; padding:13px;">
-                                <i class="fas fa-fish" style="margin-right:6px;"></i> DAFTARKAN PESERTA & IKAN
-                            </button>
+                            <div style="display:flex; gap:10px; margin-top:18px;">
+                                <button type="button" id="btnSavePesertaOnly" onclick="submitSavePeserta()" style="flex:1; padding:13px; border-radius:12px; border:2px solid #14b8a6; background:linear-gradient(135deg,#f0fdfa,#ccfbf1); color:#0d9488; font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; transition:all .25s; letter-spacing:.2px;">
+                                    <i class="fas fa-user-check"></i> SIMPAN DATA PESERTA
+                                </button>
+                                <button type="submit" class="btn-primary" id="btnRegPesertaIkan" style="flex:1; justify-content:center; padding:13px; border-radius:12px; font-size:12px; letter-spacing:.2px;">
+                                    <i class="fas fa-fish" style="margin-right:6px;"></i> DAFTARKAN IKAN
+                                </button>
+                            </div>
+                            <div style="margin-top:8px; padding:8px 12px; background:var(--bg); border:1px solid var(--border); border-radius:8px; display:flex; gap:16px; font-size:10px; color:var(--muted);">
+                                <span><i class="fas fa-user-check" style="color:#14b8a6; margin-right:3px;"></i> Simpan data peserta saja (tanpa ikan baru)</span>
+                                <span><i class="fas fa-fish" style="color:var(--primary); margin-right:3px;"></i> Simpan data + daftarkan 1 ikan baru</span>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -2265,6 +2274,77 @@ function renderAdmRegList(list){
             admRegListEl.appendChild(div);
         })(list[i]);
     }
+}
+
+/* ═══ SIMPAN DATA PESERTA SAJA (TANPA IKAN BARU) ═══ */
+function submitSavePeserta(){
+    if(!admRegSelected){
+        popupError('Peserta Belum Dipilih','Silakan pilih nama peserta dari dropdown terlebih dahulu.');
+        return;
+    }
+
+    var jenisK = document.querySelector('#admRegToggleGroup input[name="jenis_keanggotaan"]:checked');
+    var detailVal = document.getElementById('admInputDetail').value.trim();
+
+    if(!jenisK){
+        popupError('Data Tidak Lengkap','Pilih jenis keanggotaan (Perorangan / Team).');
+        return;
+    }
+    if(!detailVal){
+        var labelDetail = document.getElementById('admLabelDetail').textContent;
+        popupError('Data Tidak Lengkap','Field <b>' + esc(labelDetail) + '</b> wajib diisi.');
+        document.getElementById('admInputDetail').focus();
+        return;
+    }
+
+    var btn = document.getElementById('btnSavePesertaOnly');
+    var originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> MENYIMPAN...';
+    btn.style.opacity = '.6';
+    btn.style.cursor = 'wait';
+
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('user_id', admRegUserIdEl.value);
+    fd.append('nama_peserta', admRegHiddenName.value);
+    fd.append('jenis_keanggotaan', jenisK.value);
+    fd.append('detail_anggota', detailVal);
+
+    fetch('/api/admin/update-peserta-data', {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'},
+        body: fd
+    })
+    .then(function(r){
+        if(!r.ok) return r.json().then(function(d){ throw d; });
+        return r.json();
+    })
+    .then(function(d){
+        if(d.success){
+            popupSuccess('Data Peserta Tersimpan', d.message);
+            loadScoringData();
+            loadDashboard();
+        } else {
+            popupError('Gagal Menyimpan', d.message || 'Terjadi kesalahan.');
+        }
+    })
+    .catch(function(e){
+        if(e.errors){
+            var msg = '';
+            var keys = Object.keys(e.errors);
+            for(var i = 0; i < keys.length; i++) msg += '<div style="margin-bottom:4px;">• ' + esc(e.errors[keys[i]][0]) + '</div>';
+            popupError('Validasi Gagal', msg);
+        } else {
+            popupError('Gagal', e.message || 'Terjadi kesalahan saat menyimpan.');
+        }
+    })
+    .finally(function(){
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+    });
 }
 
 // ── SUBMIT REGISTRASI PESERTA & IKAN ──

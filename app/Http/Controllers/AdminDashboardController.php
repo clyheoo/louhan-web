@@ -653,6 +653,35 @@ class AdminDashboardController extends Controller
         return response()->json(['found' => false]);
     }
 
+    public function updatePesertaData(Request $request)
+    {
+        $request->validate([
+            'user_id'           => 'required|exists:users,id',
+            'nama_peserta'      => 'required|string|max:255',
+            'jenis_keanggotaan' => 'required|in:perorangan,team',
+            'detail_anggota'    => 'required|string|max:255',
+        ]);
+
+        $peserta = Peserta::firstOrCreate(
+            ['user_id' => $request->user_id],
+            [
+                'nama_peserta'      => $request->nama_peserta,
+                'jenis_keanggotaan' => 'perorangan',
+                'detail_anggota'    => '-',
+            ]
+        );
+
+        $peserta->nama_peserta      = $request->nama_peserta;
+        $peserta->jenis_keanggotaan = $request->jenis_keanggotaan;
+        $peserta->detail_anggota    = $request->detail_anggota;
+        $peserta->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data peserta <strong>' . e($request->nama_peserta) . '</strong> berhasil disimpan.',
+        ]);
+    }
+
         /* ═══════════════════════════════════════════
        PENGATURAN RANGE NOMOR UNDIAN
        ═══════════════════════════════════════════ */
