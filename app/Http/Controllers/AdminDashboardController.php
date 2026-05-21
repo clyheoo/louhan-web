@@ -304,13 +304,26 @@ class AdminDashboardController extends Controller
             $pointConfig = ScoringPointConfig::where('kategori', $ikan->kategori)->first();
 
             $allScoringsData = $scorings->map(function ($s) {
+                $defectInput = [
+                    'raw_head_penalty'    => $s->raw_head_penalty ?? ['0'],
+                    'raw_face_penalty'    => $s->raw_face_penalty ?? ['0'],
+                    'raw_body_penalty'    => $s->raw_body_penalty ?? ['0'],
+                    'raw_finnage_penalty' => $s->raw_finnage_penalty ?? ['0'],
+                ];
+                $defectEval = \App\Helpers\PointCalculator::evaluateDefects($defectInput);
+
                 return [
-                    'juri_name'       => $s->juri ? $s->juri->name : '—',
-                    'is_grand'        => false,
-                    'edited_by_grand' => (bool) $s->edited_by_grand_juri,
-                    'grand_juri_name' => ($s->edited_by_grand_juri && $s->grandJuri) ? $s->grandJuri->name : null,
-                    'nilai_detail'    => $s->nilai_detail,
-                    'total_nilai'     => $s->total_nilai ?? 0,
+                    'juri_name'         => $s->juri ? $s->juri->name : '—',
+                    'is_grand'          => false,
+                    'edited_by_grand'   => (bool) $s->edited_by_grand_juri,
+                    'grand_juri_name'   => ($s->edited_by_grand_juri && $s->grandJuri) ? $s->grandJuri->name : null,
+                    'nilai_detail'      => $s->nilai_detail,
+                    'total_nilai'       => $s->total_nilai ?? 0,
+                    'raw_head_penalty'  => $s->raw_head_penalty,
+                    'raw_face_penalty'  => $s->raw_face_penalty,
+                    'raw_body_penalty'  => $s->raw_body_penalty,
+                    'raw_finnage_penalty'=> $s->raw_finnage_penalty,
+                    'defect_eval'       => $defectEval,
                 ];
             })->values()->toArray();
 

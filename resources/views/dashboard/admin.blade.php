@@ -1151,14 +1151,18 @@ function removeBonus(type){
 }
 
 var formFields={
-    overall:[{id:'impression',label:'Impression',max:100}],
-    head:[{id:'size',label:'Size',max:60},{id:'bentuk',label:'Bentuk Kepala',max:40}],
-    face:[{id:'pipi',label:'Pipi',max:25},{id:'mata',label:'Mata',max:25},{id:'bibir',label:'Bibir',max:25},{id:'kondisi',label:'Kondisi Mata & Insang',max:25}],
-    body:[{id:'bentuk',label:'Bentuk Badan',max:50},{id:'proporsi',label:'Proporsional',max:40},{id:'pangkal',label:'Pangkal',max:10}],
-    marking:[{id:'fullness',label:'Fullness',max:40},{id:'contrast',label:'Contrast',max:40},{id:'bentuk',label:'Bentuk',max:20}],
-    pearl:[{id:'shining',label:'Shining',max:45},{id:'fullness',label:'Fullness',max:35},{id:'bentuk',label:'Bentuk',max:20}],
-    color:[{id:'komposisi',label:'Komposisi',max:45},{id:'kecerahan',label:'Kecerahan',max:35},{id:'fullness',label:'Fullness',max:20}],
-    finnage:[{id:'bentuk',label:'Bentuk Sirip & Ekor',max:75},{id:'kecerahan',label:'Kecerahan',max:25}]
+    overall:[{id:'impression',label:'Impression',desc:'Kelipatan 5 (10-90)'}],
+    head:[{id:'size',label:'Size (Ukuran)',desc:'Kelipatan 5 (10-90)'},{id:'bentuk',label:'Bentuk Kepala',desc:'Kelipatan 5 (10-90)'},{id:'defect',label:'Defect',desc:'Pilih jika ada defect',type:'defect',defectKey:'raw_head_penalty'}],
+    face:[{id:'face',label:'Face',desc:'Kelipatan 5 (10-90)'},{id:'defect',label:'Defect',desc:'Pilih jika ada defect',type:'defect',defectKey:'raw_face_penalty'}],
+    body:[{id:'bentuk',label:'Bentuk Badan',desc:'Kelipatan 5 (10-90)'},{id:'proporsi',label:'Proporsional',desc:'Kelipatan 5 (10-90)'},{id:'pangkal',label:'Pangkal',desc:'Kelipatan 5 (10-90)'},{id:'defect',label:'Defect',desc:'Pilih jika ada defect',type:'defect',defectKey:'raw_body_penalty'}],
+    marking:[{id:'fullness',label:'Fullness',desc:'Kelipatan 5 (10-90)'},{id:'contrast',label:'Contrast',desc:'Kelipatan 5 (10-90)'},{id:'bentuk',label:'Bentuk',desc:'Kelipatan 5 (10-90)'}],
+    pearl:[{id:'shining',label:'Shining',desc:'Kelipatan 5 (10-90)'},{id:'fullness',label:'Fullness',desc:'Kelipatan 5 (10-90)'},{id:'bentuk',label:'Bentuk',desc:'Kelipatan 5 (10-90)'}],
+    color:[{id:'komposisi',label:'Komposisi',desc:'Kelipatan 5 (10-90)'},{id:'kecerahan',label:'Kecerahan',desc:'Kelipatan 5 (10-90)'},{id:'fullness',label:'Fullness',desc:'Kelipatan 5 (10-90)'}],
+    finnage:[{id:'bentuk',label:'Bentuk Sirip & Ekor',desc:'Kelipatan 5 (10-90)'},{id:'kecerahan',label:'Kecerahan',desc:'Kelipatan 5 (10-90)'},{id:'defect',label:'Defect',desc:'Pilih jika ada defect',type:'defect',defectKey:'raw_finnage_penalty'}]
+};
+
+var formFieldsLegacy={
+    face:[{id:'pipi',label:'Pipi'},{id:'mata',label:'Mata'},{id:'bibir',label:'Bibir'},{id:'kondisi',label:'Kondisi Mata & Insang'}]
 };
 
 /* ── TOGGLE JURI DETAIL (ADMIN) ── */
@@ -1484,16 +1488,58 @@ function renderDetailView(p){
         if(!nd||typeof nd!=='object'){
             html+='<div style="padding:16px;text-align:center;color:var(--light);font-size:12px;">Tidak ada data nilai.</div>';
         } else {
-            var kats=Object.keys(formFields);
-            for(var ki=0;ki<kats.length;ki++){
-                var kat=kats[ki],fields=formFields[kat],kn=nd[kat]||{},sub=0;
-                for(var fi=0;fi<fields.length;fi++){if(kn[fields[fi].id]!=null&&kn[fields[fi].id]!=='')sub+=parseInt(kn[fields[fi].id])||0;}
-                html+='<div class="detail-kat-mini-admin"><span>'+kat.toUpperCase()+'</span><span>Subtotal: '+sub+'</span></div>';
-                for(var fj=0;fj<fields.length;fj++){
-                    var f=fields[fj],v=kn[f.id],has=(v!=null&&v!=='');
-                    html+='<div class="detail-field-row-admin"><div><div class="detail-field-admin-name">'+f.label+'</div><div class="detail-field-admin-meta">Maks '+f.max+'</div></div><span class="score-chip-admin '+(has?'filled':'empty')+'">'+(has?v:'N/A')+'</span></div>';
+            Object.keys(formFields).forEach(function(kat){
+                var fields=formFields[kat];
+                if(kat==='face'&&nd.face){
+                    if(nd.face.face===undefined&&(nd.face.pipi!==undefined||nd.face.mata!==undefined)){
+                        fields=formFieldsLegacy.face;
+                    }
                 }
-            }
+                html+='<div style="margin-bottom:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">';
+                var katNilai=nd[kat]||{},sub=0;
+                fields.forEach(function(f){if(f.type==='defect')return;if(katNilai[f.id]!==undefined&&katNilai[f.id]!==null)sub+=parseInt(katNilai[f.id])||0;});
+
+                var defectEval=sc.defect_eval||{};
+                var penaltyKey=kat+'_penalty';
+                var penaltyStr=defectEval[penaltyKey]||'';
+                var defectPersen=0,hasDefect=false,defectNames=[];
+                if(penaltyStr&&penaltyStr!==''){
+                    hasDefect=true;defectPersen=parseInt(penaltyStr)||0;
+                    var rawKey='raw_'+kat+'_penalty',rawDefs=sc[rawKey];
+                    if(rawDefs){if(!Array.isArray(rawDefs))rawDefs=[rawDefs];defectNames=rawDefs.filter(function(v){return v&&v!=='0';});}
+                }
+                var displaySub=sub;
+                if(hasDefect&&defectPersen>0){displaySub=Math.round(sub*(1-defectPersen/100)*10)/10;}
+
+                if(hasDefect&&defectPersen>0){
+                    html+='<div class="detail-kat-mini-admin"><span>'+kat.toUpperCase()+'</span><span>Subtotal: <s style="color:var(--light);font-size:10px;">'+sub+'</s> → <strong style="color:var(--primary);">'+displaySub+'</strong> <span style="color:var(--danger);font-weight:700;">(-'+defectPersen+'%)</span></span></div>';
+                }else{
+                    html+='<div class="detail-kat-mini-admin"><span>'+kat.toUpperCase()+'</span><span>Subtotal: '+sub+'</span></div>';
+                }
+
+                var hasDefectField=fields.some(function(f){return f.type==='defect';});
+                fields.forEach(function(f){
+                    if(f.type==='defect')return;
+                    var val=katNilai[f.id],has=(val!==undefined&&val!==null&&val!=='');
+                    html+='<div class="detail-field-row-admin"><div><div class="detail-field-admin-name">'+f.label+'</div><div class="detail-field-admin-meta">'+f.desc+'</div></div><span class="score-chip-admin '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
+                });
+
+                if(hasDefectField){
+                    if(hasDefect&&defectPersen>0&&defectNames.length>0){
+                        var isMayor=defectPersen>=30;
+                        html+='<div class="detail-field-row-admin" style="background:'+(isMayor?'var(--danger-lt)':'#fff7ed')+';">';
+                        html+='<div><div class="detail-field-admin-name" style="color:'+(isMayor?'var(--danger)':'#c2410c')+';"><i class="fas fa-exclamation-triangle" style="margin-right:4px;font-size:10px;"></i>Defect '+(isMayor?'(MAYOR)':'(MINOR)')+'</div>';
+                        html+='<div class="detail-field-admin-meta" style="color:'+(isMayor?'#991b1b':'#9a3412')+';font-weight:600;">'+defectNames.join(', ')+'</div></div>';
+                        html+='<span class="score-chip-admin" style="background:'+(isMayor?'var(--danger-lt)':'#fff7ed')+';color:'+(isMayor?'var(--danger)':'#c2410c')+';font-weight:800;">-'+defectPersen+'%</span></div>';
+                    }else{
+                        html+='<div class="detail-field-row-admin" style="background:var(--success-lt);">';
+                        html+='<div><div class="detail-field-admin-name" style="color:var(--success);"><i class="fas fa-check-circle" style="margin-right:4px;font-size:10px;"></i>Defect</div>';
+                        html+='<div class="detail-field-admin-meta" style="color:#15803d;font-weight:600;">Tidak ada defect</div></div>';
+                        html+='<span class="score-chip-admin" style="background:var(--success-lt);color:var(--success);font-weight:800;">AMAN</span></div>';
+                    }
+                }
+                html+='</div>';
+            });
         }
         html+='</div></div>';
     });
