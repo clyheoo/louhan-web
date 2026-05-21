@@ -6,6 +6,7 @@ use App\Exports\Sheets\DaftarIkanSheet;
 use App\Exports\Sheets\MvpIkanSheet;
 use App\Exports\Sheets\PointRankingSheet;
 use App\Exports\Sheets\RumusPenilaianSheet;
+use App\Exports\Sheets\UserDetailSheet; // 1. TAMBAHKAN INI
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 class GrandJuriExport implements WithMultipleSheets
@@ -27,6 +28,7 @@ class GrandJuriExport implements WithMultipleSheets
             $result[] = new MvpIkanSheet();
             $result[] = new PointRankingSheet($rankingScope);
             $result[] = new RumusPenilaianSheet();
+            $result[] = new UserDetailSheet(); // 2. TAMBAHKAN INI AGAR IKUT SAAT EXPORT 'ALL'
         } elseif ($this->sheets === 'daftar') {
             $result[] = new DaftarIkanSheet();
         } elseif ($this->sheets === 'mvp') {
@@ -37,8 +39,10 @@ class GrandJuriExport implements WithMultipleSheets
             $result[] = new PointRankingSheet('per_kategori');
         } elseif ($this->sheets === 'ranking_global') {
             $result[] = new PointRankingSheet('global');
+        } elseif ($this->sheets === 'users') { // 3. TAMBAHKAN INI UNTUK EXPORT SPESIFIK SHEET INI
+            $result[] = new UserDetailSheet();
         }
 
         return $result;
     }
-}   
+}
