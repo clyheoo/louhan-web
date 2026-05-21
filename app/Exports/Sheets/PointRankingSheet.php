@@ -34,6 +34,18 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
         'finnage'  => ['label' => 'FINNAGE',    'fields' => [['id'=>'bentuk','label'=>'Bentuk Sirip & Ekor'],['id'=>'kecerahan','label'=>'Kecerahan']]],
     ];
 
+    // ★ Mapping field ID ke nama kolom config database
+    private const PCT_MAP = [
+        'overall' => ['impression' => 'overall_point'],
+        'head' => ['size' => 'head_size_pct', 'bentuk' => 'head_bentuk_k_pct'],
+        'face' => ['face' => 'face_face_pct'],
+        'body' => ['bentuk' => 'body_bentuk_pct', 'proporsi' => 'body_proposional_pct', 'pangkal' => 'body_pangkal_pct'],
+        'marking' => ['fullness' => 'marking_fullness_pct', 'contrast' => 'marking_contrast_pct', 'bentuk' => 'marking_bentuk_pct'],
+        'pearl' => ['shinning' => 'pearl_shinning_pct', 'fullness' => 'pearl_fullnes_pct', 'bentuk' => 'pearl_bentuk_pearl_pct'],
+        'color' => ['komposisi' => 'color_komposisi_pct', 'kecerahan' => 'color_kecerahan_pct', 'fullness' => 'color_fullness_colour_pct'],
+        'finnage' => ['bentuk' => 'finnage_bentuk_sirip_ekor_pct', 'kecerahan' => 'finnage_kecerahan_pct'],
+    ];
+
     public function __construct($scope = 'per_kategori_kelas') { $this->scope = $scope; }
 
     public function title(): string
@@ -46,12 +58,17 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
         };
     }
 
+    /**
+     * ★ MENGHITUNG POINT IKAN - 100% KONSISTEN DENGAN POINTCALCULATOR
+     */
     private function calcIkan($ikan, $configs)
     {
         $scorings = $ikan->scorings->filter(fn($s) => $s->submitted_to_grand);
         if ($scorings->isEmpty()) return null;
         
-        // 1. Hitung Rata-rata Nilai Detail
+        // ═══════════════════════════════════════════════════════════
+        // STEP 1: Hitung Rata-rata Nilai Detail dari Semua Juri
+        // ═══════════════════════════════════════════════════════════
         $avgDetail = [];
         $jumlahJuriYangNilai = 0;
 
@@ -62,9 +79,12 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                     if (!is_array($fields)) continue;
                     foreach ($fields as $fid => $val) {
                         if ($fid === 'defect') continue;
+                        // Fix typo shining -> shinning
                         if ($kat === 'pearl' && $fid === 'shining') $fid = 'shinning';
                         
-                        if (!isset($avgDetail[$kat][$fid])) $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                        if (!isset($avgDetail[$kat][$fid])) {
+                            $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                        }
                         $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
                         $avgDetail[$kat][$fid]['count']++;
                     }
@@ -72,136 +92,136 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
             }
         }
 
-        // Inisialisasi struktur data final untuk menghindari error "Undefined array key"
         $finalAvgDetail = [];
-        foreach (self::CATS as $kat => $info) {
-            $finalAvgDetail[$kat] = [];
-            foreach ($info['fields'] as $f) {
-                $finalAvgDetail[$kat][$f['id']] = 0;
-            }
-        }
-
         if ($jumlahJuriYangNilai > 0) {
             foreach ($avgDetail as $kat => $fields) {
+                $finalAvgDetail[$kat] = [];
                 foreach ($fields as $fid => $d) {
-                    if (isset($finalAvgDetail[$kat][$fid])) {
-                        $finalAvgDetail[$kat][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
-                    }
+                    $finalAvgDetail[$kat][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
                 }
             }
         }
 
-        // 2. Gabungkan Defect
-        $defectKeysMapping = ['head' => 'raw_head_penalty', 'face' => 'raw_face_penalty', 'body' => 'raw_body_penalty', 'finnage' => 'raw_finnage_penalty'];
+        // ═══════════════════════════════════════════════════════════
+        // STEP 2: Gabungkan Defect dari Semua Juri (Union - tanpa duplikat)
+        // ═══════════════════════════════════════════════════════════
+        $defectKeys = ['raw_head_penalty', 'raw_face_penalty', 'raw_body_penalty', 'raw_finnage_penalty'];
         $combinedDefects = [];
-        $defectDataForCalc = [];
-
-        foreach ($defectKeysMapping as $k => $dk) { 
-            $combinedDefects[$k] = []; 
-            $defectDataForCalc[$dk] = []; 
+        foreach ($defectKeys as $dk) { 
+            $combinedDefects[$dk] = []; 
         }
 
         foreach ($scorings as $s) {
-            foreach ($defectKeysMapping as $cat => $rawKey) {
-                $defs = $s->$rawKey; // Sudah array karena cast di Model
+            foreach ($defectKeys as $dk) {
+                $defs = $s->$dk;
                 if (!$defs) continue;
-                
-                // Pastikan array (meskipun cast sudah ada, safety check)
-                if (!is_array($defs)) $defs = [$defs];
-
+                if (is_string($defs)) $defs = [$defs];
+                if (!is_array($defs)) continue;
                 foreach ($defs as $d) {
-                    if ($d && $d !== '0') {
-                        if (!in_array($d, $combinedDefects[$cat])) {
-                            $combinedDefects[$cat][] = $d;
-                        }
-                        $defectDataForCalc[$rawKey][] = $d;
+                    if ($d && $d !== '0' && !in_array($d, $combinedDefects[$dk])) {
+                        $combinedDefects[$dk][] = $d;
                     }
                 }
             }
         }
         
-        // Pastikan key ada untuk kalkulasi
-        foreach ($defectKeysMapping as $rawKey) {
-            if (empty($defectDataForCalc[$rawKey])) $defectDataForCalc[$rawKey] = ['0'];
+        // Format untuk dikirim ke helper (harus ada value minimal '0' jika kosong)
+        $defectDataForCalc = [];
+        foreach ($combinedDefects as $dk => &$defs) {
+            $defectDataForCalc[$dk] = count($defs) > 0 ? $defs : ['0'];
         }
+        unset($defs);
 
-        // 3. Hitung Point via Helper
+        // ═══════════════════════════════════════════════════════════
+        // STEP 3: Hitung Breakdown Point menggunakan HELPER (KONSISTEN!)
+        // ═══════════════════════════════════════════════════════════
         $breakdown = PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail);
-        $evaluatedDefects = PointCalculator::evaluateDefects($defectDataForCalc);
+        
+        if (!$breakdown) return null;
 
+        // ═══════════════════════════════════════════════════════════
+        // STEP 4: Hitung Detail Defect menggunakan HELPER
+        // ═══════════════════════════════════════════════════════════
+        $defectDetails = PointCalculator::getDefectDetails($defectDataForCalc);
+        
+        // ═══════════════════════════════════════════════════════════
+        // STEP 5: Hitung Point Per Field untuk Display Kolom Excel
+        // Menggunakan RUMUS YANG SAMA PERSIS dengan PointCalculator
+        // ═══════════════════════════════════════════════════════════
+        $cfg = $configs->get($ikan->kategori);
         $compPoints = [];
         $catSubs = [];
         $totalDeduction = 0;
-        $defectDisplay = [];
-
-        $cfg = $configs->get($ikan->kategori);
-
-        if ($breakdown) {
+        
+        if ($cfg) {
             foreach (self::CATS as $kat => $info) {
-                // A. Hitung Komponen Field
-                $bobot = (float)($cfg->{$kat . '_bobot'} ?? 0);
+                $bobotKey = $kat . '_bobot';
+                $bobot = (float)($cfg->$bobotKey ?? 0);
                 
-                $pctMap = [
-                    'head'     => ['size' => 'head_size_pct', 'bentuk' => 'head_bentuk_k_pct'],
-                    'face'     => ['face' => 'face_face_pct'],
-                    'body'     => ['bentuk' => 'body_bentuk_pct', 'proporsi' => 'body_proposional_pct', 'pangkal' => 'body_pangkal_pct'],
-                    'marking'  => ['fullness' => 'marking_fullness_pct', 'contrast' => 'marking_contrast_pct', 'bentuk' => 'marking_bentuk_pct'],
-                    'pearl'    => ['shinning' => 'pearl_shinning_pct', 'fullness' => 'pearl_fullnes_pct', 'bentuk' => 'pearl_bentuk_pearl_pct'],
-                    'color'    => ['komposisi' => 'color_komposisi_pct', 'kecerahan' => 'color_kecerahan_pct', 'fullness' => 'color_fullness_colour_pct'],
-                    'finnage'  => ['bentuk' => 'finnage_bentuk_sirip_ekor_pct', 'kecerahan' => 'finnage_kecerahan_pct'],
-                    'overall'  => ['impression' => 'overall_point']
-                ];
-
+                // Hitung point per field menggunakan rumus: (nilai × bobot × pct) / 100
                 foreach ($info['fields'] as $f) {
                     $val = $finalAvgDetail[$kat][$f['id']] ?? 0;
-                    $pctColName = $pctMap[$kat][$f['id']] ?? null;
+                    $pctColName = self::PCT_MAP[$kat][$f['id']] ?? null;
+                    $pct = $pctColName ? (float)($cfg->$pctColName ?? 0) : 0;
                     
-                    if ($kat === 'overall') {
-                        $overallPointVal = (float)($cfg->overall_point ?? 0);
-                        $compPoints[$kat][$f['id']] = round(($val * $bobot * $overallPointVal) / 100, 2);
-                    } else {
-                        $pct = $pctColName ? (float)($cfg->$pctColName ?? 0) : 0;
-                        $compPoints[$kat][$f['id']] = round(($val * $bobot * $pct) / 100, 2);
-                    }
+                    // ★ RUMUS SAMA PERSIS DENGAN HELPER
+                    $compPoints[$kat][$f['id']] = round(($val * $bobot * $pct) / 100, 2);
                 }
-
-                // B. Hitung Subtotal & Defect
-                $rawPoint = $breakdown[$kat]['point'] ?? 0;
-                $penaltyKey = $kat . '_penalty';
                 
-                if (in_array($kat, self::DEFECT_CATS) && !empty($evaluatedDefects[$penaltyKey])) {
-                    $penaltyStr = $evaluatedDefects[$penaltyKey]; // "10%" atau "30%"
-                    $penaltyPercent = (float)str_replace('%', '', $penaltyStr);
-                    
+                // ═══════════════════════════════════════════════════
+                // STEP 6: Ambil Subtotal dari Breakdown & Terapkan Penalty
+                // ═══════════════════════════════════════════════════
+                $rawPoint = $breakdown[$kat]['point'] ?? 0;
+                
+                // Terapkan defect penalty jika ada
+                $defectInfo = $defectDetails[$kat] ?? [];
+                if (!empty($defectInfo['percent'])) {
+                    $penaltyPercent = $defectInfo['percent_value'];
                     $deductionAmount = $rawPoint * ($penaltyPercent / 100);
                     $totalDeduction += $deductionAmount;
                     $catSubs[$kat] = round($rawPoint - $deductionAmount, 2);
-
-                    // Format: "Kutil, Bengkok (10%)"
-                    $items = implode(", ", $combinedDefects[$cat]);
-                    $defectDisplay[$kat] = $items . " (" . $penaltyStr . ")";
                 } else {
                     $catSubs[$kat] = $rawPoint;
-                    $defectDisplay[$kat] = implode(", ", $combinedDefects[$cat]);
                 }
             }
         }
 
-        $totalPoint = round(array_sum($catSubs));
+        // ═══════════════════════════════════════════════════════════
+        // STEP 7: Format Defect Strings untuk Kolom Excel
+        // Format: "10% - Minor: Kutil" atau "30% - Mayor: Bagian Bibir Hilang"
+        // ═══════════════════════════════════════════════════════════
+        $defectStrings = [];
+        foreach (self::DEFECT_CATS as $cat) {
+            $info = $defectDetails[$cat] ?? [];
+            if (!empty($info['percent'])) {
+                $defectStrings[$cat] = $info['percent'] . ' - ' . $info['label'];
+            } else {
+                $defectStrings[$cat] = '';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // STEP 8: Hitung Final Values
+        // ═══════════════════════════════════════════════════════════
+        $totalPoint = $breakdown['total'] ?? round(array_sum($catSubs));
         $totalBonus = (int) $ikan->bonusPoints->sum('points');
+        $totalDeductionPercent = $defectDetails['total_deduction_percent'] ?? 0;
 
         return [
             'nama_peserta' => $ikan->peserta->nama_peserta ?? '—',
-            'kategori' => $ikan->kategori, 'kelas' => $ikan->kelas ?? '—',
-            'nomor_tank' => $ikan->nomor_tank, 'asal' => $ikan->peserta->detail_anggota ?? '—',
+            'kategori' => $ikan->kategori, 
+            'kelas' => $ikan->kelas ?? '—',
+            'nomor_tank' => $ikan->nomor_tank, 
+            'asal' => $ikan->peserta->detail_anggota ?? '—',
             'jml_juri' => $scorings->count(), 
             'comp_points' => $compPoints,
             'cat_subs' => $catSubs, 
             'total_point' => $totalPoint,
             'total_deduction' => round($totalDeduction, 2),
+            'total_deduction_percent' => $totalDeductionPercent,
             'total_bonus' => $totalBonus, 
             'final_point' => $totalPoint + $totalBonus,
-            'defects' => $defectDisplay,
+            'defects' => $defectStrings,
         ];
     }
 
@@ -226,16 +246,24 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
         }
         if ($this->scope !== 'global') ksort($groups);
 
+        // ═══════════════════════════════════════════════════════════
+        // HITUNG POSISI KOLOM DINAMIS
+        // ═══════════════════════════════════════════════════════════
         $this->catStartCols = [];
-        $col = 8;
+        $col = 8; // Dimulai dari kolom H (setelah 7 kolom fixed)
+        
         foreach (self::CATS as $kat => $info) {
             $this->catStartCols[] = $col;
             $hasDefect = in_array($kat, self::DEFECT_CATS);
             $fieldCount = count($info['fields']);
             $defectCol = $hasDefect ? 1 : 0;
+            // Kolom: fields + defect (jika ada) + subtotal
             $col += $fieldCount + $defectCol + 1; 
         }
 
+        // ═══════════════════════════════════════════════════════════
+        // ROW 1: HEADER KATEGORI (OVERALL, HEAD, FACE, dll)
+        // ═══════════════════════════════════════════════════════════
         $fixedH = ['RANK', 'PESERTA', 'KATEGORI', 'KELAS', 'NO TANK', 'ASAL / TEAM', 'JML JURI'];
         $catRow = $fixedH;
         $this->mergeRanges = [];
@@ -254,9 +282,15 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
             $col += $n;
         }
         
-        foreach (['TOTAL POINT', 'DEFECT DEDUCTION', 'BONUS', 'FINAL POINT', 'RANK POINT'] as $h) $catRow[] = $h;
+        // Kolom Fixed di akhir
+        foreach (['TOTAL POINT', 'DEFECT DEDUCTION', 'BONUS', 'FINAL POINT', 'RANK POINT'] as $h) {
+            $catRow[] = $h;
+        }
         $colCount = count($catRow);
 
+        // ═══════════════════════════════════════════════════════════
+        // ROW 2: HEADER DETAIL (Size, Bentuk, DEFECT, SUBTOTAL, dll)
+        // ═══════════════════════════════════════════════════════════
         $compRow = $fixedH;
         foreach (self::CATS as $kat => $info) {
             foreach ($info['fields'] as $f) {
@@ -267,40 +301,74 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
             }
             $compRow[] = 'SUBTOTAL';
         }
-        for ($i=0; $i < 5; $i++) $compRow[] = ''; 
+        // Kolom Fixed di akhir (kosong karena sudah di row 1)
+        for ($i = 0; $i < 5; $i++) { 
+            $compRow[] = ''; 
+        }
 
         $rows = [$catRow, $compRow];
-        foreach ($groups as $groupName => $items) {
-            usort($items, fn($a, $b) => $b['final_point'] <=> $a['final_point']);
-            $ranked = [];
-            foreach ($items as $i => $it) { $it['rank_point'] = max(1, 100 - $i); $ranked[] = $it; }
 
+        // ═══════════════════════════════════════════════════════════
+        // DATA ROWS: Grouped & Ranked
+        // ═══════════════════════════════════════════════════════════
+        foreach ($groups as $groupName => $items) {
+            // Sort by final_point descending
+            usort($items, fn($a, $b) => $b['final_point'] <=> $a['final_point']);
+            
+            // Assign rank point
+            $ranked = [];
+            foreach ($items as $i => $it) { 
+                $it['rank_point'] = max(1, 100 - $i); 
+                $ranked[] = $it; 
+            }
+
+            // Separator Row
             $sep = array_fill(0, $colCount, '');
             $sep[0] = '▶ ' . strtoupper($groupName) . ' (' . count($ranked) . ' peserta)';
             $rows[] = $sep;
 
+            // Data Rows
             foreach ($ranked as $i => $d) {
-                $row = [$i + 1, $d['nama_peserta'], strtoupper($d['kategori']), $d['kelas'], $d['nomor_tank'], $d['asal'], $d['jml_juri']];
+                $row = [
+                    $i + 1, 
+                    $d['nama_peserta'], 
+                    strtoupper($d['kategori']), 
+                    $d['kelas'], 
+                    $d['nomor_tank'], 
+                    $d['asal'], 
+                    $d['jml_juri']
+                ];
                 
+                // Point per kategori
                 foreach (self::CATS as $kat => $info) {
+                    // Field points
                     foreach ($info['fields'] as $f) {
                         $row[] = $d['comp_points'][$kat][$f['id']] ?? 0;
                     }
+                    // Defect info (hanya kategori yang punya defect)
                     if (in_array($kat, self::DEFECT_CATS)) {
+                        // ★ FORMAT: "10% - Minor: Kutil" atau "30% - Mayor: Bagian Bibir Hilang"
                         $row[] = $d['defects'][$kat] ?? '';
                     }
+                    // Subtotal (sudah dikurangi penalty)
                     $row[] = $d['cat_subs'][$kat] ?? 0;
                 }
                 
+                // Kolom Fixed
                 $row[] = $d['total_point'];
-                $row[] = -$d['total_deduction'];
+                // ★ DEFECT DEDUCTION: Tampilkan persen total pengurangan
+                $row[] = $d['total_deduction_percent'] > 0 ? $d['total_deduction_percent'] . '%' : '-';
                 $row[] = $d['total_bonus'];
                 $row[] = $d['final_point'];
                 $row[] = $d['rank_point'];
+                
                 $rows[] = $row;
             }
+            
+            // Empty row after group
             $rows[] = array_fill(0, $colCount, '');
         }
+        
         return $rows;
     }
 
@@ -312,30 +380,76 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
             $lastColIdx = Coordinate::columnIndexFromString($lastCol);
             $lastRow = $sheet->getHighestRow();
 
+            // ═══════════════════════════════════════════════════════════
+            // SET COLUMN WIDTHS
+            // ═══════════════════════════════════════════════════════════
             for ($c = 1; $c <= $lastColIdx; $c++) {
                 $letter = Coordinate::stringFromColumnIndex($c);
-                $w = $c <= 2 ? 14 : ($c <= 7 ? 12 : 13); 
+                if ($c <= 2) {
+                    $w = 14;
+                } elseif ($c <= 7) {
+                    $w = 12;
+                } else {
+                    // Cek apakah ini kolom DEFECT (lebih lebar untuk teks panjang)
+                    $isDefectCol = false;
+                    $colOffset = $c - 8;
+                    $checkCol = 8;
+                    foreach (self::CATS as $kat => $info) {
+                        $hasDefect = in_array($kat, self::DEFECT_CATS);
+                        $fieldCount = count($info['fields']);
+                        
+                        if ($hasDefect && $c == $checkCol + $fieldCount) {
+                            $isDefectCol = true;
+                            break;
+                        }
+                        $checkCol += $fieldCount + ($hasDefect ? 1 : 0) + 1;
+                    }
+                    
+                    // Cek apakah ini kolom DEFECT DEDUCTION
+                    $deductionColIdx = $lastColIdx - 4;
+                    $isDeductionCol = ($c == $deductionColIdx);
+                    
+                    if ($isDefectCol) {
+                        $w = 40; // Lebar untuk teks defect panjang
+                    } elseif ($isDeductionCol) {
+                        $w = 18;
+                    } else {
+                        $w = 13;
+                    }
+                }
                 $sheet->getColumnDimension($letter)->setAutoSize(false)->setWidth($w);
             }
 
+            // ═══════════════════════════════════════════════════════════
+            // MERGE CELLS untuk Header Kategori
+            // ═══════════════════════════════════════════════════════════
             foreach ($this->mergeRanges as $range) {
                 $s = Coordinate::stringFromColumnIndex($range[0]);
                 $e = Coordinate::stringFromColumnIndex($range[1]);
                 $sheet->mergeCells("{$s}1:{$e}1");
             }
 
+            // ═══════════════════════════════════════════════════════════
+            // STYLE ROW 1: Header Kategori (Ungu Tua)
+            // ═══════════════════════════════════════════════════════════
             $sheet->getStyle("A1:{$lastCol}1")->applyFromArray([
                 'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => 'FFFFFF']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => '6D28D9']],
                 'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
             ]);
 
+            // ═══════════════════════════════════════════════════════════
+            // STYLE ROW 2: Header Detail (Ungu Muda)
+            // ═══════════════════════════════════════════════════════════
             $sheet->getStyle("A2:{$lastCol}2")->applyFromArray([
                 'font' => ['bold' => true, 'size' => 9, 'color' => ['rgb' => 'FFFFFF']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => '7C3AED']],
                 'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
             ]);
 
+            // ═══════════════════════════════════════════════════════════
+            // SEPARATOR LINES (Garis Tebal Pembatas Kategori)
+            // ═══════════════════════════════════════════════════════════
             $separatorCols = array_slice($this->catStartCols, 1);
             $totalPointCol = $lastColIdx - 4;
             $separatorCols[] = $totalPointCol;
@@ -350,6 +464,9 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                 $sheet->getStyle("{$colLetter}2")->applyFromArray(['borders' => $thickBorder]);
             }
 
+            // ═══════════════════════════════════════════════════════════
+            // IDENTIFIKASI KOLOM SUBTOTAL
+            // ═══════════════════════════════════════════════════════════
             $subtotalCols = [];
             $col = 8;
             foreach (self::CATS as $kat => $info) {
@@ -360,42 +477,97 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                 $col++;
             }
 
+            // ═══════════════════════════════════════════════════════════
+            // IDENTIFIKASI KOLOM DEFECT (untuk styling khusus)
+            // ═══════════════════════════════════════════════════════════
+            $defectCols = [];
+            $col = 8;
+            foreach (self::CATS as $kat => $info) {
+                $hasDefect = in_array($kat, self::DEFECT_CATS);
+                $fieldCount = count($info['fields']);
+                if ($hasDefect) {
+                    $defectCols[] = $col + $fieldCount;
+                }
+                $col += $fieldCount + ($hasDefect ? 1 : 0) + 1;
+            }
+
+            // ═══════════════════════════════════════════════════════════
+            // STYLE DATA ROWS
+            // ═══════════════════════════════════════════════════════════
+            $toggle = false;
             for ($r = 3; $r <= $lastRow; $r++) {
                 $val = $sheet->getCell("A{$r}")->getValue();
+                
+                // Separator Row (Group Header)
                 if ($val && str_starts_with($val, '▶')) {
                     $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
                     $sheet->getStyle("A{$r}:{$lastCol}{$r}")->applyFromArray([
                         'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '4C1D95']],
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F5F3FF']],
                     ]);
-                } elseif ($val !== '') {
+                } 
+                // Data Row
+                elseif ($val !== '') {
                     $sheet->getStyle("A{$r}:{$lastCol}{$r}")->applyFromArray([
                         'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
                     ]);
 
-                    $deductionColLetter = Coordinate::stringFromColumnIndex($totalPointCol + 1);
-                    $sheet->getStyle("{$deductionColLetter}{$r}")->getNumberFormat()->setFormatCode('[Red]-0.00');
-
-                    if (isset($toggle) && $toggle) {
+                    // Alternating row colors
+                    if ($toggle) {
                         $sheet->getStyle("A{$r}:{$lastCol}{$r}")->applyFromArray([
                             'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FAF5FF']],
                         ]);
                     }
-                    $toggle = !($toggle ?? false);
+                    $toggle = !$toggle;
 
+                    // Separator lines di data rows
                     foreach ($separatorCols as $colIdx) {
                         $colLetter = Coordinate::stringFromColumnIndex($colIdx);
                         $sheet->getStyle("{$colLetter}{$r}")->applyFromArray(['borders' => $thickBorder]);
                     }
+
+                    // ★ Style khusus kolom DEFECT (align left, wrap text, warna khusus)
+                    foreach ($defectCols as $colIdx) {
+                        $colLetter = Coordinate::stringFromColumnIndex($colIdx);
+                        $cellValue = $sheet->getCell("{$colLetter}{$r}")->getValue();
+                        
+                        if ($cellValue && $cellValue !== '') {
+                            // Deteksi apakah Mayor atau Minor untuk warna berbeda
+                            $isMayor = str_contains($cellValue, 'Mayor');
+                            $bgColor = $isMayor ? 'FEE2E2' : 'FEF3C7'; // Merah muda untuk Mayor, Kuning untuk Minor
+                            $textColor = $isMayor ? '991B1B' : '92400E';
+                            
+                            $sheet->getStyle("{$colLetter}{$r}")->applyFromArray([
+                                'alignment' => ['horizontal' => 'left', 'vertical' => 'center', 'wrapText' => true],
+                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => $bgColor]],
+                                'font' => ['size' => 8, 'color' => ['rgb' => $textColor]],
+                            ]);
+                        }
+                    }
+
+                    // ★ Style khusus kolom DEFECT DEDUCTION
+                    $deductionColLetter = Coordinate::stringFromColumnIndex($totalPointCol + 1);
+                    $deductionValue = $sheet->getCell("{$deductionColLetter}{$r}")->getValue();
+                    if ($deductionValue && $deductionValue !== '-') {
+                        $sheet->getStyle("{$deductionColLetter}{$r}")->applyFromArray([
+                            'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => 'DC2626']],
+                        ]);
+                    }
                 }
             }
 
+            // ═══════════════════════════════════════════════════════════
+            // BORDER ALL CELLS
+            // ═══════════════════════════════════════════════════════════
             $sheet->getStyle("A2:{$lastCol}{$lastRow}")->applyFromArray([
                 'borders' => [
                     'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'DDD6FE']],
                 ],
             ]);
 
+            // ═══════════════════════════════════════════════════════════
+            // STYLE KOLOM SUBTOTAL (Bold + Background)
+            // ═══════════════════════════════════════════════════════════
             foreach ($subtotalCols as $colIdx) {
                 $colLetter = Coordinate::stringFromColumnIndex($colIdx);
                 $sheet->getStyle("{$colLetter}3:{$colLetter}{$lastRow}")->applyFromArray([
@@ -404,11 +576,21 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                 ]);
             }
 
+            // ═══════════════════════════════════════════════════════════
+            // NUMBER FORMAT untuk kolom point
+            // ═══════════════════════════════════════════════════════════
             for ($c = 8; $c <= $lastColIdx - 5; $c++) {
                 $colLetter = Coordinate::stringFromColumnIndex($c);
-                $sheet->getStyle("{$colLetter}3:{$colLetter}{$lastRow}")->getNumberFormat()->setFormatCode('0.00');
+                // Skip kolom defect (bukan angka)
+                if (!in_array($c, $defectCols)) {
+                    $sheet->getStyle("{$colLetter}3:{$colLetter}{$lastRow}")
+                        ->getNumberFormat()->setFormatCode('0.00');
+                }
             }
 
+            // ═══════════════════════════════════════════════════════════
+            // FREEZE PANES & ROW HEIGHT
+            // ═══════════════════════════════════════════════════════════
             $sheet->freezePane('H3');
             $sheet->getRowDimension(1)->setRowHeight(20);
             $sheet->getRowDimension(2)->setRowHeight(30);

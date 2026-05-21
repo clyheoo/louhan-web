@@ -284,4 +284,87 @@ class PointCalculator
 
         return $items;
     }
+
+        public static function getDefectDetails(array $defectData): array
+    {
+        $parts = ['head', 'face', 'body', 'finnage'];
+        $partStatus = [
+            'head'    => ['minor' => false, 'mayor' => false, 'items' => [], 'minorItems' => [], 'mayorItems' => []],
+            'face'    => ['minor' => false, 'mayor' => false, 'items' => [], 'minorItems' => [], 'mayorItems' => []],
+            'body'    => ['minor' => false, 'mayor' => false, 'items' => [], 'minorItems' => [], 'mayorItems' => []],
+            'finnage' => ['minor' => false, 'mayor' => false, 'items' => [], 'minorItems' => [], 'mayorItems' => []],
+        ];
+        $minorCount = 0;
+        
+        foreach ($parts as $p) {
+            $key = "raw_{$p}_penalty";
+            $defs = $defectData[$key] ?? ['0'];
+            if (is_string($defs)) $defs = [$defs];
+            
+            foreach ($defs as $d) {
+                if ($d && $d !== '0') {
+                    $partStatus[$p]['items'][] = $d;
+                    if (in_array($d, self::MINOR_DEFECTS)) { 
+                        $minorCount++; 
+                        $partStatus[$p]['minor'] = true;
+                        $partStatus[$p]['minorItems'][] = $d;
+                    }
+                    if (in_array($d, self::MAYOR_DEFECTS)) { 
+                        $partStatus[$p]['mayor'] = true;
+                        $partStatus[$p]['mayorItems'][] = $d;
+                    }
+                }
+            }
+        }
+        
+        // ★ LOGIC: 3 Minor di seluruh tubuh = otomatis MAYOR
+        $isGlobalMayor = $minorCount >= 3;
+        $results = [];
+        $totalDeductionPercent = 0;
+        
+        foreach ($parts as $p) {
+            $result = [
+                'items' => [],
+                'percent' => '',
+                'percent_value' => 0,
+                'is_minor' => false,
+                'is_mayor' => false,
+                'label' => ''
+            ];
+            
+            if (count($partStatus[$p]['items']) > 0) {
+                // Mayor jika: ada defect mayor langsung, ATAU ada minor tapi total minor global >= 3
+                $isMayor = $partStatus[$p]['mayor'] || ($partStatus[$p]['minor'] && $isGlobalMayor);
+                $percentValue = $isMayor ? 30 : 10;
+                $percent = $isMayor ? '30%' : '10%';
+                $totalDeductionPercent += $percentValue;
+                
+                $result['items'] = $partStatus[$p]['items'];
+                $result['percent'] = $percent;
+                $result['percent_value'] = $percentValue;
+                $result['is_minor'] = $partStatus[$p]['minor'];
+                $result['is_mayor'] = $isMayor;
+                
+                if ($isMayor) {
+                    // Prioritaskan tampilkan Mayor items dulu
+                    if (!empty($partStatus[$p]['mayorItems'])) {
+                        $result['label'] = 'Mayor: ' . implode(', ', $partStatus[$p]['mayorItems']);
+                    } else {
+                        // Mayor karena akumulasi 3+ minor
+                        $result['label'] = 'Mayor (3+ Minor Global): ' . implode(', ', $partStatus[$p]['minorItems']);
+                    }
+                } else {
+                    $result['label'] = 'Minor: ' . implode(', ', $partStatus[$p]['minorItems']);
+                }
+            }
+            
+            $results[$p] = $result;
+        }
+        
+        $results['total_deduction_percent'] = $totalDeductionPercent;
+        $results['minor_count_global'] = $minorCount;
+        $results['is_global_mayor'] = $isGlobalMayor;
+        
+        return $results;
+    }
 }
