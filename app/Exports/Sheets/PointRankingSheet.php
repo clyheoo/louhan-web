@@ -20,6 +20,8 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
     private $scope;
     private $mergeRanges = [];
     private $catStartCols = [];
+    
+    private const DEFECT_CATS = ['head', 'face', 'body', 'finnage'];
 
     private const CATS = [
         'overall'  => ['label' => 'OVERALL',   'fields' => [['id'=>'impression','label'=>'Impression']]],
@@ -30,23 +32,6 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
         'pearl'    => ['label' => 'PEARL',      'fields' => [['id'=>'shinning','label'=>'Shinning'],['id'=>'fullness','label'=>'Fullness'],['id'=>'bentuk','label'=>'Bentuk']]],
         'color'    => ['label' => 'COLOUR',     'fields' => [['id'=>'komposisi','label'=>'Komposisi'],['id'=>'kecerahan','label'=>'Kecerahan'],['id'=>'fullness','label'=>'Fullness']]],
         'finnage'  => ['label' => 'FINNAGE',    'fields' => [['id'=>'bentuk','label'=>'Bentuk Sirip & Ekor'],['id'=>'kecerahan','label'=>'Kecerahan']]],
-    ];
-
-    private const FIELD_PCT_MAP = [
-        'overall' => ['impression' => 'overall_point'],
-        'head'    => ['size' => 'head_size_pct', 'bentuk' => 'head_bentuk_k_pct'],
-        'face'    => ['face' => 'face_face_pct'],
-        'body'    => ['bentuk' => 'body_bentuk_pct', 'proporsi' => 'body_proposional_pct', 'pangkal' => 'body_pangkal_pct'],
-        'marking' => ['fullness' => 'marking_fullness_pct', 'contrast' => 'marking_contrast_pct', 'bentuk' => 'marking_bentuk_pct'],
-        'pearl'   => ['shinning' => 'pearl_shinning_pct', 'fullness' => 'pearl_fullnes_pct', 'bentuk' => 'pearl_bentuk_pearl_pct'],
-        'color'   => ['komposisi' => 'color_komposisi_pct', 'kecerahan' => 'color_kecerahan_pct', 'fullness' => 'color_fullness_colour_pct'],
-        'finnage' => ['bentuk' => 'finnage_bentuk_sirip_ekor_pct', 'kecerahan' => 'finnage_kecerahan_pct'],
-    ];
-
-    private const BOBOT_KEYS = [
-        'overall'=>'overall_bobot','head'=>'head_bobot','face'=>'face_bobot',
-        'body'=>'body_bobot','marking'=>'marking_bobot','pearl'=>'pearl_bobot',
-        'color'=>'color_bobot','finnage'=>'finnage_bobot',
     ];
 
     public function __construct($scope = 'per_kategori_kelas') { $this->scope = $scope; }
@@ -65,85 +50,141 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
     {
         $scorings = $ikan->scorings->filter(fn($s) => $s->submitted_to_grand);
         if ($scorings->isEmpty()) return null;
-        $cfg = $configs->get($ikan->kategori);
-        if (!$cfg) return null;
-
-        // Rata-rata nilai_detail semua juri (masih dibutuhkan untuk kalkulasi internal)
-        $avg = [];
-        foreach ($scorings as $s) {
-            $nd = $s->nilai_detail;
-            if (!$nd || !is_array($nd)) continue;
-            foreach ($nd as $kat => $fields) {
-                if (!is_array($fields)) continue;
-                foreach ($fields as $fid => $val) {
-                    if ($fid === 'defect') continue;
-                    if ($kat === 'pearl' && $fid === 'shining') $fid = 'shinning';
-                    if (!isset($avg[$kat][$fid])) $avg[$kat][$fid] = ['sum' => 0, 'count' => 0];
-                    $avg[$kat][$fid]['sum'] += (float)($val ?? 0);
-                    $avg[$kat][$fid]['count']++;
-                }
-            }
-        }
-        foreach ($avg as $kat => &$fields) {
-            foreach ($fields as $fid => &$d) {
-                $d['avg'] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
-            }
-        }
-        unset($fields, $d);
-
-        // Gabungkan defect dari semua juri (union)
-        $defectKeys = ['raw_head_penalty', 'raw_face_penalty', 'raw_body_penalty', 'raw_finnage_penalty'];
-        $combinedDefects = [];
-        foreach ($defectKeys as $dk) { $combinedDefects[$dk] = []; }
+        
+        // 1. Hitung Rata-rata Nilai Detail
+        $avgDetail = [];
+        $jumlahJuriYangNilai = 0;
 
         foreach ($scorings as $s) {
-            foreach ($defectKeys as $dk) {
-                $defs = $s->$dk;
-                if (!$defs) continue;
-                if (is_string($defs)) $defs = [$defs];
-                if (!is_array($defs)) continue;
-                foreach ($defs as $d) {
-                    if ($d && $d !== '0' && !in_array($d, $combinedDefects[$dk])) {
-                        $combinedDefects[$dk][] = $d;
+            if ($s->total_nilai) $jumlahJuriYangNilai++;
+            if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                foreach ($s->nilai_detail as $kat => $fields) {
+                    if (!is_array($fields)) continue;
+                    foreach ($fields as $fid => $val) {
+                        if ($fid === 'defect') continue;
+                        if ($kat === 'pearl' && $fid === 'shining') $fid = 'shinning';
+                        
+                        if (!isset($avgDetail[$kat][$fid])) $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                        $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                        $avgDetail[$kat][$fid]['count']++;
                     }
                 }
             }
         }
-        foreach ($combinedDefects as $dk => &$defs) {
-            $combinedDefects[$dk] = count($defs) > 0 ? $defs : ['0'];
+
+        // Inisialisasi struktur data final untuk menghindari error "Undefined array key"
+        $finalAvgDetail = [];
+        foreach (self::CATS as $kat => $info) {
+            $finalAvgDetail[$kat] = [];
+            foreach ($info['fields'] as $f) {
+                $finalAvgDetail[$kat][$f['id']] = 0;
+            }
         }
-        unset($defs);
 
-        $evaluated = PointCalculator::evaluateDefects($combinedDefects);
+        if ($jumlahJuriYangNilai > 0) {
+            foreach ($avgDetail as $kat => $fields) {
+                foreach ($fields as $fid => $d) {
+                    if (isset($finalAvgDetail[$kat][$fid])) {
+                        $finalAvgDetail[$kat][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                    }
+                }
+            }
+        }
 
-        // Hitung point per komponen — hanya point, tidak perlu avg untuk output
+        // 2. Gabungkan Defect
+        $defectKeysMapping = ['head' => 'raw_head_penalty', 'face' => 'raw_face_penalty', 'body' => 'raw_body_penalty', 'finnage' => 'raw_finnage_penalty'];
+        $combinedDefects = [];
+        $defectDataForCalc = [];
+
+        foreach ($defectKeysMapping as $k => $dk) { 
+            $combinedDefects[$k] = []; 
+            $defectDataForCalc[$dk] = []; 
+        }
+
+        foreach ($scorings as $s) {
+            foreach ($defectKeysMapping as $cat => $rawKey) {
+                $defs = $s->$rawKey; // Sudah array karena cast di Model
+                if (!$defs) continue;
+                
+                // Pastikan array (meskipun cast sudah ada, safety check)
+                if (!is_array($defs)) $defs = [$defs];
+
+                foreach ($defs as $d) {
+                    if ($d && $d !== '0') {
+                        if (!in_array($d, $combinedDefects[$cat])) {
+                            $combinedDefects[$cat][] = $d;
+                        }
+                        $defectDataForCalc[$rawKey][] = $d;
+                    }
+                }
+            }
+        }
+        
+        // Pastikan key ada untuk kalkulasi
+        foreach ($defectKeysMapping as $rawKey) {
+            if (empty($defectDataForCalc[$rawKey])) $defectDataForCalc[$rawKey] = ['0'];
+        }
+
+        // 3. Hitung Point via Helper
+        $breakdown = PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail);
+        $evaluatedDefects = PointCalculator::evaluateDefects($defectDataForCalc);
+
         $compPoints = [];
         $catSubs = [];
+        $totalDeduction = 0;
+        $defectDisplay = [];
 
-        foreach (self::CATS as $kat => $info) {
-            $bobot = (float)($cfg->{self::BOBOT_KEYS[$kat]} ?? 0);
-            $sub = 0;
+        $cfg = $configs->get($ikan->kategori);
 
-            foreach ($info['fields'] as $f) {
-                $avgVal = $avg[$kat][$f['id']]['avg'] ?? 0;
-                $pctKey = self::FIELD_PCT_MAP[$kat][$f['id']] ?? null;
-                $pct = $pctKey ? (float)($cfg->$pctKey ?? 0) : 0;
+        if ($breakdown) {
+            foreach (self::CATS as $kat => $info) {
+                // A. Hitung Komponen Field
+                $bobot = (float)($cfg->{$kat . '_bobot'} ?? 0);
+                
+                $pctMap = [
+                    'head'     => ['size' => 'head_size_pct', 'bentuk' => 'head_bentuk_k_pct'],
+                    'face'     => ['face' => 'face_face_pct'],
+                    'body'     => ['bentuk' => 'body_bentuk_pct', 'proporsi' => 'body_proposional_pct', 'pangkal' => 'body_pangkal_pct'],
+                    'marking'  => ['fullness' => 'marking_fullness_pct', 'contrast' => 'marking_contrast_pct', 'bentuk' => 'marking_bentuk_pct'],
+                    'pearl'    => ['shinning' => 'pearl_shinning_pct', 'fullness' => 'pearl_fullnes_pct', 'bentuk' => 'pearl_bentuk_pearl_pct'],
+                    'color'    => ['komposisi' => 'color_komposisi_pct', 'kecerahan' => 'color_kecerahan_pct', 'fullness' => 'color_fullness_colour_pct'],
+                    'finnage'  => ['bentuk' => 'finnage_bentuk_sirip_ekor_pct', 'kecerahan' => 'finnage_kecerahan_pct'],
+                    'overall'  => ['impression' => 'overall_point']
+                ];
 
-                $point = ($avgVal * $bobot * $pct) / 100;
+                foreach ($info['fields'] as $f) {
+                    $val = $finalAvgDetail[$kat][$f['id']] ?? 0;
+                    $pctColName = $pctMap[$kat][$f['id']] ?? null;
+                    
+                    if ($kat === 'overall') {
+                        $overallPointVal = (float)($cfg->overall_point ?? 0);
+                        $compPoints[$kat][$f['id']] = round(($val * $bobot * $overallPointVal) / 100, 2);
+                    } else {
+                        $pct = $pctColName ? (float)($cfg->$pctColName ?? 0) : 0;
+                        $compPoints[$kat][$f['id']] = round(($val * $bobot * $pct) / 100, 2);
+                    }
+                }
 
-                // Hanya simpan point, tidak ada avg
-                $compPoints[$kat][$f['id']] = round($point, 2);
-                $sub += $point;
+                // B. Hitung Subtotal & Defect
+                $rawPoint = $breakdown[$kat]['point'] ?? 0;
+                $penaltyKey = $kat . '_penalty';
+                
+                if (in_array($kat, self::DEFECT_CATS) && !empty($evaluatedDefects[$penaltyKey])) {
+                    $penaltyStr = $evaluatedDefects[$penaltyKey]; // "10%" atau "30%"
+                    $penaltyPercent = (float)str_replace('%', '', $penaltyStr);
+                    
+                    $deductionAmount = $rawPoint * ($penaltyPercent / 100);
+                    $totalDeduction += $deductionAmount;
+                    $catSubs[$kat] = round($rawPoint - $deductionAmount, 2);
+
+                    // Format: "Kutil, Bengkok (10%)"
+                    $items = implode(", ", $combinedDefects[$cat]);
+                    $defectDisplay[$kat] = $items . " (" . $penaltyStr . ")";
+                } else {
+                    $catSubs[$kat] = $rawPoint;
+                    $defectDisplay[$kat] = implode(", ", $combinedDefects[$cat]);
+                }
             }
-
-            // Terapkan defect penalty ke subtotal kategori
-            $penaltyKey = $kat . '_penalty';
-            if (!empty($evaluated[$penaltyKey])) {
-                $penaltyPercent = (float)str_replace('%', '', $evaluated[$penaltyKey]);
-                $sub = $sub * (1 - ($penaltyPercent / 100));
-            }
-
-            $catSubs[$kat] = round($sub, 2);
         }
 
         $totalPoint = round(array_sum($catSubs));
@@ -153,9 +194,14 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
             'nama_peserta' => $ikan->peserta->nama_peserta ?? '—',
             'kategori' => $ikan->kategori, 'kelas' => $ikan->kelas ?? '—',
             'nomor_tank' => $ikan->nomor_tank, 'asal' => $ikan->peserta->detail_anggota ?? '—',
-            'jml_juri' => $scorings->count(), 'comp_points' => $compPoints,
-            'cat_subs' => $catSubs, 'total_point' => $totalPoint,
-            'total_bonus' => $totalBonus, 'final_point' => $totalPoint + $totalBonus,
+            'jml_juri' => $scorings->count(), 
+            'comp_points' => $compPoints,
+            'cat_subs' => $catSubs, 
+            'total_point' => $totalPoint,
+            'total_deduction' => round($totalDeduction, 2),
+            'total_bonus' => $totalBonus, 
+            'final_point' => $totalPoint + $totalBonus,
+            'defects' => $defectDisplay,
         ];
     }
 
@@ -180,37 +226,48 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
         }
         if ($this->scope !== 'global') ksort($groups);
 
-        // ★ Hitung posisi kolom — setiap field sekarang hanya 1 kolom (Point saja)
         $this->catStartCols = [];
         $col = 8;
-        foreach (self::CATS as $info) {
+        foreach (self::CATS as $kat => $info) {
             $this->catStartCols[] = $col;
-            $col += count($info['fields']) + 1; // fields + 1 subtotal
+            $hasDefect = in_array($kat, self::DEFECT_CATS);
+            $fieldCount = count($info['fields']);
+            $defectCol = $hasDefect ? 1 : 0;
+            $col += $fieldCount + $defectCol + 1; 
         }
 
         $fixedH = ['RANK', 'PESERTA', 'KATEGORI', 'KELAS', 'NO TANK', 'ASAL / TEAM', 'JML JURI'];
         $catRow = $fixedH;
         $this->mergeRanges = [];
         $col = 8;
-        foreach (self::CATS as $info) {
-            $n = count($info['fields']) + 1; // field point cols + 1 subtotal
+        
+        foreach (self::CATS as $kat => $info) {
+            $hasDefect = in_array($kat, self::DEFECT_CATS);
+            $fieldCount = count($info['fields']);
+            $defectCol = $hasDefect ? 1 : 0;
+            $n = $fieldCount + $defectCol + 1; 
+            
             $startC = $col;
             $catRow[] = strtoupper($info['label']);
             for ($i = 1; $i < $n; $i++) $catRow[] = '';
             $this->mergeRanges[] = [$startC, $col + $n - 1];
             $col += $n;
         }
-        foreach (['TOTAL POINT', 'BONUS', 'FINAL POINT', 'RANK POINT'] as $h) $catRow[] = $h;
+        
+        foreach (['TOTAL POINT', 'DEFECT DEDUCTION', 'BONUS', 'FINAL POINT', 'RANK POINT'] as $h) $catRow[] = $h;
         $colCount = count($catRow);
 
-        // ★ Row 2: Hanya label komponen, tanpa [Rata-rata]
         $compRow = $fixedH;
-        foreach (self::CATS as $info) {
+        foreach (self::CATS as $kat => $info) {
             foreach ($info['fields'] as $f) {
                 $compRow[] = $f['label'];
             }
+            if (in_array($kat, self::DEFECT_CATS)) {
+                $compRow[] = 'DEFECT';
+            }
             $compRow[] = 'SUBTOTAL';
         }
+        for ($i=0; $i < 5; $i++) $compRow[] = ''; 
 
         $rows = [$catRow, $compRow];
         foreach ($groups as $groupName => $items) {
@@ -224,14 +281,19 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
 
             foreach ($ranked as $i => $d) {
                 $row = [$i + 1, $d['nama_peserta'], strtoupper($d['kategori']), $d['kelas'], $d['nomor_tank'], $d['asal'], $d['jml_juri']];
+                
                 foreach (self::CATS as $kat => $info) {
-                    // ★ Hanya 1 kolom point per komponen
                     foreach ($info['fields'] as $f) {
                         $row[] = $d['comp_points'][$kat][$f['id']] ?? 0;
                     }
+                    if (in_array($kat, self::DEFECT_CATS)) {
+                        $row[] = $d['defects'][$kat] ?? '';
+                    }
                     $row[] = $d['cat_subs'][$kat] ?? 0;
                 }
+                
                 $row[] = $d['total_point'];
+                $row[] = -$d['total_deduction'];
                 $row[] = $d['total_bonus'];
                 $row[] = $d['final_point'];
                 $row[] = $d['rank_point'];
@@ -250,10 +312,9 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
             $lastColIdx = Coordinate::columnIndexFromString($lastCol);
             $lastRow = $sheet->getHighestRow();
 
-            // Column widths — sedikit lebih lebar karena hanya 1 kolom per komponen
             for ($c = 1; $c <= $lastColIdx; $c++) {
                 $letter = Coordinate::stringFromColumnIndex($c);
-                $w = $c <= 2 ? 14 : ($c <= 7 ? 12 : 13);
+                $w = $c <= 2 ? 14 : ($c <= 7 ? 12 : 13); 
                 $sheet->getColumnDimension($letter)->setAutoSize(false)->setWidth($w);
             }
 
@@ -275,9 +336,8 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                 'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
             ]);
 
-            // Separator kolom tebal antar kategori
             $separatorCols = array_slice($this->catStartCols, 1);
-            $totalPointCol = $lastColIdx - 3;
+            $totalPointCol = $lastColIdx - 4;
             $separatorCols[] = $totalPointCol;
 
             $thickBorder = [
@@ -290,7 +350,16 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                 $sheet->getStyle("{$colLetter}2")->applyFromArray(['borders' => $thickBorder]);
             }
 
-            // Group separator rows
+            $subtotalCols = [];
+            $col = 8;
+            foreach (self::CATS as $kat => $info) {
+                $hasDefect = in_array($kat, self::DEFECT_CATS);
+                $col += count($info['fields']);
+                if ($hasDefect) { $col++; }
+                $subtotalCols[] = $col;
+                $col++;
+            }
+
             for ($r = 3; $r <= $lastRow; $r++) {
                 $val = $sheet->getCell("A{$r}")->getValue();
                 if ($val && str_starts_with($val, '▶')) {
@@ -299,69 +368,45 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                         'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '4C1D95']],
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F5F3FF']],
                     ]);
-                }
-            }
-
-            // Data rows
-            $toggle = false;
-            for ($r = 3; $r <= $lastRow; $r++) {
-                $val = $sheet->getCell("A{$r}")->getValue();
-                if ($val === '' || ($val && str_starts_with($val, '▶'))) { $toggle = false; continue; }
-
-                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->applyFromArray([
-                    'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
-                ]);
-
-                if ($toggle) {
+                } elseif ($val !== '') {
                     $sheet->getStyle("A{$r}:{$lastCol}{$r}")->applyFromArray([
-                        'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FAF5FF']],
+                        'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
                     ]);
-                }
-                $toggle = !$toggle;
 
-                foreach ($separatorCols as $colIdx) {
-                    $colLetter = Coordinate::stringFromColumnIndex($colIdx);
-                    $sheet->getStyle("{$colLetter}{$r}")->applyFromArray(['borders' => $thickBorder]);
+                    $deductionColLetter = Coordinate::stringFromColumnIndex($totalPointCol + 1);
+                    $sheet->getStyle("{$deductionColLetter}{$r}")->getNumberFormat()->setFormatCode('[Red]-0.00');
+
+                    if (isset($toggle) && $toggle) {
+                        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->applyFromArray([
+                            'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FAF5FF']],
+                        ]);
+                    }
+                    $toggle = !($toggle ?? false);
+
+                    foreach ($separatorCols as $colIdx) {
+                        $colLetter = Coordinate::stringFromColumnIndex($colIdx);
+                        $sheet->getStyle("{$colLetter}{$r}")->applyFromArray(['borders' => $thickBorder]);
+                    }
                 }
             }
 
-            // Thin borders semua data
             $sheet->getStyle("A2:{$lastCol}{$lastRow}")->applyFromArray([
                 'borders' => [
                     'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'DDD6FE']],
                 ],
             ]);
 
-            // Override thick border di data rows
-            for ($r = 3; $r <= $lastRow; $r++) {
-                $val = $sheet->getCell("A{$r}")->getValue();
-                if ($val === '' || ($val && str_starts_with($val, '▶'))) continue;
-                foreach ($separatorCols as $colIdx) {
-                    $colLetter = Coordinate::stringFromColumnIndex($colIdx);
-                    $sheet->getStyle("{$colLetter}{$r}")->applyFromArray(['borders' => $thickBorder]);
-                }
-            }
-
-            // Number format untuk kolom point (mulai kolom 8 sampai sebelum 4 kolom terakhir)
-            for ($c = 8; $c <= $lastColIdx - 4; $c++) {
-                $colLetter = Coordinate::stringFromColumnIndex($c);
-                $sheet->getStyle("{$colLetter}3:{$colLetter}{$lastRow}")->getNumberFormat()->setFormatCode('0.00');
-            }
-
-            // Subtotal columns: bold — ★ dihitung ulang sesuai layout baru
-            $subtotalCols = [];
-            $col = 8;
-            foreach (self::CATS as $info) {
-                $col += count($info['fields']); // field point cols (tanpa ×2)
-                $subtotalCols[] = $col;
-                $col++;
-            }
             foreach ($subtotalCols as $colIdx) {
                 $colLetter = Coordinate::stringFromColumnIndex($colIdx);
                 $sheet->getStyle("{$colLetter}3:{$colLetter}{$lastRow}")->applyFromArray([
                     'font' => ['bold' => true, 'size' => 10],
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F5F3FF']],
                 ]);
+            }
+
+            for ($c = 8; $c <= $lastColIdx - 5; $c++) {
+                $colLetter = Coordinate::stringFromColumnIndex($c);
+                $sheet->getStyle("{$colLetter}3:{$colLetter}{$lastRow}")->getNumberFormat()->setFormatCode('0.00');
             }
 
             $sheet->freezePane('H3');
