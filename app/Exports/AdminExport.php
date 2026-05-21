@@ -3,10 +3,10 @@
 namespace App\Exports;
 
 use App\Exports\Sheets\AdminDaftarIkanSheet;
+use App\Exports\Sheets\AdminUserDetailSheet;
 use App\Exports\Sheets\MvpIkanSheet;
 use App\Exports\Sheets\PointRankingSheet;
 use App\Exports\Sheets\RumusPenilaianSheet;
-use App\Exports\Sheets\UserDetailSheet;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 class AdminExport implements WithMultipleSheets
@@ -25,12 +25,14 @@ class AdminExport implements WithMultipleSheets
 
         if ($this->sheets === 'all') {
             $result[] = new AdminDaftarIkanSheet();
+            $result[] = new AdminUserDetailSheet();
             $result[] = new MvpIkanSheet();
             $result[] = new PointRankingSheet($rankingScope);
             $result[] = new RumusPenilaianSheet();
-            $result[] = new UserDetailSheet();
         } elseif ($this->sheets === 'daftar') {
             $result[] = new AdminDaftarIkanSheet();
+        } elseif ($this->sheets === 'users') {
+            $result[] = new AdminUserDetailSheet();
         } elseif ($this->sheets === 'mvp') {
             $result[] = new MvpIkanSheet();
         } elseif ($this->sheets === 'ranking_kk') {
@@ -39,8 +41,6 @@ class AdminExport implements WithMultipleSheets
             $result[] = new PointRankingSheet('per_kategori');
         } elseif ($this->sheets === 'ranking_global') {
             $result[] = new PointRankingSheet('global');
-        } elseif ($this->sheets === 'users') {
-            $result[] = new UserDetailSheet();
         }
 
         return $result;
