@@ -4,6 +4,7 @@ namespace App\Exports\Sheets;
 
 use App\Models\Ikan;
 use App\Models\Peserta;
+use App\Helpers\PointCalculator;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
@@ -19,6 +20,54 @@ class MvpIkanSheet implements WithTitle, WithEvents
         return 'DATA IKAN MVP';
     }
 
+    // Helper: Hitung Nilai, Bonus, Total (Sama persis dengan Controller)
+    private function calculateMetrics($ikan)
+    {
+        $scorings = $ikan->scorings;
+        if ($scorings->isEmpty()) {
+            return ['nilai' => 0, 'bonus' => 0, 'total' => 0];
+        }
+
+        $jumlahJuriYangNilai = 0;
+        $avgDetail = [];
+
+        foreach ($scorings as $s) {
+            if ($s->total_nilai) $jumlahJuriYangNilai++;
+            if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                foreach ($s->nilai_detail as $kat => $fields) {
+                    if (!is_array($fields)) continue;
+                    foreach ($fields as $fid => $val) {
+                        if (!isset($avgDetail[$kat][$fid])) {
+                            $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                        }
+                        $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                        $avgDetail[$kat][$fid]['count']++;
+                    }
+                }
+            }
+        }
+
+        $finalAvgDetail = [];
+        if ($jumlahJuriYangNilai > 0) {
+            foreach ($avgDetail as $kat => $fields) {
+                $finalAvgDetail[$kat] = [];
+                foreach ($fields as $fid => $d) {
+                    $finalAvgDetail[$kat][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                }
+            }
+        }
+
+        $nilaiPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+        $bonus = (int) $ikan->bonusPoints->sum('points');
+        $finalPoint = $nilaiPoint + $bonus;
+
+        return [
+            'nilai' => round($nilaiPoint, 2),
+            'bonus' => $bonus,
+            'total' => round($finalPoint, 2)
+        ];
+    }
+
     public function registerEvents(): array
     {
         return [
@@ -31,188 +80,229 @@ class MvpIkanSheet implements WithTitle, WithEvents
                 $styleHeader = [
                     'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => '4C1D95']],
-                    'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+                    'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
                 ];
                 $styleBorder = [
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'DDD6FE']]],
                 ];
-                $styleTitleBlock = [
-                    'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '4C1D95']],
+                $styleTitle = [
+                    'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '4C1D95']],
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F5F3FF']],
-                    'alignment' => ['vertical' => 'center'],
                 ];
 
                 // ═══════════════════════════════════════════════════════
                 // 2. DATA RETRIEVAL
                 // ═══════════════════════════════════════════════════════
+                $allIkans = Ikan::where('is_mvp', true)
+                    ->whereHas('peserta', fn($q) => $q->where('is_mvp_submitted', true))
+                    ->with(['peserta', 'bonusPoints', 'scorings' => fn($q) => $q->where('submitted_to_grand', true)])
+                    ->orderBy('peserta_id')->orderBy('kategori')->get();
+
+                // Grouping untuk Tabel Kategori
+                $groupedKategori = $allIkans->groupBy('kategori');
                 
-                // Tabel 1: Rekap Utama
-                $ikans = Ikan::where('is_mvp', true)
-                    ->whereHas('peserta', fn($q) => $q->where('is_mvp_submitted', true))
-                    ->with('peserta')
-                    ->orderBy('peserta_id')->orderBy('kategori')
-                    ->get()->groupBy('peserta_id');
-
-                // Tabel 2 & 3: Grup Kategori & Kelas
-                $mvpKategori = Ikan::where('is_mvp', true)
-                    ->whereHas('peserta', fn($q) => $q->where('is_mvp_submitted', true))
-                    ->with('peserta')->get()->groupBy('kategori');
-
-                $mvpKelas = Ikan::where('is_mvp', true)
-                    ->whereHas('peserta', fn($q) => $q->where('is_mvp_submitted', true))
-                    ->with('peserta')->get()->groupBy('kelas');
+                // Grouping untuk Tabel Kelas
+                $groupedKelas = $allIkans->groupBy('kelas');
 
                 $pesertas = Peserta::where('is_mvp_submitted', true)->orderBy('nama_peserta')->get();
 
                 // ═══════════════════════════════════════════════════════
-                // 3. RENDERING TABEL ATAS (VERTIKAL)
+                // 3. TABEL 1: REKAP UTAMA (FLAT LIST PER IKAN)
                 // ═══════════════════════════════════════════════════════
                 $row = 1;
-
-                // --- TABEL 1: REKAP UTAMA (A-E) ---
-                $sheet->fromArray([['NO', 'NAMA PESERTA', 'DETAIL ANGGOTA', 'TOTAL', 'DAFTAR IKAN']], null, "A{$row}");
-                $sheet->getStyle("A{$row}:E{$row}")->applyFromArray($styleHeader);
+                // Header: NO, PESERTA, TEAM, KATEGORI, KELAS, TANK, NILAI, BONUS, TOTAL POINT
+                $headersT1 = ['NO', 'NAMA PESERTA', 'DETAIL ANGGOTA', 'KATEGORI', 'KELAS', 'TANK', 'NILAI', 'BONUS', 'TOTAL POINT'];
+                $sheet->fromArray($headersT1, null, "A{$row}");
+                $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleHeader);
                 $row++;
-                
+
                 $no = 1;
-                $startT1 = $row;
-                foreach ($ikans as $list) {
-                    $p = $list->first()->peserta;
-                    $daftar = $list->map(fn($i) => $i->kategori . '-' . ($i->kelas ?? '-') . ' Tank ' . ($i->nomor_tank ?? '-'))->implode("\n");
-                    
-                    $sheet->setCellValue("A{$row}", $no++);
-                    $sheet->setCellValue("B{$row}", $p->nama_peserta ?? '-');
-                    $sheet->setCellValue("C{$row}", $p->detail_anggota ?? '-');
-                    $sheet->setCellValue("D{$row}", $list->count());
-                    $sheet->setCellValue("E{$row}", $daftar);
-                    $sheet->getStyle("E{$row}")->getAlignment()->setWrapText(true);
+                $lastPesertaId = null;
+
+                foreach ($allIkans as $ikan) {
+                    $p = $ikan->peserta;
+                    $m = $this->calculateMetrics($ikan);
+
+                    // Logika: Jika peserta sama dengan baris sebelumnya, kosongkan Nama & Detail
+                    $namaPeserta = '';
+                    $detailAnggota = '';
+
+                    if ($ikan->peserta_id !== $lastPesertaId) {
+                        $namaPeserta = $p->nama_peserta ?? '-';
+                        $detailAnggota = $p->detail_anggota ?? '-';
+                        $lastPesertaId = $ikan->peserta_id;
+                    }
+
+                    $rowData = [
+                        $no++,
+                        $namaPeserta,
+                        $detailAnggota,
+                        $ikan->kategori,
+                        $ikan->kelas,
+                        $ikan->nomor_tank ? 'Tank ' . $ikan->nomor_tank : '-',
+                        $m['nilai'],
+                        $m['bonus'],
+                        $m['total']
+                    ];
+
+                    $sheet->fromArray($rowData, null, "A{$row}");
                     $row++;
                 }
-                if ($row > $startT1) $sheet->getStyle("A{$startT1}:E" . ($row-1))->applyFromArray($styleBorder);
-                $row += 2; // Jarak
+                // Styling body Tabel 1
+                if ($row > 2) $sheet->getStyle("A2:I" . ($row - 1))->applyFromArray($styleBorder);
 
-                // --- TABEL 2 & 3 (SIDE BY SIDE) ---
-                $rowTable23 = $row;
-                
-                // Tabel 2 (Kiri: A-E)
-                $sheet->fromArray([['NO', 'KATEGORI', 'PESERTA', 'DETAIL', 'JML']], null, "A{$rowTable23}");
-                $sheet->getStyle("A{$rowTable23}:E{$rowTable23}")->applyFromArray($styleHeader);
-                $r2 = $rowTable23 + 1;
-                $no = 1;
-                foreach ($mvpKategori as $kat => $items) {
-                    foreach ($items->groupBy('peserta_id') as $itemsPeserta) {
-                        $p = $itemsPeserta->first()->peserta;
-                        $sheet->setCellValue("A{$r2}", $no++);
-                        $sheet->setCellValue("B{$r2}", $kat);
-                        $sheet->setCellValue("C{$r2}", $p->nama_peserta ?? '-');
-                        $sheet->setCellValue("D{$r2}", $p->detail_anggota ?? '-');
-                        $sheet->setCellValue("E{$r2}", $itemsPeserta->count());
-                        $r2++;
-                    }
-                }
-                if ($r2 > $rowTable23 + 1) $sheet->getStyle("A" . ($rowTable23+1) . ":E" . ($r2-1))->applyFromArray($styleBorder);
-
-                // Tabel 3 (Kanan: G-K)
-                $sheet->fromArray([['NO', 'KELAS', 'PESERTA', 'DETAIL', 'JML']], null, "G{$rowTable23}");
-                $sheet->getStyle("G{$rowTable23}:K{$rowTable23}")->applyFromArray($styleHeader);
-                $r3 = $rowTable23 + 1;
-                $no = 1;
-                foreach ($mvpKelas as $kls => $items) {
-                    foreach ($items->groupBy('peserta_id') as $itemsPeserta) {
-                        $p = $itemsPeserta->first()->peserta;
-                        $sheet->setCellValue("G{$r3}", $no++);
-                        $sheet->setCellValue("H{$r3}", $kls);
-                        $sheet->setCellValue("I{$r3}", $p->nama_peserta ?? '-');
-                        $sheet->setCellValue("J{$r3}", $p->detail_anggota ?? '-');
-                        $sheet->setCellValue("K{$r3}", $itemsPeserta->count());
-                        $r3++;
-                    }
-                }
-                if ($r3 > $rowTable23 + 1) $sheet->getStyle("G" . ($rowTable23+1) . ":K" . ($r3-1))->applyFromArray($styleBorder);
-
-                // Update posisi row terakhir
-                $row = max($r2, $r3) + 3; // Beri jarak 3 baris sebelum tabel detail
+                // Jarak antar Tabel
+                $row += 2;
 
                 // ═══════════════════════════════════════════════════════
-                // 4. RENDERING TABEL DETAIL PESERTA (HORIZONTAL)
+                // 4. TABEL 2: MVP PER KATEGORI (1 KATEGORI = 1 TABEL)
                 // ═══════════════════════════════════════════════════════
+                foreach ($groupedKategori as $kategori => $ikansInKat) {
+                    // Header Kategori
+                    $sheet->mergeCells("A{$row}:E{$row}");
+                    $sheet->setCellValue("A{$row}", 'KATEGORI: ' . $kategori);
+                    $sheet->getStyle("A{$row}:E{$row}")->applyFromArray($styleTitle);
+                    $row++;
+
+                    // Header Tabel
+                    $sheet->fromArray([['NO', 'PESERTA', 'DETAIL', 'JML IKAN', 'TOTAL POINT']], null, "A{$row}");
+                    $sheet->getStyle("A{$row}:E{$row}")->applyFromArray($styleHeader);
+                    $row++;
+
+                    // Data: Group by Peserta dalam kategori ini
+                    $groupedPeserta = $ikansInKat->groupBy('peserta_id');
+                    $no = 1;
+                    $startDataRow = $row;
+
+                    foreach ($groupedPeserta as $list) {
+                        $p = $list->first()->peserta;
+                        
+                        $totalPoint = 0;
+                        foreach($list as $i) { $totalPoint += $this->calculateMetrics($i)['total']; }
+
+                        $sheet->setCellValue("A{$row}", $no++);
+                        $sheet->setCellValue("B{$row}", $p->nama_peserta ?? '-');
+                        $sheet->setCellValue("C{$row}", $p->detail_anggota ?? '-');
+                        $sheet->setCellValue("D{$row}", $list->count());
+                        $sheet->setCellValue("E{$row}", $totalPoint);
+                        $row++;
+                    }
+                    // Styling Body
+                    if ($row > $startDataRow) $sheet->getStyle("A" . ($startDataRow) . ":E" . ($row-1))->applyFromArray($styleBorder);
+
+                    // Jarak sebelum kategori berikutnya
+                    $row += 2;
+                }
+
+                // ═══════════════════════════════════════════════════════
+                // 5. TABEL 3: MVP PER KELAS (1 KELAS = 1 TABEL)
+                // ═══════════════════════════════════════════════════════
+                foreach ($groupedKelas as $kelas => $ikansInKelas) {
+                    // Header Kelas
+                    $sheet->mergeCells("A{$row}:E{$row}");
+                    $sheet->setCellValue("A{$row}", 'KELAS: ' . $kelas);
+                    $sheet->getStyle("A{$row}:E{$row}")->applyFromArray($styleTitle);
+                    $row++;
+
+                    // Header Tabel
+                    $sheet->fromArray([['NO', 'PESERTA', 'DETAIL', 'JML IKAN', 'TOTAL POINT']], null, "A{$row}");
+                    $sheet->getStyle("A{$row}:E{$row}")->applyFromArray($styleHeader);
+                    $row++;
+
+                    // Data
+                    $groupedPeserta = $ikansInKelas->groupBy('peserta_id');
+                    $no = 1;
+                    $startDataRow = $row;
+
+                    foreach ($groupedPeserta as $list) {
+                        $p = $list->first()->peserta;
+                        
+                        $totalPoint = 0;
+                        foreach($list as $i) { $totalPoint += $this->calculateMetrics($i)['total']; }
+
+                        $sheet->setCellValue("A{$row}", $no++);
+                        $sheet->setCellValue("B{$row}", $p->nama_peserta ?? '-');
+                        $sheet->setCellValue("C{$row}", $p->detail_anggota ?? '-');
+                        $sheet->setCellValue("D{$row}", $list->count());
+                        $sheet->setCellValue("E{$row}", $totalPoint);
+                        $row++;
+                    }
+                    if ($row > $startDataRow) $sheet->getStyle("A" . ($startDataRow) . ":E" . ($row-1))->applyFromArray($styleBorder);
+                    
+                    $row += 2;
+                }
+
+                // ═══════════════════════════════════════════════════════
+                // 6. TABEL DETAIL PESERTA (HORIZONTAL LAYOUT)
+                // ═══════════════════════════════════════════════════════
+                // (Menggunakan logic yang sama seperti sebelumnya, tapi pastikan pakai $this->calculateMetrics)
                 
-                $blocksPerRow = 4; // Jumlah tabel per baris horizontal
-                $blockWidth = 6;   // Lebar blok (5 Kolom + 1 Gap)
-                $blockHeight = 35; // Tinggi header + 30 baris data
-                $currentCol = 1;   // Mulai dari Kolom A
+                $blocksPerRow = 3; 
+                $blockWidth = 9;   
+                $blockHeight = 35; 
+                $currentCol = 1;   
                 $startRowDetail = $row; 
 
                 foreach ($pesertas as $idx => $peserta) {
-                    // Pindah ke baris baru jika sudah 4 tabel
                     if ($idx > 0 && ($idx % $blocksPerRow == 0)) {
                         $startRowDetail += $blockHeight;
                         $currentCol = 1;
                     }
 
-                    // Ambil data ikan HANYA untuk peserta ini
                     $ikansPeserta = Ikan::where('peserta_id', $peserta->id)
                         ->where('is_mvp', true)
+                        ->with(['scorings' => fn($q) => $q->where('submitted_to_grand', true), 'bonusPoints'])
                         ->orderBy('kategori')
                         ->limit(30)
                         ->get();
 
-                    // --- HEADER PESERTA (MERGED) ---
                     $colStartStr = Coordinate::stringFromColumnIndex($currentCol);
-                    $colEndStr = Coordinate::stringFromColumnIndex($currentCol + 4); // 5 kolom width
+                    $colEndStr = Coordinate::stringFromColumnIndex($currentCol + 7); 
 
                     $sheet->setCellValue($colStartStr . $startRowDetail, 'PESERTA: ' . ($peserta->nama_peserta ?? '-'));
                     $sheet->mergeCells("{$colStartStr}{$startRowDetail}:{$colEndStr}{$startRowDetail}");
-                    $sheet->getStyle("{$colStartStr}{$startRowDetail}")->applyFromArray($styleTitleBlock);
+                    $sheet->getStyle("{$colStartStr}{$startRowDetail}")->applyFromArray($styleTitle);
 
                     $sheet->setCellValue($colStartStr . ($startRowDetail + 1), 'TEAM: ' . ($peserta->detail_anggota ?? '-'));
                     $sheet->mergeCells("{$colStartStr}" . ($startRowDetail + 1) . ":{$colEndStr}" . ($startRowDetail + 1));
-                    $sheet->getStyle("{$colStartStr}" . ($startRowDetail + 1))->applyFromArray($styleTitleBlock);
+                    $sheet->getStyle("{$colStartStr}" . ($startRowDetail + 1))->applyFromArray($styleTitle);
 
-                    // --- HEADER TABEL ---
                     $headerRow = $startRowDetail + 2;
-                    $sheet->fromArray(['NO', 'KAT', 'KELAS', 'TANK', 'STATUS'], null, "{$colStartStr}{$headerRow}");
+                    $headers = ['NO', 'KAT', 'KELAS', 'TANK', 'NILAI', 'BONUS', 'TOTAL', 'STATUS'];
+                    $sheet->fromArray($headers, null, "{$colStartStr}{$headerRow}");
                     $sheet->getStyle("{$colStartStr}{$headerRow}:{$colEndStr}{$headerRow}")->applyFromArray($styleHeader);
 
-                    // --- DATA 30 BARIS ---
                     $dataStart = $startRowDetail + 3;
                     for ($i = 1; $i <= 30; $i++) {
                         $r = $dataStart + $i - 1;
-                        
-                        // SAFE CHECK: Cek apakah index ke-(i-1) ada di collection
                         $ikan = $ikansPeserta->get($i - 1); 
 
-                        // Inisialisasi default kosong
-                        $kategori = '';
-                        $kelas = '';
-                        $tank = '';
-                        $status = 'Kosong';
+                        $kategori = ''; $kelas = ''; $tank = ''; $nilai = ''; $bonus = ''; $total = ''; $status = 'Kosong';
 
-                        // Jika ikan ada, isi datanya
                         if ($ikan) {
                             $kategori = $ikan->kategori;
                             $kelas = $ikan->kelas;
                             $tank = $ikan->nomor_tank ? 'Tank ' . $ikan->nomor_tank : '-';
+                            
+                            $m = $this->calculateMetrics($ikan);
+                            $nilai = $m['nilai'];
+                            $bonus = $m['bonus'];
+                            $total = $m['total'];
                             $status = 'MVP';
                         }
 
-                        // Tulis ke sheet
-                        $sheet->setCellValue($colStartStr . $r, $i); // Kolom NO
-                        $sheet->setCellValue(Coordinate::stringFromColumnIndex($currentCol + 1) . $r, $kategori);
-                        $sheet->setCellValue(Coordinate::stringFromColumnIndex($currentCol + 2) . $r, $kelas);
-                        $sheet->setCellValue(Coordinate::stringFromColumnIndex($currentCol + 3) . $r, $tank);
-                        $sheet->setCellValue(Coordinate::stringFromColumnIndex($currentCol + 4) . $r, $status);
+                        $rowData = [$i, $kategori, $kelas, $tank, $nilai, $bonus, $total, $status];
+                        for($c=0; $c<8; $c++){
+                            $sheet->setCellValue(Coordinate::stringFromColumnIndex($currentCol + $c) . $r, $rowData[$c]);
+                        }
                     }
 
-                    // Styling Body Data (Border)
                     $bodyEnd = $dataStart + 29;
                     $sheet->getStyle("{$colStartStr}{$dataStart}:{$colEndStr}{$bodyEnd}")->applyFromArray($styleBorder);
-
-                    // Lanjut ke kolom berikutnya di sebelah kanan
                     $currentCol += $blockWidth;
                 }
 
-                // Auto Size Columns
+                // Auto Size
                 foreach (range('A', 'Z') as $columnID) {
                     $sheet->getColumnDimension($columnID)->setAutoSize(true);
                 }
