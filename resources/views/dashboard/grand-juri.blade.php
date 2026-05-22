@@ -1235,7 +1235,7 @@ function renderDetail(p){
         html += '</div>';
 
         html += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
-        html += '<thead><tr style="background:#f5f3ff;"><th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #ddd6fe;">JURI</th><th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #ddd6fe;">TOTAL NILAI</th></tr></thead>';
+        html += '<thead><tr style="background:#ede9fe;"><th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #ddd6fe;">JURI</th><th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #ddd6fe;">TOTAL NILAI</th></tr></thead>';
         html += '<tbody>';
         var grandTotalNilai = 0;
         var rowNum = 0;
