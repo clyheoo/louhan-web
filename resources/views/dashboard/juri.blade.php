@@ -112,7 +112,7 @@
         .modal-head h3 { font-size: 16px; font-weight: 800; }
         .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); }
         .modal-content { padding: 20px; overflow-y: auto; }
-        .detail-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; }
+        .detail-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; table-layout: fixed; }
         .detail-table th, .detail-table td { padding: 10px; border: 1px solid var(--border); text-align: left; }
         .detail-table th { background: #f8fafc; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
         .detail-table tr:hover td { background: #fafafa; }
@@ -226,7 +226,226 @@
         .defect-option:hover { border-color: var(--primary); }
         .defect-option.selected { border-color: var(--primary); background: var(--primary-light); }
         .defect-option input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
-        .defect-option span { font-size: 13px; font-weight: 600; }
+        .defect-option span { font-size: 13px; font-weight: 600; 
+        }
+        /* ═══════════════════════════════════════════════
+        RESPONSIF MOBILE
+        ═══════════════════════════════════════════════ */
+        @media (max-width: 768px) {
+            .top-nav { padding: 10px 16px; flex-wrap: wrap; gap: 8px; }
+            .brand h1 { font-size: 15px; }
+            .brand span { display: none; }
+            .nav-right { gap: 10px; flex-wrap: wrap; }
+            .nav-right .info h4 { font-size: 12px; }
+            .btn-logout { padding: 6px 10px; font-size: 11px; }
+            .main-container { padding: 12px; gap: 14px; }
+
+            /* Form row — 2 kolom */
+            .form-row,
+            .form-row[style*="grid-template-columns"] {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px !important;
+            }
+
+            /* Content grid — tumpuk vertikal */
+            .content-grid {
+                grid-template-columns: 1fr !important;
+                gap: 14px !important;
+            }
+
+            /* Kategori list — horizontal scroll */
+            .kategori-list {
+                flex-direction: row !important;
+                overflow-x: auto;
+                gap: 6px !important;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+            }
+            .kategori-list::-webkit-scrollbar { height: 3px; }
+            .kategori-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+            .kat-btn {
+                white-space: nowrap;
+                min-width: max-content;
+                padding: 10px 16px;
+                font-size: 12px;
+                flex-shrink: 0;
+            }
+
+            /* Submit area — tumpuk vertikal */
+            .submit-area {
+                flex-direction: column;
+                gap: 12px;
+                align-items: stretch;
+            }
+            .btn-primary {
+                width: 100%;
+                justify-content: center;
+                padding: 14px 20px;
+            }
+
+            /* Score grid */
+            .score-grid {
+                grid-template-columns: 1fr 100px !important;
+                gap: 10px !important;
+                padding: 10px 0 !important;
+            }
+            .score-label h4 { font-size: 12px; }
+            .score-label p { font-size: 10px; }
+            .score-select { font-size: 14px; padding: 9px 6px; }
+
+            /* Table */
+            .result-table { min-width: 580px; font-size: 12px; }
+            .result-table th { padding: 10px 8px; font-size: 10px; }
+            .result-table td { padding: 10px 8px; }
+
+            /* Locked banner */
+            .locked-banner { padding: 24px 16px; }
+            .locked-banner .lock-icon { width: 56px; height: 56px; }
+            .locked-banner .lock-icon i { font-size: 24px; }
+            .locked-banner h3 { font-size: 15px; }
+            .locked-banner .locked-note { font-size: 11px; }
+
+            /* Warning kelas */
+            #warningKelasBox { font-size: 11px; padding: 10px 12px; }
+
+            /* Pedoman */
+            .pedoman-box { padding: 12px; margin-bottom: 14px; }
+            .pedoman-box h3 { font-size: 13px; margin-bottom: 6px; }
+            .pedoman-list { font-size: 12px; }
+
+            /* Card */
+            .card-header { padding: 14px 16px; }
+            .card-title { font-size: 14px; }
+            .card-body { padding: 14px; }
+
+            /* Modal */
+            .modal-box { width: 96%; max-height: 92vh; border-radius: 16px; }
+            .modal-head { padding: 14px 16px; }
+            .modal-head h3 { font-size: 14px; }
+            .modal-content { padding: 14px; }
+
+            /* Detail table — hapus min-width, sembunyikan kolom SKALA di mobile */
+            .detail-table { min-width: unset !important; width: 100% !important; table-layout: fixed !important; font-size: 12px; }
+            .detail-table th:nth-child(2),
+            .detail-table td:nth-child(2) { display: none !important; }
+            .detail-table th:first-child,
+            .detail-table td:first-child { width: 65% !important; }
+            .detail-table th:last-child,
+            .detail-table td:last-child { width: 35% !important; text-align: center !important; }
+            .detail-table th, .detail-table td { padding: 8px 10px !important; }
+            .detail-table td[colspan] { display: table-cell !important; }
+            .grand-total { font-size: 15px; }
+            .modal-content { overflow-x: hidden; }
+
+            /* Warning modal */
+            .warning-card { width: 93%; }
+            .warning-header { padding: 22px 20px 14px; }
+            .warning-icon { width: 52px; height: 52px; }
+            .warning-icon i { font-size: 24px; }
+            .warning-title { font-size: 17px; }
+            .warning-body { padding: 14px 20px 20px; max-height: 260px; }
+            .warning-footer { padding: 0 20px 20px; }
+            .error-item { padding: 10px; gap: 10px; }
+
+            /* Popup sukses & konfirmasi */
+            .popup-card { padding: 36px 24px 28px; }
+            .popup-title { font-size: 17px; }
+            .popup-desc { font-size: 12.5px; margin-bottom: 22px; }
+            .popup-btn, .popup-btn-outline { padding: 10px 22px; font-size: 13px; }
+            .popup-actions { flex-direction: column; gap: 10px; }
+            .popup-actions .popup-btn,
+            .popup-actions .popup-btn-outline { width: 100%; justify-content: center; }
+            .popup-check { width: 64px; height: 64px; }
+            .popup-check i { font-size: 30px; }
+            .popup-icon.confirm { width: 64px; height: 64px; }
+            .popup-icon.confirm i { font-size: 30px; }
+
+            /* Defect modal */
+            .defect-modal-box { max-width: 95%; }
+            .defect-option { padding: 10px; gap: 10px; }
+            .defect-option span { font-size: 12px; }
+
+            /* Badge & button kecil */
+            .btn-view { padding: 5px 10px; font-size: 10px; }
+            .btn-kirim { padding: 5px 10px; font-size: 10px; }
+            .badge-success, .badge-edited, .badge-terkirim { font-size: 9px; padding: 3px 6px; }
+
+            /* Table scroll wrapper — mencegah border-radius memotong konten */
+            .table-scroll-wrap {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: -4px -4px 0;
+                border-radius: 10px;
+                border: 1px solid var(--border);
+            }
+            .table-scroll-wrap .result-table { border: none; }
+            .table-scroll-wrap .result-table thead tr { background: #f8fafc; }
+            .table-scroll-wrap .result-table th { border-bottom: 2px solid var(--border); }
+            .table-scroll-wrap .result-table td:first-child { padding-left: 14px; }
+            .table-scroll-wrap .result-table th:first-child { padding-left: 14px; }
+            .table-scroll-wrap .result-table td:last-child { padding-right: 14px; }
+            .table-scroll-wrap .result-table th:last-child { padding-right: 14px; }
+
+            /* AKSI column — tombol tidak pecah */
+            .result-table td:last-child { white-space: nowrap; }
+        }
+
+        @media (max-width: 480px) {
+            .brand h1 { font-size: 14px; }
+            .main-container { padding: 10px; gap: 12px; }
+
+            /* Form row — 1 kolom penuh */
+            .form-row,
+            .form-row[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Score grid — 1 kolom (label di atas, input di bawah) */
+            .score-grid {
+                grid-template-columns: 1fr !important;
+                gap: 4px !important;
+                padding: 8px 0 !important;
+            }
+            .score-label p { margin-bottom: 4px; }
+            .score-select, .defect-btn { font-size: 15px; }
+
+            /* Kategori list — kembali vertikal di layar sangat kecil */
+            .kategori-list {
+                flex-direction: column !important;
+                overflow-x: visible;
+            }
+            .kat-btn { min-width: auto; }
+
+            /* Form control */
+            .form-control { padding: 10px; font-size: 14px; }
+            .form-label { font-size: 10px; }
+
+            /* Result table */
+            .result-table { min-width: 500px; }
+
+            /* Detail table */
+            .detail-table { font-size: 11px; }
+            .detail-table th, .detail-table td { padding: 7px 8px !important; }
+            .grand-total { font-size: 14px; }
+
+            /* Warning modal */
+            .warning-card { width: 95%; border-radius: 20px; }
+            .warning-header { padding: 20px 16px 12px; }
+            .warning-body { padding: 12px 16px 16px; }
+            .warning-footer { padding: 0 16px 16px; }
+
+            /* Popup */
+            .popup-card { padding: 28px 18px 22px; border-radius: 20px; }
+            .popup-title { font-size: 16px; }
+            .popup-desc { font-size: 12px; }
+            .popup-btn, .popup-btn-outline { padding: 10px 18px; font-size: 12px; }
+
+            .table-scroll-wrap { margin: -2px -2px 0; }
+            .table-scroll-wrap .result-table td:first-child,
+            .table-scroll-wrap .result-table th:first-child { padding-left: 10px; }
+            .table-scroll-wrap .result-table td:last-child,
+            .table-scroll-wrap .result-table th:last-child { padding-right: 10px; }
+        }
     </style>
 </head>
 <body>
@@ -327,11 +546,13 @@
                     <div style="font-size: 11px; color: var(--text-light);">Klik "Lihat Detail" untuk melihat breakdown nilai.</div>
                 </div>
             </div>
-            <div class="card-body" style="padding: 0;">
-                <table class="result-table">
-                    <thead><tr><th>No. Tank</th><th>Kelas</th><th>Total Nilai</th><th>Status</th><th>Aksi</th></tr></thead>
-                    <tbody id="tbody-scores"><tr><td colspan="6"><div style="padding:30px;text-align:center;color:var(--text-light);">Belum ada data.</div></td></tr></tbody>
-                </table>
+            <div class="card-body">
+                <div class="table-scroll-wrap">
+                    <table class="result-table">
+                        <thead><tr><th>No. Tank</th><th>Kelas</th><th style="text-align:center;">Total Nilai</th><th>Status</th><th style="text-align:center;">Aksi</th></tr></thead>
+                        <tbody id="tbody-scores"><tr><td colspan="5"><div style="padding:30px;text-align:center;color:var(--text-light);">Belum ada data.</div></td></tr></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
