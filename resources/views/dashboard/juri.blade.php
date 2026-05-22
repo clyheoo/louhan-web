@@ -99,8 +99,10 @@
         .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
         .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
         .result-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .result-table th { background: #f8fafc; padding: 12px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+        .result-table th { background: #f8fafc; padding: 12px; text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); }
         .result-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; color: var(--text-main); }
+        .result-table th:last-child,
+        .result-table td:last-child { text-align: center; }
         .badge-success { background: #dcfce7; color: #16a34a; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
         .badge-edited { background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
         .btn-view { background: var(--primary-light); color: var(--primary); border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
@@ -212,7 +214,8 @@
         .btn-kirim:hover { background:#16a34a; color:white; border-color:#16a34a; }
         .btn-kirim:disabled { background:#f1f5f9; color:#94a3b8; border-color:#e2e8f0; cursor:not-allowed; }
         .badge-terkirim { background:#f5f3ff; color:#7c3aed; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:700; display:inline-flex; align-items:center; gap:3px; }
-        .popup-icon.confirm { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 8px 24px rgba(59,130,246,0.3); }
+        .popup-icon.confirm { background: var(--primary); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; box-shadow: 0 8px 24px rgba(37,99,235,0.25); }
+        .popup-icon.confirm i { font-size: 32px; color: white; }
         .popup-btn-outline { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border: 2px solid #e2e8f0; border-radius: 14px; background: white; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s; color: var(--text-muted); }
         .popup-btn-outline:hover { border-color: #94a3b8; color: var(--text-main); }
         .popup-actions { display: flex; gap: 12px; justify-content: center; }
@@ -234,10 +237,11 @@
         @media (max-width: 768px) {
             .top-nav { padding: 10px 16px; flex-wrap: wrap; gap: 8px; }
             .brand h1 { font-size: 15px; }
-            .brand span { display: none; }
-            .nav-right { gap: 10px; flex-wrap: wrap; }
+            .brand span { display: block; font-size: 10px; margin-top: 1px; }
+            .nav-right { gap: 6px; flex-wrap: wrap; align-items: stretch; }
+            .nav-right .info { text-align: center; }
             .nav-right .info h4 { font-size: 12px; }
-            .btn-logout { padding: 6px 10px; font-size: 11px; }
+            .btn-logout { padding: 5px 12px; font-size: 10px; align-self: flex-start; }
             .main-container { padding: 12px; gap: 14px; }
 
             /* Form row — 2 kolom */
@@ -261,6 +265,8 @@
                 padding-bottom: 4px;
                 -webkit-overflow-scrolling: touch;
             }
+
+            .tank-kat-label { display: none !important; }
             .kategori-list::-webkit-scrollbar { height: 3px; }
             .kategori-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
             .kat-btn {
@@ -293,10 +299,16 @@
             .score-label p { font-size: 10px; }
             .score-select { font-size: 14px; padding: 9px 6px; }
 
-            /* Table */
-            .result-table { min-width: 580px; font-size: 12px; }
-            .result-table th { padding: 10px 8px; font-size: 10px; }
-            .result-table td { padding: 10px 8px; }
+            /* Table — riwayat: tanpa scroll horizontal */
+            .table-scroll-wrap { overflow-x: visible !important; border: none !important; margin: 0 !important; border-radius: 0 !important; }
+            .result-table { min-width: unset !important; width: 100% !important; table-layout: fixed !important; font-size: 11px; }
+            .result-table th { padding: 8px 6px !important; font-size: 9px; letter-spacing: .3px; }
+            .result-table td { padding: 8px 6px !important; }
+            .result-table td:first-child,
+            .result-table th:first-child { padding-left: 8px !important; }
+            .result-table td:last-child,
+            .result-table th:last-child { padding-right: 8px !important; }
+            .result-table td:last-child { white-space: normal !important; }
 
             /* Locked banner */
             .locked-banner { padding: 24px 16px; }
@@ -358,7 +370,7 @@
             .popup-check { width: 64px; height: 64px; }
             .popup-check i { font-size: 30px; }
             .popup-icon.confirm { width: 64px; height: 64px; }
-            .popup-icon.confirm i { font-size: 30px; }
+            .popup-icon.confirm i { font-size: 26px; }
 
             /* Defect modal */
             .defect-modal-box { max-width: 95%; }
@@ -366,9 +378,18 @@
             .defect-option span { font-size: 12px; }
 
             /* Badge & button kecil */
-            .btn-view { padding: 5px 10px; font-size: 10px; }
-            .btn-kirim { padding: 5px 10px; font-size: 10px; }
+            .btn-view { padding: 4px 0; font-size: 10px; width: 100%; text-align: center; border-radius: 6px; display: block; }
+            .btn-kirim { padding: 4px 0; font-size: 10px; width: 100%; text-align: center; justify-content: center; border-radius: 6px; display: flex; }
             .badge-success, .badge-edited, .badge-terkirim { font-size: 9px; padding: 3px 6px; }
+
+            /* AKSI column — tumpuk vertikal di mobile */
+            .result-table td:last-child { white-space: normal !important; vertical-align: middle !important; }
+            .result-table td:last-child .btn-view,
+            .result-table td:last-child .btn-kirim,
+            .result-table td:last-child .badge-terkirim { display: block !important; width: 100%; margin-bottom: 3px; }
+            .result-table td:last-child .btn-view:last-child,
+            .result-table td:last-child .btn-kirim:last-child,
+            .result-table td:last-child .badge-terkirim:last-child { margin-bottom: 0; }
 
             /* Table scroll wrapper — mencegah border-radius memotong konten */
             .table-scroll-wrap {
@@ -420,8 +441,10 @@
             .form-control { padding: 10px; font-size: 14px; }
             .form-label { font-size: 10px; }
 
-            /* Result table */
-            .result-table { min-width: 500px; }
+            /* Result table — tetap tanpa scroll */
+            .result-table { min-width: unset !important; }
+            .result-table th { padding: 7px 4px !important; font-size: 8px; }
+            .result-table td { padding: 7px 4px !important; font-size: 10px; }
 
             /* Detail table */
             .detail-table { font-size: 11px; }
@@ -445,6 +468,15 @@
             .table-scroll-wrap .result-table th:first-child { padding-left: 10px; }
             .table-scroll-wrap .result-table td:last-child,
             .table-scroll-wrap .result-table th:last-child { padding-right: 10px; }
+
+            .result-table td:last-child .btn-view { font-size: 9px; padding: 4px 0; }
+            .result-table td:last-child .btn-kirim { font-size: 9px; padding: 4px 0; }
+            .result-table td:last-child .badge-terkirim { font-size: 8px; padding: 2px 4px; justify-content: center; }
+            .popup-icon.confirm { width: 56px; height: 56px; }
+            .popup-icon.confirm i { font-size: 22px; }
+            .nav-right { flex-direction: column; align-items: flex-start; gap: 4px; }
+            .nav-right .info { text-align: center; }
+            .btn-logout { align-self: flex-start; }
         }
     </style>
 </head>
@@ -1284,7 +1316,7 @@ function loadJuriData() {
                 aksiHtml += ' <button class="btn-kirim" onclick="kirimKeGrand(' + s.id + ', this)"><i class="fas fa-paper-plane"></i> Kirim</button>';
             }
             tr.innerHTML =
-            '<td style="font-weight:700; color:var(--primary);">Tank ' + s.ikan.nomor_tank + ' <span style="font-size:10px;color:var(--text-light);">(' + s.ikan.kategori + ')</span></td>' +
+            '<td style="font-weight:700; color:var(--primary);">Tank ' + s.ikan.nomor_tank + ' <span class="tank-kat-label" style="font-size:10px;color:var(--text-light);">(' + s.ikan.kategori + ')</span></td>' +
             '<td>Kelas ' + s.kelas + '</td>' +
             '<td style="font-weight:800; font-size:15px;">' + s.total_nilai + '</td>' +
             '<td>' + statusHtml + '</td>' +
