@@ -155,7 +155,7 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                 if ($histories->isEmpty()) {
                     $sheet->mergeCells("A{$row}:J{$row}");
                     $sheet->setCellValue("A{$row}", 'Belum ada riwayat perubahan password.');
-                    $sheet->getStyle("A{$row}:J{$row}")->getAlignment()->setItalic(true);
+                    $sheet->getStyle("A{$row}:J{$row}")->getFont()->setItalic(true);;
                     $row++;
                 } else {
                     $no = 1;
@@ -271,7 +271,7 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                     if ($scorings->isEmpty()) {
                         $sheet->mergeCells("A{$row}:J{$row}");
                         $sheet->setCellValue("A{$row}", 'Belum ada data penilaian yang dikirim.');
-                        $sheet->getStyle("A{$row}:J{$row}")->getAlignment()->setItalic(true);
+                        $sheet->getStyle("A{$row}:J{$row}")->getFont()->setItalic(true);;
                         $row++;
                     } else {
                         $no = 1;
@@ -349,7 +349,7 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                     if ($edits->isEmpty()) {
                         $sheet->mergeCells("A{$row}:J{$row}");
                         $sheet->setCellValue("A{$row}", 'Tidak ada riwayat intervensi nilai.');
-                        $sheet->getStyle("A{$row}:J{$row}")->getAlignment()->setItalic(true);
+                        $sheet->getStyle("A{$row}:J{$row}")->getFont()->setItalic(true);;
                         $row++;
                     } else {
                         $no = 1;
