@@ -795,7 +795,7 @@
 
             <footer class="login-footer">
                 <div class="footer-divider"></div>
-                <p class="footer-text">Support by <span class="brand">Nandhog Digital</span></p>
+                <p class="footer-text">POWERD by <span class="brand">LEO Digital</span></p>
             </footer>
         </div>
     </main>

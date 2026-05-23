@@ -568,7 +568,7 @@
                 </div>
             </div>
 
-            <h1 class="login-title">Security Access</h1>
+            <h1 class="login-title">Masuk ke Halaman LCI</h1>
             <p class="login-subtitle">Masuk dengan akun untuk mengakses LCI Suite</p>
 
             <form method="POST" action="{{ route('login') }}" id="loginForm">
@@ -635,7 +635,7 @@
 
             <footer class="login-footer">
                 <div class="footer-divider"></div>
-                <p class="footer-text">Support by <span class="brand">Nandhog Digital</span></p>
+                <p class="footer-text">Powerd by <span class="brand">Leo Digital</span></p>
             </footer>
         </div>
     </main>
