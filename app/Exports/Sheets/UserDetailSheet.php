@@ -78,7 +78,7 @@ class UserDetailSheet implements WithTitle, WithEvents
                     if ($scorings->isEmpty()) {
                         $sheet->mergeCells("A{$row}:F{$row}");
                         $sheet->setCellValue("A{$row}", 'Belum ada data penilaian.');
-                        $sheet->getStyle("A{$row}")->getAlignment()->setItalic(true);
+                        $sheet->getStyle("A{$row}:J{$row}")->getFont()->setItalic(true);
                         $row++;
                     } else {
                         $no = 1;
@@ -136,7 +136,7 @@ class UserDetailSheet implements WithTitle, WithEvents
                     if ($edits->isEmpty()) {
                         $sheet->mergeCells("A{$row}:F{$row}");
                         $sheet->setCellValue("A{$row}", 'Tidak ada riwayat edit nilai.');
-                        $sheet->getStyle("A{$row}")->getAlignment()->setItalic(true);
+                        $sheet->getStyle("A{$row}:J{$row}")->getFont()->setItalic(true);
                         $row++;
                     } else {
                         $no = 1;
