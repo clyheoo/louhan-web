@@ -88,61 +88,64 @@
             position: absolute;
             inset: 0;
             background-image:
-                linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
-            background-size: 60px 60px;
-            mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, black 20%, transparent 70%);
-            -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, black 20%, transparent 70%);
+                linear-gradient(rgba(59,130,246,0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59,130,246,0.07) 1px, transparent 1px);
+            background-size: 50px 50px;
+            mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 80%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 80%);
         }
 
         /* Orbs */
         .orb {
             position: absolute;
             border-radius: 50%;
-            filter: blur(60px);
+            filter: blur(40px);
             opacity: 0;
             animation: orbFloat 8s ease-in-out infinite;
         }
-        .orb-1 { width: 300px; height: 300px; background: rgba(59,130,246,0.12); top: 10%; left: -5%; }
-        .orb-2 { width: 250px; height: 250px; background: rgba(37,99,235,0.08); bottom: 10%; right: -5%; animation-delay: -3s; }
-        .orb-3 { width: 180px; height: 180px; background: rgba(96,165,250,0.1); top: 50%; left: 60%; animation-delay: -5s; }
+        .orb-1 { width: 400px; height: 400px; background: rgba(59,130,246,0.25); top: 5%; left: -8%; animation-duration: 10s; }
+        .orb-2 { width: 350px; height: 350px; background: rgba(37,99,235,0.2); bottom: 5%; right: -8%; animation-delay: -3s; animation-duration: 12s; }
+        .orb-3 { width: 250px; height: 250px; background: rgba(96,165,250,0.2); top: 40%; left: 55%; animation-delay: -5s; animation-duration: 9s; }
         @keyframes orbFloat {
-            0%, 100% { opacity: 0.4; transform: translateY(0) scale(1); }
-            50%      { opacity: 0.8; transform: translateY(-30px) scale(1.05); }
+            0%, 100% { opacity: 0.6; transform: translateY(0) scale(1); }
+            50%      { opacity: 1; transform: translateY(-40px) scale(1.08); }
         }
 
         /* Particles */
         .particles { position: absolute; inset: 0; }
         .particle {
             position: absolute;
-            width: 4px;
-            height: 4px;
+            width: 6px;
+            height: 6px;
             background: var(--blue-400);
             border-radius: 50%;
             opacity: 0;
+            box-shadow: 0 0 6px rgba(59,130,246,0.5), 0 0 12px rgba(59,130,246,0.2);
             animation: particleRise linear infinite;
         }
         @keyframes particleRise {
             0%   { opacity: 0; transform: translateY(100vh) scale(0); }
-            10%  { opacity: 0.6; }
-            90%  { opacity: 0.2; }
-            100% { opacity: 0; transform: translateY(-10vh) scale(1); }
+            10%  { opacity: 0.9; }
+            50%  { opacity: 0.7; }
+            90%  { opacity: 0.3; }
+            100% { opacity: 0; transform: translateY(-10vh) scale(1.2); }
         }
 
         /* Geometric Shapes */
         .geo-shape {
             position: absolute;
-            border: 1.5px solid rgba(59,130,246,0.1);
+            border: 2px solid rgba(59,130,246,0.2);
             opacity: 0;
             animation: geoFloat 12s ease-in-out infinite;
         }
-        .geo-1 { width: 80px; height: 80px; top: 15%; right: 12%; border-radius: 16px; transform: rotate(45deg); animation-delay: -2s; }
-        .geo-2 { width: 50px; height: 50px; bottom: 20%; left: 10%; border-radius: 50%; animation-delay: -6s; }
+        .geo-1 { width: 100px; height: 100px; top: 12%; right: 10%; border-radius: 20px; transform: rotate(45deg); animation-delay: -2s; }
+        .geo-2 { width: 70px; height: 70px; bottom: 18%; left: 8%; border-radius: 50%; animation-delay: -6s; }
+        .geo-3 { width: 40px; height: 40px; top: 65%; right: 25%; border-radius: 8px; animation-delay: -8s; border-color: rgba(37,99,235,0.15); }
         @keyframes geoFloat {
             0%, 100% { opacity: 0; transform: translateY(0) rotate(0deg); }
-            25%      { opacity: 0.6; }
-            50%      { opacity: 0.4; transform: translateY(-20px) rotate(180deg); }
-            75%      { opacity: 0.6; }
+            20%      { opacity: 0.7; }
+            50%      { opacity: 0.5; transform: translateY(-25px) rotate(180deg); }
+            80%      { opacity: 0.7; }
         }
 
         /* ============================================
@@ -551,6 +554,7 @@
         <div class="orb orb-3"></div>
         <div class="geo-shape geo-1"></div>
         <div class="geo-shape geo-2"></div>
+        <div class="geo-shape geo-3"></div>
         <div class="particles" id="particles"></div>
     </div>
 
@@ -640,11 +644,11 @@
         /* Particles */
         (function(){
             var c = document.getElementById('particles');
-            for(var i = 0; i < 12; i++){
+            for(var i = 0; i < 20; i++){
                 var p = document.createElement('div');
                 p.classList.add('particle');
                 p.style.left = Math.random() * 100 + '%';
-                p.style.width = p.style.height = (2 + Math.random() * 3) + 'px';
+                p.style.width = p.style.height = (3 + Math.random() * 5) + 'px';
                 p.style.animationDuration = (8 + Math.random() * 10) + 's';
                 p.style.animationDelay = (Math.random() * 10) + 's';
                 c.appendChild(p);
