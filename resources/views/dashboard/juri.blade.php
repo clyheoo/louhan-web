@@ -25,7 +25,9 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kelas <span class="text-red-500">*</span></label>
-                        <input type="text" id="input-kelas" placeholder="A, B, C..." class="w-full px-2 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-xs font-bold text-center bg-white">
+                        <select id="filter-kelas" onchange="onFilterChange()" class="w-full px-2 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-xs font-bold text-center bg-white">
+                            <option value="">Semua Kelas</option>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nama Juri</label>
@@ -315,9 +317,11 @@ function setVal(tankId, key, val) {
 }
 
 function getFilteredTanks() {
-    const f = document.getElementById('filter-kategori').value;
+    const fKat = document.getElementById('filter-kategori').value;
+    const fKelas = document.getElementById('filter-kelas').value;
     let tanks = appData.available_tanks;
-    if (f) tanks = tanks.filter(t => t.kategori === f);
+    if (fKat) tanks = tanks.filter(t => t.kategori === fKat);
+    if (fKelas) tanks = tanks.filter(t => t.kelas === fKelas);
     return tanks.filter(t => !appData.all_scored[t.id]);
 }
 
@@ -334,8 +338,11 @@ function renderFormTable() {
     const group = SCORING_GROUPS.find(g => g.id === activeTab);
     const tanks = getFilteredTanks();
     const scored = tanks.length === 0 ? 0 : getFilteredTanks().length;
-    const allFiltered = document.getElementById('filter-kategori').value
-        ? appData.available_tanks.filter(t => t.kategori === document.getElementById('filter-kategori').value) : appData.available_tanks;
+    const fKat = document.getElementById('filter-kategori').value;
+    const fKelas = document.getElementById('filter-kelas').value;
+    let allFiltered = appData.available_tanks;
+    if (fKat) allFiltered = allFiltered.filter(t => t.kategori === fKat);
+    if (fKelas) allFiltered = allFiltered.filter(t => t.kelas === fKelas);
     const scoredCount = allFiltered.filter(t => appData.all_scored[t.id]).length;
 
     // Info
@@ -409,11 +416,16 @@ function renderLiveTable() {
 }
 
 function populateFilter() {
-    const cats = [...new Set(appData.available_tanks.map(t=>t.kategori).filter(Boolean))].sort();
-    document.getElementById('filter-kategori').innerHTML = '<option value="">Semua Kategori</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+    document.getElementById('filter-kategori').innerHTML = '<option value="">Semua Kategori</option>' +
+        ['Bonsai','Cencu','Chginwa','Freemarking','Goldenbase','Jumbo','Klasik'].map(c => '<option value="' + c + '">' + c + '</option>').join('');
+
+    document.getElementById('filter-kelas').innerHTML = '<option value="">Semua Kelas</option>' +
+        ['A','B','C','D','E'].map(c => '<option value="' + c + '">Kelas ' + c + '</option>').join('');
 }
 
-function onFilterChange() { renderFormTable(); }
+function onFilterChange() {
+    renderFormTable();
+}
 
 // ═══════════════════════════════════════════════════════════════
 // TAB & GUIDELINE
@@ -524,8 +536,8 @@ function saveDefect() {
 // ═══════════════════════════════════════════════════════════════
 async function batchSubmit() {
     if (!isConfirmed || isSubmitting) return;
-    const kelas = document.getElementById('input-kelas').value.trim();
-    if (!kelas) { showWarningModal([{type:'select',msg:'Kelas wajib diisi!'}]); document.getElementById('input-kelas').focus(); return; }
+    const kelas = document.getElementById('filter-kelas').value;
+    if (!kelas) { showWarningModal([{type:'select',msg:'Kelas wajib diisi!'}]); document.getElementById('filter-kelas').focus(); return; }
 
     const tanks = getFilteredTanks();
     const toSubmit = tanks.filter(t => {

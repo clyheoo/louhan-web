@@ -268,6 +268,10 @@ async function apiFetch(url, opts = {}) {
     return res.json();
 }
 
+if (typeof window.onFilterChange !== 'function') {
+    window.onFilterChange = function() {};
+}
+
 </script>
 
 @stack('scripts')
