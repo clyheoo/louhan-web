@@ -12,8 +12,7 @@ class JuriController extends Controller
 {
     public function getJuriData()
     {
-        $approvedIkanIds = Nominasi::where('juri_id', auth()->id())
-            ->where('status', 'approved')
+        $approvedIkanIds = Nominasi::where('status', 'approved')
             ->pluck('ikan_id')
             ->toArray();
 

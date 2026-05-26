@@ -143,7 +143,7 @@
                             <select id="filter-kategori" onchange="onFilterChange()" class="w-full px-2 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-xs font-semibold bg-white"></select>
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kelas <span class="text-red-500">*</span></label>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kelas</label>
                             <select id="filter-kelas" onchange="onFilterChange()" class="w-full px-2 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-xs font-bold text-center bg-white">
                                 <option value="">Semua Kelas</option>
                             </select>
@@ -323,7 +323,16 @@ async function checkNominasiStatus() {
         nomHide('nom-loading');
 
         if (status === 'approved') {
-            nomShowApprovedAnim();
+            if (sessionStorage.getItem('nom_anim_done')) {
+                nomHide('nom-loading');
+                nomHide('nom-page');
+                nomHide('nom-waiting');
+                nomShow('scoring-page');
+                initScoringPage();
+            } else {
+                sessionStorage.setItem('nom_anim_done', '1');
+                nomShowApprovedAnim();
+            }
         } else if (status === 'pending') {
             nomShowWaiting(res.nominations);
         } else {
@@ -730,11 +739,41 @@ function saveDefect() { if (!defectModal) return; const { tankId, partKey, value
 // ═══════════════════════════════════════════════════════════════
 async function batchSubmit() {
     if (!isConfirmed || isSubmitting) return;
-    const kelas = document.getElementById('filter-kelas').value;
-    if (!kelas) { showWarningModal([{type:'select',msg:'Kelas wajib diisi!'}]); document.getElementById('filter-kelas').focus(); return; }
     const tanks = getFilteredTanks();
-    const toSubmit = tanks.filter(t => { const ts = tankScores[t.id]; if (!ts) return false; return Object.values(ts.scores).some(cat => Object.values(cat).some(v => v !== '' && v !== 0)); });
-    if (toSubmit.length === 0) { showWarningModal([{type:'select',msg:'Tidak ada data yang diisi.'}]); return; }
+
+    /* ── PISAHKAN: TANK LENGKAP (BOLEH SIMPAN) & TANK BELUM LENGKAP (DILEWATI) ── */
+    const toSubmit = [];
+    const skippedErrors = [];
+
+    tanks.forEach(function(tank) {
+        const ts = tankScores[tank.id];
+        if (!ts) return;
+
+        let isComplete = true;
+        const missingFields = [];
+        SCORING_GROUPS.forEach(function(group) {
+            group.fields.forEach(function(field) {
+                if (field.type === 'defect') return;
+                if (getVal(tank.id, field.key) === '') {
+                    isComplete = false;
+                    missingFields.push(group.title + ' > ' + field.label);
+                }
+            });
+        });
+
+        if (isComplete) {
+            toSubmit.push(tank);
+        } else {
+            skippedErrors.push('Tank T' + tank.nomor_tank + ': ' + missingFields.join(', '));
+        }
+    });
+
+    if (toSubmit.length === 0) {
+        showWarningModal(skippedErrors.map(function(e) { return {type:'select', msg: e}; }));
+        return;
+    }
+
+    /* ── PROSES SIMPAN HANYA YANG LENGKAP ── */
     isSubmitting = true;
     const btn = document.getElementById('btn-batch-submit');
     btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Menyimpan 0/' + toSubmit.length + '...';
@@ -751,7 +790,7 @@ async function batchSubmit() {
                 method: 'POST',
                 body: JSON.stringify({
                     ikan_id: tank.id,
-                    kelas: kelas,
+                    kelas: tank.kelas,
                     all_scores: ts.scores,
                     defect_data: ts.defects,
                 })
@@ -763,10 +802,16 @@ async function batchSubmit() {
     isSubmitting = false;
     if (fail === 0) {
         showSuccessPopup('Nilai Berhasil Disimpan!', 'Berhasil menyimpan <strong>' + success + '</strong> nilai.');
+        /* Setelah notifikasi sukses, tampilkan peringatan tank yang dilewati */
+        if (skippedErrors.length > 0) {
+            setTimeout(function() {
+                showWarningModal(skippedErrors.map(function(e) { return {type:'select', msg: 'Dilewati (belum lengkap): ' + e}; }));
+            }, 500);
+        }
         isConfirmed = false;
         toggleConfirm();
     } else {
-        showWarningModal(loopErrors.map(e => ({type:'select', msg: e})));
+        showWarningModal(loopErrors.map(function(e) { return {type:'select', msg: e}; }));
     }
 
     await loadJuriData();
