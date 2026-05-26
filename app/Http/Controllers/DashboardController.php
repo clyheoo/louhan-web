@@ -85,7 +85,6 @@ class DashboardController extends Controller
         $request->validate(['ikan_id' => 'required|exists:ikans,id']);
         $ikan = Ikan::find($request->ikan_id);
 
-        // ★ GUARD: Tolak jika ikan sudah punya nomor tank (sudah diundi user)
         if ($ikan->nomor_tank !== null) {
             return response()->json([
                 'success' => false,
@@ -93,13 +92,25 @@ class DashboardController extends Controller
             ], 422);
         }
 
+        $kategori = $ikan->kategori;
         $kelas = $ikan->kelas;
+        $useSubRange = false;
 
-        $ranges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
-        
-        if ($ranges && isset($ranges[$kelas])) {
-            $min = (int) ($ranges[$kelas]['min'] ?? 1);
-            $max = (int) ($ranges[$kelas]['max'] ?? 1000);
+        $classRanges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
+
+        if ($classRanges && isset($classRanges[$kelas])) {
+            $kelasMin = (int) ($classRanges[$kelas]['min'] ?? 1);
+            $kelasMax = (int) ($classRanges[$kelas]['max'] ?? 1000);
+            $subRanges = isset($classRanges[$kelas]['kategori']) ? $classRanges[$kelas]['kategori'] : [];
+
+            if (isset($subRanges[$kategori])) {
+                $min = (int) ($subRanges[$kategori]['min'] ?? $kelasMin);
+                $max = (int) ($subRanges[$kategori]['max'] ?? $kelasMax);
+                $useSubRange = true;
+            } else {
+                $min = $kelasMin;
+                $max = $kelasMax;
+            }
         } else {
             $min = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
             $max = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
@@ -110,10 +121,13 @@ class DashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($ikan, $min, $max) {
-                $assignedNumbers = Ikan::whereNotNull('nomor_tank')
-                    ->where('kelas', $ikan->kelas)
-                    ->lockForUpdate()
+            DB::transaction(function () use ($ikan, $min, $max, $useSubRange, $kategori, $kelas) {
+                $query = Ikan::whereNotNull('nomor_tank')->where('kelas', $kelas);
+                if ($useSubRange) {
+                    $query->where('kategori', $kategori);
+                }
+
+                $assignedNumbers = $query->lockForUpdate()
                     ->pluck('nomor_tank')
                     ->map(fn($n) => (string) $n)
                     ->toArray();
@@ -125,8 +139,12 @@ class DashboardController extends Controller
                     }
                 }
 
+                $label = $useSubRange
+                    ? "Kategori {$kategori} (Kelas {$kelas})"
+                    : "Kelas {$kelas}";
+
                 if (empty($availableNumbers)) {
-                    throw new \Exception('NOMOR TANK PENUH untuk Kelas ' . $ikan->kelas . ' (Rentang ' . $min . '-' . $max . '). Semua nomor sudah terisi.');
+                    throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $min . '-' . $max . '). Semua nomor sudah terisi.');
                 }
 
                 shuffle($availableNumbers);
@@ -135,7 +153,7 @@ class DashboardController extends Controller
             });
 
             return response()->json([
-                'success'      => true, 
+                'success'      => true,
                 'nomor_tank'   => $ikan->fresh()->nomor_tank,
                 'nama_peserta' => $ikan->peserta->nama_peserta
             ]);
@@ -157,13 +175,25 @@ class DashboardController extends Controller
             return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan, bukan milik Anda, atau sudah mendapat nomor.'], 400);
         }
 
+        $kategori = $ikan->kategori;
         $kelas = $ikan->kelas;
+        $useSubRange = false;
 
-        $ranges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
-        
-        if ($ranges && isset($ranges[$kelas])) {
-            $min = (int) ($ranges[$kelas]['min'] ?? 1);
-            $max = (int) ($ranges[$kelas]['max'] ?? 1000);
+        $classRanges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
+
+        if ($classRanges && isset($classRanges[$kelas])) {
+            $kelasMin = (int) ($classRanges[$kelas]['min'] ?? 1);
+            $kelasMax = (int) ($classRanges[$kelas]['max'] ?? 1000);
+            $subRanges = isset($classRanges[$kelas]['kategori']) ? $classRanges[$kelas]['kategori'] : [];
+
+            if (isset($subRanges[$kategori])) {
+                $min = (int) ($subRanges[$kategori]['min'] ?? $kelasMin);
+                $max = (int) ($subRanges[$kategori]['max'] ?? $kelasMax);
+                $useSubRange = true;
+            } else {
+                $min = $kelasMin;
+                $max = $kelasMax;
+            }
         } else {
             $min = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
             $max = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
@@ -174,10 +204,13 @@ class DashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($ikan, $min, $max) {
-                $assignedNumbers = Ikan::whereNotNull('nomor_tank')
-                    ->where('kelas', $ikan->kelas)
-                    ->lockForUpdate()
+            DB::transaction(function () use ($ikan, $min, $max, $useSubRange, $kategori, $kelas) {
+                $query = Ikan::whereNotNull('nomor_tank')->where('kelas', $kelas);
+                if ($useSubRange) {
+                    $query->where('kategori', $kategori);
+                }
+
+                $assignedNumbers = $query->lockForUpdate()
                     ->pluck('nomor_tank')
                     ->map(fn($n) => (string) $n)
                     ->toArray();
@@ -189,8 +222,12 @@ class DashboardController extends Controller
                     }
                 }
 
+                $label = $useSubRange
+                    ? "Kategori {$kategori} (Kelas {$kelas})"
+                    : "Kelas {$kelas}";
+
                 if (empty($availableNumbers)) {
-                    throw new \Exception('NOMOR TANK PENUH untuk Kelas ' . $ikan->kelas . ' (Rentang ' . $min . '-' . $max . '). Semua nomor sudah terisi.');
+                    throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $min . '-' . $max . '). Semua nomor sudah terisi.');
                 }
 
                 shuffle($availableNumbers);
@@ -199,9 +236,9 @@ class DashboardController extends Controller
             });
 
             return response()->json([
-                'success' => true, 
+                'success'    => true,
                 'nomor_tank' => $ikan->fresh()->nomor_tank,
-                'ikan_id' => $ikan->id
+                'ikan_id'    => $ikan->id
             ]);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
@@ -389,4 +426,5 @@ class DashboardController extends Controller
             'tank_range_max' => $maxTankRange,  // ★ TAMBAHKAN INI
         ]);
     }
+
 }

@@ -391,7 +391,11 @@
         .sd-empty{text-align:center;padding:40px 20px;color:var(--light);}
         .sd-empty i{font-size:28px;margin-bottom:8px;display:block;opacity:.3;}
         .sd-empty p{font-size:12px;
-    }
+        }
+        .kat-gap-info{display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:11px;color:#78350f;line-height:1.6;margin-bottom:12px;}
+        .kat-gap-info i{margin-right:4px;}
+        @media(max-width:900px){#katGrid{grid-template-columns:repeat(2,1fr)!important;}}
+        @media(max-width:500px){#katGrid{grid-template-columns:1fr!important;}}
     </style>
 </head>
 <body>
@@ -710,12 +714,13 @@
                 </div>
             </div>
             
-            <!-- ★ PENGATURAN RENTANG PER KELAS (DI ATAS) -->
+            <!-- ★ PENGATURAN RENTANG PER KELAS -->
             <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe); border:1px solid #bfdbfe; border-radius:16px; margin-bottom:20px;">
                 <div style="padding:14px 20px; border-bottom:1px solid #bfdbfe;">
                     <div style="font-size:14px; font-weight:800; color:#1e40af; display:flex; align-items:center; gap:8px;">
                         <i class="fas fa-sliders"></i> Pengaturan Rentang Nomor Tank per Kelas
                     </div>
+                    <div style="font-size:11px; color:#3b82f6; margin-top:4px;">Tentukan rentang nomor untuk setiap kelas terlebih dahulu</div>
                 </div>
                 <div style="padding:18px 20px;">
                     <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; margin-bottom:16px;" id="kelasRangeInputs">
@@ -728,9 +733,41 @@
                         <span style="font-size:12px; font-weight:700; color:#166534;">Rentang nomor per kelas sudah disimpan</span>
                     </div>
                     <div id="kelasRangeBtnWrap">
-                        <button type="button" id="btnSaveTankRange" onclick="saveTankRange()" class="btn-primary" style="width:100%; justify-content:center; background:#1e40af;">
+                        <button type="button" id="btnSaveTankRange" onclick="saveKelasRange()" class="btn-primary" style="width:100%; justify-content:center; background:#1e40af;">
                             <i class="fas fa-save"></i> Simpan Rentang Nomor
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ★ PENGATURAN SUB-RENTANG PER KATEGORI (TERHUBUNG DENGAN KELAS) -->
+            <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7); border:1px solid #fde68a; border-radius:16px; margin-bottom:20px;">
+                <div style="padding:14px 20px; border-bottom:1px solid #fde68a;">
+                    <div style="font-size:14px; font-weight:800; color:#92400e; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-tags"></i> Pengaturan Sub-Rentang Nomor per Kategori
+                    </div>
+                    <div style="font-size:11px; color:#b45309; margin-top:4px;">Tentukan nomor tank per kategori di dalam rentang kelas yang sudah ditentukan</div>
+                </div>
+                <div style="padding:18px 20px;">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+                        <label style="font-size:11px; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:.4px; margin:0; white-space:nowrap;">Pilih Kelas</label>
+                        <select id="katKelasSelect" class="form-control" style="max-width:220px; font-weight:700;" onchange="onKatKelasChange()">
+                            <option value="">-- Pilih Kelas --</option>
+                        </select>
+                        <div id="katKelasRangeInfo" style="display:none; background:#fff; border:1px solid #fde68a; border-radius:8px; padding:5px 12px;">
+                            <span style="font-size:11px; color:#78350f; font-weight:700;">Rentang: <span id="katKelasRangeText" style="color:#1e40af; font-weight:900;">—</span></span>
+                        </div>
+                    </div>
+                    <div id="katGridWrap" style="display:none;">
+                        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:14px;" id="katGrid"></div>
+                        <div class="kat-gap-info" id="katGapInfo"></div>
+                        <button type="button" id="btnSaveKatRange" onclick="saveKategoriRange()" class="btn-primary" style="width:100%; justify-content:center; background:#92400e; padding:12px; border-radius:12px;">
+                            <i class="fas fa-save"></i> Simpan Sub-Rentang Kategori
+                        </button>
+                    </div>
+                    <div id="katEmptyState" style="text-align:center; padding:20px; color:#d97706;">
+                        <i class="fas fa-hand-pointer" style="font-size:20px; display:block; margin-bottom:8px; opacity:.4;"></i>
+                        <span style="font-size:12px;">Pilih kelas di atas untuk mengatur sub-rentang kategori</span>
                     </div>
                 </div>
             </div>
@@ -1070,6 +1107,380 @@ var kelasList = ['A', 'B', 'C', 'D', 'E'];
 var allScoringData=[];
 var chartKat,chartStat,chartTop;
 var _confirmCallback=null;
+var allKategoriList = ['Cencu','Chginwa','Freemarking','Goldenbase','Klasik','Bonsai','Jumbo'];
+var kelasRangeData = {};
+var kelasRangeSaved = false;
+
+/* ═══ LOAD & RENDER KELAS GRID ═══ */
+function loadTankRange(){
+    fetch('/api/tank-range',{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        kelasRangeData = {};
+        for(var i=0;i<kelasList.length;i++){
+            var k = kelasList[i];
+            if(d[k]){
+                var katObj = {};
+                if(d[k].kategori && typeof d[k].kategori === 'object'){
+                    katObj = d[k].kategori;
+                }
+                kelasRangeData[k] = {min:d[k].min||1, max:d[k].max||1000, kategori:katObj};
+            } else {
+                kelasRangeData[k] = {min:1, max:1000, kategori:{}};
+            }
+        }
+        renderKelasGrid();
+        populateKelasSelect();
+
+        /* Cek apakah ada data tersimpan */
+        var hasAny = false;
+        for(var i=0;i<kelasList.length;i++){
+            var kd = kelasRangeData[kelasList[i]];
+            if(kd.min !== 1 || kd.max !== 1000){hasAny = true; break;}
+        }
+        if(hasAny){kelasRangeSaved = true; showKelasRangeSaved();}
+
+        /* Reset kategori section */
+        document.getElementById('katKelasSelect').value = '';
+        document.getElementById('katGridWrap').style.display = 'none';
+        document.getElementById('katEmptyState').style.display = 'block';
+    })
+    .catch(function(){
+        document.getElementById('kelasRangeInputs').innerHTML = '<div style="text-align:center;padding:20px;color:var(--danger);grid-column:1/-1;font-size:12px;">Gagal memuat.</div>';
+    });
+}
+
+function renderKelasGrid(){
+    var container = document.getElementById('kelasRangeInputs');
+    container.innerHTML = '';
+    for(var i=0;i<kelasList.length;i++){
+        var k = kelasList[i];
+        var d = kelasRangeData[k];
+        var card = document.createElement('div');
+        card.style.cssText = 'background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center;';
+        card.innerHTML =
+            '<div style="font-size:11px;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Kelas '+k+'</div>'+
+            '<div style="display:flex;gap:6px;align-items:center;">'+
+                '<input type="number" id="range_'+k+'_min" value="'+d.min+'" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;" onchange="onKelasInput(\''+k+'\')">'+
+                '<span style="font-weight:600;color:#94a3b8;">-</span>'+
+                '<input type="number" id="range_'+k+'_max" value="'+d.max+'" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;" onchange="onKelasInput(\''+k+'\')">'+
+            '</div>';
+        container.appendChild(card);
+    }
+}
+
+function onKelasInput(k){
+    var minEl = document.getElementById('range_'+k+'_min');
+    var maxEl = document.getElementById('range_'+k+'_max');
+    kelasRangeData[k].min = parseInt(minEl.value) || 1;
+    kelasRangeData[k].max = parseInt(maxEl.value) || 1000;
+
+    /* Update info di section kategori jika sedang melihat kelas ini */
+    var sel = document.getElementById('katKelasSelect').value;
+    if(sel === k){
+        document.getElementById('katKelasRangeText').textContent = kelasRangeData[k].min + ' - ' + kelasRangeData[k].max;
+    }
+}
+
+/* ═══ SIMPAN RENTANG KELAS ═══ */
+function saveKelasRange(){
+    var inputRanges = {};
+
+    for(var i=0;i<kelasList.length;i++){
+        var k = kelasList[i];
+        var minEl = document.getElementById('range_'+k+'_min');
+        var maxEl = document.getElementById('range_'+k+'_max');
+        if(!minEl || !maxEl) continue;
+
+        var minV = minEl.value.trim(), maxV = maxEl.value.trim();
+        if(minV === '' && maxV === '') continue;
+
+        minV = parseInt(minV); maxV = parseInt(maxV);
+        if(!minV || !maxV || minV < 1 || maxV < 1){
+            popupError('Tidak Valid','Rentang Kelas '+k+' tidak valid.'); return;
+        }
+        if(maxV < minV){
+            popupError('Tidak Valid','Kelas '+k+': Nomor akhir harus >= awal.'); return;
+        }
+
+        /* Cek sub-rentang kategori yang sudah ada masih muat */
+        if(kelasRangeData[k] && kelasRangeData[k].kategori){
+            for(var katName in kelasRangeData[k].kategori){
+                var sub = kelasRangeData[k].kategori[katName];
+                if(sub.min < minV || sub.max > maxV){
+                    popupError('Sub-rentang Tidak Cocok',
+                        'Sub-rentang "'+katName+'" ('+sub.min+'-'+sub.max+') di Kelas '+k+' berada di luar rentang baru ('+minV+'-'+maxV+').<br><br>'+
+                        '<span style="font-size:11px;color:var(--muted);">Solusi: Perbesar rentang, atau hapus sub-rentang "'+katName+'" terlebih dahulu.</span>'
+                    ); return;
+                }
+            }
+        }
+        inputRanges[k] = {min:minV, max:maxV};
+    }
+
+    if(!Object.keys(inputRanges).length){
+        popupError('Kosong','Isi setidaknya satu rentang kelas.'); return;
+    }
+
+    /* Cek overlap antar kelas */
+    var keys = Object.keys(inputRanges);
+    for(var i=0;i<keys.length;i++){
+        for(var j=i+1;j<keys.length;j++){
+            var a=inputRanges[keys[i]], b=inputRanges[keys[j]];
+            if(a.min<=b.max && b.min<=a.max){
+                popupError('Overlap','Kelas "'+keys[i]+'" ('+a.min+'-'+a.max+') bentrok dengan Kelas "'+keys[j]+'" ('+b.min+'-'+b.max+').'); return;
+            }
+        }
+    }
+
+    /* Build full ranges — preserve existing kategori */
+    var ranges = {};
+    for(var i=0;i<kelasList.length;i++){
+        var k = kelasList[i];
+        if(inputRanges[k]){
+            ranges[k] = {min:inputRanges[k].min, max:inputRanges[k].max};
+        } else if(kelasRangeData[k]){
+            ranges[k] = {min:kelasRangeData[k].min, max:kelasRangeData[k].max};
+        }
+        if(kelasRangeData[k] && kelasRangeData[k].kategori && Object.keys(kelasRangeData[k].kategori).length>0){
+            ranges[k].kategori = kelasRangeData[k].kategori;
+        }
+    }
+
+    var btn = document.getElementById('btnSaveTankRange');
+    var orig = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+
+    var fd = new FormData();
+    fd.append('_token',getCsrf());
+    fd.append('ranges',JSON.stringify(ranges));
+
+    fetch('/api/admin/tank-range',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+    .then(function(r){if(!r.ok) return r.json().then(function(d){throw d;}); return r.json();})
+    .then(function(d){
+        if(d.success){
+            for(var k in inputRanges){
+                if(kelasRangeData[k]){
+                    kelasRangeData[k].min = inputRanges[k].min;
+                    kelasRangeData[k].max = inputRanges[k].max;
+                }
+            }
+            kelasRangeSaved = true;
+            showKelasRangeSaved();
+            populateKelasSelect();
+            loadDashboard();
+            popupSuccess('Berhasil','Rentang nomor per kelas berhasil disimpan.');
+        } else { popupError('Gagal',d.message||'Terjadi kesalahan.'); }
+    })
+    .catch(function(e){
+        if(e.message) popupError('Validasi Gagal','<div style="text-align:left;line-height:1.8;font-size:12px;">'+esc(e.message)+'</div>');
+        else popupError('Error','Gagal menghubungi server.');
+    })
+    .finally(function(){btn.disabled=false; btn.innerHTML=orig;});
+}
+
+function showKelasRangeSaved(){
+    var info=document.getElementById('kelasRangeSavedInfo');
+    var wrap=document.getElementById('kelasRangeBtnWrap');
+    if(info) info.style.display='flex';
+    if(wrap){
+        wrap.innerHTML='<button type="button" onclick="resetKelasRangeUI()" style="width:100%;padding:10px 20px;border-radius:10px;border:1px solid #86efac;background:#f0fdf4;color:#166534;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;" onmouseover="this.style.background=\'#dcfce7\'" onmouseout="this.style.background=\'#f0fdf4\'"><i class="fas fa-pen-to-square"></i> Atur Ulang Rentang Nomor</button>';
+    }
+}
+
+function resetKelasRangeUI(){
+    kelasRangeSaved = false;
+    var info=document.getElementById('kelasRangeSavedInfo');
+    var wrap=document.getElementById('kelasRangeBtnWrap');
+    if(info) info.style.display='none';
+    if(wrap){
+        wrap.innerHTML='<button type="button" id="btnSaveTankRange" onclick="saveKelasRange()" class="btn-primary" style="width:100%;justify-content:center;background:#1e40af;"><i class="fas fa-save"></i> Simpan Rentang Nomor</button>';
+    }
+}
+
+/* ═══ SECTION KATEGORI — DROPDOWN & GRID ═══ */
+function populateKelasSelect(){
+    var sel = document.getElementById('katKelasSelect');
+    var currentVal = sel.value;
+    sel.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+    for(var i=0;i<kelasList.length;i++){
+        var k=kelasList[i], d=kelasRangeData[k];
+        var opt=document.createElement('option');
+        opt.value=k;
+        opt.textContent='Kelas '+k+' ('+d.min+' – '+d.max+')';
+        /* Tandai yang sudah punya sub-rentang */
+        if(d.kategori && Object.keys(d.kategori).length>0){
+            opt.textContent += ' ★';
+        }
+        sel.appendChild(opt);
+    }
+    if(currentVal) sel.value = currentVal;
+}
+
+function onKatKelasChange(){
+    var k = document.getElementById('katKelasSelect').value;
+    if(!k){
+        document.getElementById('katGridWrap').style.display='none';
+        document.getElementById('katEmptyState').style.display='block';
+        return;
+    }
+    document.getElementById('katGridWrap').style.display='block';
+    document.getElementById('katEmptyState').style.display='none';
+    document.getElementById('katKelasRangeInfo').style.display='block';
+    document.getElementById('katKelasRangeText').textContent = kelasRangeData[k].min+' – '+kelasRangeData[k].max;
+    renderKategoriGrid(k);
+}
+
+function renderKategoriGrid(kelas){
+    var container = document.getElementById('katGrid');
+    container.innerHTML='';
+    var existing = kelasRangeData[kelas].kategori || {};
+
+    for(var i=0;i<allKategoriList.length;i++){
+        (function(name){
+            var kat = existing[name] || null;
+            var hasSub = kat && kat.min && kat.max;
+            var card = document.createElement('div');
+
+            if(hasSub){
+                card.style.cssText='background:#fff;border:2px solid #86efac;border-radius:10px;padding:14px;text-align:center;';
+                card.innerHTML=
+                    '<div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">'+name+'</div>'+
+                    '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">'+
+                        '<input type="number" id="kat_'+name+'_min" value="'+kat.min+'" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;" oninput="updateKatGap()">'+
+                        '<span style="font-weight:600;color:#d97706;">–</span>'+
+                        '<input type="number" id="kat_'+name+'_max" value="'+kat.max+'" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;" oninput="updateKatGap()">'+
+                    '</div>'+
+                    '<button type="button" onclick="clearKatSub(\''+kelas+'\',\''+name+'\')" class="btn-xs red" style="width:100%;justify-content:center;"><i class="fas fa-times"></i> Hapus</button>';
+            } else {
+                card.style.cssText='background:#fff;border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center;';
+                card.innerHTML=
+                    '<div style="font-size:11px;font-weight:800;color:var(--light);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">'+name+'</div>'+
+                    '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">'+
+                        '<input type="number" id="kat_'+name+'_min" placeholder="—" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;" oninput="updateKatGap()">'+
+                        '<span style="font-weight:600;color:#d97706;">–</span>'+
+                        '<input type="number" id="kat_'+name+'_max" placeholder="—" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;" oninput="updateKatGap()">'+
+                    '</div>'+
+                    '<div style="font-size:9px;color:var(--light);font-weight:600;">Kosongkan jika tidak diatur</div>';
+            }
+            container.appendChild(card);
+        })(allKategoriList[i]);
+    }
+    updateKatGap();
+}
+
+function clearKatSub(kelas, name){
+    delete kelasRangeData[kelas].kategori[name];
+    renderKategoriGrid(kelas);
+    populateKelasSelect();
+}
+
+function updateKatGap(){
+    var kelas = document.getElementById('katKelasSelect').value;
+    if(!kelas) return;
+    var d = kelasRangeData[kelas];
+    var kMin = parseInt(d.min)||0, kMax = parseInt(d.max)||0;
+    if(!kMin || kMin>=kMax){document.getElementById('katGapInfo').style.display='none'; return;}
+
+    var covered=[];
+    for(var i=0;i<allKategoriList.length;i++){
+        var name=allKategoriList[i];
+        var minEl=document.getElementById('kat_'+name+'_min');
+        var maxEl=document.getElementById('kat_'+name+'_max');
+        if(!minEl||!maxEl) continue;
+        var s=parseInt(minEl.value), e=parseInt(maxEl.value);
+        if(s&&e&&e>=s){for(var n=s;n<=e;n++) covered.push(n);}
+    }
+
+    var gaps=[],inGap=false,gapStart=0;
+    for(var n=kMin;n<=kMax;n++){
+        if(covered.indexOf(n)===-1){if(!inGap){gapStart=n;inGap=true;}}
+        else{if(inGap){gaps.push(gapStart===n-1?String(gapStart):gapStart+'-'+(n-1));inGap=false;}}
+    }
+    if(inGap) gaps.push(gapStart===kMax?String(gapStart):gapStart+'-'+kMax);
+
+    var el=document.getElementById('katGapInfo');
+    if(!covered.length){el.style.display='none'; return;}
+    if(gaps.length===0){
+        el.style.display='block';
+        el.innerHTML='<i class="fas fa-check-circle" style="color:#16a34a;"></i> Semua nomor dalam rentang sudah dialokasikan ke sub-rentang kategori.';
+    } else {
+        el.style.display='block';
+        el.innerHTML='<i class="fas fa-info-circle"></i> Sisa nomor (<b>tanpa sub-rentang</b>, dipakai kategori lain): <b>'+gaps.join(', ')+'</b>';
+    }
+}
+
+/* ═══ SIMPAN SUB-RENTANG KATEGORI ═══ */
+function saveKategoriRange(){
+    var kelas = document.getElementById('katKelasSelect').value;
+    if(!kelas){popupError('Pilih Kelas','Pilih kelas terlebih dahulu.'); return;}
+
+    var d = kelasRangeData[kelas];
+    var kMin = d.min, kMax = d.max;
+    var kategori = {};
+
+    for(var i=0;i<allKategoriList.length;i++){
+        var name = allKategoriList[i];
+        var minEl = document.getElementById('kat_'+name+'_min');
+        var maxEl = document.getElementById('kat_'+name+'_max');
+        if(!minEl||!maxEl) continue;
+
+        var mv = minEl.value.trim(), xv = maxEl.value.trim();
+        if(mv==='' && xv==='') continue;
+
+        mv = parseInt(mv); xv = parseInt(xv);
+        if(!mv||!xv||mv<1||xv<1){popupError('Tidak Valid','Sub-rentang "'+name+'" tidak valid.'); return;}
+        if(xv<mv){popupError('Tidak Valid','"'+name+'": Sampai harus >= Dari.'); return;}
+        if(mv<kMin||xv>kMax){popupError('Di Luar Rentang','"'+name+'" ('+mv+'-'+xv+') harus dalam rentang Kelas '+kelas+' ('+kMin+'-'+kMax+').'); return;}
+        kategori[name]={min:mv,max:xv};
+    }
+
+    /* Cek overlap antar sub-rentang */
+    var kk=Object.keys(kategori);
+    for(var i=0;i<kk.length;i++){
+        for(var j=i+1;j<kk.length;j++){
+            var a=kategori[kk[i]],b=kategori[kk[j]];
+            if(a.min<=b.max && b.min<=a.max){
+                popupError('Overlap','"'+kk[i]+'" dan "'+kk[j]+'" saling tumpang tindih.'); return;
+            }
+        }
+    }
+
+    /* Build full ranges — update hanya kelas yang dipilih */
+    var ranges = {};
+    for(var i=0;i<kelasList.length;i++){
+        var k=kelasList[i];
+        var kd=kelasRangeData[k];
+        ranges[k]={min:kd.min,max:kd.max};
+        if(kd.kategori && Object.keys(kd.kategori).length>0){
+            ranges[k].kategori = (k===kelas) ? kategori : kd.kategori;
+        }
+    }
+
+    var btn = document.getElementById('btnSaveKatRange');
+    var orig = btn.innerHTML;
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Memproses...';
+
+    var fd=new FormData();
+    fd.append('_token',getCsrf());
+    fd.append('ranges',JSON.stringify(ranges));
+
+    fetch('/api/admin/tank-range',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+    .then(function(r){if(!r.ok) return r.json().then(function(d){throw d;}); return r.json();})
+    .then(function(dd){
+        if(dd.success){
+            kelasRangeData[kelas].kategori = kategori;
+            populateKelasSelect();
+            loadDashboard();
+            popupSuccess('Berhasil','Sub-rentang kategori Kelas '+kelas+' berhasil disimpan.');
+        } else { popupError('Gagal',dd.message||'Terjadi kesalahan.'); }
+    })
+    .catch(function(e){
+        if(e.message) popupError('Validasi Gagal','<div style="text-align:left;line-height:1.8;font-size:12px;">'+esc(e.message)+'</div>');
+        else popupError('Error','Gagal menghubungi server.');
+    })
+    .finally(function(){btn.disabled=false; btn.innerHTML=orig;});
+}
 
 /* ═══════════════════════════════════════════════
    POPUP SYSTEM
@@ -2453,44 +2864,6 @@ if(_regForm) _regForm.addEventListener('submit',function(e){
     });
 });
 
-/* ═══ PENGATURAN RANGE NOMOR UNDIAN (GLOBAL + PER KELAS) ═══ */
-function loadTankRange(){
-    // Load Global Range
-    fetch('/api/tank-range-global',{headers:{'Accept':'application/json'}})
-    .then(function(r){return r.json();})
-    .then(function(d){
-        var min=d.min||1,max=d.max||1000;
-        currentTankMax=max;
-        var displayEl=document.getElementById('globalRangeDisplayText');
-        if(displayEl)displayEl.textContent=min+' - '+max;
-        var minInput=document.getElementById('inputGlobalRangeMin'),maxInput=document.getElementById('inputGlobalRangeMax');
-        if(minInput)minInput.value=min;if(maxInput)maxInput.value=max;
-    }).catch(function(){});
-
-    // Load Per-Kelas Range
-    fetch('/api/tank-range',{headers:{'Accept':'application/json'}})
-    .then(function(r){return r.json();})
-    .then(function(d){
-        var container=document.getElementById('kelasRangeInputs');if(!container)return;container.innerHTML='';
-        var hasAny=false;
-        for(var i=0;i<kelasList.length;i++){
-            var k=kelasList[i],minVal=(d[k]&&d[k].min)?d[k].min:'',maxVal=(d[k]&&d[k].max)?d[k].max:'';
-            if(minVal!==''&&maxVal!=='') hasAny=true;
-            var card=document.createElement('div');
-            card.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center;';
-            card.innerHTML='<div style="font-size:11px;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Kelas '+k+'</div><div style="display:flex;gap:6px;align-items:center;"><input type="number" id="range_'+k+'_min" value="'+minVal+'" placeholder="Min" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;"><span style="font-weight:600;color:#94a3b8;">-</span><input type="number" id="range_'+k+'_max" value="'+maxVal+'" placeholder="Max" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;"></div>';
-            container.appendChild(card);
-        }
-        // Jika sudah ada data tersimpan, tampilkan indikator
-        if(hasAny){
-            kelasRangeSaved=true;
-            showKelasRangeSaved();
-        } else {
-            resetKelasRangeUI();
-        }
-    }).catch(function(){});
-}
-
 function toggleGlobalRangeEdit(show){
     var viewEl=document.getElementById('globalRangeViewMode'),editEl=document.getElementById('globalRangeEditMode');
     if(viewEl)viewEl.style.display=show?'none':'flex';if(editEl)editEl.style.display=show?'block':'none';
@@ -2516,65 +2889,8 @@ function saveGlobalTankRange(){
     .finally(function(){btn.disabled=false;btn.innerHTML=originalHtml;});
 }
 
-var kelasRangeSaved = false;
-
-function saveTankRange(){
-    var ranges={},isValid=true,errorMsg='';
-    for(var i=0;i<kelasList.length;i++){
-        var k=kelasList[i],minEl=document.getElementById('range_'+k+'_min'),maxEl=document.getElementById('range_'+k+'_max');
-        if(!minEl||!maxEl)continue;var min=parseInt(minEl.value),max=parseInt(maxEl.value);
-        if(minEl.value===''&&maxEl.value==='')continue;
-        if(isNaN(min)||isNaN(max)||min<1||max<1){isValid=false;errorMsg='Rentang Kelas '+k+' tidak valid.';break;}
-        if(max<min){isValid=false;errorMsg='Kelas '+k+': Max < Min.';break;}
-        ranges[k]={min:min,max:max};
-    }
-    if(!isValid){popupError('Validasi Gagal',errorMsg);return;}
-    if(Object.keys(ranges).length===0){popupError('Kosong','Isi setidaknya satu kelas.');return;}
-    
-    var btn=document.getElementById('btnSaveTankRange');
-    var originalHtml=btn.innerHTML;
-    btn.disabled=true;
-    btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Memproses...';
-    
-    var fd=new FormData();fd.append('_token',getCsrf());fd.append('ranges',JSON.stringify(ranges));
-    fetch('/api/admin/tank-range',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-    .then(function(r){return r.json();})
-    .then(function(d){
-        if(d.success){
-            kelasRangeSaved=true;
-            loadDashboard();
-            showKelasRangeSaved();
-        } else {
-            popupError('Gagal',d.message||'Error');
-        }
-    })
-    .catch(function(){popupError('Error','Gagal menyimpan.');})
-    .finally(function(){
-        if(!kelasRangeSaved){
-            btn.disabled=false;
-            btn.innerHTML=originalHtml;
-        }
-    });
-}
-
-function showKelasRangeSaved(){
-    var info=document.getElementById('kelasRangeSavedInfo');
-    var wrap=document.getElementById('kelasRangeBtnWrap');
-    if(info) info.style.display='flex';
-    if(wrap){
-        wrap.innerHTML='<button type="button" onclick="resetKelasRangeUI()" style="width:100%; padding:10px 20px; border-radius:10px; border:1px solid #86efac; background:#f0fdf4; color:#166534; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all .2s;" onmouseover="this.style.background=\'#dcfce7\'" onmouseout="this.style.background=\'#f0fdf4\'"><i class="fas fa-pen-to-square"></i> Atur Ulang Rentang Nomor</button>';
-    }
-}
-
-function resetKelasRangeUI(){
-    kelasRangeSaved=false;
-    var info=document.getElementById('kelasRangeSavedInfo');
-    var wrap=document.getElementById('kelasRangeBtnWrap');
-    if(info) info.style.display='none';
-    if(wrap){
-        wrap.innerHTML='<button type="button" id="btnSaveTankRange" onclick="saveTankRange()" class="btn-primary" style="width:100%; justify-content:center; background:#1e40af;"><i class="fas fa-save"></i> Simpan Rentang Nomor</button>';
-    }
-}
+/* ═══ VARIABEL KATEGORI RANGE ═══ */
+var kategoriList = ['Cencu', 'Chginwa', 'Freemarking', 'Goldenbase', 'Klasik', 'Bonsai', 'Jumbo'];
 
 /* ═══════════════════════════════════════════════
    SEARCH USER
