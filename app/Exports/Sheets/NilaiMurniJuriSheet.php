@@ -2,7 +2,7 @@
 
 namespace App\Exports\Sheets;
 
-use App\Models\Ikan;
+use App\Models\Scoring;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
@@ -52,20 +52,8 @@ class NilaiMurniJuriSheet implements WithTitle, WithEvents
                     'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '2563EB']]],
                 ];
-                $styleTankHeader = [
-                    'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '1E3A8A']],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'DBEAFE']],
-                    'alignment' => ['horizontal' => 'left', 'vertical' => 'center'],
-                    'borders' => ['bottom' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '1E40AF']]],
-                ];
                 $styleBorder = [
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '93C5FD']]],
-                ];
-                $styleEdited = [
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF3C7']],
-                ];
-                $styleEditedFont = [
-                    'font' => ['italic' => true, 'color' => ['rgb' => '92400E']],
                 ];
                 $styleDefect = [
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEE2E2']],
@@ -78,11 +66,13 @@ class NilaiMurniJuriSheet implements WithTitle, WithEvents
                 ];
 
                 // ═══════════════════════════════════════════
-                // 2. HITUNG POSISI KOLOM
+                // 2. HITUNG POSISI KOLOM & GARIS PEMISAH
                 // ═══════════════════════════════════════════
-                $col = 3; // Mulai dari kolom C (setelah NO, NAMA JURI)
+                // A=1: NO, B=2: NAMA JURI, C=3: NO TANK, D=4: PESERTA/TEAM
+                $col = 5; 
                 $catStartCols = [];
                 $defectCols = [];
+                $separatorCols = [5]; // Kolom pertama komponen (OVERALL)
 
                 foreach (self::CATS as $kat => $info) {
                     $catStartCols[$kat] = $col;
@@ -95,12 +85,18 @@ class NilaiMurniJuriSheet implements WithTitle, WithEvents
                         $defectCols[$kat] = $col;
                         $col++;
                     }
+                    
+                    // Tandai kolom awal komponen berikutnya untuk garis pemisah tebal
+                    if ($kat !== 'overall') {
+                        $separatorCols[] = $catStartCols[$kat];
+                    }
                 }
 
                 $totalNilaiCol = $col;
+                $separatorCols[] = $totalNilaiCol;
                 $col++;
-                $statusCol = $col;
-                $lastCol = $col;
+                $editStatusCol = $col;
+                $lastCol = $editStatusCol;
                 $lastColLetter = Coordinate::stringFromColumnIndex($lastCol);
 
                 // ═══════════════════════════════════════════
@@ -108,7 +104,6 @@ class NilaiMurniJuriSheet implements WithTitle, WithEvents
                 // ═══════════════════════════════════════════
                 $row = 1;
 
-                // Fixed cols: NO, NAMA JURI
                 $sheet->mergeCells('A1:A2');
                 $sheet->setCellValue('A1', 'NO');
                 $sheet->getStyle('A1:A2')->applyFromArray($styleHeaderMain);
@@ -117,7 +112,14 @@ class NilaiMurniJuriSheet implements WithTitle, WithEvents
                 $sheet->setCellValue('B1', 'NAMA JURI');
                 $sheet->getStyle('B1:B2')->applyFromArray($styleHeaderMain);
 
-                // Dynamic category headers
+                $sheet->mergeCells('C1:C2');
+                $sheet->setCellValue('C1', 'NO TANK');
+                $sheet->getStyle('C1:C2')->applyFromArray($styleHeaderMain);
+
+                $sheet->mergeCells('D1:D2');
+                $sheet->setCellValue('D1', 'PESERTA / TEAM');
+                $sheet->getStyle('D1:D2')->applyFromArray($styleHeaderMain);
+
                 foreach (self::CATS as $kat => $info) {
                     $startCol = $catStartCols[$kat];
                     $endCol = $startCol + count($info['fields']) - 1;
@@ -128,37 +130,30 @@ class NilaiMurniJuriSheet implements WithTitle, WithEvents
                     $startLetter = Coordinate::stringFromColumnIndex($startCol);
                     $endLetter = Coordinate::stringFromColumnIndex($endCol);
 
-                    $sheet->mergeCells("{$startLetter}1:{$endLetter}1");
-                    $sheet->setCellValue("{$startLetter}1", $info['label']);
-                    $sheet->getStyle("{$startLetter}1:{$endLetter}1")->applyFromArray($styleHeaderMain);
+                    if ($startCol === $endCol) {
+                        $sheet->setCellValue("{$startLetter}1", $info['label']);
+                        $sheet->getStyle("{$startLetter}1")->applyFromArray($styleHeaderMain);
+                    } else {
+                        $sheet->mergeCells("{$startLetter}1:{$endLetter}1");
+                        $sheet->setCellValue("{$startLetter}1", $info['label']);
+                        $sheet->getStyle("{$startLetter}1:{$endLetter}1")->applyFromArray($styleHeaderMain);
+                    }
                 }
 
-                // Fixed end cols: TOTAL, STATUS
                 $totalColLetter = Coordinate::stringFromColumnIndex($totalNilaiCol);
-                $statusColLetter = Coordinate::stringFromColumnIndex($statusCol);
+                $editColLetter = Coordinate::stringFromColumnIndex($editStatusCol);
 
                 $sheet->mergeCells("{$totalColLetter}1:{$totalColLetter}2");
                 $sheet->setCellValue("{$totalColLetter}1", 'TOTAL');
                 $sheet->getStyle("{$totalColLetter}1:{$totalColLetter}2")->applyFromArray($styleHeaderMain);
 
-                $submitCol = $statusCol + 1;
-                $lastCol = $submitCol;
-                $lastColLetter = Coordinate::stringFromColumnIndex($lastCol);
-                $submitColLetter = Coordinate::stringFromColumnIndex($submitCol);
-
-                $sheet->mergeCells("{$statusColLetter}1:{$statusColLetter}2");
-                $sheet->setCellValue("{$statusColLetter}1", 'EDIT STATUS');
-                $sheet->getStyle("{$statusColLetter}1:{$statusColLetter}2")->applyFromArray($styleHeaderMain);
-
-                $sheet->mergeCells("{$submitColLetter}1:{$submitColLetter}2");
-                $sheet->setCellValue("{$submitColLetter}1", 'SUBMIT');
-                $sheet->getStyle("{$submitColLetter}1:{$submitColLetter}2")->applyFromArray($styleHeaderMain);
+                $sheet->mergeCells("{$editColLetter}1:{$editColLetter}2");
+                $sheet->setCellValue("{$editColLetter}1", 'EDIT STATUS');
+                $sheet->getStyle("{$editColLetter}1:{$editColLetter}2")->applyFromArray($styleHeaderMain);
 
                 // ═══════════════════════════════════════════
                 // 4. TULIS HEADER ROW 2 (Sub-komponen)
                 // ═══════════════════════════════════════════
-                $row = 2;
-
                 foreach (self::CATS as $kat => $info) {
                     $col = $catStartCols[$kat];
                     foreach ($info['fields'] as $f) {
@@ -175,156 +170,160 @@ class NilaiMurniJuriSheet implements WithTitle, WithEvents
                 }
 
                 // ═══════════════════════════════════════════
-                // 5. DATA RETRIEVAL
+                // 5. DATA RETRIEVAL (DIURUTKAN PER JURI, LALU TANK)
                 // ═══════════════════════════════════════════
-                $ikans = Ikan::whereNotNull('nomor_tank')
-                    ->whereHas('scorings')
-                    ->with(['peserta', 'scorings' => fn($q) => $q->with('juri', 'grandJuri')])
-                    ->orderBy('nomor_tank')
+                $scorings = Scoring::with(['juri', 'ikan.peserta'])
+                    ->whereHas('ikan', fn($q) => $q->whereNotNull('nomor_tank'))
+                    ->orderBy('juri_id')
+                    ->orderBy('ikan_id')
                     ->get();
 
                 // ═══════════════════════════════════════════
-                // 6. TULIS DATA PER TANK
+                // 6. TULIS DATA BERURUTAN
                 // ═══════════════════════════════════════════
                 $row = 3;
+                $no = 1;
+                $lastJuriId = null;
+                $startJuriRow = $row;
+                $juriMergeRanges = [];
 
-                foreach ($ikans as $ikan) {
-                    $scorings = $ikan->scorings;
-                    if ($scorings->isEmpty()) continue;
+                foreach ($scorings as $scoring) {
+                    $currentJuriId = $scoring->juri_id;
+                    $isEdited = (bool) $scoring->edited_by_grand_juri;
 
-                    // ── Header Tank ──
-                    $sheet->mergeCells("A{$row}:{$lastColLetter}{$row}");
-                    $sheet->setCellValue("A{$row}", sprintf(
-                        '▶ TANK %s  │  %s  │  %s - Kelas %s  │  Team: %s  │  %d Juri',
-                        $ikan->nomor_tank,
-                        $ikan->peserta->nama_peserta ?? '-',
-                        strtoupper($ikan->kategori),
-                        $ikan->kelas ?? '-',
-                        $ikan->peserta->detail_anggota ?? '-',
-                        $scorings->count()
-                    ));
-                    $sheet->getStyle("A{$row}:{$lastColLetter}{$row}")->applyFromArray($styleTankHeader);
-                    $sheet->getRowDimension($row)->setRowHeight(25);
-                    $row++;
+                    // Jika ganti juri, simpan range merge untuk juri sebelumnya
+                    if ($lastJuriId !== null && $currentJuriId !== $lastJuriId) {
+                        if ($row - 1 >= $startJuriRow) {
+                            $juriMergeRanges[] = [$startJuriRow, $row - 1];
+                        }
+                        $startJuriRow = $row;
+                    }
 
-                    // ── Data Rows per Juri ──
-                    $no = 1;
-                    $startDataRow = $row;
-
-                    foreach ($scorings as $scoring) {
-                        $nd = $scoring->nilai_detail ?: [];
-                        $isEdited = (bool) $scoring->edited_by_grand_juri;
-
-                        // NO
+                    if ($currentJuriId !== $lastJuriId) {
                         $sheet->setCellValue("A{$row}", $no++);
+                    }
 
-                        // NAMA JURI
+                    // Kolom B: NAMA JURI (Hanya diisi saat pertama kali juri muncul)
+                    if ($currentJuriId !== $lastJuriId) {
                         $juriName = $scoring->juri ? $scoring->juri->name : '-';
                         if ($isEdited && $scoring->grandJuri) {
                             $juriName .= "\n✎ " . $scoring->grandJuri->name;
                         }
                         $sheet->setCellValue("B{$row}", $juriName);
-                        if ($isEdited) {
-                            $sheet->getStyle("B{$row}")->applyFromArray($styleEditedFont);
-                        }
-
-                        // Nilai per komponen
-                        foreach (self::CATS as $kat => $info) {
-                            $col = $catStartCols[$kat];
-                            $catData = $nd[$kat] ?? [];
-
-                            foreach ($info['fields'] as $f) {
-                                $colLetter = Coordinate::stringFromColumnIndex($col);
-                                // Handle typo shinning vs shining
-                                $fieldId = $f['id'];
-                                if ($kat === 'pearl' && $fieldId === 'shinning') {
-                                    $val = $catData['shinning'] ?? $catData['shining'] ?? 0;
-                                } else {
-                                    $val = $catData[$fieldId] ?? 0;
-                                }
-                                $sheet->setCellValue("{$colLetter}{$row}", (float) $val);
-                                $col++;
-                            }
-
-                            // Defect
-                            if (isset($defectCols[$kat])) {
-                                $colLetter = Coordinate::stringFromColumnIndex($defectCols[$kat]);
-                                $defectKey = "raw_{$kat}_penalty";
-                                $defects = $scoring->$defectKey ?? [];
-                                if (is_string($defects)) $defects = [$defects];
-                                $defectText = [];
-                                foreach ($defects as $d) {
-                                    if ($d && $d !== '0') {
-                                        $defectText[] = $d;
-                                    }
-                                }
-                                $sheet->setCellValue("{$colLetter}{$row}", implode(', ', $defectText) ?: '-');
-                            }
-                        }
-
-                        // TOTAL NILAI
-                        $sheet->setCellValue("{$totalColLetter}{$row}", $scoring->total_nilai ?? 0);
-
-                        // EDIT STATUS
-                        $editStatus = 'Asli';
-                        if ($isEdited) {
-                            $editStatus = 'Edited Grand Juri';
-                        }
-                        $sheet->setCellValue("{$statusColLetter}{$row}", $editStatus);
-
-                        // SUBMIT STATUS
-                        $submitStatus = $scoring->submitted_to_grand ? 'Sudah' : 'Draft';
-                        $sheet->setCellValue("{$submitColLetter}{$row}", $submitStatus);
-
-                        // Jika masih draft, beri warna abu-abu
-                        if (!$scoring->submitted_to_grand) {
-                            $sheet->getStyle("A{$row}:{$lastColLetter}{$row}")->applyFromArray([
-                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F3F4F6']],
-                                'font' => ['color' => ['rgb' => '6B7280']]
-                            ]);
-                        }
-
-                        $row++;
                     }
 
-                    // ── Styling Data Rows ──
-                    if ($row > $startDataRow) {
-                        // Apply border
-                        $sheet->getStyle("A{$startDataRow}:{$lastColLetter}" . ($row - 1))->applyFromArray($styleBorder);
+                    // Kolom C: NO TANK (Hanya angka saja)
+                    $tankStr = $scoring->ikan->nomor_tank ?? '-';
+                    $sheet->setCellValue("C{$row}", $tankStr);
 
-                        // Apply edited styling per row
-                        foreach ($scorings as $idx => $scoring) {
-                            if ($scoring->edited_by_grand_juri) {
-                                $r = $startDataRow + $idx;
-                                $sheet->getStyle("A{$r}:{$lastColLetter}{$r}")->applyFromArray($styleEdited);
-                                $sheet->getStyle("B{$r}")->applyFromArray($styleEditedFont);
+                    // Kolom D: PESERTA / TEAM
+                    $pesertaName = $scoring->ikan->peserta->nama_peserta ?? '-';
+                    $team = $scoring->ikan->peserta->detail_anggota ?? '-';
+                    $kat = strtoupper($scoring->ikan->kategori ?? '-');
+                    $kelas = $scoring->ikan->kelas ?? '-';
+                    $sheet->setCellValue("D{$row}", "{$pesertaName} ({$kat}-{$kelas})\n{$team}");
+
+                    // Nilai per komponen
+                    $nd = $scoring->nilai_detail ?: [];
+                    foreach (self::CATS as $katKey => $info) {
+                        $col = $catStartCols[$katKey];
+                        $catData = $nd[$katKey] ?? [];
+
+                        foreach ($info['fields'] as $f) {
+                            $colLetter = Coordinate::stringFromColumnIndex($col);
+                            $fieldId = $f['id'];
+                            if ($katKey === 'pearl' && $fieldId === 'shinning') {
+                                $val = $catData['shinning'] ?? $catData['shining'] ?? 0;
+                            } else {
+                                $val = $catData[$fieldId] ?? 0;
                             }
+                            $sheet->setCellValue("{$colLetter}{$row}", (float) $val);
+                            $col++;
                         }
 
-                        // Apply defect styling
-                        foreach ($defectCols as $colIdx) {
-                            $colLetter = Coordinate::stringFromColumnIndex($colIdx);
-                            for ($r = $startDataRow; $r < $row; $r++) {
-                                $val = $sheet->getCell("{$colLetter}{$r}")->getValue();
-                                if ($val && $val !== '-') {
-                                    $sheet->getStyle("{$colLetter}{$r}")->applyFromArray($styleDefect);
-                                }
+                        if (isset($defectCols[$katKey])) {
+                            $colLetter = Coordinate::stringFromColumnIndex($defectCols[$katKey]);
+                            $defectKey = "raw_{$katKey}_penalty";
+                            $defects = $scoring->$defectKey ?? [];
+                            if (is_string($defects)) $defects = [$defects];
+                            $defectText = [];
+                            foreach ($defects as $d) {
+                                if ($d && $d !== '0') $defectText[] = $d;
                             }
+                            $sheet->setCellValue("{$colLetter}{$row}", implode(', ', $defectText) ?: '-');
                         }
-
-                        // Apply total styling
-                        $sheet->getStyle("{$totalColLetter}{$startDataRow}:{$totalColLetter}" . ($row - 1))->applyFromArray($styleTotal);
                     }
 
-                    // ── Jarak antar tank ──
-                    $row += 2;
+                    $sheet->setCellValue("{$totalColLetter}{$row}", $scoring->total_nilai ?? 0);
+
+                    $editStatus = $isEdited ? 'Edited Grand Juri' : 'Asli';
+                    $sheet->setCellValue("{$editColLetter}{$row}", $editStatus);
+
+                    $lastJuriId = $currentJuriId;
+                    $row++;
+                }
+
+                // Simpan merge juri terakhir
+                if ($row - 1 >= $startJuriRow) {
+                    $juriMergeRanges[] = [$startJuriRow, $row - 1];
                 }
 
                 // ═══════════════════════════════════════════
-                // 7. SET COLUMN WIDTHS
+                // 7. APPLY MERGE VERTIKAL UNTUK JURI
+                // ═══════════════════════════════════════════
+                foreach ($juriMergeRanges as $range) {
+                    if ($range[0] < $range[1]) { 
+                        $sheet->mergeCells("A{$range[0]}:A{$range[1]}"); // Merge NO
+                        $sheet->mergeCells("B{$range[0]}:B{$range[1]}"); // Merge Nama Juri
+                    }
+                }
+
+                // ═══════════════════════════════════════════
+                // 8. STYLING AKHIR
+                // ═══════════════════════════════════════════
+                $lastRow = $row - 1;
+                if ($lastRow >= 3) {
+                    $sheet->getStyle("A3:{$lastColLetter}{$lastRow}")->applyFromArray($styleBorder);
+                    $sheet->getStyle("A3:{$lastColLetter}{$lastRow}")
+                        ->getAlignment()->setHorizontal('center')->setVertical('center');
+
+                    $sheet->getStyle("B3:B{$lastRow}")->getAlignment()->setHorizontal('center')->setVertical('center')->setWrapText(true);
+                    $sheet->getStyle("D3:D{$lastRow}")->getAlignment()->setHorizontal('left')->setWrapText(true);
+
+                    $sheet->getStyle("{$totalColLetter}3:{$totalColLetter}{$lastRow}")->applyFromArray($styleTotal);
+
+                    // Warna merah untuk kolom Defect
+                    foreach ($defectCols as $colIdx) {
+                        $colLetter = Coordinate::stringFromColumnIndex($colIdx);
+                        for ($r = 3; $r <= $lastRow; $r++) {
+                            $val = $sheet->getCell("{$colLetter}{$r}")->getValue();
+                            if ($val && $val !== '-') {
+                                $sheet->getStyle("{$colLetter}{$r}")->applyFromArray($styleDefect);
+                            }
+                        }
+                    }
+                }
+
+                // ═══════════════════════════════════════════
+                // 9. GARIS PEMISAH KOMPONEN (VERTIKAL TEBAL)
+                // ═══════════════════════════════════════════
+                foreach ($separatorCols as $colIdx) {
+                    $colLetter = Coordinate::stringFromColumnIndex($colIdx);
+                    for ($r = 1; $r <= $lastRow; $r++) {
+                        // Menggunakan getBorders()->getLeft() agar garis atas/bawah/kanan tidak tertimpa
+                        $sheet->getStyle("{$colLetter}{$r}")->getBorders()->getLeft()
+                            ->setBorderStyle(Border::BORDER_MEDIUM)
+                            ->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('1E3A8A'));
+                    }
+                }
+
+                // ═══════════════════════════════════════════
+                // 10. SET COLUMN WIDTHS
                 // ═══════════════════════════════════════════
                 $sheet->getColumnDimension('A')->setWidth(5);
-                $sheet->getColumnDimension('B')->setWidth(28);
+                $sheet->getColumnDimension('B')->setWidth(25);
+                $sheet->getColumnDimension('C')->setWidth(10);
+                $sheet->getColumnDimension('D')->setWidth(32);
 
                 foreach (self::CATS as $kat => $info) {
                     $col = $catStartCols[$kat];
@@ -335,27 +334,19 @@ class NilaiMurniJuriSheet implements WithTitle, WithEvents
                     }
                     if (isset($defectCols[$kat])) {
                         $colLetter = Coordinate::stringFromColumnIndex($defectCols[$kat]);
-                        $sheet->getColumnDimension($colLetter)->setWidth(20);
+                        $sheet->getColumnDimension($colLetter)->setWidth(22);
                     }
                 }
 
                 $sheet->getColumnDimension($totalColLetter)->setWidth(9);
-                $sheet->getColumnDimension($statusColLetter)->setWidth(18);
-                $sheet->getColumnDimension($submitColLetter)->setWidth(10);
+                $sheet->getColumnDimension($editColLetter)->setWidth(18);
 
                 // ═══════════════════════════════════════════
-                // 8. FINAL SETTINGS
+                // 11. FINAL SETTINGS
                 // ═══════════════════════════════════════════
-                $sheet->freezePane('C3');
+                $sheet->freezePane('E3'); 
                 $sheet->getRowDimension(1)->setRowHeight(22);
                 $sheet->getRowDimension(2)->setRowHeight(40);
-
-                // Alignment center untuk semua data
-                $lastRow = $sheet->getHighestRow();
-                $sheet->getStyle("A3:{$lastColLetter}{$lastRow}")
-                    ->getAlignment()
-                    ->setHorizontal('center')
-                    ->setVertical('center');
             },
         ];
     }
