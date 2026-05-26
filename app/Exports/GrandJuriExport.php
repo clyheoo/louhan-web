@@ -6,8 +6,9 @@ use App\Exports\Sheets\DaftarIkanSheet;
 use App\Exports\Sheets\MvpIkanSheet;
 use App\Exports\Sheets\PointRankingSheet;
 use App\Exports\Sheets\RumusPenilaianSheet;
-use App\Exports\Sheets\UserDetailSheet; // 1. TAMBAHKAN INI
+use App\Exports\Sheets\UserDetailSheet;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
+use App\Exports\Sheets\NominasiSheet;
 
 class GrandJuriExport implements WithMultipleSheets
 {
@@ -28,7 +29,8 @@ class GrandJuriExport implements WithMultipleSheets
             $result[] = new MvpIkanSheet();
             $result[] = new PointRankingSheet($rankingScope);
             $result[] = new RumusPenilaianSheet();
-            $result[] = new UserDetailSheet(); // 2. TAMBAHKAN INI AGAR IKUT SAAT EXPORT 'ALL'
+            $result[] = new UserDetailSheet();
+             $result[] = new NominasiSheet();
         } elseif ($this->sheets === 'daftar') {
             $result[] = new DaftarIkanSheet();
         } elseif ($this->sheets === 'mvp') {
@@ -39,8 +41,10 @@ class GrandJuriExport implements WithMultipleSheets
             $result[] = new PointRankingSheet('per_kategori');
         } elseif ($this->sheets === 'ranking_global') {
             $result[] = new PointRankingSheet('global');
-        } elseif ($this->sheets === 'users') { // 3. TAMBAHKAN INI UNTUK EXPORT SPESIFIK SHEET INI
+        } elseif ($this->sheets === 'users') {
             $result[] = new UserDetailSheet();
+        } elseif ($this->sheets === 'nominasi') {
+            $result[] = new NominasiSheet();
         }
 
         return $result;

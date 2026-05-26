@@ -1038,7 +1038,7 @@ class GrandJuriController extends Controller
     public function exportExcel(Request $request)
     {
         $sheets = $request->query('sheets', 'all');
-        $valid  = ['all', 'daftar', 'mvp', 'ranking_kk', 'ranking_k', 'ranking_global'];
+        $valid  = ['all', 'daftar', 'mvp', 'ranking_kk', 'ranking_k', 'ranking_global', 'nominasi'];
 
         if (!in_array($sheets, $valid)) {
             $sheets = 'all';
@@ -1050,6 +1050,7 @@ class GrandJuriController extends Controller
             'ranking_kk'     => 'Ranking_Per_Kat_Kelas',
             'ranking_k'      => 'Ranking_Per_Kategori',
             'ranking_global' => 'Rank_Global',
+            'nominasi'       => 'Hasil_Nominasi',
             default          => 'Semua_Data',
         };
 

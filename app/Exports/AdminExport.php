@@ -8,6 +8,7 @@ use App\Exports\Sheets\MvpIkanSheet;
 use App\Exports\Sheets\PointRankingSheet;
 use App\Exports\Sheets\RumusPenilaianSheet;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
+use App\Exports\Sheets\NominasiSheet;
 
 class AdminExport implements WithMultipleSheets
 {
@@ -29,6 +30,7 @@ class AdminExport implements WithMultipleSheets
             $result[] = new MvpIkanSheet();
             $result[] = new PointRankingSheet($rankingScope);
             $result[] = new RumusPenilaianSheet();
+             $result[] = new NominasiSheet();
         } elseif ($this->sheets === 'daftar') {
             $result[] = new AdminDaftarIkanSheet();
         } elseif ($this->sheets === 'users') {
@@ -41,6 +43,8 @@ class AdminExport implements WithMultipleSheets
             $result[] = new PointRankingSheet('per_kategori');
         } elseif ($this->sheets === 'ranking_global') {
             $result[] = new PointRankingSheet('global');
+        } elseif ($this->sheets === 'nominasi') {
+            $result[] = new NominasiSheet();
         }
 
         return $result;
