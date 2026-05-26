@@ -95,7 +95,7 @@ class MvpIkanSheet implements WithTitle, WithEvents
                 // ═══════════════════════════════════════════════════════
                 $allIkans = Ikan::where('is_mvp', true)
                     ->whereHas('peserta', fn($q) => $q->where('is_mvp_submitted', true))
-                    ->with(['peserta', 'bonusPoints', 'scorings' => fn($q) => $q->where('submitted_to_grand', true)])
+                    ->with(['peserta', 'bonusPoints', 'scorings'])
                     ->orderBy('peserta_id')->orderBy('kategori')->get();
 
                 // Grouping untuk Tabel Kategori
@@ -251,7 +251,7 @@ class MvpIkanSheet implements WithTitle, WithEvents
 
                     $ikansPeserta = Ikan::where('peserta_id', $peserta->id)
                         ->where('is_mvp', true)
-                        ->with(['scorings' => fn($q) => $q->where('submitted_to_grand', true), 'bonusPoints'])
+                        ->with(['scorings', 'bonusPoints'])
                         ->orderBy('kategori')
                         ->limit(30)
                         ->get();

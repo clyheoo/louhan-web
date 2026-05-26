@@ -63,7 +63,7 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
      */
     private function calcIkan($ikan, $configs)
     {
-        $scorings = $ikan->scorings->filter(fn($s) => $s->submitted_to_grand);
+        $scorings = $ikan->scorings;
         if ($scorings->isEmpty()) return null;
         
         // ═══════════════════════════════════════════════════════════
@@ -229,8 +229,8 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
     {
         $configs = ScoringPointConfig::all()->keyBy('kategori');
         $ikans = Ikan::where('is_locked', true)->whereNotNull('nomor_tank')
-            ->whereHas('scorings', fn($q) => $q->where('submitted_to_grand', true))
-            ->with(['peserta', 'scorings' => fn($q) => $q->where('submitted_to_grand', true), 'bonusPoints'])
+            ->whereHas('scorings')
+            ->with(['peserta', 'scorings', 'bonusPoints'])
             ->orderBy('kategori')->orderBy('kelas')->orderBy('nomor_tank')->get();
 
         $groups = [];
