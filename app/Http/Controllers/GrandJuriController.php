@@ -129,6 +129,63 @@ class GrandJuriController extends Controller
         ]);
     }
 
+    /* ═══════════════════════════════════════════
+    NOMINASI — RIWAYAT REVIEW (DITERIMA/DITOLAK)
+    ═══════════════════════════════════════════ */
+    public function getNominasiHistory()
+    {
+        $nominations = Nominasi::whereIn('status', ['approved', 'rejected'])
+            ->with(['juri', 'ikan.peserta'])
+            ->orderByDesc('reviewed_at')
+            ->get();
+
+        $approved = $nominations->where('status', 'approved')->groupBy('juri_id')->map(function ($items) {
+            $juri = $items->first()->juri;
+            return [
+                'juri_id'   => $juri ? $juri->id : null,
+                'juri_name' => $juri ? $juri->name : 'Unknown',
+                'tanks'     => $items->map(function ($n) {
+                    $ikan = $n->ikan;
+                    return [
+                        'nominasi_id'  => $n->id,
+                        'nomor_tank'   => $ikan ? $ikan->nomor_tank : null,
+                        'kategori'     => $ikan ? $ikan->kategori : null,
+                        'kelas'        => $ikan ? $ikan->kelas : null,
+                        'nama_peserta' => optional($ikan->peserta)->nama_peserta ?? 'Unknown',
+                        'reviewed_at'  => $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-',
+                    ];
+                })->values()->toArray(),
+            ];
+        })->values()->toArray();
+
+        $rejected = $nominations->where('status', 'rejected')->groupBy('juri_id')->map(function ($items) {
+            $juri = $items->first()->juri;
+            return [
+                'juri_id'   => $juri ? $juri->id : null,
+                'juri_name' => $juri ? $juri->name : 'Unknown',
+                'tanks'     => $items->map(function ($n) {
+                    $ikan = $n->ikan;
+                    return [
+                        'nominasi_id'  => $n->id,
+                        'nomor_tank'   => $ikan ? $ikan->nomor_tank : null,
+                        'kategori'     => $ikan ? $ikan->kategori : null,
+                        'kelas'        => $ikan ? $ikan->kelas : null,
+                        'nama_peserta' => optional($ikan->peserta)->nama_peserta ?? 'Unknown',
+                        'catatan'      => $n->catatan ?: null,
+                        'reviewed_at'  => $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-',
+                    ];
+                })->values()->toArray(),
+            ];
+        })->values()->toArray();
+
+        return response()->json([
+            'approved'       => $approved,
+            'rejected'       => $rejected,
+            'total_approved' => $nominations->where('status', 'approved')->count(),
+            'total_rejected' => $nominations->where('status', 'rejected')->count(),
+        ]);
+    }
+
     public function getPeserta(Request $request)
     {
         $query = Ikan::whereHas('scorings', function ($q) {

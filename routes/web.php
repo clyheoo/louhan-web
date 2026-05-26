@@ -82,6 +82,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/grand-juri/nominasi', [GrandJuriController::class, 'nominasiIndex'])->name('grand-juri.nominasi');
     Route::get('/api/grand-juri/nominasi', [GrandJuriController::class, 'getNominasi']);
     Route::post('/api/grand-juri/nominasi-review', [GrandJuriController::class, 'reviewNominasi']);
+    Route::get('/api/grand-juri/nominasi-history', [GrandJuriController::class, 'getNominasiHistory']);
 });
 
 Route::middleware('auth')->group(function () {

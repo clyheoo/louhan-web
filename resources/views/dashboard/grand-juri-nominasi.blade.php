@@ -146,6 +146,29 @@
             </div>
         </div>
 
+                {{-- RIWAYAT REVIEW NOMINASI --}}
+        <div class="mt-8">
+            <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <h2 class="font-bold text-slate-700 flex items-center gap-2 text-sm">
+                        <i class="fas fa-clock-rotate-left text-blue-600"></i>
+                        Riwayat Review Nominasi
+                    </h2>
+                    <div class="flex gap-1 bg-slate-200 p-1 rounded-lg">
+                        <button onclick="switchHistTab('approved')" id="hist-tab-approved" class="hist-tab px-3 py-1.5 rounded-md text-[11px] font-bold transition-colors bg-emerald-500 text-white">
+                            <i class="fas fa-check-circle mr-1"></i>Diterima (<span id="hist-cnt-app">0</span>)
+                        </button>
+                        <button onclick="switchHistTab('rejected')" id="hist-tab-rejected" class="hist-tab px-3 py-1.5 rounded-md text-[11px] font-bold transition-colors text-slate-500 hover:bg-slate-100">
+                            <i class="fas fa-times-circle mr-1"></i>Ditolak (<span id="hist-cnt-rej">0</span>)
+                        </button>
+                    </div>
+                </div>
+                <div id="hist-content" class="p-4">
+                    <div class="text-center py-10 text-xs text-slate-400 font-semibold">Memuat data...</div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- Warning Modal -->
@@ -279,6 +302,7 @@ async function executeReject() {
             decrementStatTank(1);
             showSuccessPopup('Ditolak', res.message);
             loadNominasi(true);
+            loadHistory();
         } else {
             showWarningModal([{ msg: res.message }]);
         }
@@ -303,6 +327,7 @@ async function approveNominasi(btn, nominasiId) {
             decrementStatTank(1);
             showSuccessPopup('Disetujui', res.message);
             loadNominasi(true);
+            loadHistory();
         } else {
             showWarningModal([{ msg: res.message }]);
             btn.disabled = false;
@@ -342,6 +367,7 @@ async function approveAllInGroup(btn, ids) {
         showWarningModal([{ msg: success + ' berhasil, ' + fail + ' gagal.' }]);
     }
     loadNominasi(true);
+    loadHistory();
 }
 
 /* ── silent=true = tidak tampilkan error popup ── */
@@ -400,8 +426,82 @@ async function loadNominasi(silent) {
     }
 }
 
+let histData = { approved: [], rejected: [] };
+let histActiveTab = 'approved';
+
+function switchHistTab(tab) {
+    histActiveTab = tab;
+    document.querySelectorAll('.hist-tab').forEach(function(b) {
+        b.className = 'hist-tab px-3 py-1.5 rounded-md text-[11px] font-bold transition-colors text-slate-500 hover:bg-slate-100';
+    });
+    var activeBtn = document.getElementById('hist-tab-' + tab);
+    if (tab === 'approved') {
+        activeBtn.className = 'hist-tab px-3 py-1.5 rounded-md text-[11px] font-bold transition-colors bg-emerald-500 text-white';
+    } else {
+        activeBtn.className = 'hist-tab px-3 py-1.5 rounded-md text-[11px] font-bold transition-colors bg-red-500 text-white';
+    }
+    renderHistory();
+}
+
+function renderHistory() {
+    var groups = histData[histActiveTab];
+    var container = document.getElementById('hist-content');
+    if (!groups || groups.length === 0) {
+        container.innerHTML = '<div class="text-center py-12"><i class="fas fa-inbox text-4xl text-slate-200 mb-3"></i><p class="text-xs font-bold text-slate-400">Belum ada data nominasi ' + (histActiveTab === 'approved' ? 'yang diterima' : 'yang ditolak') + '.</p></div>';
+        return;
+    }
+
+    var isApp = histActiveTab === 'approved';
+    var accentBg = isApp ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200';
+    var iconBg = isApp ? 'bg-emerald-100' : 'bg-red-100';
+    var iconColor = isApp ? 'text-emerald-600' : 'text-red-600';
+    var icon = isApp ? 'fa-check' : 'fa-times';
+    var tankBorder = isApp ? 'border-emerald-100' : 'border-red-100';
+    var tankHover = isApp ? 'hover:border-emerald-300' : 'hover:border-red-300';
+
+    var html = '<div class="space-y-4">';
+    groups.forEach(function(group) {
+        html += '<div class="' + accentBg + ' border rounded-xl overflow-hidden fade-in">';
+        html += '<div class="px-4 py-3 flex items-center gap-3">';
+        html += '<div class="w-9 h-9 ' + iconBg + ' rounded-lg flex items-center justify-center"><i class="fas ' + icon + ' ' + iconColor + ' text-sm"></i></div>';
+        html += '<div><h3 class="text-xs font-extrabold text-slate-800">' + group.juri_name + '</h3>';
+        html += '<p class="text-[10px] font-bold text-slate-500">' + group.tanks.length + ' tank</p></div></div>';
+        html += '<div class="px-4 pb-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">';
+
+        group.tanks.forEach(function(tank) {
+            html += '<div class="p-2.5 rounded-lg border ' + tankBorder + ' bg-white ' + tankHover + ' transition-colors">';
+            html += '<div class="w-9 h-9 rounded-lg flex items-center justify-center font-extrabold text-sm shadow-sm bg-slate-800 text-white mb-2">T' + tank.nomor_tank + '</div>';
+            html += '<div class="text-[10px] font-bold px-1.5 py-1 rounded bg-blue-50 text-blue-700 truncate text-center border border-blue-100/50 mb-1">' + tank.kategori + '</div>';
+            html += '<div class="text-[10px] font-bold px-1.5 py-1 rounded bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50 mb-1.5">Kelas ' + tank.kelas + '</div>';
+            if (!isApp && tank.catatan) {
+                html += '<div class="text-[9px] text-red-600 italic px-1 truncate" title="' + tank.catatan + '"><i class="fas fa-comment-dots mr-0.5"></i>' + tank.catatan + '</div>';
+            }
+            html += '<div class="text-[9px] text-slate-400 text-center mt-1.5">' + tank.reviewed_at + '</div>';
+            html += '</div>';
+        });
+
+        html += '</div></div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function loadHistory() {
+    try {
+        var res = await apiFetch('/api/grand-juri/nominasi-history');
+        histData.approved = res.approved || [];
+        histData.rejected = res.rejected || [];
+        document.getElementById('hist-cnt-app').textContent = res.total_approved || 0;
+        document.getElementById('hist-cnt-rej').textContent = res.total_rejected || 0;
+        renderHistory();
+    } catch(e) {
+        document.getElementById('hist-content').innerHTML = '<div class="text-center py-10 text-xs text-red-400 font-semibold">Gagal memuat riwayat.</div>';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     loadNominasi();
+    loadHistory();
 });
 </script>
 
