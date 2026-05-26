@@ -9,6 +9,7 @@ use App\Exports\Sheets\RumusPenilaianSheet;
 use App\Exports\Sheets\UserDetailSheet;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use App\Exports\Sheets\NominasiSheet;
+use App\Exports\Sheets\NilaiMurniJuriSheet;
 
 class GrandJuriExport implements WithMultipleSheets
 {
@@ -30,7 +31,8 @@ class GrandJuriExport implements WithMultipleSheets
             $result[] = new PointRankingSheet($rankingScope);
             $result[] = new RumusPenilaianSheet();
             $result[] = new UserDetailSheet();
-             $result[] = new NominasiSheet();
+            $result[] = new NominasiSheet();
+            $result[] = new NilaiMurniJuriSheet();
         } elseif ($this->sheets === 'daftar') {
             $result[] = new DaftarIkanSheet();
         } elseif ($this->sheets === 'mvp') {
@@ -45,6 +47,8 @@ class GrandJuriExport implements WithMultipleSheets
             $result[] = new UserDetailSheet();
         } elseif ($this->sheets === 'nominasi') {
             $result[] = new NominasiSheet();
+        } elseif ($this->sheets === 'nilai_murni') {
+            $result[] = new NilaiMurniJuriSheet();
         }
 
         return $result;
