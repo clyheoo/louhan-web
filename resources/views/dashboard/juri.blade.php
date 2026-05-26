@@ -682,7 +682,7 @@ function renderLiveTable() {
     document.getElementById('live-count').textContent = appData.my_scores.length;
     if (appData.my_scores.length === 0) { body.innerHTML=''; empty.classList.remove('hidden'); return; }
     empty.classList.add('hidden');
-    body.innerHTML = appData.my_scores.map(s => { const t = s.ikan; const nd = s.nilai_detail||{}; const fmt = (obj,keys) => keys.map(k=>nd[obj]?.[k]||'-').join('/'); let defHtml = ''; ['head','face','body','finnage'].forEach(p => { const raw = s['raw_'+p+'_penalty']; if (raw && Array.isArray(raw) && raw[0]!=='0' && raw.length>0) defHtml += '<span class="inline-block bg-red-100 text-red-700 text-[8px] font-bold px-1 py-0 rounded mb-0.5">'+raw.join(', ')+'</span>'; }); if (!defHtml) defHtml = '<span class="text-slate-300">-</span>'; const toG = s.submitted_to_grand; return '<tr class="hover:bg-amber-50/50"><td class="px-2 py-2 border-r font-bold text-slate-800 text-center bg-slate-50 sticky left-0 z-10 text-xs">T'+(t?t.nomor_tank:'-')+'</td><td class="px-2 py-2 border-r"><div class="font-bold text-[10px]">'+(t?.kategori||'-')+'</div><div class="text-[9px] text-blue-600 font-bold">KLS:'+(s.kelas||'-')+'</div></td><td class="px-2 py-2 border-r text-center font-mono font-bold text-blue-700 bg-blue-50/30">'+(nd.overall?.impression||'-')+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('head',['size','bentuk'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+(nd.face?.face||'-')+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('body',['bentuk','proporsi','pangkal'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('marking',['fullness','contrast','bentuk'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('pearl',['shinning','fullness','bentuk'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('color',['komposisi','kecerahan','fullness'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('finnage',['bentuk','kecerahan'])+'</td><td class="px-2 py-2 border-r text-left align-top min-w-[100px] whitespace-normal">'+defHtml+'</td><td class="px-2 py-2 text-center">'+(toG?'<span class="text-emerald-600 font-bold text-[9px] flex items-center gap-1 justify-center"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Terkirim</span>':'<button onclick="kirimGrand('+s.id+')" class="px-2 py-1 bg-blue-600 text-white text-[9px] font-bold rounded hover:bg-blue-700 flex items-center gap-1 mx-auto"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>Kirim</button>')+'</td></tr>'; }).join('');
+    body.innerHTML = appData.my_scores.map(s => { const t = s.ikan; const nd = s.nilai_detail||{}; const fmt = (obj,keys) => keys.map(k=>nd[obj]?.[k]||'-').join('/'); let defHtml = ''; ['head','face','body','finnage'].forEach(p => { const raw = s['raw_'+p+'_penalty']; if (raw && Array.isArray(raw) && raw[0]!=='0' && raw.length>0) defHtml += '<span class="inline-block bg-red-100 text-red-700 text-[8px] font-bold px-1 py-0 rounded mb-0.5">'+raw.join(', ')+'</span>'; }); if (!defHtml) defHtml = '<span class="text-slate-300">-</span>'; const toG = s.submitted_to_grand; return '<tr class="hover:bg-amber-50/50"><td class="px-2 py-2 border-r font-bold text-slate-800 text-center bg-slate-50 sticky left-0 z-10 text-xs">T'+(t?t.nomor_tank:'-')+'</td><td class="px-2 py-2 border-r"><div class="font-bold text-[10px]">'+(t?.kategori||'-')+'</div><div class="text-[9px] text-blue-600 font-bold">KLS:'+(s.kelas||'-')+'</div></td><td class="px-2 py-2 border-r text-center font-mono font-bold text-blue-700 bg-blue-50/30">'+(nd.overall?.impression||'-')+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('head',['size','bentuk'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+(nd.face?.face||'-')+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('body',['bentuk','proporsi','pangkal'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('marking',['fullness','contrast','bentuk'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('pearl',['shinning','fullness','bentuk'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('color',['komposisi','kecerahan','fullness'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('finnage',['bentuk','kecerahan'])+'</td><td class="px-2 py-2 border-r text-left align-top min-w-[100px] whitespace-normal">'+defHtml+'</td><td class="px-2 py-2 text-center">'+'<button onclick="lihatDetail('+s.id+')" class="px-2 py-1 bg-slate-700 text-white text-[9px] font-bold rounded hover:bg-slate-800 flex items-center gap-1 mx-auto"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>Detail</button>'+'</td></tr>'; }).join('');
 }
 
 function populateFilter() { document.getElementById('filter-kategori').innerHTML = '<option value="">Semua Kategori</option>' + ['Bonsai','Cencu','Chginwa','Freemarking','Goldenbase','Jumbo','Klasik'].map(c => '<option value="'+c+'">'+c+'</option>').join(''); document.getElementById('filter-kelas').innerHTML = '<option value="">Semua Kelas</option>' + ['A','B','C','D','E'].map(c => '<option value="'+c+'">Kelas '+c+'</option>').join(''); }
@@ -822,14 +822,25 @@ async function batchSubmit() {
 // ═══════════════════════════════════════════════════════════════
 // KIRIM GRAND JURI (EXISTING)
 // ═══════════════════════════════════════════════════════════════
-async function kirimGrand(scoringId) {
-    const ok = await showConfirm('Nilai yang sudah Anda simpan akan dikirim ke Grand Juri untuk ditinjau. Tindakan ini tidak dapat dibatalkan.');
-    if (!ok) return;
-    try {
-        const res = await apiFetch('/api/juri/kirim-ke-grand',{method:'POST',body:JSON.stringify({scoring_id:scoringId})});
-        if (res.success) { showSuccessPopup('Berhasil Dikirim!', res.message); await loadJuriData(); }
-        else showWarningModal([{type:'select',msg:res.message}]);
-    } catch(e) { showWarningModal([{type:'select',msg:'Gagal mengirim. Periksa koneksi internet Anda.'}]); }
+function lihatDetail(scoringId) {
+    var s = appData.my_scores.find(function(x) { return x.id === scoringId; });
+    if (!s) return;
+    var nd = s.nilai_detail || {};
+    var html = '<div style="text-align:left;font-size:12px;line-height:2;">';
+    html += '<b>Tank:</b> T' + (s.ikan ? s.ikan.nomor_tank : '-') + '<br>';
+    html += '<b>Kelas:</b> ' + (s.kelas || '-') + '<br>';
+    html += '<b>Total Nilai:</b> ' + (s.total_nilai || 0) + '<br>';
+    html += '<hr style="margin:8px 0;border-color:#e2e8f0;">';
+    html += '<b>Overall:</b> ' + (nd.overall ? nd.overall.impression || '-' : '-') + '<br>';
+    html += '<b>Head:</b> ' + (nd.head ? (nd.head.size||'-') + ' / ' + (nd.head.bentuk||'-') : '-') + '<br>';
+    html += '<b>Face:</b> ' + (nd.face ? nd.face.face || '-' : '-') + '<br>';
+    html += '<b>Body:</b> ' + (nd.body ? (nd.body.bentuk||'-') + ' / ' + (nd.body.proporsi||'-') + ' / ' + (nd.body.pangkal||'-') : '-') + '<br>';
+    html += '<b>Marking:</b> ' + (nd.marking ? (nd.marking.fullness||'-') + ' / ' + (nd.marking.contrast||'-') + ' / ' + (nd.marking.bentuk||'-') : '-') + '<br>';
+    html += '<b>Pearl:</b> ' + (nd.pearl ? (nd.pearl.shinning||'-') + ' / ' + (nd.pearl.fullness||'-') + ' / ' + (nd.pearl.bentuk||'-') : '-') + '<br>';
+    html += '<b>Color:</b> ' + (nd.color ? (nd.color.komposisi||'-') + ' / ' + (nd.color.kecerahan||'-') + ' / ' + (nd.color.fullness||'-') : '-') + '<br>';
+    html += '<b>Finnage:</b> ' + (nd.finnage ? (nd.finnage.bentuk||'-') + ' / ' + (nd.finnage.kecerahan||'-') : '-') + '<br>';
+    html += '</div>';
+    showSuccessPopup('Detail Nilai T' + (s.ikan ? s.ikan.nomor_tank : '-'), html);
 }
 
 // ═══════════════════════════════════════════════════════════════

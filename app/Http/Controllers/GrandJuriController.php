@@ -27,33 +27,6 @@ class GrandJuriController extends Controller
     {
         $totalTank = Ikan::whereNotNull('nomor_tank')->count();
         $totalPeserta = Peserta::count();
-
-        $sudahPlot = Scoring::where('submitted_to_grand', true)
-            ->distinct('ikan_id')
-            ->count('ikan_id');
-        $belumPlot = max(0, $totalTank - $sudahPlot);
-        $maxTank = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
-        $sisaTank = max(0, $maxTank - $totalTank);
-
-        // ★ FIX: Hanya hitung ikan yang sudah submitted_to_grand, tanpa belum_tank
-        $rincian = Ikan::whereNotNull('nomor_tank')
-            ->whereHas('scorings', function ($q) {
-                $q->where('submitted_to_grand', true);
-            })
-            ->selectRaw('ikans.kategori, COUNT(ikans.id) as ekor')
-            ->groupBy('ikans.kategori')
-            ->orderByDesc('ekor')
-            ->get();
-
-        return response()->json([
-            'total_tank'    => $totalTank,
-            'total_peserta' => $totalPeserta,
-            'sudah_plot'    => $sudahPlot,
-            'belum_plot'    => $belumPlot,
-            'sisa_tank'     => $sisaTank,
-            'max_tank'      => $maxTank,
-            'rincian'       => $rincian,
-        ]);
     }
 
         /* ═══════════════════════════════════════════
@@ -159,10 +132,8 @@ class GrandJuriController extends Controller
     public function getPeserta(Request $request)
     {
         $query = Ikan::whereHas('scorings', function ($q) {
-            $q->where('submitted_to_grand', true);
         })
         ->with(['peserta', 'scorings' => function ($q) {
-            $q->where('submitted_to_grand', true);
         }, 'scorings.juri', 'scorings.grandJuri', 'bonusPoints']);
 
         if ($request->filled('search')) {
@@ -362,7 +333,6 @@ class GrandJuriController extends Controller
 
         // ★ 1. CARI SCORING JURI ASLI TERAKHIR
         $targetScoring = Scoring::where('ikan_id', $ikanId)
-            ->where('submitted_to_grand', true)
             ->latest()
             ->first();
 
@@ -474,23 +444,18 @@ class GrandJuriController extends Controller
             return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
         }
 
-        $totalJuriAll = Scoring::where('ikan_id', $ikanId)
-            ->where('submitted_to_grand', true)
+        $totalJuriSemua = \App\Models\User::where('role', 'juri')->count();
+        $jumlahSudahNilai = Scoring::where('ikan_id', $ikanId)
             ->distinct('juri_id')
             ->count('juri_id');
 
-        $submittedCount = Scoring::where('ikan_id', $ikanId)
-            ->where('submitted_to_grand', true)
-            ->count('ikan_id');
-
-        if ($submittedCount < $totalJuriAll) {
-            $sisa = $totalJuriAll - $submittedCount;
+        if ($jumlahSudahNilai < $totalJuriSemua) {
+            $sisa = $totalJuriSemua - $jumlahSudahNilai;
             return response()->json([
                 'success' => false,
-                'message' => 'Tidak bisa mengunci. Masih ada ' . $sisa . ' juri yang belum mengirim nilai.',
+                'message' => 'Tidak bisa mengunci. Masih ada ' . $sisa . ' juri yang belum menilai tank ini.',
             ]);
         }
-
 
         $ikan->is_locked = !$ikan->is_locked;
         $ikan->save();
@@ -514,7 +479,6 @@ class GrandJuriController extends Controller
             $juriRows = \DB::table('scorings')
                 ->join('users', 'scorings.juri_id', '=', 'users.id')
                 ->whereNotNull('scorings.juri_id')
-                ->where('scorings.submitted_to_grand', true)
                 ->selectRaw('scorings.juri_id, users.name, COUNT(DISTINCT scorings.ikan_id) as total_ikan')
                 ->groupBy('scorings.juri_id', 'users.name')
                 ->orderByDesc('total_ikan')
@@ -615,7 +579,6 @@ class GrandJuriController extends Controller
 
         $ikans = Ikan::whereNotNull('nomor_tank')
             ->whereHas('scorings', function ($q) {
-                $q->where('submitted_to_grand', true);
             })
             ->where('kategori', $kategori)
             ->with(['peserta', 'scorings' => function ($q) {
@@ -662,7 +625,6 @@ class GrandJuriController extends Controller
 
         if ($status === 'sudah_plot') {
             $query->whereHas('scorings', function ($q) {
-                $q->where('submitted_to_grand', true);
             });
         } else {
             $query->whereDoesntHave('scorings');
@@ -731,10 +693,8 @@ class GrandJuriController extends Controller
             $ikans = Ikan::where('is_locked', true)
                 ->whereNotNull('nomor_tank')
                 ->whereHas('scorings', function ($q) {
-                    $q->where('submitted_to_grand', true);
                 })
                 ->with(['peserta', 'scorings' => function ($q) {
-                    $q->where('submitted_to_grand', true);
                 }, 'scorings.juri', 'scorings.grandJuri', 'bonusPoints'])
                 ->get();
 
@@ -815,10 +775,8 @@ class GrandJuriController extends Controller
         $query = Ikan::where('is_locked', true)
             ->whereNotNull('nomor_tank')
             ->whereHas('scorings', function ($q) {
-                $q->where('submitted_to_grand', true);
             })
             ->with(['peserta', 'scorings' => function ($q) {
-                $q->where('submitted_to_grand', true);
             }, 'scorings.grandJuri', 'bonusPoints']);
 
         if ($filterKategori) $query->where('kategori', $filterKategori);
