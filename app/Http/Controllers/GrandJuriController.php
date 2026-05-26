@@ -15,6 +15,16 @@ use App\Models\Nominasi;
 
 class GrandJuriController extends Controller
 {
+    private const BONUS_TYPES = [
+        'best_of_the_best' => 'BEST OF THE BEST',
+        'best_of_show'     => 'BEST OF SHOW',
+        'grand_champion'   => 'GRAND CHAMPION',
+        'young_champion'   => 'YOUNG CHAMPION',
+        'junior'           => 'JUNIOR',
+        'baby_champion'    => 'BABY CHAMPION',
+        'mini_champion'    => 'MINI CHAMPION',
+    ];
+
     public function index()
     {
         return view('dashboard.grand-juri', ['user' => auth()->user()->fresh()]);
@@ -25,8 +35,62 @@ class GrandJuriController extends Controller
        ═══════════════════════════════════════════ */
     public function getStats()
     {
-        $totalTank = Ikan::whereNotNull('nomor_tank')->count();
-        $totalPeserta = Peserta::count();
+        try {
+            $totalTank    = Ikan::whereNotNull('nomor_tank')->count();
+            $totalPeserta = Peserta::count();
+
+            $sudahPlot = Ikan::whereNotNull('nomor_tank')
+                ->whereHas('scorings')
+                ->count();
+
+            $belumPlot = Ikan::whereNotNull('nomor_tank')
+                ->whereDoesntHave('scorings')
+                ->count();
+
+            // Cari max tank secara aman tanpa model Setting
+            $maxTank = 0;
+            $sisaTank = 0;
+            try {
+                $setting = \DB::table('settings')->where('key', 'tank_range_max')->first();
+                if ($setting) {
+                    $maxTank = (int) $setting->value;
+                    $sisaTank = max(0, $maxTank - $totalTank);
+                }
+            } catch (\Exception $e) {
+                // Jika tabel settings tidak ada, biarkan maxTank = 0
+            }
+
+            // Rincian per kategori
+            $rincian = Ikan::whereNotNull('nomor_tank')
+                ->selectRaw('kategori, COUNT(*) as ekor')
+                ->groupBy('kategori')
+                ->orderBy('kategori')
+                ->get()
+                ->map(function ($row) {
+                    return [
+                        'kategori' => $row->kategori,
+                        'ekor'     => (int) $row->ekor,
+                    ];
+                })
+                ->toArray();
+
+            return response()->json([
+                'total_tank'    => $totalTank,
+                'total_peserta' => $totalPeserta,
+                'sudah_plot'    => $sudahPlot,
+                'belum_plot'    => $belumPlot,
+                'sisa_tank'     => $sisaTank,
+                'max_tank'      => $maxTank,
+                'rincian'       => $rincian,
+            ]);
+
+        } catch (\Exception $e) {
+            // Jika masih gagal juga, kirim pesan error agar bisa dilihat di Network tab
+            return response()->json([
+                'error'   => true,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
         /* ═══════════════════════════════════════════
@@ -913,15 +977,6 @@ class GrandJuriController extends Controller
 
         return response()->json($result);
     }
-        const BONUS_TYPES = [
-        'best_of_the_best' => 'BEST OF THE BEST',
-        'best_of_show'     => 'BEST OF SHOW',
-        'grand_champion'   => 'GRAND CHAMPION',
-        'young_champion'   => 'YOUNG CHAMPION',
-        'junior'           => 'JUNIOR',
-        'baby_champion'    => 'BABY CHAMPION',
-        'mini_champion'    => 'MINI CHAMPION',
-    ];
 
     public function addBonus(Request $request)
     {

@@ -227,8 +227,20 @@ let pendingRejectId = null;
 
 async function apiFetch(url, opts = {}) {
     const defaults = { headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } };
-    const res = await fetch(url, { ...defaults, ...opts, headers: { ...defaults.headers, ...(opts.headers || {}) } });
-    return res.json();
+    try {
+        const res = await fetch(url, { ...defaults, ...opts, headers: { ...defaults.headers, ...(opts.headers || {}) } });
+        var text = await res.text();
+        if (!text || text.trim() === '') {
+            return { error: true, message: 'Server mengembalikan respons kosong.' };
+        }
+        try {
+            return JSON.parse(text);
+        } catch(e) {
+            return { error: true, message: 'Respons tidak valid dari server.' };
+        }
+    } catch(e) {
+        return { error: true, message: 'Gagal terhubung ke server.' };
+    }
 }
 
 function showWarningModal(errorsArray) {
@@ -502,6 +514,19 @@ async function loadHistory() {
 document.addEventListener('DOMContentLoaded', function() {
     loadNominasi();
     loadHistory();
+});
+
+window.addEventListener('unhandledrejection', function(e) {
+    console.group('%c🔍 UNHANDLED PROMISE REJECTION', 'color:#d97706;font-weight:bold;font-size:14px');
+    console.log('Error:', e.reason);
+    console.log('Stack:', e.reason?.stack || 'TIDAK ADA STACK — kemungkinan dari browser extension');
+    console.log('Promise:', e.promise);
+    console.groupEnd();
+    e.preventDefault(); // mencegah error muncul di console
+});
+
+window.addEventListener('unhandledrejection', function(e) {
+    e.preventDefault();
 });
 </script>
 

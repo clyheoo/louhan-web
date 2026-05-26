@@ -924,12 +924,14 @@ function loadStats(){
         var grid=document.getElementById('rincianGrid');
         grid.innerHTML='';
         if(d.rincian)d.rincian.forEach(function(r){
-            // ★ FIX: Hapus baris "Belum Dinilai", hanya tampilkan jumlah ekor
             grid.innerHTML+='<div class="rincian-card" onclick="openRincianDetail(\''+esc(r.kategori)+'\')">'+
                 '<div class="rincian-cat"><i class="fas fa-arrow-up-right-from-square"></i>'+esc(r.kategori)+'</div>'+
                 '<div class="rincian-data"><div class="rincian-ekor">'+r.ekor+' Ekor</div></div></div>';
         });
-    });
+    })
+    .catch(function(err){
+        console.error('Gagal load stats:', err);
+    });  // ← TAMBAHKAN INI
 }
 
 /* ================================================================
