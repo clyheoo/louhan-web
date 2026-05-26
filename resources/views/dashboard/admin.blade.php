@@ -749,6 +749,16 @@
                     <div style="font-size:11px; color:#b45309; margin-top:4px;">Tentukan nomor tank per kategori di dalam rentang kelas yang sudah ditentukan</div>
                 </div>
                 <div style="padding:18px 20px;">
+
+                    <!-- ★ INFO: Kelas mana yang sudah punya sub-rentang kategori tersimpan -->
+                    <div id="katSavedInfoWrap" style="display:none; margin-bottom:16px;">
+                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                            <i class="fas fa-circle-info" style="color:#d97706; font-size:13px;"></i>
+                            <span style="font-size:11px; font-weight:800; color:#92400e; text-transform:uppercase; letter-spacing:.4px;">Sub-rentang kategori yang sudah disimpan</span>
+                        </div>
+                        <div id="katSavedInfoContent" style="display:flex; flex-direction:column; gap:8px;"></div>
+                    </div>
+
                     <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
                         <label style="font-size:11px; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:.4px; margin:0; white-space:nowrap;">Pilih Kelas</label>
                         <select id="katKelasSelect" class="form-control" style="max-width:220px; font-weight:700;" onchange="onKatKelasChange()">
@@ -1113,8 +1123,7 @@ var kelasRangeSaved = false;
 
 /* ═══ LOAD & RENDER KELAS GRID ═══ */
 function loadTankRange(){
-    fetch('/api/tank-range',{headers:{'Accept':'application/json'}})
-    .then(function(r){return r.json();})
+    fetch('/api/tank-range?_t='+Date.now(),{headers:{'Accept':'application/json'}})    .then(function(r){return r.json();})
     .then(function(d){
         kelasRangeData = {};
         for(var i=0;i<kelasList.length;i++){
@@ -1140,10 +1149,11 @@ function loadTankRange(){
         }
         if(hasAny){kelasRangeSaved = true; showKelasRangeSaved();}
 
-        /* Reset kategori section */
         document.getElementById('katKelasSelect').value = '';
         document.getElementById('katGridWrap').style.display = 'none';
         document.getElementById('katEmptyState').style.display = 'block';
+
+        renderKatSavedInfo();
     })
     .catch(function(){
         document.getElementById('kelasRangeInputs').innerHTML = '<div style="text-align:center;padding:20px;color:var(--danger);grid-column:1/-1;font-size:12px;">Gagal memuat.</div>';
@@ -1268,6 +1278,7 @@ function saveKelasRange(){
             kelasRangeSaved = true;
             showKelasRangeSaved();
             populateKelasSelect();
+            renderKatSavedInfo();
             loadDashboard();
             popupSuccess('Berhasil','Rentang nomor per kelas berhasil disimpan.');
         } else { popupError('Gagal',d.message||'Terjadi kesalahan.'); }
@@ -1343,9 +1354,10 @@ function renderKategoriGrid(kelas){
             var card = document.createElement('div');
 
             if(hasSub){
+                /* ★ SUDAH DISIMPAN — nama kategori abu-abu pudar, border hijau */
                 card.style.cssText='background:#fff;border:2px solid #86efac;border-radius:10px;padding:14px;text-align:center;';
                 card.innerHTML=
-                    '<div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">'+name+'</div>'+
+                    '<div style="font-size:11px;font-weight:800;color:var(--light);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">'+name+'</div>'+
                     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">'+
                         '<input type="number" id="kat_'+name+'_min" value="'+kat.min+'" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;" oninput="updateKatGap()">'+
                         '<span style="font-weight:600;color:#d97706;">–</span>'+
@@ -1353,9 +1365,10 @@ function renderKategoriGrid(kelas){
                     '</div>'+
                     '<button type="button" onclick="clearKatSub(\''+kelas+'\',\''+name+'\')" class="btn-xs red" style="width:100%;justify-content:center;"><i class="fas fa-times"></i> Hapus</button>';
             } else {
+                /* ★ BELUM DISIMPAN — nama kategori hitam jelas, border kuning */
                 card.style.cssText='background:#fff;border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center;';
                 card.innerHTML=
-                    '<div style="font-size:11px;font-weight:800;color:var(--light);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">'+name+'</div>'+
+                    '<div style="font-size:11px;font-weight:800;color:#1e293b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">'+name+'</div>'+
                     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">'+
                         '<input type="number" id="kat_'+name+'_min" placeholder="—" class="form-control" style="text-align:center;font-weight:700;padding:8px;font-size:13px;" oninput="updateKatGap()">'+
                         '<span style="font-weight:600;color:#d97706;">–</span>'+
@@ -1369,10 +1382,67 @@ function renderKategoriGrid(kelas){
     updateKatGap();
 }
 
+/* ═══ RENDER INFO KELAS YANG SUDAH PUNYA SUB-RENTANG KATEGORI ═══ */
+function renderKatSavedInfo(){
+    var wrap = document.getElementById('katSavedInfoWrap');
+    var content = document.getElementById('katSavedInfoContent');
+
+    /* Kumpulkan kelas yang punya sub-rentang kategori */
+    var kelasWithKat = [];
+    for(var i = 0; i < kelasList.length; i++){
+        var k = kelasList[i];
+        var kd = kelasRangeData[k];
+        if(kd && kd.kategori && Object.keys(kd.kategori).length > 0){
+            kelasWithKat.push({kelas: k, min: kd.min, max: kd.max, kategori: kd.kategori});
+        }
+    }
+
+    /* Jika tidak ada yang punya sub-rentang, sembunyikan */
+    if(kelasWithKat.length === 0){
+        wrap.style.display = 'none';
+        return;
+    }
+
+    wrap.style.display = 'block';
+    content.innerHTML = '';
+
+    for(var i = 0; i < kelasWithKat.length; i++){
+        var item = kelasWithKat[i];
+        var card = document.createElement('div');
+        card.style.cssText = 'background:#fff; border:1px solid #fde68a; border-radius:10px; padding:10px 14px;';
+
+        /* Header: Kelas X (min – max) */
+        var headerHtml = '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">';
+        headerHtml += '<span style="font-size:12px; font-weight:800; color:#1e40af; text-transform:uppercase; letter-spacing:.5px;">';
+        headerHtml += '<i class="fas fa-layer-group" style="margin-right:4px; font-size:10px;"></i>Kelas ' + item.kelas;
+        headerHtml += '</span>';
+        headerHtml += '<span style="font-size:10px; color:#78350f; font-weight:700; background:#fffbeb; padding:2px 8px; border-radius:4px; border:1px solid #fde68a;">';
+        headerHtml += 'Rentang: ' + item.min + ' – ' + item.max;
+        headerHtml += '</span></div>';
+
+        /* Daftar kategori yang sudah disimpan di kelas ini */
+        var katKeys = Object.keys(item.kategori);
+        var katHtml = '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
+        for(var j = 0; j < katKeys.length; j++){
+            var katName = katKeys[j];
+            var katData = item.kategori[katName];
+            katHtml += '<span style="display:inline-flex; align-items:center; gap:4px; background:#dcfce7; color:#166534; padding:4px 10px; border-radius:6px; font-size:10px; font-weight:800; border:1px solid #86efac;">';
+            katHtml += '<i class="fas fa-tag" style="font-size:8px;"></i>';
+            katHtml += katName + ': <b>' + katData.min + '–' + katData.max + '</b>';
+            katHtml += '</span>';
+        }
+        katHtml += '</div>';
+
+        card.innerHTML = headerHtml + katHtml;
+        content.appendChild(card);
+    }
+}
+
 function clearKatSub(kelas, name){
     delete kelasRangeData[kelas].kategori[name];
     renderKategoriGrid(kelas);
     populateKelasSelect();
+    renderKatSavedInfo();
 }
 
 function updateKatGap(){
@@ -1452,8 +1522,10 @@ function saveKategoriRange(){
         var k=kelasList[i];
         var kd=kelasRangeData[k];
         ranges[k]={min:kd.min,max:kd.max};
-        if(kd.kategori && Object.keys(kd.kategori).length>0){
-            ranges[k].kategori = (k===kelas) ? kategori : kd.kategori;
+        if(k === kelas){
+            ranges[k].kategori = kategori;
+        } else if(kd.kategori && Object.keys(kd.kategori).length>0){
+            ranges[k].kategori = kd.kategori;
         }
     }
 
@@ -1469,10 +1541,53 @@ function saveKategoriRange(){
     .then(function(r){if(!r.ok) return r.json().then(function(d){throw d;}); return r.json();})
     .then(function(dd){
         if(dd.success){
-            kelasRangeData[kelas].kategori = kategori;
-            populateKelasSelect();
+            /* ★ VERIFIKASI: re-fetch dari server untuk memastikan data benar-benar tersimpan */
+            fetch('/api/tank-range?_v='+Date.now(),{headers:{'Accept':'application/json'}})
+            .then(function(r){return r.json();})
+            .then(function(d){
+                /* Sync SEMUA data dari server (bukan percaya local state) */
+                for(var i=0;i<kelasList.length;i++){
+                    var k=kelasList[i];
+                    if(d[k]){
+                        var katObj={};
+                        if(d[k].kategori && typeof d[k].kategori==='object'){
+                            katObj=d[k].kategori;
+                        }
+                        kelasRangeData[k]={min:d[k].min||1,max:d[k].max||1000,kategori:katObj};
+                    }
+                }
+                /* Re-render UI berdasarkan data aktual dari server */
+                var curKelas=document.getElementById('katKelasSelect').value;
+                if(curKelas) renderKategoriGrid(curKelas);
+                populateKelasSelect();
+                renderKatSavedInfo();
+
+                /* Bandingkan yang dikirim vs yang tersimpan */
+                var serverKat=kelasRangeData[kelas].kategori||{};
+                var expectedKeys=Object.keys(kategori);
+                var savedKeys=Object.keys(serverKat);
+
+                if(expectedKeys.length>0 && savedKeys.length===0){
+                    popupError('Data Tidak Tersimpan di Database',
+                        'Server merespons berhasil, tetapi sub-rentang <b>tidak ditemukan</b> saat diverifikasi ulang.<br><br>'+
+                        '<div style="text-align:left;background:var(--bg);padding:10px;border-radius:8px;font-size:11px;line-height:1.7;color:var(--muted);">'+
+                        '<b>Kemungkinan penyebab:</b><br>'+
+                        '• Ada <code>AppServiceProvider</code> atau middleware yang mereset value<br>'+
+                        '• Ada database trigger pada tabel <code>settings</code><br>'+
+                        '• Koneksi database di <code>.env</code> menunjuk ke DB berbeda<br>'+
+                        '• Redis/cache server menyimpan data lama<br><br>'+
+                        '<b>Cara cek:</b> jalankan di terminal:<br>'+
+                        '<code style="display:block;margin-top:4px;padding:6px;background:#1e293b;color:#22c55e;border-radius:6px;font-size:10px;">php artisan tinker --execute="echo DB::table(\'settings\')->where(\'key\',\'tank_class_ranges\')->value(\'value\');"</code>'+
+                        '</div>'
+                    );
+                } else {
+                    popupSuccess('Berhasil','Sub-rentang kategori Kelas '+kelas+' berhasil disimpan dan diverifikasi.');
+                }
+            })
+            .catch(function(){
+                popupError('Verifikasi Gagal','Tidak dapat memverifikasi data dari server.');
+            });
             loadDashboard();
-            popupSuccess('Berhasil','Sub-rentang kategori Kelas '+kelas+' berhasil disimpan.');
         } else { popupError('Gagal',dd.message||'Terjadi kesalahan.'); }
     })
     .catch(function(e){
