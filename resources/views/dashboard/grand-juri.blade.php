@@ -338,6 +338,9 @@
     </div>
         <div class="nav-right">
             <div class="info"><h4>{{ $user->name }}</h4><span>GRAND JURI</span></div>
+            <a href="{{ route('grand-juri.nominasi') }}" class="btn-sm" style="padding:8px 16px;border-radius:8px;border:1px solid var(--purple);background:var(--purple-light);font-size:12px;font-weight:700;cursor:pointer;color:var(--purple);text-decoration:none;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:all .2s;">
+                <i class="fas fa-clipboard-check"></i> Review Nominasi
+            </a>
             <div class="export-wrap">
         <button class="export-btn" onclick="document.getElementById('exportDD').classList.toggle('show')">
             <i class="fas fa-file-excel"></i> Export Excel
@@ -396,6 +399,11 @@
         <div class="stat-card purple">
             <div class="stat-number" id="statSisa">0</div>
             <div class="stat-label" id="statSisaLabel">Sisa Tank</div>
+        </div>
+        <div class="stat-card purple clickable" onclick="window.location.href='/grand-juri/nominasi'">
+            <div class="stat-number" id="statNominasi">0</div>
+            <div class="stat-label">Nominasi Masuk</div>
+            <div class="stat-click-hint"><i class="fas fa-arrow-up-right-from-square"></i> Review Sekarang</div>
         </div>
     </div>
 
@@ -553,7 +561,7 @@
             <div class="edit-info-banner" id="editInfo"></div>
             <div class="note-hint">
                 <i class="fas fa-circle-info"></i>
-                Nilai dari juri sudah terisi di setiap input. <strong>Ubah hanya komponen yang ingin diperbarui</strong>, lalu simpan. Input yang tidak diubah akan tetap menggunakan nilai juri.
+                Nilai dari juri sudah terisi di setiap input. <strong>Ubah hanya komponen yang ingin diperbarui</strong>lalu simpan. Input yang tidak diubah akan tetap menggunakan nilai juri.
             </div>
             <div class="content-grid">
                 <div class="kat-list" id="editKatList"></div>
@@ -1797,8 +1805,20 @@ document.addEventListener('click',function(e){
 loadStats();
 loadPeserta();
 loadJuriSummary();
-loadMvpGj(); // ★ TAMBAHKAN BARIS INI AGAR MVP TERLOAD SAAT BUKA HALAMAN
+loadMvpGj();
 loadPointRanking();
+
+/* ── NOMINASI BADGE ── */
+function loadNominasiBadge(){
+    fetch('/api/grand-juri/nominasi',{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        var el=document.getElementById('statNominasi');
+        if(el) el.innerText=d.total_pending||0;
+    })
+    .catch(function(){});
+}
+loadNominasiBadge();
 </script>
 </body>
 </html>
