@@ -69,36 +69,47 @@ class GrandJuriController extends Controller
        ═══════════════════════════════════════════ */
     public function getNominasi()
     {
-        $nominations = Nominasi::where('status', 'pending')
-            ->with(['juri', 'ikan.peserta'])
-            ->orderByDesc('created_at')
-            ->get();
+        try {
+            $nominations = Nominasi::where('status', 'pending')
+                ->with(['juri', 'ikan.peserta'])
+                ->orderByDesc('created_at')
+                ->get();
 
-        $grouped = $nominations->groupBy('juri_id')->map(function ($items) {
-            $juri = $items->first()->juri;
-            return [
-                'juri_id'   => $juri->id,
-                'juri_name' => $juri->name,
-                'tanks'     => $items->map(function ($n) {
-                    return [
-                        'nominasi_id'   => $n->id,
-                        'ikan_id'       => $n->ikan_id,
-                        'nomor_tank'    => $n->ikan->nomor_tank ?? null,
-                        'kategori'      => $n->ikan->kategori ?? null,
-                        'kelas'         => $n->ikan->kelas ?? null,
-                        'nama_peserta'  => $n->ikan->peserta->nama_peserta ?? 'Unknown',
-                        'detail_anggota'=> $n->ikan->peserta->detail_anggota ?? '—',
-                        'submitted_at'  => $n->created_at->toISOString(),
-                    ];
-                })->values()->toArray(),
-            ];
-        })->values()->toArray();
+            $grouped = $nominations->groupBy('juri_id')->map(function ($items) {
+                $juri = $items->first()->juri;
+                if (!$juri) return null;
+                return [
+                    'juri_id'   => $juri->id,
+                    'juri_name' => $juri->name,
+                    'tanks'     => $items->map(function ($n) {
+                        $ikan = $n->ikan;
+                        if (!$ikan) return null;
+                        return [
+                            'nominasi_id'   => $n->id,
+                            'ikan_id'       => $n->ikan_id,
+                            'nomor_tank'    => $ikan->nomor_tank ?? null,
+                            'kategori'      => $ikan->kategori ?? null,
+                            'kelas'         => $ikan->kelas ?? null,
+                            'nama_peserta'  => optional($ikan->peserta)->nama_peserta ?? 'Unknown',
+                            'detail_anggota'=> optional($ikan->peserta)->detail_anggota ?? '—',
+                            'submitted_at'  => $n->created_at->toISOString(),
+                        ];
+                    })->filter()->values()->toArray(),
+                ];
+            })->filter()->values()->toArray();
 
-        return response()->json([
-            'grouped'       => $grouped,
-            'total_pending' => $nominations->count(),
-            'total_juri'    => count($grouped),
-        ]);
+            return response()->json([
+                'grouped'       => $grouped,
+                'total_pending' => $nominations->count(),
+                'total_juri'    => count($grouped),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'grouped'       => [],
+                'total_pending' => 0,
+                'total_juri'    => 0,
+            ]);
+        }
     }
 
     /* ═══════════════════════════════════════════

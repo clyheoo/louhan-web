@@ -233,60 +233,126 @@ function showRejectConfirm(nominasiId, nomorTank) {
     document.getElementById('confirmModal').classList.add('show');
 }
 
+/* ── HAPUS CARD DARI DOM ── */
+function removeTankCard(nominasiId) {
+    var card = document.getElementById('tank-card-' + nominasiId);
+    if (!card) return;
+    card.style.transition = 'all 0.3s ease';
+    card.style.opacity = '0';
+    card.style.transform = 'scale(0.9)';
+    card.style.pointerEvents = 'none';
+    setTimeout(function() {
+        card.remove();
+        var parent = card.closest('.bg-white.rounded-xl.shadow-lg');
+        if (parent && parent.querySelectorAll('[id^="tank-card-"]').length === 0) {
+            parent.style.transition = 'all 0.3s ease';
+            parent.style.opacity = '0';
+            setTimeout(function() {
+                parent.remove();
+                if (document.getElementById('nom-list').children.length === 0) {
+                    document.getElementById('nom-empty').classList.remove('hidden');
+                }
+            }, 300);
+        }
+    }, 300);
+}
+
+function decrementStatTank(count) {
+    var el = document.getElementById('stat-tank');
+    el.textContent = Math.max(0, (parseInt(el.textContent) || 0) - count);
+}
+
 async function executeReject() {
     if (!pendingRejectId) return;
-    const catatan = document.getElementById('rejectReason').value.trim();
+    var catatan = document.getElementById('rejectReason').value.trim();
     document.getElementById('confirmModal').classList.remove('show');
+    var targetId = pendingRejectId;
+    pendingRejectId = null;
 
     try {
-        const res = await apiFetch('/api/grand-juri/nominasi-review', {
+        var res = await apiFetch('/api/grand-juri/nominasi-review', {
             method: 'POST',
-            body: JSON.stringify({ nominasi_id: pendingRejectId, action: 'reject', catatan: catatan })
+            body: JSON.stringify({ nominasi_id: targetId, action: 'reject', catatan: catatan })
         });
         if (res.success) {
+            removeTankCard(targetId);
+            decrementStatTank(1);
             showSuccessPopup('Ditolak', res.message);
-            loadNominasi();
+            loadNominasi(true);
         } else {
             showWarningModal([{ msg: res.message }]);
         }
     } catch(e) {
         showWarningModal([{ msg: 'Gagal memproses. Periksa koneksi.' }]);
     }
-    pendingRejectId = null;
 }
 
 async function approveNominasi(btn, nominasiId) {
+    var card = btn.closest('[id^="tank-card-"]');
+    if (card) card.style.pointerEvents = 'none';
     btn.disabled = true;
     btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>';
 
     try {
-        const res = await apiFetch('/api/grand-juri/nominasi-review', {
+        var res = await apiFetch('/api/grand-juri/nominasi-review', {
             method: 'POST',
             body: JSON.stringify({ nominasi_id: nominasiId, action: 'approve' })
         });
         if (res.success) {
+            removeTankCard(nominasiId);
+            decrementStatTank(1);
             showSuccessPopup('Disetujui', res.message);
-            loadNominasi();
+            loadNominasi(true);
         } else {
             showWarningModal([{ msg: res.message }]);
             btn.disabled = false;
+            if (card) card.style.pointerEvents = '';
             btn.innerHTML = '<i class="fas fa-check"></i> ACC';
         }
     } catch(e) {
         showWarningModal([{ msg: 'Gagal memproses. Periksa koneksi.' }]);
         btn.disabled = false;
+        if (card) card.style.pointerEvents = '';
         btn.innerHTML = '<i class="fas fa-check"></i> ACC';
     }
 }
 
-async function loadNominasi() {
+async function approveAllInGroup(btn, ids) {
+    btn.disabled = true;
+    btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Memproses...';
+
+    var success = 0, fail = 0;
+    for (var i = 0; i < ids.length; i++) {
+        /* ── SKIP jika card sudah dihapus dari DOM (sudah di-ACC manual) ── */
+        if (!document.getElementById('tank-card-' + ids[i])) continue;
+
+        removeTankCard(ids[i]);
+        try {
+            var res = await apiFetch('/api/grand-juri/nominasi-review', {
+                method: 'POST',
+                body: JSON.stringify({ nominasi_id: ids[i], action: 'approve' })
+            });
+            if (res.success) success++; else fail++;
+        } catch(e) { fail++; }
+    }
+    decrementStatTank(success);
+    if (fail === 0) {
+        showSuccessPopup('Berhasil', 'Semua ' + success + ' nominasi disetujui.');
+    } else {
+        showWarningModal([{ msg: success + ' berhasil, ' + fail + ' gagal.' }]);
+    }
+    loadNominasi(true);
+}
+
+/* ── silent=true = tidak tampilkan error popup ── */
+async function loadNominasi(silent) {
     try {
-        const res = await apiFetch('/api/grand-juri/nominasi');
+        var res = await apiFetch('/api/grand-juri/nominasi');
         document.getElementById('stat-juri').textContent = res.total_juri || 0;
         document.getElementById('stat-tank').textContent = res.total_pending || 0;
 
-        const list = document.getElementById('nom-list');
-        const empty = document.getElementById('nom-empty');
+        var list = document.getElementById('nom-list');
+        var empty = document.getElementById('nom-empty');
 
         if (!res.grouped || res.grouped.length === 0) {
             list.innerHTML = '';
@@ -295,7 +361,7 @@ async function loadNominasi() {
         }
 
         empty.classList.add('hidden');
-        let html = '';
+        var html = '';
 
         res.grouped.forEach(function(group) {
             html += '<div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden fade-in">';
@@ -330,31 +396,8 @@ async function loadNominasi() {
 
         list.innerHTML = html;
     } catch(e) {
-        showWarningModal([{ msg: 'Gagal memuat data nominasi.' }]);
+        if (!silent) showWarningModal([{ msg: 'Gagal memuat data nominasi.' }]);
     }
-}
-
-async function approveAllInGroup(btn, ids) {
-    btn.disabled = true;
-    btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Memproses...';
-
-    let success = 0, fail = 0;
-    for (let i = 0; i < ids.length; i++) {
-        try {
-            const res = await apiFetch('/api/grand-juri/nominasi-review', {
-                method: 'POST',
-                body: JSON.stringify({ nominasi_id: ids[i], action: 'approve' })
-            });
-            if (res.success) success++; else fail++;
-        } catch(e) { fail++; }
-    }
-
-    if (fail === 0) {
-        showSuccessPopup('Berhasil', 'Semua ' + success + ' nominasi disetujui.');
-    } else {
-        showWarningModal([{ msg: success + ' berhasil, ' + fail + ' gagal.' }]);
-    }
-    loadNominasi();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
