@@ -11,6 +11,7 @@ use App\Helpers\PointCalculator;
 use App\Models\ScoringPointConfig;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\GrandJuriExport;
+use App\Models\Nominasi;
 
 class GrandJuriController extends Controller
 {
@@ -52,6 +53,95 @@ class GrandJuriController extends Controller
             'sisa_tank'     => $sisaTank,
             'max_tank'      => $maxTank,
             'rincian'       => $rincian,
+        ]);
+    }
+
+        /* ═══════════════════════════════════════════
+       NOMINASI — INDEX (HALAMAN TERPISAH)
+       ═══════════════════════════════════════════ */
+    public function nominasiIndex()
+    {
+        return view('dashboard.grand-juri-nominasi', ['user' => auth()->user()->fresh()]);
+    }
+
+    /* ═══════════════════════════════════════════
+       NOMINASI — AMBIL DATA PENDING
+       ═══════════════════════════════════════════ */
+    public function getNominasi()
+    {
+        $nominations = Nominasi::where('status', 'pending')
+            ->with(['juri', 'ikan.peserta'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $grouped = $nominations->groupBy('juri_id')->map(function ($items) {
+            $juri = $items->first()->juri;
+            return [
+                'juri_id'   => $juri->id,
+                'juri_name' => $juri->name,
+                'tanks'     => $items->map(function ($n) {
+                    return [
+                        'nominasi_id'   => $n->id,
+                        'ikan_id'       => $n->ikan_id,
+                        'nomor_tank'    => $n->ikan->nomor_tank ?? null,
+                        'kategori'      => $n->ikan->kategori ?? null,
+                        'kelas'         => $n->ikan->kelas ?? null,
+                        'nama_peserta'  => $n->ikan->peserta->nama_peserta ?? 'Unknown',
+                        'detail_anggota'=> $n->ikan->peserta->detail_anggota ?? '—',
+                        'submitted_at'  => $n->created_at->toISOString(),
+                    ];
+                })->values()->toArray(),
+            ];
+        })->values()->toArray();
+
+        return response()->json([
+            'grouped'       => $grouped,
+            'total_pending' => $nominations->count(),
+            'total_juri'    => count($grouped),
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       NOMINASI — REVIEW (ACC / TOLAK)
+       ═══════════════════════════════════════════ */
+    public function reviewNominasi(Request $request)
+    {
+        $nominasiId = $request->json('nominasi_id');
+        $action     = $request->json('action');
+        $catatan    = $request->json('catatan', '');
+
+        if (!$nominasiId || !in_array($action, ['approve', 'reject'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data tidak valid.',
+            ], 422);
+        }
+
+        $nominasi = Nominasi::where('id', $nominasiId)
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$nominasi) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nominasi tidak ditemukan atau sudah ditinjau.',
+            ], 404);
+        }
+
+        $nomorTank = $nominasi->ikan->nomor_tank ?? '?';
+
+        $nominasi->update([
+            'status'      => $action === 'approve' ? 'approved' : 'rejected',
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+            'catatan'     => $catatan,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $action === 'approve'
+                ? 'Tank T' . $nomorTank . ' DISETUJUI.'
+                : 'Tank T' . $nomorTank . ' DITOLAK.',
         ]);
     }
 

@@ -6,12 +6,23 @@ use Illuminate\Http\Request;
 use App\Models\Scoring;
 use App\Models\Ikan;
 use App\Helpers\PointCalculator;
+use App\Models\Nominasi;
 
 class JuriController extends Controller
 {
     public function getJuriData()
     {
+        $approvedIkanIds = Nominasi::where('juri_id', auth()->id())
+            ->where('status', 'approved')
+            ->pluck('ikan_id')
+            ->toArray();
+
+        $hasApproved = count($approvedIkanIds) > 0;
+
         $availableTanks = Ikan::whereNotNull('nomor_tank')
+            ->when($hasApproved, function ($q) use ($approvedIkanIds) {
+                $q->whereIn('id', $approvedIkanIds);
+            })
             ->with('peserta')
             ->orderBy('nomor_tank')
             ->get();
@@ -152,5 +163,151 @@ class JuriController extends Controller
         $scoring->update(['submitted_to_grand' => true]);
 
         return response()->json(['success' => true, 'message' => 'Nilai berhasil dikirim ke Grand Juri.']);
+    }
+
+        /* ═══════════════════════════════════════════
+       NOMINASI — CEK STATUS
+       ═══════════════════════════════════════════ */
+    public function getNominasiStatus()
+    {
+        $nominations = Nominasi::where('juri_id', auth()->id())
+            ->with('ikan.peserta')
+            ->orderByDesc('created_at')
+            ->get();
+
+        if ($nominations->isEmpty()) {
+            return response()->json([
+                'status'            => 'none',
+                'nominations'       => [],
+                'approved_ikan_ids' => [],
+            ]);
+        }
+
+        $hasPending  = $nominations->contains('status', 'pending');
+        $hasApproved = $nominations->contains('status', 'approved');
+
+        if ($hasPending) {
+            $status = 'pending';
+        } elseif ($hasApproved) {
+            $status = 'approved';
+        } else {
+            $status = 'none';
+        }
+
+        $approvedIds = $nominations->where('status', 'approved')->pluck('ikan_id')->toArray();
+
+        return response()->json([
+            'status'            => $status,
+            'nominations'       => $nominations->map(function ($n) {
+                return [
+                    'id'            => $n->id,
+                    'ikan_id'       => $n->ikan_id,
+                    'nomor_tank'    => $n->ikan->nomor_tank ?? null,
+                    'kategori'      => $n->ikan->kategori ?? null,
+                    'kelas'         => $n->ikan->kelas ?? null,
+                    'nama_peserta'  => $n->ikan->peserta->nama_peserta ?? 'Unknown',
+                    'status'        => $n->status,
+                    'catatan'       => $n->catatan,
+                    'reviewed_at'   => $n->reviewed_at?->toISOString(),
+                ];
+            }),
+            'approved_ikan_ids' => $approvedIds,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       NOMINASI — KIRIM
+       ═══════════════════════════════════════════ */
+    public function submitNominasi(Request $request)
+    {
+        $ikanIds = $request->json('ikan_ids');
+
+        if (!is_array($ikanIds) || count($ikanIds) === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pilih minimal 1 tank untuk dinominasikan.',
+            ], 422);
+        }
+
+        $ikans = Ikan::whereIn('id', $ikanIds)
+            ->whereNotNull('nomor_tank')
+            ->get();
+
+        if ($ikans->count() !== count($ikanIds)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Beberapa tank tidak ditemukan atau belum memiliki nomor tank.',
+            ], 422);
+        }
+
+        $hasPending = Nominasi::where('juri_id', auth()->id())
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($hasPending) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda masih memiliki nominasi yang sedang ditinjau Grand Juri. Tunggu hingga selesai.',
+            ], 422);
+        }
+
+        $hasApproved = Nominasi::where('juri_id', auth()->id())
+            ->where('status', 'approved')
+            ->exists();
+
+        if ($hasApproved) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda sudah memiliki nominasi yang disetujui.',
+            ], 422);
+        }
+
+        foreach ($ikanIds as $ikanId) {
+            Nominasi::where('juri_id', auth()->id())
+                ->where('ikan_id', $ikanId)
+                ->delete();
+
+            Nominasi::create([
+                'juri_id' => auth()->id(),
+                'ikan_id' => $ikanId,
+                'status'  => 'pending',
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Nominasi berhasil dikirim! Menunggu review Grand Juri.',
+            'count'   => count($ikanIds),
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       NOMINASI — AMBIL DATA TANK UNTUK GRID
+       ═══════════════════════════════════════════ */
+    public function getTanksForNominasi()
+    {
+        $tanks = Ikan::whereNotNull('nomor_tank')
+            ->with('peserta')
+            ->orderBy('nomor_tank')
+            ->get()
+            ->map(function ($ikan) {
+                return [
+                    'id'             => $ikan->id,
+                    'nomor_tank'     => $ikan->nomor_tank,
+                    'kategori'       => $ikan->kategori,
+                    'kelas'          => $ikan->kelas,
+                    'nama_peserta'   => $ikan->peserta->nama_peserta ?? 'Unknown',
+                    'detail_anggota' => $ikan->peserta->detail_anggota ?? '—',
+                ];
+            });
+
+        $kategoris = $tanks->pluck('kategori')->unique()->sort()->values();
+        $kelass    = $tanks->pluck('kelas')->unique()->sort()->values();
+
+        return response()->json([
+            'tanks'     => $tanks,
+            'kategoris' => $kategoris,
+            'kelass'    => $kelass,
+        ]);
     }
 }

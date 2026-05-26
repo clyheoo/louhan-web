@@ -38,6 +38,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/juri/data', [JuriController::class, 'getJuriData']);
     Route::post('/api/juri/simpan-nilai', [JuriController::class, 'simpanNilai']);
     Route::post('/api/juri/kirim-ke-grand', [JuriController::class, 'kirimKeGrandJuri']);
+    Route::get('/api/juri/nominasi-status', [JuriController::class, 'getNominasiStatus']);
+    Route::get('/api/juri/tanks-nominasi', [JuriController::class, 'getTanksForNominasi']);
+    Route::post('/api/juri/submit-nominasi', [JuriController::class, 'submitNominasi']);
 });
 
 Route::get('/juri', function () {
@@ -70,6 +73,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/grand-juri/export', [GrandJuriController::class, 'exportExcel']);
     Route::get('/api/admin/export', [AdminDashboardController::class, 'exportExcel']);
     Route::get('/api/scoring-point-configs', [GrandJuriController::class, 'getPointConfigs']);
+});
+
+/* ═══════════════════════════════════════════
+   GRAND JURI — NOMINASI REVIEW
+   ═══════════════════════════════════════════ */
+Route::middleware('auth')->group(function () {
+    Route::get('/grand-juri/nominasi', [GrandJuriController::class, 'nominasiIndex'])->name('grand-juri.nominasi');
+    Route::get('/api/grand-juri/nominasi', [GrandJuriController::class, 'getNominasi']);
+    Route::post('/api/grand-juri/nominasi-review', [GrandJuriController::class, 'reviewNominasi']);
 });
 
 Route::middleware('auth')->group(function () {

@@ -274,6 +274,8 @@ if (typeof window.onFilterChange !== 'function') {
 
 </script>
 
+    @yield('modals')
+
 @stack('scripts')
 
 </body>
