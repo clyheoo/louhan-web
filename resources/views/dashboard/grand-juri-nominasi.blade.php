@@ -86,7 +86,7 @@
 
     <nav class="top-nav">
         <div class="brand">
-            <h1><i class="fas fa-gavel"></i> Penjurian LCI</h1>
+            <h1><i class="fas fa-gavel"></i> Pilih Nominasi LCI</h1>
             <span>Grand Juri — Review Nominasi</span>
         </div>
         <div class="nav-right">
