@@ -691,20 +691,15 @@ class AdminDashboardController extends Controller
     {
         $ranges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
         
-        // Default values jika belum diatur
+        // Format baru: hanya berisi sub-rentang per kategori, tanpa min/max level kelas
+        // Contoh: {"A": {"kategori": {"Cencu": {"min":1,"max":30}}}, "B": {"kategori": {"Chginwa": {"min":5,"max":15}}}}
         if (!$ranges) {
-            $ranges = [
-                'A' => ['min' => 1, 'max' => 20],
-                'B' => ['min' => 21, 'max' => 40],
-                'C' => ['min' => 41, 'max' => 60],
-                'D' => ['min' => 61, 'max' => 80],
-                'E' => ['min' => 81, 'max' => 100],
-            ];
+            $ranges = [];
         }
         
         return response()->json($ranges);
     }
-
+    
     public function setTankRange(Request $request)
     {
         $ranges = json_decode($request->ranges, true);
@@ -716,49 +711,17 @@ class AdminDashboardController extends Controller
             ], 422);
         }
 
-        // ── STEP 1: Validasi setiap kelas ──
+        // Ambil rentang global sebagai batas
+        $globalMin = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
+        $globalMax = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+
+        // ── Validasi setiap sub-rentang kategori ──
         foreach ($ranges as $kelas => $data) {
-            $min = isset($data['min']) ? (int)$data['min'] : null;
-            $max = isset($data['max']) ? (int)$data['max'] : null;
+            // Bersihkan sisa data lama jika masih ada
+            if (isset($data['min'])) unset($ranges[$kelas]['min']);
+            if (isset($data['max'])) unset($ranges[$kelas]['max']);
 
-            if ($min === null || $max === null || $min < 1 || $max < 1) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Rentang Kelas ' . $kelas . ' tidak valid.'
-                ], 422);
-            }
-            if ($max < $min) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Rentang Kelas ' . $kelas . ': Max harus >= Min.'
-                ], 422);
-            }
-        }
-
-        // ── STEP 2: Validasi antar kelas tidak overlap ──
-        $kelasKeys = array_keys($ranges);
-        for ($i = 0; $i < count($kelasKeys); $i++) {
-            for ($j = $i + 1; $j < count($kelasKeys); $j++) {
-                $aMin = (int) $ranges[$kelasKeys[$i]]['min'];
-                $aMax = (int) $ranges[$kelasKeys[$i]]['max'];
-                $bMin = (int) $ranges[$kelasKeys[$j]]['min'];
-                $bMax = (int) $ranges[$kelasKeys[$j]]['max'];
-
-                if ($aMin <= $bMax && $bMin <= $aMax) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Kelas "' . $kelasKeys[$i] . '" (' . $aMin . '-' . $aMax . ') bentrok dengan Kelas "' . $kelasKeys[$j] . '" (' . $bMin . '-' . $bMax . ').'
-                    ], 422);
-                }
-            }
-        }
-
-        // ── STEP 3: Validasi sub-rentang kategori di dalam kelas ──
-        foreach ($ranges as $kelas => $data) {
-            $kelasMin = (int) $data['min'];
-            $kelasMax = (int) $data['max'];
             $kategori = isset($data['kategori']) && is_array($data['kategori']) ? $data['kategori'] : [];
-            $katKeys = array_keys($kategori);
 
             foreach ($kategori as $katName => $katData) {
                 $katMin = (int) ($katData['min'] ?? 0);
@@ -770,38 +733,25 @@ class AdminDashboardController extends Controller
                         'message' => 'Sub-rentang "' . $katName . '" di Kelas ' . $kelas . ' tidak valid.'
                     ], 422);
                 }
-                if ($katMin < $kelasMin || $katMax > $kelasMax) {
+
+                // Harus dalam rentang global
+                if ($katMin < $globalMin || $katMax > $globalMax) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Sub-rentang "' . $katName . '" (' . $katMin . '-' . $katMax . ') harus berada dalam rentang Kelas ' . $kelas . ' (' . $kelasMin . '-' . $kelasMax . ').'
+                        'message' => 'Sub-rentang "' . $katName . '" (' . $katMin . '-' . $katMax . ') harus berada dalam Rentang Global (' . $globalMin . '-' . $globalMax . ').'
                     ], 422);
                 }
             }
-
-            // Cek overlap antar sub-rentang dalam kelas yang sama
-            for ($i = 0; $i < count($katKeys); $i++) {
-                for ($j = $i + 1; $j < count($katKeys); $j++) {
-                    $aMin = (int) $kategori[$katKeys[$i]]['min'];
-                    $aMax = (int) $kategori[$katKeys[$i]]['max'];
-                    $bMin = (int) $kategori[$katKeys[$j]]['min'];
-                    $bMax = (int) $kategori[$katKeys[$j]]['max'];
-
-                    if ($aMin <= $bMax && $bMin <= $aMax) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'Sub-rentang "' . $katKeys[$i] . '" dan "' . $katKeys[$j] . '" di Kelas ' . $kelas . ' saling tumpang tindih.'
-                        ], 422);
-                    }
-                }
-            }
         }
+
+        // ── TIDAK ADA validasi overlap (diperbolehkan semua) ──
 
         \DB::table('settings')->updateOrInsert(
             ['key' => 'tank_class_ranges'],
             ['value' => json_encode($ranges), 'updated_at' => now()]
         );
 
-        return response()->json(['success' => true, 'message' => 'Rentang nomor undian berhasil diperbarui.']);
+        return response()->json(['success' => true, 'message' => 'Pengaturan sub-rentang nomor berhasil disimpan.']);
     }
 
     public function resetTankNumbers(Request $request)
