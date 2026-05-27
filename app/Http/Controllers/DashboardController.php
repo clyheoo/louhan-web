@@ -95,11 +95,9 @@ class DashboardController extends Controller
         $kategori = $ikan->kategori;
         $kelas = $ikan->kelas;
 
-        // Ambil rentang global
         $globalMin = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
         $globalMax = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
 
-        // Cari sub-rentang untuk kelas+kategori ini
         $classRanges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
 
         $myMin = $globalMin;
@@ -117,78 +115,48 @@ class DashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($ikan, $myMin, $myMax, $hasSubRange, $kategori, $kelas, $classRanges) {
-                // 1. Nomor yang sudah dipakai di database (siapapun)
-                $usedNumbers = Ikan::whereNotNull('nomor_tank')
+            DB::transaction(function () use ($ikan, $myMin, $myMax, $hasSubRange, $kategori, $kelas) {
+                $usedSet = Ikan::whereNotNull('nomor_tank')
                     ->lockForUpdate()
                     ->pluck('nomor_tank')
-                    ->map(fn($n) => (string) $n)
+                    ->map(fn($n) => (int) $n)
+                    ->flip()
                     ->toArray();
 
-                // 2. Nomor yang dialokasikan ke sub-rentang KELAS LAIN yang overlap dengan rentang kita
-                $excludedByOtherRanges = [];
-                if ($classRanges && $hasSubRange) {
-                    foreach ($classRanges as $otherKelas => $otherData) {
-                        if (!isset($otherData['kategori']) || !is_array($otherData['kategori'])) continue;
-
-                        foreach ($otherData['kategori'] as $otherKat => $otherRange) {
-                            // Skip diri sendiri
-                            if ($otherKelas === $kelas) continue;
-
-                            // ★ Hanya cek overlap untuk KATEGORI YANG SAMA di kelas lain
-                            // Kategori berbeda boleh overlap — nomor tetap unik karena dicek via DB
-                            if ($otherKat !== $kategori) continue;
-
-                            $otherMin = (int) ($otherRange['min'] ?? 0);
-                            $otherMax = (int) ($otherRange['max'] ?? 0);
-
-                            // Cek apakah rentang lain overlap dengan rentang kita
-                            if ($otherMin <= $myMax && $otherMax >= $myMin) {
-                                // Cek apakah rentang lain BUKAN subset dari rentang kita
-                                // Jika rentang lain adalah subset (sepenuhnya di dalam), MAKA kita yang mengalah
-                                $otherIsSubset = ($otherMin >= $myMin && $otherMax <= $myMax);
-
-                                if (!$otherIsSubset) {
-                                    // Rentang lain lebih besar atau partially overlap di luar → exclude overlap
-                                    $overlapStart = max($myMin, $otherMin);
-                                    $overlapEnd = min($myMax, $otherMax);
-                                    for ($n = $overlapStart; $n <= $overlapEnd; $n++) {
-                                        $excludedByOtherRanges[] = (string) $n;
-                                    }
-                                }
-                                // Jika otherIsSubset = true → jangan exclude, biarkan yang lebih kecil "miliki" nomor itu
-                            }
-                        }
-                    }
-                }
-
-                // 3. Hitung available numbers
-                $availableNumbers = [];
-                for ($i = $myMin; $i <= $myMax; $i++) {
-                    $numStr = (string) $i;
-                    if (!in_array($numStr, $usedNumbers, false) && !in_array($numStr, $excludedByOtherRanges, false)) {
-                        $availableNumbers[] = $i;
-                    }
-                }
-
+                $rangeSize = $myMax - $myMin + 1;
                 $label = $hasSubRange
                     ? "Kategori {$kategori} (Kelas {$kelas})"
                     : "Rentang Global ({$myMin}-{$myMax})";
 
-                if (empty($availableNumbers)) {
-                    $detail = '';
-                    $usedInMyRange = 0;
+                if ($rangeSize <= 50000) {
+                    $available = [];
                     for ($i = $myMin; $i <= $myMax; $i++) {
-                        if (in_array((string)$i, $usedNumbers, false)) $usedInMyRange++;
+                        if (!isset($usedSet[$i])) $available[] = $i;
                     }
-                    if ($usedInMyRange > 0) {
-                        $detail = ' (' . $usedInMyRange . ' nomor sudah dipakai)';
+                    if (empty($available)) {
+                        throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $myMin . '-' . $myMax . ').');
                     }
-                    throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $myMin . '-' . $myMax . ').' . $detail);
+                    shuffle($available);
+                    $ikan->nomor_tank = $available[0];
+                } else {
+                    $usedInMyRange = 0;
+                    foreach ($usedSet as $num => $v) {
+                        if ($num >= $myMin && $num <= $myMax) $usedInMyRange++;
+                    }
+                    if ($usedInMyRange >= $rangeSize) {
+                        throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $myMin . '-' . $myMax . ').');
+                    }
+                    $maxAttempts = min(1000, $rangeSize);
+                    $found = null;
+                    for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+                        $candidate = random_int($myMin, $myMax);
+                        if (!isset($usedSet[$candidate])) { $found = $candidate; break; }
+                    }
+                    if ($found === null) {
+                        throw new \Exception('Gagal mendapatkan nomor setelah ' . $maxAttempts . ' percobaan. Coba lagi.');
+                    }
+                    $ikan->nomor_tank = $found;
                 }
-
-                shuffle($availableNumbers);
-                $ikan->nomor_tank = $availableNumbers[0];
                 $ikan->save();
             });
 
@@ -218,11 +186,9 @@ class DashboardController extends Controller
         $kategori = $ikan->kategori;
         $kelas = $ikan->kelas;
 
-        // Ambil rentang global
         $globalMin = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
         $globalMax = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
 
-        // Cari sub-rentang untuk kelas+kategori ini
         $classRanges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
 
         $myMin = $globalMin;
@@ -240,68 +206,48 @@ class DashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($ikan, $myMin, $myMax, $hasSubRange, $kategori, $kelas, $classRanges) {
-                // 1. Nomor yang sudah dipakai di database
-                $usedNumbers = Ikan::whereNotNull('nomor_tank')
+            DB::transaction(function () use ($ikan, $myMin, $myMax, $hasSubRange, $kategori, $kelas) {
+                $usedSet = Ikan::whereNotNull('nomor_tank')
                     ->lockForUpdate()
                     ->pluck('nomor_tank')
-                    ->map(fn($n) => (string) $n)
+                    ->map(fn($n) => (int) $n)
+                    ->flip()
                     ->toArray();
 
-                // 2. Nomor yang dialokasikan ke sub-rentang KELAS LAIN yang overlap
-                $excludedByOtherRanges = [];
-                if ($classRanges && $hasSubRange) {
-                    foreach ($classRanges as $otherKelas => $otherData) {
-                        if (!isset($otherData['kategori']) || !is_array($otherData['kategori'])) continue;
-
-                        foreach ($otherData['kategori'] as $otherKat => $otherRange) {
-                            if ($otherKelas === $kelas) continue;
-
-                            $otherMin = (int) ($otherRange['min'] ?? 0);
-                            $otherMax = (int) ($otherRange['max'] ?? 0);
-
-                            if ($otherMin <= $myMax && $otherMax >= $myMin) {
-                                $otherIsSubset = ($otherMin >= $myMin && $otherMax <= $myMax);
-
-                                if (!$otherIsSubset) {
-                                    $overlapStart = max($myMin, $otherMin);
-                                    $overlapEnd = min($myMax, $otherMax);
-                                    for ($n = $overlapStart; $n <= $overlapEnd; $n++) {
-                                        $excludedByOtherRanges[] = (string) $n;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 3. Hitung available
-                $availableNumbers = [];
-                for ($i = $myMin; $i <= $myMax; $i++) {
-                    $numStr = (string) $i;
-                    if (!in_array($numStr, $usedNumbers, false) && !in_array($numStr, $excludedByOtherRanges, false)) {
-                        $availableNumbers[] = $i;
-                    }
-                }
-
+                $rangeSize = $myMax - $myMin + 1;
                 $label = $hasSubRange
                     ? "Kategori {$kategori} (Kelas {$kelas})"
                     : "Rentang Global ({$myMin}-{$myMax})";
 
-                if (empty($availableNumbers)) {
-                    $detail = '';
-                    $usedInMyRange = 0;
+                if ($rangeSize <= 50000) {
+                    $available = [];
                     for ($i = $myMin; $i <= $myMax; $i++) {
-                        if (in_array((string)$i, $usedNumbers, false)) $usedInMyRange++;
+                        if (!isset($usedSet[$i])) $available[] = $i;
                     }
-                    if ($usedInMyRange > 0) {
-                        $detail = ' (' . $usedInMyRange . ' nomor sudah dipakai)';
+                    if (empty($available)) {
+                        throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $myMin . '-' . $myMax . ').');
                     }
-                    throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $myMin . '-' . $myMax . ').' . $detail);
+                    shuffle($available);
+                    $ikan->nomor_tank = $available[0];
+                } else {
+                    $usedInMyRange = 0;
+                    foreach ($usedSet as $num => $v) {
+                        if ($num >= $myMin && $num <= $myMax) $usedInMyRange++;
+                    }
+                    if ($usedInMyRange >= $rangeSize) {
+                        throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $myMin . '-' . $myMax . ').');
+                    }
+                    $maxAttempts = min(1000, $rangeSize);
+                    $found = null;
+                    for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+                        $candidate = random_int($myMin, $myMax);
+                        if (!isset($usedSet[$candidate])) { $found = $candidate; break; }
+                    }
+                    if ($found === null) {
+                        throw new \Exception('Gagal mendapatkan nomor setelah ' . $maxAttempts . ' percobaan. Coba lagi.');
+                    }
+                    $ikan->nomor_tank = $found;
                 }
-
-                shuffle($availableNumbers);
-                $ikan->nomor_tank = $availableNumbers[0];
                 $ikan->save();
             });
 

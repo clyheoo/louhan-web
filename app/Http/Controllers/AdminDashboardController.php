@@ -714,7 +714,6 @@ class AdminDashboardController extends Controller
         $globalMin = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
         $globalMax = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
 
-        // ── Kumpulkan & validasi per-sub-rentang ──
         $allRanges = [];
         foreach ($ranges as $kelas => $data) {
             if (isset($data['min'])) unset($ranges[$kelas]['min']);
@@ -749,21 +748,22 @@ class AdminDashboardController extends Controller
             }
         }
 
-        // ── Validasi: Kategori SAMA di kelas berbeda TIDAK BOLEH overlap ──
-        // Aturan: dalam 1 kelas boleh overlap, kategori berbeda di kelas lain boleh overlap
+        // ── Validasi: Semua rentang tidak boleh menyentuh batas rentang lain ──
         $count = count($allRanges);
         for ($i = 0; $i < $count; $i++) {
             for ($j = $i + 1; $j < $count; $j++) {
                 $a = $allRanges[$i];
                 $b = $allRanges[$j];
 
-                // Skip jika kategori berbeda (overlap diperbolehkan)
-                if ($a['kategori'] !== $b['kategori']) continue;
-                // Skip jika kelas sama (overlap dalam 1 kelas diperbolehkan)
-                if ($a['kelas'] === $b['kelas']) continue;
+                // Skip hanya jika kelas DAN kategori sama persis (diri sendiri)
+                if ($a['kelas'] === $b['kelas'] && $a['kategori'] === $b['kategori']) continue;
 
-                if ($a['min'] <= $b['max'] && $b['min'] <= $a['max']) {
-                    $msg = "Kategori <b>{$a['kategori']}</b> di Kelas {$a['kelas']} ({$a['min']}–{$a['max']}) bentrok dengan Kelas {$b['kelas']} ({$b['min']}–{$b['max']}). Kategori yang sama di kelas berbeda tidak boleh memiliki rentang yang tumpang tindih.";
+                $strictlyInside = ($a['min'] > $b['min'] && $a['max'] < $b['max'])
+                              || ($b['min'] > $a['min'] && $b['max'] < $a['max']);
+                $strictlyOutside = ($a['max'] < $b['min']) || ($a['min'] > $b['max']);
+
+                if (!$strictlyInside && !$strictlyOutside) {
+                    $msg = "Rentang <b>{$a['kategori']}</b> di Kelas {$a['kelas']} ({$a['min']}–{$a['max']}) menyentuh/melewati batas rentang <b>{$b['kategori']}</b> di Kelas {$b['kelas']} ({$b['min']}–{$b['max']}). Pastikan rentang ketat di dalam atau sepenuhnya di luar rentang yang sudah ada.";
                     return response()->json(['success' => false, 'message' => $msg], 422);
                 }
             }
