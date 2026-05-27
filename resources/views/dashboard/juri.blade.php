@@ -358,7 +358,7 @@ function nomShowNominasiPage(rejectedNoms) {
         if (rejected.length > 0) {
             const list = document.getElementById('nom-rejected-list');
             list.innerHTML = rejected.map(n =>
-                '<li class="flex items-start gap-2"><span class="font-bold">T' + n.nomor_tank + '</span> <span>(' + n.kategori + ', Kelas ' + n.kelas + ')</span>' + (n.catatan ? ': <em>"' + n.catatan + '"</em>' : '') + '</li>'
+                '<li class="flex items-start gap-2"><span class="font-bold">No Tank: ' + n.nomor_tank + '</span> <span>(' + n.kategori + ', Kelas ' + n.kelas + ')</span>' + (n.catatan ? ': <em>"' + n.catatan + '"</em>' : '') + '</li>'
             ).join('');
             nomShow('nom-rejected-notice');
         }

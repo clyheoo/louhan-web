@@ -188,8 +188,8 @@ class GrandJuriController extends Controller
         return response()->json([
             'success' => true,
             'message' => $action === 'approve'
-                ? 'Tank T' . $nomorTank . ' DISETUJUI.'
-                : 'Tank T' . $nomorTank . ' DITOLAK.',
+                ? 'Tank ' . $nomorTank . ' DISETUJUI.'
+                : 'Tank ' . $nomorTank . ' DITOLAK.',
         ]);
     }
 

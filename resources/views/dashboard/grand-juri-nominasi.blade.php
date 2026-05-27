@@ -263,7 +263,7 @@ function showSuccessPopup(title, desc) {
 
 function showRejectConfirm(nominasiId, nomorTank) {
     pendingRejectId = nominasiId;
-    document.getElementById('confirmMessage').textContent = 'Anda yakin ingin menolak Tank T' + nomorTank + '? Juri akan diminta mengirim ulang nominasi.';
+    document.getElementById('confirmMessage').textContent = 'Anda yakin ingin menolak Tank ' + nomorTank + '? Juri akan diminta mengirim ulang nominasi.';
     document.getElementById('rejectReason').value = '';
     document.getElementById('confirmModal').classList.add('show');
 }
@@ -416,7 +416,7 @@ async function loadNominasi(silent) {
             group.tanks.forEach(function(tank) {
                 html += '<div id="tank-card-' + tank.nominasi_id + '" class="p-3 rounded-xl border border-slate-200 bg-white hover:shadow-md transition-all">';
                 html += '<div class="flex justify-between items-start mb-3">';
-                html += '<div class="w-11 h-11 rounded-[10px] flex items-center justify-center font-extrabold text-lg shadow-sm bg-slate-800 text-white">T' + tank.nomor_tank + '</div>';
+                html += '<div class="w-11 h-11 rounded-[10px] flex items-center justify-center font-extrabold text-lg shadow-sm bg-slate-800 text-white">' + tank.nomor_tank + '</div>';
                 html += '</div>';
                 html += '<div class="flex flex-col gap-1.5 mb-3">';
                 html += '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-blue-50 text-blue-700 truncate text-center border border-blue-100/50">' + tank.kategori + '</div>';
@@ -482,7 +482,7 @@ function renderHistory() {
 
         group.tanks.forEach(function(tank) {
             html += '<div class="p-2.5 rounded-lg border ' + tankBorder + ' bg-white ' + tankHover + ' transition-colors">';
-            html += '<div class="w-9 h-9 rounded-lg flex items-center justify-center font-extrabold text-sm shadow-sm bg-slate-800 text-white mb-2">T' + tank.nomor_tank + '</div>';
+            html += '<div class="w-9 h-9 rounded-lg flex items-center justify-center font-extrabold text-sm shadow-sm bg-slate-800 text-white mb-2">' + tank.nomor_tank + '</div>';
             html += '<div class="text-[10px] font-bold px-1.5 py-1 rounded bg-blue-50 text-blue-700 truncate text-center border border-blue-100/50 mb-1">' + tank.kategori + '</div>';
             html += '<div class="text-[10px] font-bold px-1.5 py-1 rounded bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50 mb-1.5">Kelas ' + tank.kelas + '</div>';
             if (!isApp && tank.catatan) {
