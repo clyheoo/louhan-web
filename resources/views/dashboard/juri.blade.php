@@ -75,6 +75,10 @@
                         <i class="fas fa-sync-alt"></i> Refresh
                     </button>
                 </div>
+                <div id="nom-filter-info" class="hidden mb-4 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-xs font-semibold text-blue-700 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                    <span id="nom-filter-info-text">-</span>
+                </div>
                 <div id="nom-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3"></div>
                 <div id="nom-grid-empty" class="hidden text-center py-16 bg-white rounded-xl shadow-lg border border-slate-200">
                     <i class="fas fa-database text-4xl text-slate-200 mb-3"></i>
@@ -428,6 +432,7 @@ function nomSetKat(val) {
             b.className = 'nom-kat-btn px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors bg-white text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600';
         }
     });
+    nomUpdateFilterInfo();
     nomRenderGrid();
 }
 
@@ -469,8 +474,7 @@ function nomRenderGrid() {
             (sel ? 'bg-blue-50 border-blue-400 shadow-md ring-2 ring-blue-200 -translate-y-0.5' : 'bg-white border-slate-200 hover:border-slate-300') +
             '" onclick="nomToggle(' + t.id + ')">' +
             '<div class="flex justify-between items-start mb-3">' +
-            '<div class="w-11 h-11 rounded-[10px] flex items-center justify-center font-extrabold text-lg shadow-sm ' +
-            (sel ? 'bg-blue-600 text-white' : 'bg-slate-800 text-white') + '">T' + t.nomor_tank + '</div>' +
+            '<div class="w-16 h-16 rounded-xl flex items-center justify-center font-extrabold text-2xl shadow-md ' +            (sel ? 'bg-blue-600 text-white' : 'bg-slate-800 text-white') + '">' + t.nomor_tank + '</div>' +
             '<button class="p-2 rounded-[10px] transition-all ' +
             (sel ? 'text-amber-500 bg-amber-100' : 'text-slate-300 hover:text-amber-400 hover:bg-slate-50') +
             '" onclick="event.stopPropagation();nomToggle(' + t.id + ')">' +
@@ -480,6 +484,21 @@ function nomRenderGrid() {
             '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50">Kelas ' + t.kelas + '</div>' +
             '</div></div>';
     }).join('');
+}
+
+function nomUpdateFilterInfo() {
+    const el = document.getElementById('nom-filter-info');
+    const txt = document.getElementById('nom-filter-info-text');
+    const parts = [];
+    if (nomState.filterKat) parts.push('Kategori: <b>' + nomState.filterKat + '</b>');
+    if (nomState.filterKelas) parts.push('Kelas: <b>' + nomState.filterKelas + '</b>');
+    if (nomState.searchTerm) parts.push('Cari: <b>"' + nomState.searchTerm + '"</b>');
+    if (parts.length > 0) {
+        txt.innerHTML = 'Menampilkan filter — ' + parts.join(' <span class="text-blue-300 mx-1">|</span> ');
+        el.classList.remove('hidden');
+    } else {
+        el.classList.add('hidden');
+    }
 }
 
 function nomToggle(id) {
@@ -547,6 +566,7 @@ async function nomConfirmSubmit() {
 
 document.getElementById('nom-search')?.addEventListener('input', function(e) {
     nomState.searchTerm = e.target.value;
+    nomUpdateFilterInfo();
     nomRenderGrid();
 });
 
