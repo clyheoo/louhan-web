@@ -720,36 +720,76 @@
                     <div style="font-size:14px; font-weight:800; color:#92400e; display:flex; align-items:center; gap:8px;">
                         <i class="fas fa-tags"></i> Pengaturan Rentang Nomor Tank
                     </div>
-                    <div style="font-size:11px; color:#b45309; margin-top:4px;">Tentukan rentang nomor untuk setiap <b>Kelas + Kategori</b>. Overlap antar kelas diperbolehkan — sistem akan menyesuaikan saat undian.</div>
+                    <div style="font-size:11px; color:#b45309; margin-top:4px;">Tentukan rentang nomor unik untuk setiap Kategori di setiap Kelas. Sistem akan memastikan tidak ada nomor yang dobel.</div>
                 </div>
                 <div style="padding:18px 20px;">
-                    <!-- Info rentang global -->
-                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
-                        <label style="font-size:11px; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;">Pilih Kelas</label>
-                        <select id="katKelasSelect" class="form-control" style="max-width:200px; font-weight:700;" onchange="onKatKelasChange()">
-                            <option value="">-- Pilih Kelas --</option>
-                        </select>
-                        <div id="katGlobalInfo" style="background:#fff; border:1px solid #fde68a; border-radius:8px; padding:5px 12px;">
-                            <span style="font-size:11px; color:#78350f; font-weight:700;">Rentang Global: <span id="katGlobalRangeText" style="color:#1e40af; font-weight:900;">—</span></span>
-                        </div>
+
+                    <!-- LOADING STATE -->
+                    <div id="katLoading" style="text-align:center; padding:30px;">
+                        <i class="fas fa-spinner fa-spin" style="font-size:22px; color:#d97706;"></i>
+                        <div style="font-size:12px; color:#b45309; margin-top:10px;">Memuat pengaturan rentang...</div>
                     </div>
 
-                    <div id="katGridWrap" style="display:none;">
-                        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:14px;" id="katGrid"></div>
+                    <!-- KONTEN UTAMA (sembunyi sampai data selesai dimuat) -->
+                    <div id="katContent" style="display:none;">
 
-                        <!-- Info overlap peringatan -->
-                        <div id="katOverlapInfo" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:11px; color:#1e40af; line-height:1.6;">
-                            <i class="fas fa-triangle-exclamation" style="margin-right:4px;"></i>
-                            <span id="katOverlapText"></span>
+                        <!-- RINGKASAN: kelas mana saja yang sudah dikonfigurasi -->
+                        <div id="katSummaryWrap" style="background:#fff; border:1px solid #fde68a; border-radius:10px; padding:14px 16px; margin-bottom:14px;">
+                            <div style="font-size:10px; font-weight:800; color:#92400e; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                                <i class="fas fa-clipboard-list"></i> Rentang yang Sudah Dikonfigurasi
+                            </div>
+                            <div id="katSummaryContent" style="font-size:11px; color:#78350f; line-height:1.8;"></div>
                         </div>
 
-                        <button type="button" id="btnSaveKatRange" onclick="saveKategoriRange()" class="btn-primary" style="width:100%; justify-content:center; background:#92400e; padding:12px; border-radius:12px;">
-                            <i class="fas fa-save"></i> Simpan Pengaturan Rentang
-                        </button>
-                    </div>
-                    <div id="katEmptyState" style="text-align:center; padding:20px; color:#d97706;">
-                        <i class="fas fa-hand-pointer" style="font-size:20px; display:block; margin-bottom:8px; opacity:.4;"></i>
-                        <span style="font-size:12px;">Pilih kelas di atas untuk mengatur rentang nomor per kategori</span>
+                        <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe); border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+                            <div style="font-size:10px; font-weight:800; color:#1e40af; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                                <i class="fas fa-book-open"></i> Cara Kerja Sistem Rentang
+                            </div>
+                            <div style="font-size:11px; color:#1e3a8a; line-height:1.8;">
+                                <div style="margin-bottom:5px;"><b style="color:#1e40af;">1. Dalam 1 kelas yang sama →</b> Kategori boleh memiliki rentang yang <b>tumpang tindih</b>. Contoh: Cencu A = 1–30 dan Chginwa A = 5–25 <span style="color:#16a34a;font-weight:800;">diperbolehkan</span>. Saat undian, sistem memastikan nomor tank tetap unik.</div>
+                                <div style="margin-bottom:5px;"><b style="color:#1e40af;">2. Kategori sama, kelas berbeda →</b> <span style="color:#dc2626;font-weight:800;">DILARANG</span> tumpang tindih. Contoh: Cencu A = 1–30, maka Cencu B <span style="color:#dc2626;font-weight:800;">tidak boleh</span> 1–30 atau 5–29. Gunakan rentang terpisah seperti Cencu B = 31–60.</div>
+                                <div style="margin-bottom:5px;"><b style="color:#1e40af;">3. Kategori berbeda, kelas berbeda →</b> Boleh tumpang tindih. Contoh: Cencu A = 1–30 dan Goldenbase B = 5–25 <span style="color:#16a34a;font-weight:800;">diperbolehkan</span>. Nomor tetap unik karena dicek saat undian.</div>
+                                <div style="margin-bottom:5px;"><b style="color:#1e40af;">4.</b> Jika rentang <b>dikosongkan</b>, kategori tersebut otomatis menggunakan <b>Rentang Global</b> saat undian.</div>
+                                <div><b style="color:#1e40af;">5.</b> Semua rentang harus berada <b>di dalam batas Rentang Global</b>.</div>
+                            </div>
+                        </div>
+
+                        <!-- PILIH KELAS -->
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+                            <label style="font-size:11px; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;">Pilih Kelas</label>
+                            <select id="katKelasSelect" class="form-control" style="max-width:200px; font-weight:700;" onchange="onKatKelasChange()">
+                                <option value="">-- Pilih Kelas --</option>
+                            </select>
+                            <div id="katGlobalInfo" style="background:#fff; border:1px solid #fde68a; border-radius:8px; padding:5px 12px;">
+                                <span style="font-size:11px; color:#78350f; font-weight:700;">Rentang Global: <span id="katGlobalRangeText" style="color:#1e40af; font-weight:900;">—</span></span>
+                            </div>
+                        </div>
+
+                        <div id="katGridWrap" style="display:none;">
+                            <!-- Info rentang yang sudah ada di kelas ini -->
+                            <div id="katExistingInfo" style="display:none; background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:11px; color:#15803d; line-height:1.6;">
+                                <i class="fas fa-check-circle" style="margin-right:4px;"></i>
+                                <span id="katExistingText"></span>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:14px;" id="katGrid"></div>
+
+                            <!-- ERROR VALIDASI (menggantikan info overlap lama) -->
+                            <div id="katErrorBox" style="display:none; background:var(--danger-lt); border:1px solid #fca5a5; border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:11px; color:#991b1b; line-height:1.7;">
+                                <div style="font-weight:800; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
+                                    <i class="fas fa-triangle-exclamation"></i> Tidak Dapat Disimpan
+                                </div>
+                                <div id="katErrorText"></div>
+                            </div>
+
+                            <button type="button" id="btnSaveKatRange" onclick="saveKategoriRange()" class="btn-primary" style="width:100%; justify-content:center; background:#92400e; padding:12px; border-radius:12px;">
+                                <i class="fas fa-save"></i> Simpan Pengaturan Rentang
+                            </button>
+                        </div>
+                        <div id="katEmptyState" style="text-align:center; padding:20px; color:#d97706;">
+                            <i class="fas fa-hand-pointer" style="font-size:20px; display:block; margin-bottom:8px; opacity:.4;"></i>
+                            <span style="font-size:12px;">Pilih kelas di atas untuk mengatur rentang nomor per kategori</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1085,16 +1125,18 @@ document.querySelectorAll('.modal-bg').forEach(function(m){
 
 
 var currentTankMax = 1000;
-var kelasList = ['A', 'B', 'C', 'D', 'E'];
+var kelasList = ['A','B','C','D','E'];
 var allScoringData=[];
 var chartKat,chartStat,chartTop;
 var _confirmCallback=null;
 var kelasRangeData = {};
 var allKategoriList = ['Cencu','Chginwa','Freemarking','Goldenbase','Klasik','Bonsai','Jumbo'];
-var kelasList = ['A','B','C','D','E'];
 
-/* ═══ LOAD & RENDER ═══ */
+/* ═══ LOAD RENTANG DARI SERVER (dengan loading state) ═══ */
 function loadTankRange(){
+    document.getElementById('katLoading').style.display='block';
+    document.getElementById('katContent').style.display='none';
+
     fetch('/api/tank-range?_t='+Date.now(),{headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -1112,15 +1154,21 @@ function loadTankRange(){
             }
         }
         populateKelasSelect();
+        renderRangeSummary();
         loadGlobalRangeText();
 
-        // Reset UI
+        // Reset pilihan kelas
         document.getElementById('katKelasSelect').value = '';
         document.getElementById('katGridWrap').style.display = 'none';
         document.getElementById('katEmptyState').style.display = 'block';
+        hideKatError();
+
+        // Tampilkan konten, sembunyikan loading
+        document.getElementById('katLoading').style.display='none';
+        document.getElementById('katContent').style.display='block';
     })
     .catch(function(){
-        document.getElementById('katGrid').innerHTML = '<div style="text-align:center;padding:20px;color:var(--danger);grid-column:1/-1;font-size:12px;">Gagal memuat.</div>';
+        document.getElementById('katLoading').innerHTML='<div style="color:var(--danger);font-size:12px;"><i class="fas fa-triangle-exclamation" style="margin-right:4px;"></i>Gagal memuat pengaturan rentang.</div>';
     });
 }
 
@@ -1128,13 +1176,51 @@ function loadGlobalRangeText(){
     fetch('/api/tank-range-global?_t='+Date.now(),{headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
     .then(function(d){
-        document.getElementById('katGlobalRangeText').textContent = d.min + ' – ' + d.max;
+        document.getElementById('katGlobalRangeText').textContent = d.min + ' \u2013 ' + d.max;
     })
     .catch(function(){
-        document.getElementById('katGlobalRangeText').textContent = '1 – 1000';
+        document.getElementById('katGlobalRangeText').textContent = '1 \u2013 1000';
     });
 }
 
+/* ═══ RINGKASAN: kelas & kategori mana yang sudah punya rentang ═══ */
+function renderRangeSummary(){
+    var el = document.getElementById('katSummaryContent');
+    var wrap = document.getElementById('katSummaryWrap');
+    var html = '';
+    var totalKelas = 0;
+    var totalKat = 0;
+
+    for(var i=0; i<kelasList.length; i++){
+        var k = kelasList[i];
+        var kats = kelasRangeData[k].kategori || {};
+        var keys = Object.keys(kats);
+        if(keys.length === 0) continue;
+
+        totalKelas++;
+        totalKat += keys.length;
+        html += '<div style="margin-bottom:6px;"><b style="color:#92400e;">Kelas ' + k + '</b> \u2192 ';
+        var parts = [];
+        for(var j=0; j<keys.length; j++){
+            var name = keys[j];
+            var r = kats[name];
+            parts.push('<span style="background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;font-weight:700;">' + name + ' <span style="color:#1e40af;">' + r.min + '\u2013' + r.max + '</span></span>');
+        }
+        html += parts.join(' &nbsp; ');
+        html += '</div>';
+    }
+
+    if(!html){
+        wrap.style.display = 'none';
+        return;
+    }
+
+    html = '<div style="margin-bottom:6px;color:#b45309;font-weight:600;"><i class="fas fa-chart-pie" style="margin-right:4px;"></i> ' + totalKelas + ' kelas terkonfigurasi, ' + totalKat + ' kategori memiliki rentang khusus.</div>' + html;
+    el.innerHTML = html;
+    wrap.style.display = 'block';
+}
+
+/* ═══ POPULATE DROPDOWN KELAS ═══ */
 function populateKelasSelect(){
     var sel = document.getElementById('katKelasSelect');
     var currentVal = sel.value;
@@ -1151,6 +1237,7 @@ function populateKelasSelect(){
     if(currentVal) sel.value = currentVal;
 }
 
+/* ═══ SAAT KELAS DIPILIH ═══ */
 function onKatKelasChange(){
     var k = document.getElementById('katKelasSelect').value;
     if(!k){
@@ -1160,9 +1247,33 @@ function onKatKelasChange(){
     }
     document.getElementById('katGridWrap').style.display='block';
     document.getElementById('katEmptyState').style.display='none';
+    hideKatError();
     renderKategoriGrid(k);
+    showExistingInfo(k);
 }
 
+/* ═══ TAMPILKAN INFO RENTANG YANG SUDAH ADA DI KELAS INI ═══ */
+function showExistingInfo(kelas){
+    var infoEl = document.getElementById('katExistingInfo');
+    var textEl = document.getElementById('katExistingText');
+    var kats = kelasRangeData[kelas].kategori || {};
+    var keys = Object.keys(kats);
+
+    if(keys.length === 0){
+        infoEl.style.display = 'none';
+        return;
+    }
+
+    var parts = [];
+    for(var i=0; i<keys.length; i++){
+        var name = keys[i];
+        parts.push('<b>' + name + '</b> (' + kats[name].min + '\u2013' + kats[name].max + ')');
+    }
+    textEl.innerHTML = 'Kelas ' + kelas + ' saat ini sudah dikonfigurasi: ' + parts.join(', ') + '. Anda bisa mengubah atau menambah rentang di bawah.';
+    infoEl.style.display = 'block';
+}
+
+/* ═══ RENDER GRID INPUT KATEGORI ═══ */
 function renderKategoriGrid(kelas){
     var container = document.getElementById('katGrid');
     container.innerHTML='';
@@ -1173,64 +1284,170 @@ function renderKategoriGrid(kelas){
             var kat = existing[name] || null;
             var hasSub = kat && kat.min && kat.max;
             var card = document.createElement('div');
-            card.style.cssText='background:#fff;border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center;';
+            card.id = 'kat_card_' + name;
+            card.style.cssText='background:#fff;border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center;transition:border-color .2s,box-shadow .2s;';
             card.innerHTML=
                 '<div style="font-size:11px;font-weight:800;color:#1e293b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">'+name+'</div>'+
                 '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">'+
-                    '<input type="number" id="kat_'+name+'_min" value="'+(hasSub?kat.min:'')+'" class="form-control" placeholder="Dari" style="text-align:center;font-weight:700;padding:8px;font-size:13px;">'+
-                    '<span style="font-weight:600;color:#d97706;">–</span>'+
-                    '<input type="number" id="kat_'+name+'_max" value="'+(hasSub?kat.max:'')+'" class="form-control" placeholder="Sampai" style="text-align:center;font-weight:700;padding:8px;font-size:13px;">'+
+                    '<input type="number" id="kat_'+name+'_min" value="'+(hasSub?kat.min:'')+'" class="form-control" placeholder="Dari" style="text-align:center;font-weight:700;padding:8px;font-size:13px;transition:border-color .2s,box-shadow .2s;" oninput="onKatInputChange()">'+
+                    '<span style="font-weight:600;color:#d97706;">\u2013</span>'+
+                    '<input type="number" id="kat_'+name+'_max" value="'+(hasSub?kat.max:'')+'" class="form-control" placeholder="Sampai" style="text-align:center;font-weight:700;padding:8px;font-size:13px;transition:border-color .2s,box-shadow .2s;" oninput="onKatInputChange()">'+
                 '</div>'+
-                '<div style="font-size:9px;color:var(--light);font-weight:600;">Kosongkan = pakai rentang global saat undian</div>';
+                '<div id="kat_hint_'+name+'" style="font-size:9px;color:var(--light);font-weight:600;transition:color .2s;">Kosongkan = pakai rentang global</div>';
             container.appendChild(card);
         })(allKategoriList[i]);
     }
-    checkOverlapInfo(kelas);
 }
 
-/* ═══ CEK OVERLAP INFO (hanya informasi, tidak memblokir) ═══ */
-function checkOverlapInfo(kelas){
-    var infoEl = document.getElementById('katOverlapInfo');
-    var textEl = document.getElementById('katOverlapText');
-    infoEl.style.display = 'none';
+/* ═══ VALIDASI REAL-TIME SAAT INPUT BERUBAH ═══ */
+var katInputTimer = null;
+function onKatInputChange(){
+    clearTimeout(katInputTimer);
+    katInputTimer = setTimeout(function(){
+        var kelas = document.getElementById('katKelasSelect').value;
+        if(!kelas) return;
+        validateAndHighlight(kelas);
+    }, 300);
+}
 
-    var myKats = kelasRangeData[kelas].kategori || {};
-    var myKatKeys = Object.keys(myKats);
-    if(myKatKeys.length === 0) return;
+function validateAndHighlight(kelas){
+    // Reset semua card ke normal
+    for(var i=0; i<allKategoriList.length; i++){
+        var name = allKategoriList[i];
+        var card = document.getElementById('kat_card_' + name);
+        var hint = document.getElementById('kat_hint_' + name);
+        var minEl = document.getElementById('kat_' + name + '_min');
+        var maxEl = document.getElementById('kat_' + name + '_max');
+        if(card){ card.style.borderColor='#fde68a'; card.style.boxShadow='none'; }
+        if(hint){ hint.style.color='var(--light)'; hint.textContent='Kosongkan = pakai rentang global'; }
+        if(minEl){ minEl.style.borderColor=''; minEl.style.boxShadow=''; }
+        if(maxEl){ maxEl.style.borderColor=''; maxEl.style.boxShadow=''; }
+    }
 
-    var overlaps = [];
-    for(var ki=0; ki<myKatKeys.length; ki++){
-        var myKat = myKatKeys[ki];
-        var myMin = parseInt(myKats[myKat].min) || 0;
-        var myMax = parseInt(myKats[myKat].max) || 0;
-        if(!myMin || !myMax) continue;
+    // Kumpulkan rentang yang sedang diinput
+    var inputRanges = gatherInputRanges(kelas);
+    if(inputRanges.length === 0) return;
 
-        for(var oi=0; oi<kelasList.length; oi++){
-            var otherK = kelasList[oi];
-            var otherKats = kelasRangeData[otherK].kategori || {};
-            var otherKatKeys = Object.keys(otherKats);
+    var errors = validateRanges(kelas, inputRanges);
 
-            for(var oj=0; oj<otherKatKeys.length; oj++){
-                var otherKat = otherKatKeys[oj];
-                // Skip diri sendiri (kelas+kategori yang sama persis)
-                if(otherK === kelas && otherKat === myKat) continue;
+    // Highlight yang bermasalah
+    var conflictKats = {};
+    for(var e=0; e<errors.length; e++){
+        var err = errors[e];
+        for(var c=0; c<err.kategori.length; c++){
+            conflictKats[err.kategori[c]] = true;
+        }
+    }
 
-                var otherMin = parseInt(otherKats[otherKat].min) || 0;
-                var otherMax = parseInt(otherKats[otherKat].max) || 0;
-                if(!otherMin || !otherMax) continue;
+    var conflictKeys = Object.keys(conflictKats);
+    for(var i=0; i<conflictKeys.length; i++){
+        var name = conflictKeys[i];
+        var card = document.getElementById('kat_card_' + name);
+        var hint = document.getElementById('kat_hint_' + name);
+        var minEl = document.getElementById('kat_' + name + '_min');
+        var maxEl = document.getElementById('kat_' + name + '_max');
+        if(card){ card.style.borderColor='#fca5a5'; card.style.boxShadow='0 0 0 2px rgba(239,68,68,.1)'; }
+        if(hint){ hint.style.color='var(--danger)'; hint.textContent='Rentang bentrok!'; }
+        if(minEl){ minEl.style.borderColor='var(--danger)'; }
+        if(maxEl){ maxEl.style.borderColor='var(--danger)'; }
+    }
 
-                if(myMin <= otherMax && otherMax >= myMin){
-                    var sameClass = otherK === kelas ? '' : 'Kelas '+otherK+' → ';
-                    overlaps.push(sameClass + '<b>'+otherKat+'</b> ('+otherMin+'–'+otherMax+') overlap dengan <b>'+myKat+'</b> ('+myMin+'–'+myMax+')');
+    // Tampilkan error di box
+    if(errors.length > 0){
+        showKatError(errors);
+    } else {
+        hideKatError();
+    }
+}
+
+/* ═══ KUMPULKAN RENTANG DARI INPUT YANG SEDANG DIISI ═══ */
+function gatherInputRanges(kelas){
+    var ranges = [];
+    for(var i=0; i<allKategoriList.length; i++){
+        var name = allKategoriList[i];
+        var minEl = document.getElementById('kat_' + name + '_min');
+        var maxEl = document.getElementById('kat_' + name + '_max');
+        if(!minEl || !maxEl) continue;
+
+        var mv = minEl.value.trim(), xv = maxEl.value.trim();
+        if(mv === '' && xv === '') continue; // Kosong = pakai global, skip
+
+        mv = parseInt(mv); xv = parseInt(xv);
+        if(isNaN(mv) || isNaN(xv) || mv < 1 || xv < 1) continue; // Belum valid, skip dulu
+
+        ranges.push({ kategori: name, min: mv, max: xv });
+    }
+    return ranges;
+}
+
+/* ═══ CEK 2 RANGE APAKAH OVERLAP ═══ */
+function rangesOverlap(a, b){
+    return a.min <= b.max && b.min <= a.max;
+}
+
+/* ═══ VALIDASI SEMUA RENTANG (aturan baru) ═══
+   - Dalam 1 kelas: BOLEH overlap
+   - Kategori SAMA, kelas berbeda: DILARANG overlap
+   - Kategori BERBEDA, kelas berbeda: BOLEH overlap
+   ═══════════════════════════════════════════ */
+function validateRanges(kelas, inputRanges){
+    var errors = [];
+
+    // 1. TIDAK ADA cek overlap dalam kelas yang sama — diperbolehkan
+
+    // 2. Cek cross-class: HANYA kategori yang SAMA yang dilarang overlap
+    for(var ki=0; ki<kelasList.length; ki++){
+        var otherK = kelasList[ki];
+        if(otherK === kelas) continue;
+
+        var otherKats = kelasRangeData[otherK].kategori || {};
+        var otherKatKeys = Object.keys(otherKats);
+
+        for(var oi=0; oi<otherKatKeys.length; oi++){
+            var otherKat = otherKatKeys[oi];
+
+            // Skip kategori berbeda — overlap diperbolehkan
+            // Hanya cek jika kategori yang SAMA
+            var hasInputForThisKat = null;
+            for(var ii=0; ii<inputRanges.length; ii++){
+                if(inputRanges[ii].kategori === otherKat){
+                    hasInputForThisKat = inputRanges[ii];
+                    break;
                 }
+            }
+            if(!hasInputForThisKat) continue;
+
+            var otherMin = parseInt(otherKats[otherKat].min) || 0;
+            var otherMax = parseInt(otherKats[otherKat].max) || 0;
+            if(!otherMin || !otherMax) continue;
+
+            var ir = hasInputForThisKat;
+            if(rangesOverlap(ir, {min: otherMin, max: otherMax})){
+                errors.push({
+                    kategori: [ir.kategori],
+                    message: '<b>' + ir.kategori + '</b> di Kelas ' + kelas + ' (' + ir.min + '\u2013' + ir.max + ') tumpang tindih dengan <b>' + otherKat + '</b> di Kelas ' + otherK + ' (' + otherMin + '\u2013' + otherMax + '). Kategori yang sama di kelas berbeda tidak boleh memiliki rentang yang tumpang tindih.'
+                });
             }
         }
     }
 
-    if(overlaps.length > 0){
-        textEl.innerHTML = '<b><i class="fas fa-info-circle" style="margin-right:4px;"></i>Info overlap (diperbolehkan):</b><br>Sistem akan otomatis menyesuaikan saat undian — rentang yang lebih kecil "menguasai" nomor yang overlap.<br><br>' + overlaps.join('<br>');
-        infoEl.style.display = 'block';
+    return errors;
+}
+
+/* ═══ TAMPILKAN / SEMBUNYIKAN ERROR BOX ═══ */
+function showKatError(errors){
+    var box = document.getElementById('katErrorBox');
+    var text = document.getElementById('katErrorText');
+    var html = '';
+    for(var i=0; i<errors.length; i++){
+        html += '<div style="margin-bottom:' + (i < errors.length-1 ? '6px' : '0') + ';">\u2022 ' + errors[i].message + '</div>';
     }
+    text.innerHTML = html;
+    box.style.display = 'block';
+}
+
+function hideKatError(){
+    document.getElementById('katErrorBox').style.display = 'none';
 }
 
 /* ═══ SIMPAN SUB-RENTANG KATEGORI ═══ */
@@ -1238,8 +1455,8 @@ function saveKategoriRange(){
     var kelas = document.getElementById('katKelasSelect').value;
     if(!kelas){popupError('Pilih Kelas','Pilih kelas terlebih dahulu.'); return;}
 
+    // Kumpulkan rentang dari input
     var kategori = {};
-
     for(var i=0;i<allKategoriList.length;i++){
         var name = allKategoriList[i];
         var minEl=document.getElementById('kat_'+name+'_min');
@@ -1250,12 +1467,38 @@ function saveKategoriRange(){
         if(mv==='' && xv==='') continue;
 
         mv = parseInt(mv); xv = parseInt(xv);
-        if(!mv||!xv||mv<1||xv<1){popupError('Tidak Valid','Sub-rentang "'+name+'" tidak valid.'); return;}
-        if(xv<mv){popupError('Tidak Valid','"'+name+'": Sampai harus >= Dari.'); return;}
+        if(!mv||!xv||mv<1||xv<1){
+            popupError('Tidak Valid','Rentang "<b>'+name+'</b>" tidak lengkap atau tidak valid. Isi kedua angka dengan benar.');
+            return;
+        }
+        if(xv<mv){
+            popupError('Tidak Valid','"<b>'+name+'</b>": Angka akhir ('+xv+') harus lebih besar atau sama dengan angka awal ('+mv+').');
+            return;
+        }
         kategori[name]={min:mv,max:xv};
     }
 
-    /* Build full ranges — update hanya kelas yang dipilih, preserve kelas lain */
+    // Validasi input dasar (cek angka yang tidak masuk akal)
+    var inputRanges = [];
+    for(var kat in kategori){
+        inputRanges.push({ kategori: kat, min: kategori[kat].min, max: kategori[kat].max });
+    }
+
+    // Cek validitas masing-masing range (min <= max sudah dicek di atas)
+    // Cek overlap
+    var errors = validateRanges(kelas, inputRanges);
+    if(errors.length > 0){
+        var errHtml = '<div style="text-align:left;line-height:1.8;font-size:12px;max-height:200px;overflow-y:auto;">';
+        for(var e=0; e<errors.length; e++){
+            errHtml += '<div style="margin-bottom:6px;">\u2022 ' + errors[e].message + '</div>';
+        }
+        errHtml += '</div>';
+        errHtml += '<div style="margin-top:8px;font-size:11px;color:#78350f;font-weight:600;">Perbaiki rentang yang bentrok terlebih dahulu sebelum menyimpan.</div>';
+        popupError('Ada Rentang yang Bentrok', errHtml);
+        return;
+    }
+
+    // Build full ranges — update hanya kelas yang dipilih, preserve kelas lain
     var ranges = {};
     for(var i=0;i<kelasList.length;i++){
         var k=kelasList[i];
@@ -1275,7 +1518,7 @@ function saveKategoriRange(){
     .then(function(r){if(!r.ok) return r.json().then(function(d){throw d;}); return r.json();})
     .then(function(dd){
         if(dd.success){
-            /* Re-fetch dari server untuk verifikasi */
+            // Re-fetch dari server untuk verifikasi
             fetch('/api/tank-range?_v='+Date.now(),{headers:{'Accept':'application/json'}})
             .then(function(r){return r.json();})
             .then(function(d){
@@ -1289,12 +1532,14 @@ function saveKategoriRange(){
                         kelasRangeData[k]={kategori:katObj};
                     }
                 }
+                populateKelasSelect();
+                renderRangeSummary();
                 var curKelas=document.getElementById('katKelasSelect').value;
                 if(curKelas){
                     renderKategoriGrid(curKelas);
-                    checkOverlapInfo(curKelas);
+                    showExistingInfo(curKelas);
+                    hideKatError();
                 }
-                populateKelasSelect();
                 loadDashboard();
                 popupSuccess('Berhasil','Pengaturan rentang Kelas '+kelas+' berhasil disimpan.');
             })
@@ -2714,9 +2959,6 @@ function saveGlobalTankRange(){
     }).catch(function(){popupError('Error','Gagal menyimpan.');})
     .finally(function(){btn.disabled=false;btn.innerHTML=originalHtml;});
 }
-
-/* ═══ VARIABEL KATEGORI RANGE ═══ */
-var kategoriList = ['Cencu', 'Chginwa', 'Freemarking', 'Goldenbase', 'Klasik', 'Bonsai', 'Jumbo'];
 
 /* ═══════════════════════════════════════════════
    SEARCH USER

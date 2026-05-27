@@ -699,7 +699,7 @@ class AdminDashboardController extends Controller
         
         return response()->json($ranges);
     }
-    
+
     public function setTankRange(Request $request)
     {
         $ranges = json_decode($request->ranges, true);
@@ -711,13 +711,12 @@ class AdminDashboardController extends Controller
             ], 422);
         }
 
-        // Ambil rentang global sebagai batas
         $globalMin = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
         $globalMax = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
 
-        // ── Validasi setiap sub-rentang kategori ──
+        // ── Kumpulkan & validasi per-sub-rentang ──
+        $allRanges = [];
         foreach ($ranges as $kelas => $data) {
-            // Bersihkan sisa data lama jika masih ada
             if (isset($data['min'])) unset($ranges[$kelas]['min']);
             if (isset($data['max'])) unset($ranges[$kelas]['max']);
 
@@ -730,21 +729,45 @@ class AdminDashboardController extends Controller
                 if ($katMin < 1 || $katMax < 1 || $katMax < $katMin) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Sub-rentang "' . $katName . '" di Kelas ' . $kelas . ' tidak valid.'
+                        'message' => 'Sub-rentang "' . $katName . '" di Kelas ' . $kelas . ' tidak valid (min harus ≥ 1 dan max ≥ min).'
                     ], 422);
                 }
 
-                // Harus dalam rentang global
                 if ($katMin < $globalMin || $katMax > $globalMax) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Sub-rentang "' . $katName . '" (' . $katMin . '-' . $katMax . ') harus berada dalam Rentang Global (' . $globalMin . '-' . $globalMax . ').'
+                        'message' => 'Sub-rentang "' . $katName . '" (' . $katMin . '–' . $katMax . ') harus berada dalam Rentang Global (' . $globalMin . '–' . $globalMax . ').'
                     ], 422);
                 }
+
+                $allRanges[] = [
+                    'kelas'   => $kelas,
+                    'kategori' => $katName,
+                    'min'     => $katMin,
+                    'max'     => $katMax,
+                ];
             }
         }
 
-        // ── TIDAK ADA validasi overlap (diperbolehkan semua) ──
+        // ── Validasi: Kategori SAMA di kelas berbeda TIDAK BOLEH overlap ──
+        // Aturan: dalam 1 kelas boleh overlap, kategori berbeda di kelas lain boleh overlap
+        $count = count($allRanges);
+        for ($i = 0; $i < $count; $i++) {
+            for ($j = $i + 1; $j < $count; $j++) {
+                $a = $allRanges[$i];
+                $b = $allRanges[$j];
+
+                // Skip jika kategori berbeda (overlap diperbolehkan)
+                if ($a['kategori'] !== $b['kategori']) continue;
+                // Skip jika kelas sama (overlap dalam 1 kelas diperbolehkan)
+                if ($a['kelas'] === $b['kelas']) continue;
+
+                if ($a['min'] <= $b['max'] && $b['min'] <= $a['max']) {
+                    $msg = "Kategori <b>{$a['kategori']}</b> di Kelas {$a['kelas']} ({$a['min']}–{$a['max']}) bentrok dengan Kelas {$b['kelas']} ({$b['min']}–{$b['max']}). Kategori yang sama di kelas berbeda tidak boleh memiliki rentang yang tumpang tindih.";
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+            }
+        }
 
         \DB::table('settings')->updateOrInsert(
             ['key' => 'tank_class_ranges'],

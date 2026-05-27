@@ -135,6 +135,10 @@ class DashboardController extends Controller
                             // Skip diri sendiri
                             if ($otherKelas === $kelas) continue;
 
+                            // ★ Hanya cek overlap untuk KATEGORI YANG SAMA di kelas lain
+                            // Kategori berbeda boleh overlap — nomor tetap unik karena dicek via DB
+                            if ($otherKat !== $kategori) continue;
+
                             $otherMin = (int) ($otherRange['min'] ?? 0);
                             $otherMax = (int) ($otherRange['max'] ?? 0);
 
