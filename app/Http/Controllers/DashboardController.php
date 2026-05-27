@@ -115,7 +115,8 @@ class DashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($ikan, $myMin, $myMax, $hasSubRange, $kategori, $kelas) {
+            DB::transaction(function () use ($ikan, $myMin, $myMax, $hasSubRange, $kategori, $kelas, $classRanges) {
+                // Nomor yang sudah dipakai di database
                 $usedSet = Ikan::whereNotNull('nomor_tank')
                     ->lockForUpdate()
                     ->pluck('nomor_tank')
@@ -123,15 +124,54 @@ class DashboardController extends Controller
                     ->flip()
                     ->toArray();
 
-                $rangeSize = $myMax - $myMin + 1;
+                // Kumpulkan range kategori lain yang KETAT DI DALAM range saya
+                $excludedRanges = [];
+                if ($classRanges) {
+                    foreach ($classRanges as $otherKelas => $otherData) {
+                        if (!isset($otherData['kategori']) || !is_array($otherData['kategori'])) continue;
+                        foreach ($otherData['kategori'] as $otherKat => $otherRange) {
+                            if ($otherKelas === $kelas && $otherKat === $kategori) continue;
+                            $oMin = (int) ($otherRange['min'] ?? 0);
+                            $oMax = (int) ($otherRange['max'] ?? 0);
+                            // Hanya exclude jika range lain KETAT DI DALAM range saya
+                            if ($oMin > $myMin && $oMax < $myMax) {
+                                $excludedRanges[] = ['min' => $oMin, 'max' => $oMax];
+                            }
+                        }
+                    }
+                }
+                usort($excludedRanges, fn($a, $b) => $a['min'] <=> $b['min']);
+
+                // Hitung sub-range tersedia (range saya minus range yang di-exclude)
+                $subRanges = [];
+                $cursor = $myMin;
+                foreach ($excludedRanges as $ex) {
+                    if ($ex['min'] > $cursor) {
+                        $subRanges[] = ['min' => $cursor, 'max' => $ex['min'] - 1];
+                    }
+                    $cursor = $ex['max'] + 1;
+                }
+                if ($cursor <= $myMax) {
+                    $subRanges[] = ['min' => $cursor, 'max' => $myMax];
+                }
+
                 $label = $hasSubRange
                     ? "Kategori {$kategori} (Kelas {$kelas})"
                     : "Rentang Global ({$myMin}-{$myMax})";
 
+                if (empty($subRanges)) {
+                    throw new \Exception('NOMOR TANK PENUH untuk ' . $label . '. Seluruh rentang ditempati oleh kategori lain.');
+                }
+
+                $rangeSize = $myMax - $myMin + 1;
+
                 if ($rangeSize <= 50000) {
+                    // Range kecil: langsung loop
                     $available = [];
-                    for ($i = $myMin; $i <= $myMax; $i++) {
-                        if (!isset($usedSet[$i])) $available[] = $i;
+                    foreach ($subRanges as $sub) {
+                        for ($i = $sub['min']; $i <= $sub['max']; $i++) {
+                            if (!isset($usedSet[$i])) $available[] = $i;
+                        }
                     }
                     if (empty($available)) {
                         throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $myMin . '-' . $myMax . ').');
@@ -139,24 +179,42 @@ class DashboardController extends Controller
                     shuffle($available);
                     $ikan->nomor_tank = $available[0];
                 } else {
-                    $usedInMyRange = 0;
-                    foreach ($usedSet as $num => $v) {
-                        if ($num >= $myMin && $num <= $myMax) $usedInMyRange++;
+                    // Range besar: hitung available per sub-range, pilih weighted random
+                    $subAvailCounts = [];
+                    $totalAvail = 0;
+                    foreach ($subRanges as $idx => $sub) {
+                        $usedInSub = 0;
+                        foreach ($usedSet as $num => $v) {
+                            if ($num >= $sub['min'] && $num <= $sub['max']) $usedInSub++;
+                        }
+                        $avail = ($sub['max'] - $sub['min'] + 1) - $usedInSub;
+                        $subAvailCounts[$idx] = $avail;
+                        $totalAvail += $avail;
                     }
-                    if ($usedInMyRange >= $rangeSize) {
+                    if ($totalAvail <= 0) {
                         throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $myMin . '-' . $myMax . ').');
                     }
-                    $maxAttempts = min(1000, $rangeSize);
+
+                    $rand = random_int(1, $totalAvail);
+                    $cum = 0;
+                    $chosenSub = null;
+                    foreach ($subAvailCounts as $idx => $cnt) {
+                        $cum += $cnt;
+                        if ($rand <= $cum) { $chosenSub = $subRanges[$idx]; break; }
+                    }
+
+                    $maxAttempts = min(2000, $chosenSub['max'] - $chosenSub['min'] + 1);
                     $found = null;
                     for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
-                        $candidate = random_int($myMin, $myMax);
+                        $candidate = random_int($chosenSub['min'], $chosenSub['max']);
                         if (!isset($usedSet[$candidate])) { $found = $candidate; break; }
                     }
                     if ($found === null) {
-                        throw new \Exception('Gagal mendapatkan nomor setelah ' . $maxAttempts . ' percobaan. Coba lagi.');
+                        throw new \Exception('Gagal mendapatkan nomor. Coba lagi.');
                     }
                     $ikan->nomor_tank = $found;
                 }
+
                 $ikan->save();
             });
 
@@ -206,7 +264,7 @@ class DashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($ikan, $myMin, $myMax, $hasSubRange, $kategori, $kelas) {
+            DB::transaction(function () use ($ikan, $myMin, $myMax, $hasSubRange, $kategori, $kelas, $classRanges) {
                 $usedSet = Ikan::whereNotNull('nomor_tank')
                     ->lockForUpdate()
                     ->pluck('nomor_tank')
@@ -214,15 +272,50 @@ class DashboardController extends Controller
                     ->flip()
                     ->toArray();
 
-                $rangeSize = $myMax - $myMin + 1;
+                $excludedRanges = [];
+                if ($classRanges) {
+                    foreach ($classRanges as $otherKelas => $otherData) {
+                        if (!isset($otherData['kategori']) || !is_array($otherData['kategori'])) continue;
+                        foreach ($otherData['kategori'] as $otherKat => $otherRange) {
+                            if ($otherKelas === $kelas && $otherKat === $kategori) continue;
+                            $oMin = (int) ($otherRange['min'] ?? 0);
+                            $oMax = (int) ($otherRange['max'] ?? 0);
+                            if ($oMin > $myMin && $oMax < $myMax) {
+                                $excludedRanges[] = ['min' => $oMin, 'max' => $oMax];
+                            }
+                        }
+                    }
+                }
+                usort($excludedRanges, fn($a, $b) => $a['min'] <=> $b['min']);
+
+                $subRanges = [];
+                $cursor = $myMin;
+                foreach ($excludedRanges as $ex) {
+                    if ($ex['min'] > $cursor) {
+                        $subRanges[] = ['min' => $cursor, 'max' => $ex['min'] - 1];
+                    }
+                    $cursor = $ex['max'] + 1;
+                }
+                if ($cursor <= $myMax) {
+                    $subRanges[] = ['min' => $cursor, 'max' => $myMax];
+                }
+
                 $label = $hasSubRange
                     ? "Kategori {$kategori} (Kelas {$kelas})"
                     : "Rentang Global ({$myMin}-{$myMax})";
 
+                if (empty($subRanges)) {
+                    throw new \Exception('NOMOR TANK PENUH untuk ' . $label . '. Seluruh rentang ditempati oleh kategori lain.');
+                }
+
+                $rangeSize = $myMax - $myMin + 1;
+
                 if ($rangeSize <= 50000) {
                     $available = [];
-                    for ($i = $myMin; $i <= $myMax; $i++) {
-                        if (!isset($usedSet[$i])) $available[] = $i;
+                    foreach ($subRanges as $sub) {
+                        for ($i = $sub['min']; $i <= $sub['max']; $i++) {
+                            if (!isset($usedSet[$i])) $available[] = $i;
+                        }
                     }
                     if (empty($available)) {
                         throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $myMin . '-' . $myMax . ').');
@@ -230,24 +323,41 @@ class DashboardController extends Controller
                     shuffle($available);
                     $ikan->nomor_tank = $available[0];
                 } else {
-                    $usedInMyRange = 0;
-                    foreach ($usedSet as $num => $v) {
-                        if ($num >= $myMin && $num <= $myMax) $usedInMyRange++;
+                    $subAvailCounts = [];
+                    $totalAvail = 0;
+                    foreach ($subRanges as $idx => $sub) {
+                        $usedInSub = 0;
+                        foreach ($usedSet as $num => $v) {
+                            if ($num >= $sub['min'] && $num <= $sub['max']) $usedInSub++;
+                        }
+                        $avail = ($sub['max'] - $sub['min'] + 1) - $usedInSub;
+                        $subAvailCounts[$idx] = $avail;
+                        $totalAvail += $avail;
                     }
-                    if ($usedInMyRange >= $rangeSize) {
+                    if ($totalAvail <= 0) {
                         throw new \Exception('NOMOR TANK PENUH untuk ' . $label . ' (Rentang ' . $myMin . '-' . $myMax . ').');
                     }
-                    $maxAttempts = min(1000, $rangeSize);
+
+                    $rand = random_int(1, $totalAvail);
+                    $cum = 0;
+                    $chosenSub = null;
+                    foreach ($subAvailCounts as $idx => $cnt) {
+                        $cum += $cnt;
+                        if ($rand <= $cum) { $chosenSub = $subRanges[$idx]; break; }
+                    }
+
+                    $maxAttempts = min(2000, $chosenSub['max'] - $chosenSub['min'] + 1);
                     $found = null;
                     for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
-                        $candidate = random_int($myMin, $myMax);
+                        $candidate = random_int($chosenSub['min'], $chosenSub['max']);
                         if (!isset($usedSet[$candidate])) { $found = $candidate; break; }
                     }
                     if ($found === null) {
-                        throw new \Exception('Gagal mendapatkan nomor setelah ' . $maxAttempts . ' percobaan. Coba lagi.');
+                        throw new \Exception('Gagal mendapatkan nomor. Coba lagi.');
                     }
                     $ikan->nomor_tank = $found;
                 }
+
                 $ikan->save();
             });
 
