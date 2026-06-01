@@ -353,7 +353,7 @@ class AdminDashboardController extends Controller
                 'peserta_id'         => $ikan->peserta_id,
                 'nama_peserta'       => $peserta->nama_peserta ?? 'Unknown',
                 'kategori'           => $ikan->kategori,
-                'kelas'              => $latestKelas ?? $ikan->kelas,
+                'kelas'              => $latestKelas ?? $ikan->kelas ?? '-',
                 'nomor_tank'         => $ikan->nomor_tank,
                 'detail_anggota'     => $peserta->detail_anggota ?? '—',
                 'juri_list'          => $juriList,

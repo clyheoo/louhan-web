@@ -47,7 +47,7 @@
                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Kategori</label>
                             <div id="nom-kategori-btns" class="flex flex-wrap gap-1.5"></div>
                         </div>
-                        <div>
+                        <div id="nom-kelas-wrap">
                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Kelas</label>
                             <div id="nom-kelas-btns" class="flex flex-wrap gap-1.5"></div>
                         </div>
@@ -146,7 +146,7 @@
                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kategori</label>
                             <select id="filter-kategori" onchange="onFilterChange()" class="w-full px-2 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-xs font-semibold bg-white"></select>
                         </div>
-                        <div>
+                        <div id="scoring-kelas-wrap">
                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kelas</label>
                             <select id="filter-kelas" onchange="onFilterChange()" class="w-full px-2 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-xs font-bold text-center bg-white">
                                 <option value="">Semua Kelas</option>
@@ -302,6 +302,11 @@
 </style>
 <script>
 
+var NO_KELAS_KATEGORI = ['Bonsai', 'Jumbo'];
+function isNoKelas(kat) { return NO_KELAS_KATEGORI.indexOf(kat) !== -1; }
+function kelasLabel(kelas) { return kelas ? 'Kelas ' + kelas : ''; }
+function kelasDisplay(kategori, kelas) { return isNoKelas(kategori) ? '' : '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50">Kelas ' + kelas + '</div>'; }
+
 // ═══════════════════════════════════════════════════════════════
 // NOMINASI STATE & LOGIC
 // ═══════════════════════════════════════════════════════════════
@@ -377,7 +382,7 @@ function nomShowWaiting(nominations) {
         '<div class="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-slate-200">' +
         '<div class="w-9 h-9 bg-slate-900 text-white rounded-lg flex items-center justify-center text-xs font-bold shrink-0">T' + n.nomor_tank + '</div>' +
         '<div><div class="text-xs font-bold text-slate-700">' + n.nama_peserta + '</div>' +
-        '<div class="text-[10px] text-slate-500">' + n.kategori + ' — Kelas ' + n.kelas + '</div></div>' +
+        '<div class="text-[10px] text-slate-500">' + n.kategori + (n.kelas ? ' — Kelas ' + n.kelas : '') + '</div></div>' +
         '<span class="ml-auto px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-bold">Pending</span></div>'
     ).join('') + '</div>';
 
@@ -425,6 +430,9 @@ function nomRenderFilterBtns() {
 
 function nomSetKat(val) {
     nomState.filterKat = val;
+    nomState.filterKelas = '';
+    var kelasWrap = document.getElementById('nom-kelas-wrap');
+    if(kelasWrap) kelasWrap.style.display = isNoKelas(val) ? 'none' : '';
     document.querySelectorAll('.nom-kat-btn').forEach(function(b) {
         if (b.textContent.trim() === (val || 'Semua')) {
             b.className = 'nom-kat-btn px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors bg-slate-900 text-white border-slate-900';
@@ -481,7 +489,7 @@ function nomRenderGrid() {
             '<i class="fas fa-star ' + (sel ? '' : 'fa-regular') + '"></i></button></div>' +
             '<div class="flex flex-col gap-1.5">' +
             '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-blue-50 text-blue-700 truncate text-center border border-blue-100/50">' + t.kategori + '</div>' +
-            '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50">Kelas ' + t.kelas + '</div>' +
+            kelasDisplay(t.kategori, t.kelas) +
             '</div></div>';
     }).join('');
 }
@@ -491,7 +499,7 @@ function nomUpdateFilterInfo() {
     const txt = document.getElementById('nom-filter-info-text');
     const parts = [];
     if (nomState.filterKat) parts.push('Kategori: <b>' + nomState.filterKat + '</b>');
-    if (nomState.filterKelas) parts.push('Kelas: <b>' + nomState.filterKelas + '</b>');
+    if (nomState.filterKelas && !isNoKelas(nomState.filterKat)) parts.push('Kelas: <b>' + nomState.filterKelas + '</b>');
     if (nomState.searchTerm) parts.push('Cari: <b>"' + nomState.searchTerm + '"</b>');
     if (parts.length > 0) {
         txt.innerHTML = 'Menampilkan filter — ' + parts.join(' <span class="text-blue-300 mx-1">|</span> ');
@@ -530,7 +538,7 @@ function nomSubmit() {
             '<div class="w-10 h-10 bg-slate-900 text-white rounded-lg flex items-center justify-center text-sm font-bold shrink-0">T' + t.nomor_tank + '</div>' +
             '<div class="flex-1 min-w-0">' +
             '<div class="text-[10px] font-bold text-blue-600">' + t.kategori + '</div>' +
-            '<div class="text-[10px] font-bold text-emerald-600">Kelas ' + t.kelas + '</div></div>' +
+            (t.kelas ? '<div class="text-[10px] font-bold text-emerald-600">Kelas ' + t.kelas + '</div>' : '') + '</div>' +
             '<i class="fas fa-star text-amber-400"></i></div>';
     }).join('');
     document.getElementById('nom-preview-count').textContent = selectedTanks.length + ' Tank';
@@ -668,7 +676,7 @@ function getDefectBtnHtml(tankId, partKey, ts) {
 function initTankScores(tanks) { tanks.forEach(t => { if (!tankScores[t.id]) { tankScores[t.id] = { scores: { overall:{impression:''}, head:{size:'',bentuk:''}, face:{face:''}, body:{bentuk:'',proporsi:'',pangkal:''}, marking:{fullness:'',contrast:'',bentuk:''}, pearl:{shinning:'',fullness:'',bentuk:''}, color:{komposisi:'',kecerahan:'',fullness:''}, finnage:{bentuk:'',kecerahan:''} }, defects: { raw_head_penalty:['0'], raw_face_penalty:['0'], raw_body_penalty:['0'], raw_finnage_penalty:['0'] } }; } }); }
 function getVal(tankId, key) { const parts = key.split('.'); if (parts[0] === 'defect') return null; return tankScores[tankId]?.scores?.[parts[0]]?.[parts[1]] || ''; }
 function setVal(tankId, key, val) { const parts = key.split('.'); if (!tankScores[tankId]) return; if (!tankScores[tankId].scores[parts[0]]) tankScores[tankId].scores[parts[0]] = {}; tankScores[tankId].scores[parts[0]][parts[1]] = val; }
-function getFilteredTanks() { const fKat = document.getElementById('filter-kategori').value; const fKelas = document.getElementById('filter-kelas').value; let tanks = appData.available_tanks; if (fKat) tanks = tanks.filter(t => t.kategori === fKat); if (fKelas) tanks = tanks.filter(t => t.kelas === fKelas); return tanks.filter(t => !appData.all_scored[t.id]); }
+function getFilteredTanks() { const fKat = document.getElementById('filter-kategori').value; const fKelas = document.getElementById('filter-kelas').value; let tanks = appData.available_tanks; if (fKat) tanks = tanks.filter(t => t.kategori === fKat); if (fKelas && !isNoKelas(fKat)) tanks = tanks.filter(t => t.kelas === fKelas); return tanks.filter(t => !appData.all_scored[t.id]); }
 
 // ═══════════════════════════════════════════════════════════════
 // RENDER (EXISTING)
@@ -705,7 +713,16 @@ function renderLiveTable() {
     body.innerHTML = appData.my_scores.map(s => { const t = s.ikan; const nd = s.nilai_detail||{}; const fmt = (obj,keys) => keys.map(k=>nd[obj]?.[k]||'-').join('/'); let defHtml = ''; ['head','face','body','finnage'].forEach(p => { const raw = s['raw_'+p+'_penalty']; if (raw && Array.isArray(raw) && raw[0]!=='0' && raw.length>0) defHtml += '<span class="inline-block bg-red-100 text-red-700 text-[8px] font-bold px-1 py-0 rounded mb-0.5">'+raw.join(', ')+'</span>'; }); if (!defHtml) defHtml = '<span class="text-slate-300">-</span>'; const toG = s.submitted_to_grand; return '<tr class="hover:bg-amber-50/50"><td class="px-2 py-2 border-r font-bold text-slate-800 text-center bg-slate-50 sticky left-0 z-10 text-xs">T'+(t?t.nomor_tank:'-')+'</td><td class="px-2 py-2 border-r"><div class="font-bold text-[10px]">'+(t?.kategori||'-')+'</div><div class="text-[9px] text-blue-600 font-bold">KLS:'+(s.kelas||'-')+'</div></td><td class="px-2 py-2 border-r text-center font-mono font-bold text-blue-700 bg-blue-50/30">'+(nd.overall?.impression||'-')+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('head',['size','bentuk'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+(nd.face?.face||'-')+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('body',['bentuk','proporsi','pangkal'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('marking',['fullness','contrast','bentuk'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('pearl',['shinning','fullness','bentuk'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('color',['komposisi','kecerahan','fullness'])+'</td><td class="px-2 py-2 border-r text-center font-mono text-[10px]">'+fmt('finnage',['bentuk','kecerahan'])+'</td><td class="px-2 py-2 border-r text-left align-top min-w-[100px] whitespace-normal">'+defHtml+'</td><td class="px-2 py-2 text-center">'+'<button onclick="lihatDetail('+s.id+')" class="px-2 py-1 bg-slate-700 text-white text-[9px] font-bold rounded hover:bg-slate-800 flex items-center gap-1 mx-auto"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>Detail</button>'+'</td></tr>'; }).join('');
 }
 
-function populateFilter() { document.getElementById('filter-kategori').innerHTML = '<option value="">Semua Kategori</option>' + ['Bonsai','Cencu','Chginwa','Freemarking','Goldenbase','Jumbo','Klasik'].map(c => '<option value="'+c+'">'+c+'</option>').join(''); document.getElementById('filter-kelas').innerHTML = '<option value="">Semua Kelas</option>' + ['A','B','C','D','E'].map(c => '<option value="'+c+'">Kelas '+c+'</option>').join(''); }
+function populateFilter() { 
+    document.getElementById('filter-kategori').innerHTML = '<option value="">Semua Kategori</option>' + ['Bonsai','Cencu','Chginwa','Freemarking','Goldenbase','Jumbo','Klasik'].map(c => '<option value="'+c+'">'+c+'</option>').join(''); 
+    document.getElementById('filter-kelas').innerHTML = '<option value="">Semua Kelas</option>' + ['A','B','C','D','E'].map(c => '<option value="'+c+'">Kelas '+c+'</option>').join('');
+    document.getElementById('filter-kategori').onchange = function() {
+        var kelasWrap = document.getElementById('scoring-kelas-wrap');
+        if(kelasWrap) kelasWrap.style.display = isNoKelas(this.value) ? 'none' : '';
+        if(isNoKelas(this.value)) document.getElementById('filter-kelas').value = '';
+        onFilterChange();
+    };
+}
 function onFilterChange() { renderFormTable(); }
 
 // ═══════════════════════════════════════════════════════════════

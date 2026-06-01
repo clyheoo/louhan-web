@@ -394,7 +394,7 @@ class GrandJuriController extends Controller
                 'id'                    => $ikan->id,
                 'nama_peserta'          => $peserta->nama_peserta ?? 'Unknown',
                 'kategori'              => $ikan->kategori,
-                'kelas'                 => $latestKelas ?? $ikan->kelas,
+                'kelas'                 => $latestKelas ?? $ikan->kelas ?? '-',
                 'nomor_tank'            => $ikan->nomor_tank,
                 'detail_anggota'        => $peserta->detail_anggota ?? '—',
                 'juri_list'             => $juriList,
@@ -867,7 +867,7 @@ class GrandJuriController extends Controller
                     'nama_peserta'      => $ikan->peserta->nama_peserta ?? 'Unknown',
                     'detail_anggota'    => $ikan->peserta->detail_anggota ?? '—',
                     'kategori'          => $ikan->kategori,
-                    'kelas'             => $ikan->kelas,
+                    'kelas'             => $ikan->kelas ?? '-',
                     'nomor_tank'        => $ikan->nomor_tank,
                     'total_nilai_semua' => $totalNilaiSemua,
                     'total_point'       => (float) $totalPoint,
@@ -947,17 +947,20 @@ class GrandJuriController extends Controller
             $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
             $totalBonus = (int) $ikan->bonusPoints->sum('points');
             $finalPoint = $totalPoint + $totalBonus;
+            $noKelasKategori = ['Bonsai', 'Jumbo'];
 
-            $key = ($scope === 'per_kategori')
-                ? $ikan->kategori
-                : $ikan->kategori . ' - Kelas ' . $ikan->kelas;
+            if ($scope === 'per_kategori' || in_array($ikan->kategori, $noKelasKategori) || !$ikan->kelas) {
+                $key = $ikan->kategori;
+            } else {
+                $key = $ikan->kategori . ' - Kelas ' . $ikan->kelas;
+            }
 
             $groups[$key][] = [
                 'ikan_id'           => $ikan->id,
                 'nama_peserta'      => $ikan->peserta->nama_peserta ?? 'Unknown',
                 'detail_anggota'    => $ikan->peserta->detail_anggota ?? '—',
                 'kategori'          => $ikan->kategori,
-                'kelas'             => $ikan->kelas,
+                'kelas'             => $ikan->kelas ?? '-',
                 'nomor_tank'        => $ikan->nomor_tank,
                 'total_nilai_semua' => $totalNilaiSemua,
                 'total_point'       => (float) $totalPoint,

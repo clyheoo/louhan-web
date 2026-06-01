@@ -222,6 +222,9 @@
     </div>
 
 <script>
+var NO_KELAS_KAT = ['Bonsai', 'Jumbo'];
+function isNoKelasGJ(kat) { return NO_KELAS_KAT.indexOf(kat) !== -1; }
+
 const CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 let pendingRejectId = null;
 
@@ -420,7 +423,7 @@ async function loadNominasi(silent) {
                 html += '</div>';
                 html += '<div class="flex flex-col gap-1.5 mb-3">';
                 html += '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-blue-50 text-blue-700 truncate text-center border border-blue-100/50">' + tank.kategori + '</div>';
-                html += '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50">Kelas ' + tank.kelas + '</div>';
+                html += (tank.kelas && !isNoKelasGJ(tank.kategori) ? '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50">Kelas ' + tank.kelas + '</div>' : '');
                 html += '</div>';
                 html += '<div class="text-[10px] font-semibold text-slate-600 truncate mb-3" title="' + tank.nama_peserta + '">' + tank.nama_peserta + '</div>';
                 html += '<div class="grid grid-cols-2 gap-2">';
@@ -484,7 +487,7 @@ function renderHistory() {
             html += '<div class="p-2.5 rounded-lg border ' + tankBorder + ' bg-white ' + tankHover + ' transition-colors">';
             html += '<div class="w-9 h-9 rounded-lg flex items-center justify-center font-extrabold text-sm shadow-sm bg-slate-800 text-white mb-2">' + tank.nomor_tank + '</div>';
             html += '<div class="text-[10px] font-bold px-1.5 py-1 rounded bg-blue-50 text-blue-700 truncate text-center border border-blue-100/50 mb-1">' + tank.kategori + '</div>';
-            html += '<div class="text-[10px] font-bold px-1.5 py-1 rounded bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50 mb-1.5">Kelas ' + tank.kelas + '</div>';
+            html += (tank.kelas && !isNoKelasGJ(tank.kategori) ? '<div class="text-[10px] font-bold px-1.5 py-1 rounded bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50 mb-1.5">Kelas ' + tank.kelas + '</div>' : '');
             if (!isApp && tank.catatan) {
                 html += '<div class="text-[9px] text-red-600 italic px-1 truncate" title="' + tank.catatan + '"><i class="fas fa-comment-dots mr-0.5"></i>' + tank.catatan + '</div>';
             }

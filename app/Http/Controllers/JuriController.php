@@ -69,15 +69,22 @@ class JuriController extends Controller
         $ikanId     = $data['ikan_id'] ?? null;
         $kelas      = $data['kelas'] ?? null;
         $allScores  = $data['all_scores'] ?? null;
-        $defectData = $data['defect_data'] ?? null; // ★ TAMBAHAN
-
-        if (!$ikanId || !$kelas || !$allScores) {
-            return response()->json(['success' => false, 'message' => 'Data tidak lengkap (Kelas wajib dipilih).'], 422);
+        $defectData = $data['defect_data'] ?? null;
+        
+        if (!$ikanId || !$allScores) {
+            return response()->json(['success' => false, 'message' => 'Data tidak lengkap.'], 422);
         }
 
         $ikan = Ikan::find($ikanId);
         if (!$ikan) {
             return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
+        }
+
+        $noKelasKategori = ['Bonsai', 'Jumbo'];
+        $needKelas = !in_array($ikan->kategori, $noKelasKategori);
+
+        if ($needKelas && !$kelas) {
+            return response()->json(['success' => false, 'message' => 'Data tidak lengkap (Kelas wajib dipilih).'], 422);
         }
 
         if (is_string($allScores)) {
@@ -301,7 +308,7 @@ class JuriController extends Controller
             });
 
         $kategoris = $tanks->pluck('kategori')->unique()->sort()->values();
-        $kelass    = $tanks->pluck('kelas')->unique()->sort()->values();
+        $kelass    = $tanks->pluck('kelas')->filter()->unique()->sort()->values();
 
         return response()->json([
             'tanks'     => $tanks,
