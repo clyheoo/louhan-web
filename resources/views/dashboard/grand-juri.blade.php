@@ -877,6 +877,7 @@ function cloneValues(source){
         formFields[k].forEach(function(f){
             if(f.type==='defect')return;
             var v=(source&&source[k]&&source[k][f.id]);
+            if(v===undefined&&f.id==='shining'&&source&&source[k]&&source[k].shinning!==undefined)v=source[k].shinning;
             m[k][f.id]=(v!==undefined&&v!==null&&v!=='')?String(v):'';
         });
     });
@@ -1169,7 +1170,7 @@ function renderDetail(p){
                     html += '<div style="margin-bottom:10px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">';
                     
                     var katNilai=nd[kat]||{};var sub=0;
-                    fields.forEach(function(f){if(katNilai[f.id]!==undefined&&katNilai[f.id]!==null)sub+=parseInt(katNilai[f.id])||0;});
+                    fields.forEach(function(f){if(f.type==='defect')return;var fv=katNilai[f.id];if(fv===undefined&&f.id==='shining'&&katNilai.shinning!==undefined)fv=katNilai.shinning;if(fv!==undefined&&fv!==null)sub+=parseInt(fv)||0;});
 
                     // ★ BACA HASIL EVALUASI DEFECT DARI BACKEND
                     var defectEval = sc.defect_eval || {};
@@ -1210,8 +1211,8 @@ function renderDetail(p){
                         // ★ SKIP field defect karena ditangani terpisah di bawah
                         if(f.type === 'defect') return;
                         
-                        var val=katNilai[f.id];var has=(val!==undefined&&val!==null&&val!=='');
-                        html+='<div class="detail-field-row"><div class="detail-field-left"><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
+                      var val=katNilai[f.id];if(val===undefined&&f.id==='shining'&&katNilai.shinning!==undefined)val=katNilai.shinning;var has=(val!==undefined&&val!==null&&val!=='');
+                      html+='<div class="detail-field-row"><div class="detail-field-left"><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
                     });
 
                     // ★ TAMPILKAN BARIS DEFECT (selalu tampilkan jika kategori punya field defect)

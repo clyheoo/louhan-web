@@ -989,7 +989,7 @@ function renderDetailView(p){
                 }
                 html+='<div style="margin-bottom:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">';
                 var katNilai=nd[kat]||{},sub=0;
-                fields.forEach(function(f){if(f.type==='defect')return;if(katNilai[f.id]!==undefined&&katNilai[f.id]!==null)sub+=parseInt(katNilai[f.id])||0;});
+                fields.forEach(function(f){if(f.type==='defect')return;var fv=katNilai[f.id];if(fv===undefined&&f.id==='shining'&&katNilai.shinning!==undefined)fv=katNilai.shinning;if(fv!==undefined&&fv!==null)sub+=parseInt(fv)||0;});
 
                 var defectEval=sc.defect_eval||{};
                 var penaltyKey=kat+'_penalty';
@@ -1012,8 +1012,8 @@ function renderDetailView(p){
                 var hasDefectField=fields.some(function(f){return f.type==='defect';});
                 fields.forEach(function(f){
                     if(f.type==='defect')return;
-                    var val=katNilai[f.id],has=(val!==undefined&&val!==null&&val!=='');
-                    html+='<div class="detail-field-row-admin"><div><div class="detail-field-admin-name">'+f.label+'</div><div class="detail-field-admin-meta">'+f.desc+'</div></div><span class="score-chip-admin '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
+                var val=katNilai[f.id];if(val===undefined&&f.id==='shining'&&katNilai.shinning!==undefined)val=katNilai.shinning;var has=(val!==undefined&&val!==null&&val!=='');
+                html+='<div class="detail-field-row-admin"><div><div class="detail-field-admin-name">'+f.label+'</div><div class="detail-field-admin-meta">'+f.desc+'</div></div><span class="score-chip-admin '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';
                 });
 
                 if(hasDefectField){
