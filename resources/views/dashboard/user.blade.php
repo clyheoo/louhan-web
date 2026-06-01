@@ -243,7 +243,7 @@
                                 @endif
                             </form>
                             
-                            <button class="submit-btn btn-green" style="margin-top: 12px;" onclick="document.getElementById('modalIkan').classList.add('show')">
+                            <button class="submit-btn btn-green" style="margin-top: 12px;" onclick="openModalIkan()">
                                 <i class="fas fa-plus" style="margin-right:8px;"></i>MASUKKAN DATA IKAN
                             </button>
                         </div>
@@ -365,16 +365,16 @@
                     <div class="form-group" style="margin-bottom:12px;">
                         <label class="form-label">Kategori</label>
                         <div class="input-wrapper">
-                            <select name="kategori" class="form-select" required style="padding-left:14px;">
+                            <select name="kategori" id="ikanKategoriSelect" class="form-select" required style="padding-left:14px;">
                                 <option value="" disabled selected>Pilih Kategori</option>
                                 <option value="Cencu">Cencu</option><option value="Chginwa">Chginwa</option><option value="Freemarking">Freemarking</option><option value="Goldenbase">Goldenbase</option><option value="Klasik">Klasik</option><option value="Bonsai">Bonsai</option><option value="Jumbo">Jumbo</option>
                             </select>
                         </div>
                     </div>
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label">Kelas</label>
+                <div class="form-group" id="ikanKelasWrap" style="margin-bottom:0;">
+                    <label class="form-label">Kelas</label>
                         <div class="input-wrapper">
-                            <select name="kelas" class="form-select" required style="padding-left:14px;">
+                            <select name="kelas" id="ikanKelasSelect" class="form-select" style="padding-left:14px;">
                                 <option value="" disabled selected>Pilih Kelas</option>
                                 <option value="A">Kelas A</option><option value="B">Kelas B</option><option value="C">Kelas C</option><option value="D">Kelas D</option><option value="E">Kelas E</option>
                             </select>
@@ -468,10 +468,18 @@
             .finally(() => { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN PROFIL'; });
         });
 
-        // --- LOGIC TAMBAH IKAN ---
         const formIkan = document.getElementById('formIkan');
         formIkan.addEventListener('submit', function(e) {
             e.preventDefault();
+            
+            // Validasi manual (karena required dihapus dari HTML)
+            var selectedKategori = ikanKategoriSelect ? ikanKategoriSelect.value : '';
+            if(!selectedKategori){ alert('Pilih kategori terlebih dahulu.'); return; }
+            if(noKelasKategori.indexOf(selectedKategori) === -1){
+                var selectedKelas = ikanKelasSelectEl ? ikanKelasSelectEl.value : '';
+                if(!selectedKelas){ alert('Pilih kelas terlebih dahulu.'); return; }
+            }
+            
             const btnSubmit = formIkan.querySelector('.submit-btn');
             btnSubmit.disabled = true; btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
             const formData = new FormData(formIkan);
@@ -479,9 +487,10 @@
             apiFetch('{{ route("store.ikan") }}', { method: 'POST', body: formData })
             .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
             .then(data => {
-                if (data.success) {
-                    document.getElementById('modalIkan').classList.remove('show');
-                    formIkan.reset();
+            if (data.success) {
+                document.getElementById('modalIkan').classList.remove('show');
+                formIkan.reset();
+                resetIkanFormState();
                     let listContainer = document.getElementById('ikanListContainer');
                     let emptyState = document.querySelector('.ikan-empty-state');
                     if (emptyState) emptyState.remove();
@@ -738,6 +747,33 @@
 
         // --- RANGE UNDIAN (DEFAULT) ---
         let tankDrawMax = 1000;
+
+        // --- HIDE KELAS UNTUK BONSAI/JUMBO (SINKRON DENGAN ADMIN) ---
+        var noKelasKategori = ['Bonsai', 'Jumbo'];
+        var ikanKategoriSelect = document.getElementById('ikanKategoriSelect');
+        var ikanKelasWrap = document.getElementById('ikanKelasWrap');
+        var ikanKelasSelectEl = document.getElementById('ikanKelasSelect');
+
+        function resetIkanFormState() {
+            if(ikanKelasWrap) ikanKelasWrap.style.display = '';
+            if(ikanKelasSelectEl) ikanKelasSelectEl.value = '';
+        }
+
+        function openModalIkan() {
+            resetIkanFormState();
+            document.getElementById('modalIkan').classList.add('show');
+        }
+
+        if(ikanKategoriSelect && ikanKelasWrap){
+            ikanKategoriSelect.addEventListener('change', function(){
+                if(noKelasKategori.indexOf(this.value) !== -1){
+                    if(ikanKelasSelectEl) ikanKelasSelectEl.value = '';
+                    ikanKelasWrap.style.display = 'none';
+                } else {
+                    ikanKelasWrap.style.display = '';
+                }
+            });
+        }
 
         // --- LOGIC MESIN UNDIAN ---
         const numberDisplay = document.getElementById('numberDisplay');

@@ -280,6 +280,13 @@ class DashboardController extends Controller
             $hasSubRange = true;
         }
 
+        // Fallback: Bonsai/Jumbo disimpan di key khusus (tanpa kelas)
+        if (!$hasSubRange && in_array($kategori, ['Bonsai', 'Jumbo']) && $classRanges && isset($classRanges[$kategori]['kategori'][$kategori])) {
+            $myMin = (int) $classRanges[$kategori]['kategori'][$kategori]['min'];
+            $myMax = (int) $classRanges[$kategori]['kategori'][$kategori]['max'];
+            $hasSubRange = true;
+        }
+
         if ($myMin > $myMax) {
             return response()->json(['success' => false, 'message' => 'Rentang nomor tank tidak valid.'], 400);
         }
