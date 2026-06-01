@@ -11,9 +11,17 @@ use App\Helpers\PointCalculator;
 use App\Models\ScoringPointConfig;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AdminExport;
+use App\Services\SheetsSyncService;
 
 class AdminDashboardController extends Controller
 {
+    protected $sheetsSync;
+
+    public function __construct(SheetsSyncService $sheetsSync)
+    {
+        $this->sheetsSync = $sheetsSync;
+    }
+
     public function index()
     {
         return view('dashboard.admin', ['user' => auth()->user()->fresh()]);
@@ -93,6 +101,15 @@ class AdminDashboardController extends Controller
             'kelas'        => $kelas,
             'dibuat_oleh'  => 'admin',
         ]);
+
+                // ★ AUTO-SYNC KE GOOGLE SHEETS
+        try {
+            if ($this->sheetsSync->isReady()) {
+                $this->sheetsSync->tambahPeserta($ikan->fresh());
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Sheets sync gagal: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
@@ -787,6 +804,15 @@ class AdminDashboardController extends Controller
             ['value' => json_encode($ranges), 'updated_at' => now()]
         );
 
+        // ★ AUTO-SYNC PLOTING TANK
+        try {
+            if ($this->sheetsSync->isReady()) {
+                $this->sheetsSync->syncPlotingTank();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Sheets sync ploting gagal: ' . $e->getMessage());
+        }
+
         return response()->json(['success' => true, 'message' => 'Pengaturan sub-rentang nomor berhasil disimpan.']);
     }
 
@@ -841,6 +867,15 @@ class AdminDashboardController extends Controller
             ['key' => 'tank_range_max'],
             ['value' => $request->max, 'updated_at' => now()]
         );
+
+        // ★ AUTO-SYNC PLOTING TANK
+        try {
+            if ($this->sheetsSync->isReady()) {
+                $this->sheetsSync->syncPlotingTank();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Sheets sync ploting gagal: ' . $e->getMessage());
+        }
 
         return response()->json(['success' => true, 'message' => 'Rentang global berhasil diperbarui.']);
     }

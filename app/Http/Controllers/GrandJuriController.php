@@ -12,9 +12,17 @@ use App\Models\ScoringPointConfig;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\GrandJuriExport;
 use App\Models\Nominasi;
+use App\Services\SheetsSyncService;
 
 class GrandJuriController extends Controller
 {
+    protected $sheetsSync;
+
+    public function __construct(SheetsSyncService $sheetsSync)
+    {
+        $this->sheetsSync = $sheetsSync;
+    }
+    
     private const BONUS_TYPES = [
         'best_of_the_best' => 'BEST OF THE BEST',
         'best_of_show'     => 'BEST OF SHOW',
@@ -184,6 +192,18 @@ class GrandJuriController extends Controller
             'reviewed_at' => now(),
             'catatan'     => $catatan,
         ]);
+
+        // ★ AUTO-SYNC SAAT APPROVE
+        if ($action === 'approve') {
+            try {
+                if ($this->sheetsSync->isReady()) {
+                    $this->sheetsSync->tambahNominasi($nominasi->fresh());
+                    $this->sheetsSync->tambahPilNom($nominasi->fresh());
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Sheets sync nominasi gagal: ' . $e->getMessage());
+            }
+        }
 
         return response()->json([
             'success' => true,

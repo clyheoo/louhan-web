@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JuriController;
 use App\Http\Controllers\GrandJuriController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\SheetsSyncController;
 
 require __DIR__.'/auth.php';
 
@@ -125,4 +126,18 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/tank-range', [AdminDashboardController::class, 'getTankRange']);
     Route::post('/api/admin/tank-range', [AdminDashboardController::class, 'setTankRange']);
     Route::post('/api/admin/reset-tank', [AdminDashboardController::class, 'resetTankNumbers']);
+});
+
+/* ═══════════════════════════════════════════
+   GOOGLE SHEETS SYNC
+   ═══════════════════════════════════════════ */
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/api/sheets/test', [SheetsSyncController::class, 'testConnection']);
+    Route::get('/api/sheets/sync-all', [SheetsSyncController::class, 'syncAll']);
+    Route::get('/api/sheets/sync-peserta', [SheetsSyncController::class, 'syncPeserta']);
+    Route::get('/api/sheets/sync-nominasi', [SheetsSyncController::class, 'syncNominasi']);
+    Route::get('/api/sheets/sync-pil-nom', [SheetsSyncController::class, 'syncPilNom']);
+    Route::get('/api/sheets/sync-ploting-tank', [SheetsSyncController::class, 'syncPlotingTank']);
+    Route::get('/api/sheets/sync-nama-juri', [SheetsSyncController::class, 'syncNamaJuri']);
+    Route::get('/api/sheets/sync-hasil-juri', [SheetsSyncController::class, 'syncHasilJuri']);
 });
