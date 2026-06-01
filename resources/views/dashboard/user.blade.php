@@ -318,7 +318,7 @@
                                             <div class="ikan-item" id="ikan-item-{{ $ikan->id }}">
                                                 <div class="ikan-item-info">
                                                     <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #{{ $loop->iteration }}@if($ikan->dibuat_oleh === 'admin')<span class="badge-admin"><i class="fas fa-shield-halved"></i> Ditambah Admin</span>@endif</h4>
-                                                    <p>{{ $ikan->kategori }} - Kelas {{ $ikan->kelas }}</p>
+                                                    <p>{{ $ikan->kategori }}{{ $ikan->kelas ? ' - Kelas ' . $ikan->kelas : '' }}</p>
                                                 </div>
                                                 <div class="ikan-item-right">
                                                     <div class="tank-num {{ $ikan->nomor_tank ? 'filled' : 'empty' }}" id="tank-num-{{ $ikan->id }}">
@@ -500,7 +500,7 @@
                     newEl.className = 'ikan-item'; newEl.id = `ikan-item-${data.ikan.id}`;
                     newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #${currentCount + 1}</h4><p>${data.ikan.kategori} - Kelas ${data.ikan.kelas}</p></div><div class="ikan-item-right"><div class="tank-num empty" id="tank-num-${data.ikan.id}">--</div><button class="btn-acak-kecil" onclick="mulaiAcak(${data.ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button></div>`;
                     listContainer.prepend(newEl);
-                    currentIkans[data.ikan.id] = { kategori: `${data.ikan.kategori} - Kelas ${data.ikan.kelas}`, nomor_tank: '--', is_mvp: false };
+                    currentIkans[data.ikan.id] = { kategori: formatKategoriKelas(data.ikan.kategori, data.ikan.kelas), nomor_tank: '--', is_mvp: false };
                 }
             })
             .catch(err => { if (err.errors) { let msg = ''; Object.values(err.errors).forEach(function(e) { msg += e[0] + '\n'; }); alert(msg); } else { alert(err.message || 'Gagal menambahkan ikan.'); } })
@@ -638,7 +638,7 @@
                         mvpCount++;
                         const removeBtn = currentMvpSubmitted ? '' : `<button class="mvp-remove" onclick="toggleMvp(${ikan.id}, document.querySelector('#ikan-item-${ikan.id} .btn-mvp-star'))"><i class="fas fa-xmark"></i></button>`;
                         mvpListHtml += `<div class="mvp-list-item ${currentMvpSubmitted ? 'locked' : ''}">
-                            <span><i class="fas fa-star" style="color:#f59e0b; margin-right:6px;"></i>${ikan.kategori} - Kelas ${ikan.kelas} (Tank ${ikan.nomor_tank ?? '--'})</span>
+                            <span><i class="fas fa-star" style="color:#f59e0b; margin-right:6px;"></i>${formatKategoriKelas(ikan.kategori, ikan.kelas)} (Tank ${ikan.nomor_tank ?? '--'})</span>
                             ${removeBtn}
                         </div>`;
                     }
@@ -650,12 +650,12 @@
                         const badge = ikan.dibuat_oleh === 'admin' ? '<span class="badge-admin"><i class="fas fa-shield-halved"></i> Ditambah Admin</span>' : '';
                         const mvpBtnHtml = (isMvpOpen && !currentMvpSubmitted) ? `<button class="btn-mvp-star ${ikan.is_mvp ? 'active' : ''}" onclick="toggleMvp(${ikan.id}, this)" title="Daftarkan MVP"><i class="fas fa-star"></i></button>` : (currentMvpSubmitted && ikan.is_mvp ? `<button class="btn-mvp-star active" disabled style="opacity:0.5; cursor:not-allowed;"><i class="fas fa-star"></i></button>` : '');
                         const newEl = document.createElement('div'); newEl.className = 'ikan-item'; newEl.id = `ikan-item-${ikan.id}`; newEl.style.animation = 'cardEntry 0.5s ease both';
-                        newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #${count} ${badge}</h4><p>${ikan.kategori} - Kelas ${ikan.kelas}</p></div><div class="ikan-item-right">${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${!ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`}</div>`;
+                        newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>Ikan #${count} ${badge}</h4><p>${formatKategoriKelas(ikan.kategori, ikan.kelas)}</p></div><div class="ikan-item-right">${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${!ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`}</div>`;
                         listContainer.prepend(newEl);
                         currentIkans[ikan.id] = { kategori: `${ikan.kategori} - Kelas ${ikan.kelas}`, nomor_tank: ikan.nomor_tank ?? '--', is_mvp: ikan.is_mvp };
                     } else {
                         if (!currentIkans[ikan.id]) currentIkans[ikan.id] = { kategori: '', nomor_tank: '--', is_mvp: false };
-                        const currentKat = `${ikan.kategori} - Kelas ${ikan.kelas}`;
+                        const currentKat = formatKategoriKelas(ikan.kategori, ikan.kelas);
                         const currentTank = ikan.nomor_tank ?? '--';
                         
                         if (currentIkans[ikan.id].kategori !== currentKat) { existingEl.querySelector('.ikan-item-info p').textContent = currentKat; currentIkans[ikan.id].kategori = currentKat; }
@@ -762,6 +762,11 @@
         function openModalIkan() {
             resetIkanFormState();
             document.getElementById('modalIkan').classList.add('show');
+        }
+
+        function formatKategoriKelas(kategori, kelas) {
+            if (noKelasKategori.indexOf(kategori) !== -1 || !kelas) return kategori;
+            return kategori + ' - Kelas ' + kelas;
         }
 
         if(ikanKategoriSelect && ikanKelasWrap){
