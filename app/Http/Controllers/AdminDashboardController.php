@@ -51,14 +51,23 @@ class AdminDashboardController extends Controller
 
     public function registerPesertaIkan(Request $request)
     {
-        $request->validate([
+        $noKelasKategori = ['Bonsai', 'Jumbo'];
+
+        $rules = [
             'user_id'           => 'required|exists:users,id',
             'nama_peserta'      => 'required|string|max:255',
             'kategori'          => 'required|string|max:255',
-            'kelas'             => 'required|string|max:10',
             'jenis_keanggotaan' => 'required|in:perorangan,team',
             'detail_anggota'    => 'required|string|max:255',
-        ]);
+        ];
+
+        if (in_array($request->kategori, $noKelasKategori)) {
+            $rules['kelas'] = 'nullable';
+        } else {
+            $rules['kelas'] = 'required|string|max:10';
+        }
+
+        $request->validate($rules);
 
         $user = User::find($request->user_id);
 
@@ -76,10 +85,12 @@ class AdminDashboardController extends Controller
         $peserta->detail_anggota = $request->detail_anggota;
         $peserta->save();
 
+        $kelas = in_array($request->kategori, $noKelasKategori) ? null : $request->kelas;
+
         Ikan::create([
             'peserta_id'   => $peserta->id,
             'kategori'     => $request->kategori,
-            'kelas'        => $request->kelas,
+            'kelas'        => $kelas,
             'dibuat_oleh'  => 'admin',
         ]);
 
@@ -763,7 +774,9 @@ class AdminDashboardController extends Controller
                 $strictlyOutside = ($a['max'] < $b['min']) || ($a['min'] > $b['max']);
 
                 if (!$strictlyInside && !$strictlyOutside) {
-                    $msg = "Rentang <b>{$a['kategori']}</b> di Kelas {$a['kelas']} ({$a['min']}–{$a['max']}) menyentuh/melewati batas rentang <b>{$b['kategori']}</b> di Kelas {$b['kelas']} ({$b['min']}–{$b['max']}). Pastikan rentang ketat di dalam atau sepenuhnya di luar rentang yang sudah ada.";
+                    $labelA = in_array($a['kelas'], ['Bonsai', 'Jumbo']) ? $a['kelas'] : 'Kelas ' . $a['kelas'];
+                    $labelB = in_array($b['kelas'], ['Bonsai', 'Jumbo']) ? $b['kelas'] : 'Kelas ' . $b['kelas'];
+                    $msg = "Rentang <b>{$a['kategori']}</b> di {$labelA} ({$a['min']}–{$a['max']}) menyentuh/melewati batas rentang <b>{$b['kategori']}</b> di {$labelB} ({$b['min']}–{$b['max']}). Pastikan rentang ketat di dalam atau sepenuhnya di luar rentang yang sudah ada.";
                     return response()->json(['success' => false, 'message' => $msg], 422);
                 }
             }

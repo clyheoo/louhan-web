@@ -56,20 +56,29 @@ class DashboardController extends Controller
     // SIMPAN DATA IKAN (Dipanggil dari Popup)
     public function storeIkan(Request $request)
     {
-        $request->validate([
+        $rules = [
             'kategori' => 'required|string|max:255',
-            'kelas'    => 'required|string|max:10',
-        ]);
+        ];
+
+        if (!in_array($request->kategori, ['Bonsai', 'Jumbo'])) {
+            $rules['kelas'] = 'required|string|max:10';
+        } else {
+            $rules['kelas'] = 'nullable';
+        }
+
+        $request->validate($rules);
 
         $peserta = Peserta::where('user_id', Auth::id())->first();
         if (!$peserta) {
             return response()->json(['success' => false, 'message' => 'Silakan isi profil terlebih dahulu.'], 400);
         }
 
+        $kelas = in_array($request->kategori, ['Bonsai', 'Jumbo']) ? null : $request->kelas;
+
         $ikan = Ikan::create([
             'peserta_id' => $peserta->id,
             'kategori'   => $request->kategori,
-            'kelas'      => $request->kelas,
+            'kelas'      => $kelas,
             'dibuat_oleh' => 'user',
         ]);
 
@@ -104,9 +113,16 @@ class DashboardController extends Controller
         $myMax = $globalMax;
         $hasSubRange = false;
 
-        if ($classRanges && isset($classRanges[$kelas]['kategori'][$kategori])) {
+        if ($kelas && $classRanges && isset($classRanges[$kelas]['kategori'][$kategori])) {
             $myMin = (int) $classRanges[$kelas]['kategori'][$kategori]['min'];
             $myMax = (int) $classRanges[$kelas]['kategori'][$kategori]['max'];
+            $hasSubRange = true;
+        }
+
+        // Fallback: Bonsai/Jumbo disimpan di key khusus (tanpa kelas)
+        if (!$hasSubRange && in_array($kategori, ['Bonsai', 'Jumbo']) && $classRanges && isset($classRanges[$kategori]['kategori'][$kategori])) {
+            $myMin = (int) $classRanges[$kategori]['kategori'][$kategori]['min'];
+            $myMax = (int) $classRanges[$kategori]['kategori'][$kategori]['max'];
             $hasSubRange = true;
         }
 
@@ -130,7 +146,8 @@ class DashboardController extends Controller
                     foreach ($classRanges as $otherKelas => $otherData) {
                         if (!isset($otherData['kategori']) || !is_array($otherData['kategori'])) continue;
                         foreach ($otherData['kategori'] as $otherKat => $otherRange) {
-                            if ($otherKelas === $kelas && $otherKat === $kategori) continue;
+                            $myLookupKey = $kelas ?: $kategori;
+                            if ($otherKelas === $myLookupKey && $otherKat === $kategori) continue;
                             $oMin = (int) ($otherRange['min'] ?? 0);
                             $oMax = (int) ($otherRange['max'] ?? 0);
                             // Hanya exclude jika range lain KETAT DI DALAM range saya
@@ -155,9 +172,13 @@ class DashboardController extends Controller
                     $subRanges[] = ['min' => $cursor, 'max' => $myMax];
                 }
 
-                $label = $hasSubRange
-                    ? "Kategori {$kategori} (Kelas {$kelas})"
-                    : "Rentang Global ({$myMin}-{$myMax})";
+                if ($hasSubRange) {
+                    $label = $kelas
+                        ? "Kategori {$kategori} (Kelas {$kelas})"
+                        : "Kategori {$kategori} (Tanpa Kelas)";
+                } else {
+                    $label = "Rentang Global ({$myMin}-{$myMax})";
+                }
 
                 if (empty($subRanges)) {
                     throw new \Exception('NOMOR TANK PENUH untuk ' . $label . '. Seluruh rentang ditempati oleh kategori lain.');
@@ -300,9 +321,13 @@ class DashboardController extends Controller
                     $subRanges[] = ['min' => $cursor, 'max' => $myMax];
                 }
 
-                $label = $hasSubRange
-                    ? "Kategori {$kategori} (Kelas {$kelas})"
-                    : "Rentang Global ({$myMin}-{$myMax})";
+                if ($hasSubRange) {
+                    $label = $kelas
+                        ? "Kategori {$kategori} (Kelas {$kelas})"
+                        : "Kategori {$kategori} (Tanpa Kelas)";
+                } else {
+                    $label = "Rentang Global ({$myMin}-{$myMax})";
+                }
 
                 if (empty($subRanges)) {
                     throw new \Exception('NOMOR TANK PENUH untuk ' . $label . '. Seluruh rentang ditempati oleh kategori lain.');

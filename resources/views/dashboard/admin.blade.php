@@ -1081,6 +1081,6 @@
     };
     window.MY_AUTH_ID = {{ auth()->id() }};
 </script>
-<script src="{{ asset('js/admin-dashboard.js') }}"></script>
+<script src="{{ asset('js/admin-dashboard.js') }}?v={{ time() }}"></script>
 </body>
 </html>

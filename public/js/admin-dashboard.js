@@ -1,15 +1,19 @@
-/* ═══════════════════════════════════════════════
-   HELPERS & STATE
-   ═══════════════════════════════════════════════ */
+var currentTankMax = 1000;
+var kelasList = ['A','B','C','D','E'];
+var allScoringData = [];
+var chartKat, chartStat, chartTop;
+var _confirmCallback = null;
+var kelasRangeData = {};
+var allKategoriList = ['Cencu','Chginwa','Freemarking','Goldenbase','Klasik','Bonsai','Jumbo'];
+var noKelasKategori = ['Bonsai', 'Jumbo'];
+var kategoriListWithKelas = allKategoriList.filter(function(k){ return noKelasKategori.indexOf(k) === -1; });
+
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 
-/* ═══ FUNGSI MODAL BERSIH (TANPA OVERRIDE BERANTAI) ═══ */
 function openModal(id){
     var el = document.getElementById(id);
-    if(!el) return; // Cegah error jika elemen tidak ditemukan
+    if(!el) return;
     el.classList.add('show');
-
-    // Trigger khusus saat modal spesifik dibuka
     if(id === 'modalCreate'){
         var form = document.getElementById('formCreateUser');
         if(form) form.reset();
@@ -32,7 +36,6 @@ function openModal(id){
         var cSegs = [document.getElementById('cSeg1'),document.getElementById('cSeg2'),document.getElementById('cSeg3'),document.getElementById('cSeg4'),document.getElementById('cSeg5')];
         for(var i=0;i<cSegs.length;i++){ if(cSegs[i]) cSegs[i].className='str-seg'; }
     }
-
     if(id === 'modalOld'){
         loadPesertaOld();
         loadTankRange();
@@ -46,16 +49,6 @@ document.querySelectorAll('.modal-bg').forEach(function(m){
     m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
 });
 
-
-var currentTankMax = 1000;
-var kelasList = ['A','B','C','D','E'];
-var allScoringData=[];
-var chartKat,chartStat,chartTop;
-var _confirmCallback=null;
-var kelasRangeData = {};
-var allKategoriList = ['Cencu','Chginwa','Freemarking','Goldenbase','Klasik','Bonsai','Jumbo'];
-
-/* ═══ LOAD RENTANG DARI SERVER (dengan loading state) ═══ */
 function loadTankRange(){
     document.getElementById('katLoading').style.display='block';
     document.getElementById('katContent').style.display='none';
@@ -64,8 +57,9 @@ function loadTankRange(){
     .then(function(r){return r.json();})
     .then(function(d){
         kelasRangeData = {};
-        for(var i=0;i<kelasList.length;i++){
-            var k = kelasList[i];
+        var allKeys = kelasList.concat(noKelasKategori);
+        for(var i=0;i<allKeys.length;i++){
+            var k = allKeys[i];
             if(d[k]){
                 var katObj = {};
                 if(d[k].kategori && typeof d[k].kategori === 'object'){
@@ -80,18 +74,21 @@ function loadTankRange(){
         renderRangeSummary();
         loadGlobalRangeText();
 
-        // Reset pilihan kelas
         document.getElementById('katKelasSelect').value = '';
         document.getElementById('katGridWrap').style.display = 'none';
         document.getElementById('katEmptyState').style.display = 'block';
         hideKatError();
 
-        // Tampilkan konten, sembunyikan loading
         document.getElementById('katLoading').style.display='none';
         document.getElementById('katContent').style.display='block';
     })
-    .catch(function(){
-        document.getElementById('katLoading').innerHTML='<div style="color:var(--danger);font-size:12px;"><i class="fas fa-triangle-exclamation" style="margin-right:4px;"></i>Gagal memuat pengaturan rentang.</div>';
+    .catch(function(err){
+        console.error('loadTankRange error:', err);
+        var msg = 'Gagal memuat pengaturan rentang.';
+        try {
+            if(err.message && typeof err.message === 'string') msg = err.message;
+        } catch(ex){}
+        document.getElementById('katLoading').innerHTML='<div style="color:var(--danger);font-size:12px;"><i class="fas fa-triangle-exclamation" style="margin-right:4px;"></i>'+esc(msg)+'</div>';
     });
 }
 
@@ -106,28 +103,44 @@ function loadGlobalRangeText(){
     });
 }
 
-/* ═══ RINGKASAN: kelas & kategori mana yang sudah punya rentang ═══ */
 function renderRangeSummary(){
     var el = document.getElementById('katSummaryContent');
     var wrap = document.getElementById('katSummaryWrap');
     var html = '';
     var totalKelas = 0;
     var totalKat = 0;
+    var allKeys = kelasList.concat(noKelasKategori);
 
-    for(var i=0; i<kelasList.length; i++){
-        var k = kelasList[i];
-        var kats = kelasRangeData[k].kategori || {};
+    /* Cek apakah ada rentang yang sudah dikonfigurasi */
+    var hasAnyRange = false;
+    for(var ci=0; ci<allKeys.length; ci++){
+        var ck = allKeys[ci];
+        var ckKats = kelasRangeData[ck] ? kelasRangeData[ck].kategori || {} : {};
+        if(Object.keys(ckKats).length > 0){ hasAnyRange = true; break; }
+    }
+
+    /* Tombol reset hanya muncul jika ada rentang */
+    if(hasAnyRange){
+        html = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">' +
+            '<button type="button" onclick="resetAllRanges()" style="padding:6px 12px;border:1px solid #fca5a5;border-radius:7px;background:var(--danger-lt);color:var(--danger);font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .2s;" onmouseover="this.style.background=\'var(--danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'var(--danger-lt)\';this.style.color=\'var(--danger\'">' +
+            '<i class="fas fa-rotate-left"></i> Reset Semua Rentang</button></div>';
+    }
+
+    for(var i=0; i<allKeys.length; i++){
+        var k = allKeys[i];
+        var kats = kelasRangeData[k] ? kelasRangeData[k].kategori || {} : {};
         var keys = Object.keys(kats);
         if(keys.length === 0) continue;
 
         totalKelas++;
         totalKat += keys.length;
-        html += '<div style="margin-bottom:6px;"><b style="color:#92400e;">Kelas ' + k + '</b> \u2192 ';
+        var isNoKelas = noKelasKategori.indexOf(k) !== -1;
+        html += '<div style="margin-bottom:6px;"><b style="color:#92400e;">'+(isNoKelas ? k : 'Kelas '+k)+'</b> \u2192 ';
         var parts = [];
         for(var j=0; j<keys.length; j++){
             var name = keys[j];
             var r = kats[name];
-            parts.push('<span style="background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;font-weight:700;">' + name + ' <span style="color:#1e40af;">' + r.min + '\u2013' + r.max + '</span></span>');
+            parts.push('<span style="background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;font-weight:700;">'+name+' <span style="color:#1e40af;">'+r.min+'\u2013'+r.max+'</span></span>');
         }
         html += parts.join(' &nbsp; ');
         html += '</div>';
@@ -138,12 +151,11 @@ function renderRangeSummary(){
         return;
     }
 
-    html = '<div style="margin-bottom:6px;color:#b45309;font-weight:600;"><i class="fas fa-chart-pie" style="margin-right:4px;"></i> ' + totalKelas + ' kelas terkonfigurasi, ' + totalKat + ' kategori memiliki rentang khusus.</div>' + html;
+    html = '<div style="margin-bottom:6px;color:#b45309;font-weight:600;"><i class="fas fa-chart-pie" style="margin-right:4px;"></i> '+totalKelas+' group terkonfigurasi, '+totalKat+' kategori memiliki rentang khusus.</div>' + html;
     el.innerHTML = html;
     wrap.style.display = 'block';
 }
 
-/* ═══ POPULATE DROPDOWN KELAS ═══ */
 function populateKelasSelect(){
     var sel = document.getElementById('katKelasSelect');
     var currentVal = sel.value;
@@ -155,6 +167,20 @@ function populateKelasSelect(){
         opt.value=k;
         opt.textContent='Kelas '+k;
         if(katCount > 0) opt.textContent += ' ('+katCount+' kategori)';
+        sel.appendChild(opt);
+    }
+    var sep=document.createElement('option');
+    sep.disabled=true;
+    sep.textContent='\u2500\u2500 Tanpa Kelas \u2500\u2500';
+    sel.appendChild(sep);
+    for(var i=0;i<noKelasKategori.length;i++){
+        var nk=noKelasKategori[i];
+        var d=kelasRangeData[nk];
+        var hasR=d&&d.kategori&&d.kategori[nk];
+        var opt=document.createElement('option');
+        opt.value=nk;
+        opt.textContent=nk+' (Tanpa Kelas)';
+        if(hasR) opt.textContent+=' \u2714';
         sel.appendChild(opt);
     }
     if(currentVal) sel.value = currentVal;
@@ -192,17 +218,26 @@ function showExistingInfo(kelas){
         var name = keys[i];
         parts.push('<b>' + name + '</b> (' + kats[name].min + '\u2013' + kats[name].max + ')');
     }
-    textEl.innerHTML = 'Kelas ' + kelas + ' saat ini sudah dikonfigurasi: ' + parts.join(', ') + '. Anda bisa mengubah atau menambah rentang di bawah.';
+    var isNoKelas = noKelasKategori.indexOf(kelas) !== -1;
+    textEl.innerHTML = (isNoKelas ? '' : 'Kelas ') + kelas + ' saat ini sudah dikonfigurasi: ' + parts.join(', ') + '.';
     infoEl.style.display = 'block';
 }
 
-/* ═══ RENDER GRID INPUT KATEGORI ═══ */
 function renderKategoriGrid(kelas){
     var container = document.getElementById('katGrid');
     container.innerHTML='';
-    var existing = kelasRangeData[kelas].kategori || {};
+    var existing = kelasRangeData[kelas] ? kelasRangeData[kelas].kategori || {} : {};
 
-    for(var i=0;i<allKategoriList.length;i++){
+    var katsToShow;
+    if(kelas === 'Bonsai'){
+        katsToShow = ['Bonsai'];
+    } else if(kelas === 'Jumbo'){
+        katsToShow = ['Jumbo'];
+    } else {
+        katsToShow = kategoriListWithKelas;
+    }
+
+    for(var i=0;i<katsToShow.length;i++){
         (function(name){
             var kat = existing[name] || null;
             var hasSub = kat && kat.min && kat.max;
@@ -218,7 +253,7 @@ function renderKategoriGrid(kelas){
                 '</div>'+
                 '<div id="kat_hint_'+name+'" style="font-size:9px;color:var(--light);font-weight:600;transition:color .2s;">Kosongkan = pakai rentang global</div>';
             container.appendChild(card);
-        })(allKategoriList[i]);
+        })(katsToShow[i]);
     }
 }
 
@@ -234,8 +269,9 @@ function onKatInputChange(){
 }
 
 function validateAndHighlight(kelas){
-    for(var i=0; i<allKategoriList.length; i++){
-        var name = allKategoriList[i];
+    var checkKats = (kelas==='Bonsai') ? ['Bonsai'] : (kelas==='Jumbo') ? ['Jumbo'] : kategoriListWithKelas;
+    for(var i=0; i<checkKats.length; i++){
+        var name = checkKats[i];
         var card = document.getElementById('kat_card_' + name);
         var hint = document.getElementById('kat_hint_' + name);
         var minEl = document.getElementById('kat_' + name + '_min');
@@ -246,8 +282,8 @@ function validateAndHighlight(kelas){
         if(maxEl){ maxEl.style.borderColor=''; maxEl.style.boxShadow=''; }
     }
 
-    for(var i=0; i<allKategoriList.length; i++){
-        var name = allKategoriList[i];
+    for(var i=0; i<checkKats.length; i++){
+        var name = checkKats[i];
         var minEl = document.getElementById('kat_' + name + '_min');
         var maxEl = document.getElementById('kat_' + name + '_max');
         if(!minEl || !maxEl) continue;
@@ -292,20 +328,20 @@ function highlightCardError(name, msg){
     if(maxEl){ maxEl.style.borderColor='var(--danger)'; }
 }
 
-/* ═══ KUMPULKAN RENTANG DARI INPUT YANG SEDANG DIISI ═══ */
 function gatherInputRanges(kelas){
     var ranges = [];
-    for(var i=0; i<allKategoriList.length; i++){
-        var name = allKategoriList[i];
+    var checkKats = (kelas==='Bonsai') ? ['Bonsai'] : (kelas==='Jumbo') ? ['Jumbo'] : kategoriListWithKelas;
+    for(var i=0; i<checkKats.length; i++){
+        var name = checkKats[i];
         var minEl = document.getElementById('kat_' + name + '_min');
         var maxEl = document.getElementById('kat_' + name + '_max');
         if(!minEl || !maxEl) continue;
 
         var mv = minEl.value.trim(), xv = maxEl.value.trim();
-        if(mv === '' && xv === '') continue; // Kosong = pakai global, skip
+        if(mv === '' && xv === '') continue;
 
         mv = parseInt(mv); xv = parseInt(xv);
-        if(isNaN(mv) || isNaN(xv) || mv < 1 || xv < 1) continue; // Belum valid, skip dulu
+        if(isNaN(mv) || isNaN(xv) || mv < 1 || xv < 1) continue;
 
         ranges.push({ kategori: name, min: mv, max: xv });
     }
@@ -324,8 +360,9 @@ function validateRanges(kelas, inputRanges){
     var errors = [];
 
     var allExisting = [];
-    for(var ki=0; ki<kelasList.length; ki++){
-        var k = kelasList[ki];
+    var allKeys = kelasList.concat(noKelasKategori);
+    for(var ki=0; ki<allKeys.length; ki++){
+        var k = allKeys[ki];
         var kats = kelasRangeData[k].kategori || {};
         var keys = Object.keys(kats);
         for(var oi=0; oi<keys.length; oi++){
@@ -397,8 +434,9 @@ function saveKategoriRange(){
     if(!kelas){popupError('Pilih Kelas','Pilih kelas terlebih dahulu.'); return;}
 
     var kategori = {};
-    for(var i=0;i<allKategoriList.length;i++){
-        var name = allKategoriList[i];
+    var saveKats = (kelas==='Bonsai') ? ['Bonsai'] : (kelas==='Jumbo') ? ['Jumbo'] : kategoriListWithKelas;
+    for(var i=0;i<saveKats.length;i++){
+        var name = saveKats[i];
         var minEl=document.getElementById('kat_'+name+'_min');
         var maxEl=document.getElementById('kat_'+name+'_max');
         if(!minEl||!maxEl) continue;
@@ -417,8 +455,9 @@ function saveKategoriRange(){
     }
 
     var ranges = {};
-    for(var i=0;i<kelasList.length;i++){
-        var k=kelasList[i];
+    var allKeys = kelasList.concat(noKelasKategori);
+    for(var i=0;i<allKeys.length;i++){
+        var k=allKeys[i];
         ranges[k] = {kategori: kelasRangeData[k].kategori || {}};
     }
     ranges[kelas].kategori = kategori;
@@ -438,8 +477,9 @@ function saveKategoriRange(){
             fetch('/api/tank-range?_v='+Date.now(),{headers:{'Accept':'application/json'}})
             .then(function(r){return r.json();})
             .then(function(d){
-                for(var i=0;i<kelasList.length;i++){
-                    var k=kelasList[i];
+                var reloadKeys = kelasList.concat(noKelasKategori);
+                for(var i=0;i<reloadKeys.length;i++){
+                    var k=reloadKeys[i];
                     if(d[k]){
                         var katObj={};
                         if(d[k].kategori && typeof d[k].kategori==='object') katObj=d[k].kategori;
@@ -1822,6 +1862,7 @@ if(_regForm) _regForm.addEventListener('submit',function(e){
         if(d.success){
             form.reset();
             admRegSearchEl.value='';
+            if(regKelasWrap) regKelasWrap.style.display='';
             admRegSearchEl.classList.remove('input-success');
             admRegClearEl.style.display='none';
             admRegNama.value='';
@@ -2130,6 +2171,51 @@ openModal = function(id) {
     }
 }
 
+/* ═══════════════════════════════════════════════
+   RESET SEMUA RENTANG SUB-KATEGORI
+   ═══════════════════════════════════════════════ */
+function resetAllRanges(){
+    popupConfirm(
+        'Reset Semua Rentang',
+        'Yakin ingin menghapus <b>SEMUA</b> pengaturan rentang sub-kategori?<br><span style="font-size:11px;color:var(--warning);">Rentang Global <b>tidak terpengaruh</b>. Hanya sub-rentang per kategori/kelas yang dihapus.</span>',
+        'Ya, Hapus Semua',
+        function(){
+            var fd = new FormData();
+            fd.append('_token', getCsrf());
+            fd.append('ranges', JSON.stringify({}));
+
+            fetch('/api/admin/tank-range',{
+                method:'POST',
+                headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
+                body:fd
+            })
+            .then(function(r){if(!r.ok) return r.json().then(function(d){throw d;}); return r.json();})
+            .then(function(d){
+                if(d.success){
+                    var allKeys = kelasList.concat(noKelasKategori);
+                    for(var i=0; i<allKeys.length; i++){
+                        kelasRangeData[allKeys[i]] = {kategori: {}};
+                    }
+                    populateKelasSelect();
+                    renderRangeSummary();
+                    document.getElementById('katKelasSelect').value = '';
+                    document.getElementById('katGridWrap').style.display = 'none';
+                    document.getElementById('katEmptyState').style.display = 'block';
+                    hideKatError();
+                    loadDashboard();
+                    popupSuccess('Berhasil Direset','Semua pengaturan rentang sub-kategori telah dihapus. Ikan akan menggunakan Rentang Global.');
+                } else {
+                    popupError('Gagal', d.message || 'Terjadi kesalahan.');
+                }
+            })
+            .catch(function(e){
+                if(e.message) popupError('Gagal', esc(e.message));
+                else popupError('Kesalahan Jaringan','Gagal menghubungi server.');
+            });
+        }
+    );
+}
+
 function loadGlobalRangeDisplay(){
     fetch('/api/tank-range-global?_t='+Date.now(),{headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
@@ -2139,6 +2225,24 @@ function loadGlobalRangeDisplay(){
     })
     .catch(function(){
         document.getElementById('globalRangeDesc').textContent='Rentang undian: 1 – 1000';
+    });
+}
+
+/* ═══════════════════════════════════════════════
+   REGISTRASI: HIDE KELAS UNTUK BONSAI/JUMBO
+   ═══════════════════════════════════════════════ */
+var regKategoriSelect = document.querySelector('#regPesertaIkanForm select[name="kategori"]');
+var regKelasWrap = regKategoriSelect ? regKategoriSelect.closest('.form-group').nextElementSibling : null;
+var regKelasSelect = regKelasWrap ? regKelasWrap.querySelector('select[name="kelas"]') : null;
+
+if(regKategoriSelect && regKelasWrap){
+    regKategoriSelect.addEventListener('change', function(){
+        if(noKelasKategori.indexOf(this.value) !== -1){
+            if(regKelasSelect) regKelasSelect.value = '';
+            regKelasWrap.style.display = 'none';
+        } else {
+            regKelasWrap.style.display = '';
+        }
     });
 }
 
