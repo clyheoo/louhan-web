@@ -82,18 +82,25 @@ class GoogleSheetsService
         try {
             $data = [];
             foreach ($updates as $u) {
+                // ⛔ Safety: skip jika kolom melebihi Z (indeks 26)
+                $cell = $u['cell'];
+                $colLetter = preg_replace('/[0-9]/', '', $cell);
+                if ($this->letterToCol($colLetter) > 26) {
+                    Log::warning("Skip kolom {$colLetter} melebihi batas Z di sheet {$u['sheet']}");
+                    continue;
+                }
+
                 $data[] = [
                     'range'  => "'{$u['sheet']}'!{$u['cell']}",
                     'values' => [[$u['value']]],
                 ];
             }
+
+            if (empty($data)) return false;
+
+            $body = ['data' => $data];
             
-            $body = [
-                'valueInputOption' => 'USER_ENTERED',
-                'data' => $data,
-            ];
-            
-            $result = $this->apiCall('post', '/values:batchUpdate', $body);
+            $result = $this->apiCall('post', '/values:batchUpdate?valueInputOption=USER_ENTERED', $body);
             return !is_null($result);
         } catch (\Exception $e) {
             Log::error('Sheets Batch Error: ' . $e->getMessage());
@@ -126,11 +133,23 @@ class GoogleSheetsService
         return $letter;
     }
 
+    public function letterToCol(string $letter): int
+    {
+        $col = 0;
+        $length = strlen($letter);
+        for ($i = 0; $i < $length; $i++) {
+            $col = $col * 26 + (ord(strtoupper($letter[$i])) - 64);
+        }
+        return $col;
+    }
+
     public function getNextRow(string $sheetName, string $col = 'A')
     {
         try {
-            $data = $this->read($sheetName, "{$col}500");
-            return count($data) + 1;
+            $data = $this->read($sheetName, "{$col}1:{$col}1000");
+            $count = count($data);
+            // Jika baris 1 berisi header, mulai dari baris 2
+            return $count > 0 ? $count + 1 : 2;
         } catch (\Exception $e) {
             return 2;
         }

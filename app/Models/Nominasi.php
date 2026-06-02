@@ -28,7 +28,7 @@ class Nominasi extends Model
     }
 
     public function ikan()
-    {
+    {           
         return $this->belongsTo(Ikan::class);
     }
 

@@ -5,11 +5,12 @@ return [
     'credentials_path' => env('GOOGLE_SHEETS_CREDENTIALS_PATH'),
 
     'sheets' => [
-        'peserta'   => 'PESERTA',
-        'ploting'   => 'PLOTING TANK',
-        'nominasi'  => 'NOMINASI',
-        'pil_nom'   => 'PIL NOM',
-        'rumus'     => 'RUMUS PENILAIAN',
-        'nama_juri' => 'NAMA JURI',
+        'peserta'         => 'PESERTA',
+        'ploting'         => 'PLOTING TANK',
+        'nominasi'        => 'NOMINASI',
+        'pil_nom'         => 'PIL NOM',
+        'rumus'           => 'RUMUS PENILAIAN',
+        'nama_juri'       => 'NAMA JURI',
+        'hasil_nominasi'  => 'HASIL NOMINASI',
     ],
 ];

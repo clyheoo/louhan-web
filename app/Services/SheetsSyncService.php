@@ -228,14 +228,25 @@ class SheetsSyncService
             $noTank ?? '',
         ];
 
+        // Ambil baris tujuan SEBELUM append
+        $targetRow = $this->sheets->getNextRow($sheetName);
+
         $this->sheets->append($sheetName, $row);
 
+        // Tulis ke kolom mapping jika ada no tank
         if ($noTank) {
             $colIndex = $this->findPilNomColumn($ikan->kategori, $ikan->kelas);
             if ($colIndex !== null) {
-                $nextRow = $this->sheets->getNextRow($sheetName);
-                $cellLetter = $this->sheets->colToLetter($colIndex + 1);
-                $this->sheets->writeCell($sheetName, $cellLetter . ($nextRow - 1), $noTank);
+                $colNumber = $colIndex + 1;
+                // ⛔ Skip jika melebihi kolom Z (26)
+                if ($colNumber <= 26) {
+                    $cellLetter = $this->sheets->colToLetter($colNumber);
+                    // ⛔ Pastikan baris minimal 1 (tidak pernah 0)
+                    $safeRow = max(1, $targetRow);
+                    $this->sheets->writeCell($sheetName, $cellLetter . $safeRow, $noTank);
+                } else {
+                    Log::warning("tambahPilNom: kolom {$colNumber} melebihi Z, skip mapping untuk tank {$noTank}");
+                }
             }
         }
         return true;
@@ -261,8 +272,9 @@ class SheetsSyncService
             $ikan = $n->ikan;
             $peserta = $ikan->peserta ?? null;
             $noTank = $ikan->nomor_tank;
-            $actualRow = $rowIdx + 2;
+            $actualRow = $rowIdx + 2; // mulai dari baris 2
 
+            // Data utama A-H
             $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $actualRow, 'value' => $n->created_at ? Carbon::parse($n->created_at)->format('d/m/Y H:i:s') : ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $actualRow, 'value' => $juri->name ?? ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $actualRow, 'value' => $peserta->nama_peserta ?? ''];
@@ -271,6 +283,18 @@ class SheetsSyncService
             $batch[] = ['sheet' => $sheetName, 'cell' => 'F' . $actualRow, 'value' => ucfirst($peserta->jenis_keanggotaan ?? 'Team')];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'G' . $actualRow, 'value' => $peserta->detail_anggota ?? ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'H' . $actualRow, 'value' => $noTank ?? ''];
+
+            // ★ TAMBAHAN: Tulis ke kolom mapping
+            if ($noTank) {
+                $colIndex = $this->findPilNomColumn($ikan->kategori, $ikan->kelas);
+                if ($colIndex !== null) {
+                    $colNumber = $colIndex + 1;
+                    if ($colNumber <= 26) {
+                        $cellLetter = $this->sheets->colToLetter($colNumber);
+                        $batch[] = ['sheet' => $sheetName, 'cell' => $cellLetter . $actualRow, 'value' => $noTank];
+                    }
+                }
+            }
 
             $rowIdx++;
         }
@@ -488,11 +512,5 @@ class SheetsSyncService
         if (strtoupper($kategori) === 'JUMBO') return 'JUMBO';
         if (strtoupper($kategori) === 'BONSAI') return '-';
         return $kelas ?? '-';
-    }
-
-    public function getNextRow(string $sheetName, string $col = 'A')
-    {
-        $data = $this->read($sheetName, "{$col}1000");
-        return count($data) + 1;
     }
 }
