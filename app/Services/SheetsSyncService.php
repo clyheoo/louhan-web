@@ -738,7 +738,26 @@ class SheetsSyncService
             ->with(['peserta', 'bonusPoints'])
             ->get();
 
-        $this->sheets->clear($sheetName, 'A2:E500');
+        $sheetId = $this->sheets->getSheetId($sheetName);
+
+        // ★ FIX 1: Hapus merged cell DULU, baru clear data
+        $formatRequests = [
+            [
+                'unmergeCells' => [
+                    'range' => [
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => 0,
+                        'endRowIndex' => 1000,
+                        'startColumnIndex' => 0,
+                        'endColumnIndex' => 26
+                    ]
+                ]
+            ]
+        ];
+        $this->sheets->formatCells($formatRequests);
+
+        // Clear seluruh data
+        $this->sheets->clear($sheetName, 'A1:Z1000');
 
         if ($ikans->isEmpty()) return 0;
 
@@ -746,20 +765,7 @@ class SheetsSyncService
 
         $batch = [];
         $formatRequests = [];
-        $sheetId = $this->sheets->getSheetId($sheetName);
-        $row = 2;
-
-        $formatRequests[] = [
-            'unmergeCells' => [
-                'range' => [
-                    'sheetId' => $sheetId,
-                    'startRowIndex' => 1,
-                    'endRowIndex' => 500,
-                    'startColumnIndex' => 0,
-                    'endColumnIndex' => 5
-                ]
-            ]
-        ];
+        $row = 1; // ★ Mulai dari baris 1
 
         foreach ($groups as $pesertaId => $items) {
             $peserta = $items->first()->peserta;
@@ -812,12 +818,13 @@ class SheetsSyncService
                 $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $row, 'value' => $nama];
                 $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $row, 'value' => strtoupper($ikan->kategori ?? '')];
                 $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $row, 'value' => $ikan->nomor_tank ?? ''];
-                $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => $point ?: ''];
+                // ★ FIX 2: Tulis 0 bukan kosong jika point = 0
+                $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => $point];
                 $row++;
                 $no++;
             }
 
-            // Total point di kolom E
+            // Total point
             $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => $totalPoint];
             $row++;
 
