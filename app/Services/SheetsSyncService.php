@@ -528,7 +528,7 @@ class SheetsSyncService
         $sheetName = $this->sheetNames['hasil_nominasi'];
         
         $nominasis = Nominasi::with(['juri', 'reviewer', 'ikan.peserta'])
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'rejected'])
             ->whereNotNull('reviewed_by')
             ->orderByDesc('reviewed_at')
             ->get();
@@ -543,7 +543,7 @@ class SheetsSyncService
 
             return [
                 $n->reviewed_at ? Carbon::parse($n->reviewed_at)->format('d/m/Y H:i:s') : '',
-                '✅ DISETUJUI GRAND JURI',
+                $n->status === 'approved' ? '✅ DISETUJUI GRAND JURI' : '❌ DITOLAK GRAND JURI',
                 $peserta->nama_peserta ?? '',
                 strtoupper($ikan->kategori ?? ''),
                 $this->formatKelasNominasi($ikan->kategori, $ikan->kelas),
