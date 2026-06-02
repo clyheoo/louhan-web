@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Peserta;
 use App\Models\Ikan;
 use App\Models\User;
+use App\Services\SheetsSyncService;
 
 class DashboardController extends Controller
 {
@@ -239,6 +240,9 @@ class DashboardController extends Controller
                 $ikan->save();
             });
 
+            // ★ AUTO-SYNC
+            try { app(\App\Services\SheetsSyncService::class)->syncSemuaPeserta(); } catch (\Exception $e) {}
+
             return response()->json([
                 'success'      => true,
                 'nomor_tank'   => $ikan->fresh()->nomor_tank,
@@ -392,6 +396,9 @@ class DashboardController extends Controller
 
                 $ikan->save();
             });
+
+            // ★ AUTO-SYNC
+            try { app(\App\Services\SheetsSyncService::class)->syncSemuaPeserta(); } catch (\Exception $e) {}
 
             return response()->json([
                 'success'    => true,

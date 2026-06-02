@@ -95,7 +95,7 @@ class AdminDashboardController extends Controller
 
         $kelas = in_array($request->kategori, $noKelasKategori) ? null : $request->kelas;
 
-        Ikan::create([
+        $ikan = Ikan::create([
             'peserta_id'   => $peserta->id,
             'kategori'     => $request->kategori,
             'kelas'        => $kelas,
@@ -105,7 +105,7 @@ class AdminDashboardController extends Controller
                 // ★ AUTO-SYNC KE GOOGLE SHEETS
         try {
             if ($this->sheetsSync->isReady()) {
-                $this->sheetsSync->tambahPeserta($ikan->fresh());
+                $this->sheetsSync->syncSemuaPeserta();
             }
         } catch (\Exception $e) {
             \Log::warning('Sheets sync gagal: ' . $e->getMessage());
@@ -485,6 +485,17 @@ class AdminDashboardController extends Controller
         // 4. Baru hapus user-nya
         $user->delete();
 
+        // ★ AUTO-SYNC KE GOOGLE SHEETS
+        try {
+            if ($this->sheetsSync->isReady()) {
+                $this->sheetsSync->syncSemuaPeserta();
+                $this->sheetsSync->syncNamaJuri();
+                $this->sheetsSync->syncHasilJuri();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Sheets sync gagal saat hapus user: ' . $e->getMessage());
+        }
+
         return response()->json(['success' => true, 'message' => 'User "' . $name . '" berhasil dihapus.']);
     }
 
@@ -592,6 +603,16 @@ class AdminDashboardController extends Controller
 
         // Hapus data ikan
         $ikan->delete();
+
+        // ★ AUTO-SYNC KE GOOGLE SHEETS
+        try {
+            if ($this->sheetsSync->isReady()) {
+                $this->sheetsSync->syncSemuaPeserta();
+                $this->sheetsSync->syncHasilJuri();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Sheets sync gagal saat hapus ikan: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true, 

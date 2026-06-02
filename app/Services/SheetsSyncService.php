@@ -250,7 +250,7 @@ class SheetsSyncService
             ->orderBy('created_at')
             ->get();
 
-        $this->sheets->clear($sheetName, 'A2:AM2000');
+        $this->sheets->clear($sheetName, 'A2:Z1000');
         if ($nominasis->isEmpty()) return 0;
 
         $batch = [];
@@ -272,13 +272,6 @@ class SheetsSyncService
             $batch[] = ['sheet' => $sheetName, 'cell' => 'G' . $actualRow, 'value' => $peserta->detail_anggota ?? ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'H' . $actualRow, 'value' => $noTank ?? ''];
 
-            if ($noTank) {
-                $colIndex = $this->findPilNomColumn($ikan->kategori, $ikan->kelas);
-                if ($colIndex !== null) {
-                    $cellLetter = $this->sheets->colToLetter($colIndex + 1);
-                    $batch[] = ['sheet' => $sheetName, 'cell' => $cellLetter . $actualRow, 'value' => $noTank];
-                }
-            }
             $rowIdx++;
         }
 
@@ -327,7 +320,7 @@ class SheetsSyncService
 
         // Kita akan letakkan di kolom yang jauh di kanan agar tidak menimpa rumus
         // Misal mulai kolom AQ (ke-43)
-        $startColIndex = 42; 
+        $startColIndex = 0; 
         $startRow = 1;
 
         $batch = [];
@@ -401,7 +394,7 @@ class SheetsSyncService
         $startRow = 30;
         
         // Hapus data lama (asumsi max 5000 baris data juri)
-        $this->sheets->clear($sheetName, "A{$startRow}:AM5000");
+        $this->sheets->clear($sheetName, "A{$startRow}:X500");
 
         $batch = [];
         
@@ -495,5 +488,11 @@ class SheetsSyncService
         if (strtoupper($kategori) === 'JUMBO') return 'JUMBO';
         if (strtoupper($kategori) === 'BONSAI') return '-';
         return $kelas ?? '-';
+    }
+
+    public function getNextRow(string $sheetName, string $col = 'A')
+    {
+        $data = $this->read($sheetName, "{$col}1000");
+        return count($data) + 1;
     }
 }

@@ -2,41 +2,24 @@
 
 namespace App\Services;
 
-use Google\Client;
-use Google\Service\Sheets;
-use Google\Service\Sheets\ValueRange;
-use Google\Service\Sheets\BatchUpdateValuesRequest;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class GoogleSheetsService
 {
-    protected $client;
-    protected $service;
     protected $spreadsheetId;
+    protected $accessToken;
 
     public function __construct()
     {
         $this->spreadsheetId = config('google-sheets.spreadsheet_id');
-
-        if (!$this->spreadsheetId) {
-            return;
-        }
-
-        try {
-            $this->client = new Client();
-            $this->client->setAuthConfig(storage_path(config('google-sheets.credentials_path')));
-            $this->client->addScope(Sheets::SPREADSHEETS);
-            $this->client->setAccessType('offline');
-            $this->service = new Sheets($this->client);
-        } catch (\Exception $e) {
-            Log::error('Google Sheets Init Error: ' . $e->getMessage());
-            $this->service = null;
-        }
     }
 
     public function isReady(): bool
     {
-        return $this->service !== null && $this->spreadsheetId;
+        $credentialsPath = storage_path(config('google-sheets.credentials_path'));
+        return $this->spreadsheetId && file_exists($credentialsPath);
     }
 
     public function read(string $sheetName, string $range = 'A:Z')
@@ -45,8 +28,8 @@ class GoogleSheetsService
 
         try {
             $range = "'{$sheetName}'!{$range}";
-            $response = $this->service->spreadsheets_values->get($this->spreadsheetId, $range);
-            return $response->getValues() ?? [];
+            $data = $this->apiCall('get', "/values/" . urlencode($range));
+            return $data['values'] ?? [];
         } catch (\Exception $e) {
             Log::error('Sheets Read Error [' . $sheetName . ']: ' . $e->getMessage());
             return [];
@@ -59,12 +42,11 @@ class GoogleSheetsService
 
         try {
             $range = "'{$sheetName}'!{$range}";
-            $body = new ValueRange(['values' => $values]);
-            $params = ['valueInputOption' => $raw ? 'RAW' : 'USER_ENTERED'];
-            $result = $this->service->spreadsheets_values->update(
-                $this->spreadsheetId, $range, $body, $params
-            );
-            return $result->getUpdatedCells();
+            $params = '?valueInputOption=' . ($raw ? 'RAW' : 'USER_ENTERED');
+            $body = ['values' => $values];
+            
+            $data = $this->apiCall('put', "/values/" . urlencode($range) . $params, $body);
+            return $data['updatedCells'] ?? false;
         } catch (\Exception $e) {
             Log::error('Sheets Write Error [' . $sheetName . ']: ' . $e->getMessage());
             return false;
@@ -82,15 +64,11 @@ class GoogleSheetsService
 
         try {
             $range = "'{$sheetName}'!A:A";
-            $body = new ValueRange(['values' => [$rowData]]);
-            $params = [
-                'valueInputOption' => 'USER_ENTERED',
-                'insertDataOption' => 'INSERT_ROWS'
-            ];
-            $result = $this->service->spreadsheets_values->append(
-                $this->spreadsheetId, $range, $body, $params
-            );
-            return $result->getUpdates()->getUpdatedCells();
+            $params = '?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS';
+            $body = ['values' => [$rowData]];
+            
+            $data = $this->apiCall('post', "/values/" . urlencode($range) . ":append" . $params, $body);
+            return $data['updates']['updatedCells'] ?? false;
         } catch (\Exception $e) {
             Log::error('Sheets Append Error [' . $sheetName . ']: ' . $e->getMessage());
             return false;
@@ -109,12 +87,14 @@ class GoogleSheetsService
                     'values' => [[$u['value']]],
                 ];
             }
-            $body = new BatchUpdateValuesRequest([
+            
+            $body = [
                 'valueInputOption' => 'USER_ENTERED',
                 'data' => $data,
-            ]);
-            $this->service->spreadsheets_values->batchUpdate($this->spreadsheetId, $body);
-            return true;
+            ];
+            
+            $result = $this->apiCall('post', '/values:batchUpdate', $body);
+            return !is_null($result);
         } catch (\Exception $e) {
             Log::error('Sheets Batch Error: ' . $e->getMessage());
             return false;
@@ -127,11 +107,8 @@ class GoogleSheetsService
 
         try {
             $range = "'{$sheetName}'!{$range}";
-            $this->service->spreadsheets_values->clear(
-                $this->spreadsheetId, $range,
-                new \Google\Service\Sheets\ClearValuesRequest()
-            );
-            return true;
+            $result = $this->apiCall('post', "/values/" . urlencode($range) . ":clear");
+            return !is_null($result);
         } catch (\Exception $e) {
             Log::error('Sheets Clear Error: ' . $e->getMessage());
             return false;
@@ -151,7 +128,105 @@ class GoogleSheetsService
 
     public function getNextRow(string $sheetName, string $col = 'A')
     {
-        $data = $this->read($sheetName, "{$col}2000");
-        return count($data) + 1;
+        try {
+            $data = $this->read($sheetName, "{$col}500");
+            return count($data) + 1;
+        } catch (\Exception $e) {
+            return 2;
+        }
+    }
+
+    /* ═══════════════════════════════════════════
+       INTERNAL: HTTP CLIENT & JWT AUTH
+       ═══════════════════════════════════════════ */
+
+    private function apiCall(string $method, string $uri, ?array $body = null)
+    {
+        $token = $this->getAccessToken();
+        if (!$token) return null;
+
+        $url = "https://sheets.googleapis.com/v4/spreadsheets/{$this->spreadsheetId}" . $uri;
+        $http = Http::withToken($token);
+
+        if ($method === 'get') {
+            $response = $http->get($url);
+        } else {
+            $response = $http->{$method}($url, $body);
+        }
+
+        if (!$response->successful()) {
+            Log::error("Sheets API Error [{$method} {$uri}]: " . $response->body());
+            return null;
+        }
+
+        return $response->json();
+    }
+
+    private function getAccessToken()
+    {
+        if (Cache::has('google_sheets_token')) {
+            $this->accessToken = Cache::get('google_sheets_token');
+            return $this->accessToken;
+        }
+
+        $credentialsPath = storage_path(config('google-sheets.credentials_path'));
+        if (!file_exists($credentialsPath)) return null;
+
+        $cred = json_decode(file_get_contents($credentialsPath), true);
+        if (!$cred || !isset($cred['client_email'], $cred['private_key'])) {
+            Log::error('Invalid Google Credentials format.');
+            return null;
+        }
+
+        $now = time();
+        $payload = [
+            'iss'   => $cred['client_email'],
+            'scope' => 'https://www.googleapis.com/auth/spreadsheets',
+            'aud'   => 'https://oauth2.googleapis.com/token',
+            'iat'   => $now,
+            'exp'   => $now + 3600,
+        ];
+
+        $jwt = $this->encodeJwt($payload, $cred['private_key']);
+
+        $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+            'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            'assertion'  => $jwt,
+        ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            $token = $data['access_token'];
+            Cache::put('google_sheets_token', $token, 3500); 
+            $this->accessToken = $token;
+            return $token;
+        }
+
+        Log::error('Failed to get Google Access Token: ' . $response->body());
+        return null;
+    }
+
+    private function encodeJwt(array $payload, string $privateKey): string
+    {
+        $header = ['alg' => 'RS256', 'typ' => 'JWT'];
+        $base64UrlHeader = $this->base64UrlEncode(json_encode($header));
+        $base64UrlPayload = $this->base64UrlEncode(json_encode($payload));
+
+        $signature = '';
+        openssl_sign(
+            $base64UrlHeader . '.' . $base64UrlPayload,
+            $signature,
+            $privateKey,
+            OPENSSL_ALGO_SHA256
+        );
+
+        $base64UrlSignature = $this->base64UrlEncode($signature);
+
+        return $base64UrlHeader . '.' . $base64UrlPayload . '.' . $base64UrlSignature;
+    }
+
+    private function base64UrlEncode(string $data): string
+    {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
     }
 }
