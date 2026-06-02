@@ -611,7 +611,10 @@ class SheetsSyncService
         $sheetId = $this->sheets->getSheetId($sheetName);
 
         $cyanBg = [
-            'red' => 0.0, 'green' => 0.75, 'blue' => 0.85
+            'red'   => 0.0,
+            'green' => 1.0,
+            'blue'  => 1.0,
+            'alpha' => 1.0
         ];
 
         $row = 3;
