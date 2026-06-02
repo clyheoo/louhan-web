@@ -571,21 +571,20 @@ class SheetsSyncService
     {
         $sheetName = $this->sheetNames['nominasi_fix'];
 
-        // ★ FIX 1: unique('ikan_id') agar 1 tank tidak muncul 2x
         $nominasis = Nominasi::with('ikan')
             ->where('status', 'approved')
             ->get()
             ->unique('ikan_id');
 
-        $this->sheets->clear($sheetName, 'A2:E500');
+        $this->sheets->clear($sheetName, 'A3:E500');
 
         if ($nominasis->isEmpty()) return 0;
 
-        // Kelompokkan per kategori + kelas
         $groups = [];
         foreach ($nominasis as $n) {
             $ikan = $n->ikan;
-            if (!$ikan || !$ikan->nomor_tank) continue;
+            // ★ Hanya skip jika ikan benar-benar tidak ada
+            if (!$ikan) continue;
 
             $kat = strtoupper($ikan->kategori ?? '');
             $kelas = $this->formatKelasNominasi($ikan->kategori, $ikan->kelas);
@@ -601,7 +600,7 @@ class SheetsSyncService
             $groups[$groupKey][] = [
                 'kategori'  => $kat,
                 'kelas'     => $kelas,
-                'no_tank'   => $ikan->nomor_tank,
+                'no_tank'   => $ikan->nomor_tank ?? '',
             ];
         }
 
@@ -610,14 +609,18 @@ class SheetsSyncService
         $batch = [];
         $formatRequests = [];
         $sheetId = $this->sheets->getSheetId($sheetName);
-        $row = 2;
 
-        // ★ Hapus semua merge cell lama di range ini agar tidak berantakan
+        $cyanBg = [
+            'red' => 0.0, 'green' => 0.75, 'blue' => 0.85
+        ];
+
+        $row = 3;
+
         $formatRequests[] = [
             'unmergeCells' => [
                 'range' => [
                     'sheetId' => $sheetId,
-                    'startRowIndex' => 1,
+                    'startRowIndex' => 2,
                     'endRowIndex' => 500,
                     'startColumnIndex' => 0,
                     'endColumnIndex' => 5
@@ -626,10 +629,9 @@ class SheetsSyncService
         ];
 
         foreach ($groups as $groupName => $items) {
-            // 1. Header Grup (Nama Kategori)
+            // 1. Header Grup
             $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => $groupName];
-            
-            // Format: Bold + Center + Merge A:E
+
             $formatRequests[] = [
                 'mergeCells' => [
                     'range' => [
@@ -650,22 +652,25 @@ class SheetsSyncService
                     'cell' => [
                         'userEnteredFormat' => [
                             'horizontalAlignment' => 'CENTER',
-                            'textFormat' => ['bold' => true]
+                            'backgroundColor'   => $cyanBg,
+                            'textFormat' => [
+                                'bold'     => true,
+                                'fontSize' => 17
+                            ]
                         ]
                     ],
-                    'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)'
+                    'fields' => 'userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)'
                 ]
             ];
             $row++;
 
-            // 2. Sub-header (Kolom)
+            // 2. Sub-header
             $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => 'NO URUT'];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $row, 'value' => 'KATEGORI'];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $row, 'value' => 'KELAS'];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $row, 'value' => 'NO TANK'];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => 'KETERANGAN'];
 
-            // Format: Background Biru Muda
             $formatRequests[] = [
                 'repeatCell' => [
                     'range' => [
@@ -675,12 +680,14 @@ class SheetsSyncService
                     ],
                     'cell' => [
                         'userEnteredFormat' => [
-                            'backgroundColor' => [
-                                'red' => 0.85, 'green' => 0.92, 'blue' => 0.98
+                            'backgroundColor' => $cyanBg,
+                            'textFormat' => [
+                                'bold'     => false,
+                                'fontSize' => 10
                             ]
                         ]
                     ],
-                    'fields' => 'userEnteredFormat(backgroundColor)'
+                    'fields' => 'userEnteredFormat(backgroundColor,textFormat)'
                 ]
             ];
             $row++;
@@ -697,15 +704,13 @@ class SheetsSyncService
                 $row++;
             }
 
-            // Baris kosong pemisah antar grup
-            $row++;
+            $row += 2;
         }
 
         if (!empty($batch)) {
             $this->sheets->batchUpdate($batch);
         }
 
-        // ★ Jalankan formatting (merge, bold, warna biru)
         if (!empty($formatRequests)) {
             $this->sheets->formatCells($formatRequests);
         }
