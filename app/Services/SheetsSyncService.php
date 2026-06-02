@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Ikan;
 use App\Models\Peserta;
 use App\Models\Nominasi;
+use App\Helpers\PointCalculator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -722,9 +723,11 @@ class SheetsSyncService
         return $nominasis->count();
     }
 
-        /* ═══════════════════════════════════════════
-       SHEET: MVP
-       Dikelompokkan per peserta, ada total point
+    /* ═══════════════════════════════════════════
+       SHEET: MVP (LAYOUT HORIZONTAL)
+       Setiap peserta = 1 tabel (5 kolom)
+       Maks 4 tabel per baris, gap 1 kolom
+       Batas kolom W
        ═══════════════════════════════════════════ */
 
     public function syncMvp()
@@ -735,109 +738,217 @@ class SheetsSyncService
             ->whereHas('peserta', function ($q) {
                 $q->where('is_mvp_submitted', true);
             })
-            ->with(['peserta', 'bonusPoints'])
+            ->with(['peserta', 'bonusPoints', 'scorings'])
             ->get();
 
         $sheetId = $this->sheets->getSheetId($sheetName);
 
-        // ★ FIX 1: Hapus merged cell DULU, baru clear data
-        $formatRequests = [
-            [
-                'unmergeCells' => [
-                    'range' => [
-                        'sheetId' => $sheetId,
-                        'startRowIndex' => 0,
-                        'endRowIndex' => 1000,
-                        'startColumnIndex' => 0,
-                        'endColumnIndex' => 26
-                    ]
-                ]
-            ]
-        ];
-        $this->sheets->formatCells($formatRequests);
-
-        // Clear seluruh data
-        $this->sheets->clear($sheetName, 'A1:Z1000');
+        // ★ Clear data saja
+        $this->sheets->clear($sheetName, 'A1:W1000');
 
         if ($ikans->isEmpty()) return 0;
 
-        $groups = $ikans->groupBy('peserta_id');
+        // ─── Konfigurasi Layout ───
+        $COLS_PER_TABLE = 5;
+        $COL_GAP = 1;
+        $TABLES_PER_ROW = 4;
 
-        $batch = [];
-        $formatRequests = [];
-        $row = 1; // ★ Mulai dari baris 1
+        $tableColStarts = [];
+        $col = 0;
+        for ($i = 0; $i < $TABLES_PER_ROW; $i++) {
+            $tableColStarts[] = $col;
+            $col += $COLS_PER_TABLE + $COL_GAP;
+        }
+
+        // ─── Group & Siapkan Data Per Peserta ───
+        $groups = $ikans->groupBy('peserta_id');
+        $pesertaData = [];
 
         foreach ($groups as $pesertaId => $items) {
             $peserta = $items->first()->peserta;
             $nama = $peserta->nama_peserta ?? 'Unknown';
-            $jenis = ucfirst($peserta->jenis_keanggotaan ?? 'Team');
             $team = $peserta->detail_anggota ?? '';
 
-            $headerText = $nama . ' - ' . $jenis;
-            if ($team) $headerText .= ' ' . $team;
+            $headerText = $nama;
+            if ($team) $headerText .= ' - ' . $team;
 
-            // Header grup — bold, size 10, tanpa background
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => $headerText];
-
-            $formatRequests[] = [
-                'repeatCell' => [
-                    'range' => [
-                        'sheetId' => $sheetId,
-                        'startRowIndex' => $row - 1, 'endRowIndex' => $row,
-                        'startColumnIndex' => 0, 'endColumnIndex' => 5
-                    ],
-                    'cell' => [
-                        'userEnteredFormat' => [
-                            'textFormat' => [
-                                'bold'     => true,
-                                'fontSize' => 10
-                            ]
-                        ]
-                    ],
-                    'fields' => 'userEnteredFormat(textFormat)'
-                ]
-            ];
-            $row++;
-
-            // Kolom header
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => 'No'];
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $row, 'value' => 'NAMA PESERTA'];
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $row, 'value' => 'KATEGORI'];
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $row, 'value' => 'NO TANK'];
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => 'POINT'];
-            $row++;
-
-            // Data rows
-            $no = 1;
+            $rows = [];
             $totalPoint = 0;
+            $no = 1;
+
             foreach ($items as $ikan) {
-                $point = (int) $ikan->bonusPoints->sum('points');
+                $point = $this->hitungFinalPoint($ikan);
                 $totalPoint += $point;
 
-                $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => $no];
-                $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $row, 'value' => $nama];
-                $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $row, 'value' => strtoupper($ikan->kategori ?? '')];
-                $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $row, 'value' => $ikan->nomor_tank ?? ''];
-                // ★ FIX 2: Tulis 0 bukan kosong jika point = 0
-                $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => $point];
-                $row++;
+                $rows[] = [
+                    $no,
+                    $nama,
+                    strtoupper($ikan->kategori ?? ''),
+                    $ikan->nomor_tank ?? '',
+                    $point
+                ];
                 $no++;
             }
 
-            // Total point
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => $totalPoint];
-            $row++;
+            $tableHeight = 2 + count($rows) + 1;
 
-            // Baris kosong pemisah
-            $row++;
+            $pesertaData[] = [
+                'header'     => $headerText,
+                'rows'       => $rows,
+                'totalPoint' => $totalPoint,
+                'height'     => $tableHeight
+            ];
         }
 
+        // ─── Bangun Batch Write ───
+        $batch = [];
+        $formatRequests = [];
+        $currentRow = 1;
+        $pesertaIndex = 0;
+        $totalPeserta = count($pesertaData);
+
+        while ($pesertaIndex < $totalPeserta) {
+            $rowPesertas = [];
+            $maxHeight = 0;
+
+            for ($i = 0; $i < $TABLES_PER_ROW && $pesertaIndex < $totalPeserta; $i++) {
+                $rowPesertas[] = [
+                    'data'     => $pesertaData[$pesertaIndex],
+                    'colStart' => $tableColStarts[$i]
+                ];
+                $maxHeight = max($maxHeight, $pesertaData[$pesertaIndex]['height']);
+                $pesertaIndex++;
+            }
+
+            foreach ($rowPesertas as $rp) {
+                $data = $rp['data'];
+                $cs = $rp['colStart'];
+
+                // ── Baris 1: Header di SETIAP kolom (tanpa merge) ──
+                for ($ci = 0; $ci < $COLS_PER_TABLE; $ci++) {
+                    $batch[] = [
+                        'sheet' => $sheetName,
+                        'cell'  => $this->sheets->colToLetter($cs + $ci + 1) . $currentRow,
+                        'value' => $data['header']
+                    ];
+                }
+
+                if ($sheetId !== null) {
+                    $formatRequests[] = [
+                        'repeatCell' => [
+                            'range' => [
+                                'sheetId' => $sheetId,
+                                'startRowIndex' => $currentRow - 1,
+                                'endRowIndex' => $currentRow,
+                                'startColumnIndex' => $cs,
+                                'endColumnIndex' => $cs + $COLS_PER_TABLE
+                            ],
+                            'cell' => [
+                                'userEnteredFormat' => [
+                                    'horizontalAlignment' => 'CENTER',
+                                    'textFormat' => [
+                                        'bold'     => true,
+                                        'fontSize' => 10
+                                    ]
+                                ]
+                            ],
+                            'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)'
+                        ]
+                    ];
+                }
+
+                // ── Baris 2: Sub-Header ──
+                $subRow = $currentRow + 1;
+                $subHeaders = ['NO', 'NAMA PESERTA', 'KATEGORI', 'NO TANK', 'POINT'];
+                foreach ($subHeaders as $ci => $val) {
+                    $batch[] = [
+                        'sheet' => $sheetName,
+                        'cell'  => $this->sheets->colToLetter($cs + $ci + 1) . $subRow,
+                        'value' => $val
+                    ];
+                }
+
+                // ── Baris 3+: Data Ikan ──
+                $dataRow = $subRow + 1;
+                foreach ($data['rows'] as $row) {
+                    foreach ($row as $ci => $val) {
+                        $batch[] = [
+                            'sheet' => $sheetName,
+                            'cell'  => $this->sheets->colToLetter($cs + $ci + 1) . $dataRow,
+                            'value' => $val
+                        ];
+                    }
+                    $dataRow++;
+                }
+
+                // ── Baris Terakhir: TOTAL ──
+                $batch[] = [
+                    'sheet' => $sheetName,
+                    'cell'  => $this->sheets->colToLetter($cs + 3) . $dataRow,
+                    'value' => 'TOTAL'
+                ];
+                $batch[] = [
+                    'sheet' => $sheetName,
+                    'cell'  => $this->sheets->colToLetter($cs + 5) . $dataRow,
+                    'value' => (int) $data['totalPoint']
+                ];
+            }
+
+            $currentRow += $maxHeight + 1;
+        }
+
+        // ─── Eksekusi Data ───
         if (!empty($batch)) {
-            $this->sheets->batchUpdate($batch);
+            foreach (array_chunk($batch, 500) as $chunk) {
+                $this->sheets->batchUpdate($chunk);
+            }
         }
 
-        if (!empty($formatRequests)) {
-            $this->sheets->formatCells($formatRequests);
+        // ─── Eksekusi Format (center, bold) ───
+        if (!empty($formatRequests) && $sheetId !== null) {
+            foreach (array_chunk($formatRequests, 50) as $chunk) {
+                $this->sheets->formatCells($chunk);
+            }
+        }
+
+        // ─── Merge Header (terpisah, boleh gagal) ───
+        if ($sheetId !== null) {
+            $mergeRequests = [];
+            $currentRowMerge = 1;
+            $pesertaIndexMerge = 0;
+
+            while ($pesertaIndexMerge < $totalPeserta) {
+                for ($i = 0; $i < $TABLES_PER_ROW && $pesertaIndexMerge < $totalPeserta; $i++) {
+                    $cs = $tableColStarts[$i];
+                    $height = $pesertaData[$pesertaIndexMerge]['height'];
+
+                    $mergeRequests[] = [
+                        'mergeCells' => [
+                            'range' => [
+                                'sheetId' => $sheetId,
+                                'startRowIndex' => $currentRowMerge - 1,
+                                'endRowIndex' => $currentRowMerge,
+                                'startColumnIndex' => $cs,
+                                'endColumnIndex' => $cs + $COLS_PER_TABLE
+                            ],
+                            'mergeType' => 'MERGE_ALL'
+                        ]
+                    ];
+
+                    $currentRowMerge += $height + 1;
+                    $pesertaIndexMerge++;
+                }
+            }
+
+            if (!empty($mergeRequests)) {
+                try {
+                    foreach (array_chunk($mergeRequests, 50) as $chunk) {
+                        $this->sheets->formatCells($chunk);
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Merge header MVP gagal (tidak kritis): ' . $e->getMessage());
+                }
+            }
         }
 
         return $ikans->count();
@@ -848,5 +959,45 @@ class SheetsSyncService
         if (strtoupper($kategori) === 'JUMBO') return 'JUMBO';
         if (strtoupper($kategori) === 'BONSAI') return '-';
         return $kelas ?? '-';
+    }
+
+    private function hitungFinalPoint(Ikan $ikan): float
+    {
+        $scorings = $ikan->scorings;
+        $totalBonus = (int) $ikan->bonusPoints->sum('points');
+
+        if ($scorings->isEmpty()) {
+            return (float) $totalBonus;
+        }
+
+        // Hitung rata-rata nilai_detail dari semua juri
+        $avgDetail = [];
+        foreach ($scorings as $s) {
+            if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                foreach ($s->nilai_detail as $kat => $fields) {
+                    if (!is_array($fields)) continue;
+                    foreach ($fields as $fid => $val) {
+                        if (!isset($avgDetail[$kat][$fid])) {
+                            $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                        }
+                        $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                        $avgDetail[$kat][$fid]['count']++;
+                    }
+                }
+            }
+        }
+
+        $finalAvgDetail = [];
+        foreach ($avgDetail as $kat => $fields) {
+            $finalAvgDetail[$kat] = [];
+            foreach ($fields as $fid => $d) {
+                $finalAvgDetail[$kat][$fid] = $d['count'] > 0
+                    ? $d['sum'] / $d['count']
+                    : 0;
+            }
+        }
+
+        $calculatedPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+        return (float) ($calculatedPoint + $totalBonus);
     }
 }

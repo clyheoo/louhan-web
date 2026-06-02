@@ -261,7 +261,8 @@ class GoogleSheetsService
                 return $this->sheetIdCache[$sheetName];
             }
         }
-        return 0;
+        Log::warning("Sheet '{$sheetName}' tidak ditemukan di spreadsheet");
+        return null;
     }
 
     public function formatCells(array $requests)

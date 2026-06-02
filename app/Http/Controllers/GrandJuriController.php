@@ -572,6 +572,13 @@ class GrandJuriController extends Controller
             \Log::error('Auto-sync hasil juri gagal (edit): ' . $e->getMessage()); 
         }
 
+        // ★ AUTO-SYNC MVP
+        try { 
+            $this->sheetsSync->syncMvp(); 
+        } catch (\Exception $e) { 
+            \Log::error('Auto-sync MVP gagal (edit): ' . $e->getMessage()); 
+        }
+
         return response()->json([
             'success'     => true,
             'message'     => 'Nilai berhasil diperbarui oleh Grand Juri!',

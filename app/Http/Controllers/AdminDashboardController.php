@@ -655,6 +655,9 @@ class AdminDashboardController extends Controller
             'added_by'   => auth()->id(),
         ]);
 
+        // ★ AUTO-SYNC MVP
+        try { $this->sheetsSync->syncMvp(); } catch (\Exception $e) { \Log::error('Auto-sync MVP gagal (admin add bonus): ' . $e->getMessage()); }
+
         return response()->json([
             'success' => true,
             'message' => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" (+100) berhasil ditambahkan.',
@@ -680,6 +683,9 @@ class AdminDashboardController extends Controller
         }
 
         $bonus->delete();
+
+        // ★ AUTO-SYNC MVP
+        try { $this->sheetsSync->syncMvp(); } catch (\Exception $e) { \Log::error('Auto-sync MVP gagal (admin remove bonus): ' . $e->getMessage()); }
 
         return response()->json([
             'success' => true,
