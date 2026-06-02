@@ -197,11 +197,12 @@ class GrandJuriController extends Controller
         if ($action === 'approve') {
             try {
                 if ($this->sheetsSync->isReady()) {
-                    $this->sheetsSync->tambahNominasi($nominasi->fresh());
-                    $this->sheetsSync->tambahPilNom($nominasi->fresh());
+                    $this->sheetsSync->syncSemuaNominasi();
+                    $this->sheetsSync->syncSemuaPilNom();
+                    $this->sheetsSync->syncHasilNominasi();
                 }
             } catch (\Exception $e) {
-                \Log::warning('Sheets sync nominasi gagal: ' . $e->getMessage());
+                \Log::error('Auto-sync nominasi gagal: ' . $e->getMessage());
             }
         }
 
@@ -563,6 +564,13 @@ class GrandJuriController extends Controller
             'total_sebelum'  => $totalSebelum,
             'total_sesudah'  => $totalNilai,
         ]);
+
+        // ★ AUTO-SYNC HASIL JURI
+        try { 
+            $this->sheetsSync->syncHasilJuri(); 
+        } catch (\Exception $e) { 
+            \Log::error('Auto-sync hasil juri gagal (edit): ' . $e->getMessage()); 
+        }
 
         return response()->json([
             'success'     => true,

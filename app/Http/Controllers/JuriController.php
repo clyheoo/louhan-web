@@ -168,6 +168,13 @@ class JuriController extends Controller
 
         $scoring->update(['submitted_to_grand' => true]);
 
+        // ★ AUTO-SYNC HASIL JURI
+        try { 
+            app(\App\Services\SheetsSyncService::class)->syncHasilJuri(); 
+        } catch (\Exception $e) { 
+            \Log::error('Auto-sync hasil juri gagal (kirim): ' . $e->getMessage()); 
+        }
+
         return response()->json(['success' => true, 'message' => 'Nilai berhasil dikirim ke Grand Juri.']);
     }
 

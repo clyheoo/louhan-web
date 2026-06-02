@@ -241,7 +241,11 @@ class DashboardController extends Controller
             });
 
             // ★ AUTO-SYNC
-            try { app(\App\Services\SheetsSyncService::class)->syncSemuaPeserta(); } catch (\Exception $e) {}
+            try { 
+                app(\App\Services\SheetsSyncService::class)->syncSemuaPeserta(); 
+            } catch (\Exception $e) { 
+                \Log::error('Auto-sync peserta gagal (admin): ' . $e->getMessage()); 
+            }
 
             return response()->json([
                 'success'      => true,
@@ -398,7 +402,11 @@ class DashboardController extends Controller
             });
 
             // ★ AUTO-SYNC
-            try { app(\App\Services\SheetsSyncService::class)->syncSemuaPeserta(); } catch (\Exception $e) {}
+            try { 
+                app(\App\Services\SheetsSyncService::class)->syncSemuaPeserta(); 
+            } catch (\Exception $e) { 
+                \Log::error('Auto-sync peserta gagal (admin): ' . $e->getMessage()); 
+            }
 
             return response()->json([
                 'success'    => true,
