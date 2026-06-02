@@ -142,4 +142,5 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/sheets/sync-hasil-juri', [SheetsSyncController::class, 'syncHasilJuri']);
     Route::get('/api/sheets/sync-hasil-nominasi', [SheetsSyncController::class, 'syncHasilNominasi']);
     Route::get('/api/sheets/sync-nominasi-fix', [SheetsSyncController::class, 'syncNominasiFix']);
+    Route::get('/api/sheets/sync-mvp', [SheetsSyncController::class, 'syncMvp']);
 });

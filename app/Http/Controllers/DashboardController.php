@@ -542,6 +542,9 @@ class DashboardController extends Controller
         $peserta->is_mvp_submitted = true;
         $peserta->save();
 
+        // ★ AUTO-SYNC MVP
+        try { app(\App\Services\SheetsSyncService::class)->syncMvp(); } catch (\Exception $e) { \Log::error('Auto-sync MVP gagal: ' . $e->getMessage()); }
+
         return response()->json(['success' => true, 'message' => 'Data ikan MVP berhasil dikirim! Pilihan tidak dapat diubah lagi.']);
     }
 

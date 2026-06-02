@@ -331,6 +331,7 @@ class SheetsSyncService
         try { $results['hasil_juri'] = $this->syncHasilJuri(); } catch (\Exception $e) { $results['hasil_juri'] = 'Error: ' . $e->getMessage(); }
         try { $results['hasil_nominasi'] = $this->syncHasilNominasi(); } catch (\Exception $e) { $results['hasil_nominasi'] = 'Error: ' . $e->getMessage(); }
         try { $results['nominasi_fix'] = $this->syncNominasiFix(); } catch (\Exception $e) { $results['nominasi_fix'] = 'Error: ' . $e->getMessage(); }
+        try { $results['mvp'] = $this->syncMvp(); } catch (\Exception $e) { $results['mvp'] = 'Error: ' . $e->getMessage(); }
         
         return $results;
     }
@@ -719,6 +720,120 @@ class SheetsSyncService
         }
 
         return $nominasis->count();
+    }
+
+        /* ═══════════════════════════════════════════
+       SHEET: MVP
+       Dikelompokkan per peserta, ada total point
+       ═══════════════════════════════════════════ */
+
+    public function syncMvp()
+    {
+        $sheetName = $this->sheetNames['mvp'];
+
+        $ikans = Ikan::where('is_mvp', true)
+            ->whereHas('peserta', function ($q) {
+                $q->where('is_mvp_submitted', true);
+            })
+            ->with(['peserta', 'bonusPoints'])
+            ->get();
+
+        $this->sheets->clear($sheetName, 'A2:E500');
+
+        if ($ikans->isEmpty()) return 0;
+
+        $groups = $ikans->groupBy('peserta_id');
+
+        $batch = [];
+        $formatRequests = [];
+        $sheetId = $this->sheets->getSheetId($sheetName);
+        $row = 2;
+
+        $formatRequests[] = [
+            'unmergeCells' => [
+                'range' => [
+                    'sheetId' => $sheetId,
+                    'startRowIndex' => 1,
+                    'endRowIndex' => 500,
+                    'startColumnIndex' => 0,
+                    'endColumnIndex' => 5
+                ]
+            ]
+        ];
+
+        foreach ($groups as $pesertaId => $items) {
+            $peserta = $items->first()->peserta;
+            $nama = $peserta->nama_peserta ?? 'Unknown';
+            $jenis = ucfirst($peserta->jenis_keanggotaan ?? 'Team');
+            $team = $peserta->detail_anggota ?? '';
+
+            $headerText = $nama . ' - ' . $jenis;
+            if ($team) $headerText .= ' ' . $team;
+
+            // Header grup — bold, size 10, tanpa background
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => $headerText];
+
+            $formatRequests[] = [
+                'repeatCell' => [
+                    'range' => [
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $row - 1, 'endRowIndex' => $row,
+                        'startColumnIndex' => 0, 'endColumnIndex' => 5
+                    ],
+                    'cell' => [
+                        'userEnteredFormat' => [
+                            'textFormat' => [
+                                'bold'     => true,
+                                'fontSize' => 10
+                            ]
+                        ]
+                    ],
+                    'fields' => 'userEnteredFormat(textFormat)'
+                ]
+            ];
+            $row++;
+
+            // Kolom header
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => 'No'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $row, 'value' => 'NAMA PESERTA'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $row, 'value' => 'KATEGORI'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $row, 'value' => 'NO TANK'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => 'POINT'];
+            $row++;
+
+            // Data rows
+            $no = 1;
+            $totalPoint = 0;
+            foreach ($items as $ikan) {
+                $point = (int) $ikan->bonusPoints->sum('points');
+                $totalPoint += $point;
+
+                $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => $no];
+                $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $row, 'value' => $nama];
+                $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $row, 'value' => strtoupper($ikan->kategori ?? '')];
+                $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $row, 'value' => $ikan->nomor_tank ?? ''];
+                $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => $point ?: ''];
+                $row++;
+                $no++;
+            }
+
+            // Total point di kolom E
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => $totalPoint];
+            $row++;
+
+            // Baris kosong pemisah
+            $row++;
+        }
+
+        if (!empty($batch)) {
+            $this->sheets->batchUpdate($batch);
+        }
+
+        if (!empty($formatRequests)) {
+            $this->sheets->formatCells($formatRequests);
+        }
+
+        return $ikans->count();
     }
 
     private function formatKelasNominasi($kategori, $kelas): string

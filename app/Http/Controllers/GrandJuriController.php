@@ -1034,6 +1034,9 @@ class GrandJuriController extends Controller
             'added_by'   => auth()->id(),
         ]);
 
+        // ★ AUTO-SYNC MVP
+        try { $this->sheetsSync->syncMvp(); } catch (\Exception $e) { \Log::error('Auto-sync MVP gagal (add bonus): ' . $e->getMessage()); }
+
         return response()->json([
             'success' => true,
             'message' => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" (+100) berhasil ditambahkan.',
@@ -1059,6 +1062,9 @@ class GrandJuriController extends Controller
         }
 
         $bonus->delete();
+
+        // ★ AUTO-SYNC MVP
+        try { $this->sheetsSync->syncMvp(); } catch (\Exception $e) { \Log::error('Auto-sync MVP gagal (remove bonus): ' . $e->getMessage()); }
 
         return response()->json([
             'success' => true,
