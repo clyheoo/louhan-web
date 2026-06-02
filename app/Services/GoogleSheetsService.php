@@ -244,6 +244,40 @@ class GoogleSheetsService
         return $base64UrlHeader . '.' . $base64UrlPayload . '.' . $base64UrlSignature;
     }
 
+        private $sheetIdCache = [];
+
+    public function getSheetId(string $sheetName)
+    {
+        if (isset($this->sheetIdCache[$sheetName])) {
+            return $this->sheetIdCache[$sheetName];
+        }
+
+        $data = $this->apiCall('get', '?fields=sheets.properties');
+        if (!$data || !isset($data['sheets'])) return 0;
+
+        foreach ($data['sheets'] as $sheet) {
+            if (isset($sheet['properties']['title']) && $sheet['properties']['title'] === $sheetName) {
+                $this->sheetIdCache[$sheetName] = $sheet['properties']['sheetId'];
+                return $this->sheetIdCache[$sheetName];
+            }
+        }
+        return 0;
+    }
+
+    public function formatCells(array $requests)
+    {
+        if (!$this->isReady() || empty($requests)) return false;
+
+        try {
+            $body = ['requests' => $requests];
+            $result = $this->apiCall('post', ':batchUpdate', $body);
+            return !is_null($result);
+        } catch (\Exception $e) {
+            Log::error('Sheets Format Error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
     private function base64UrlEncode(string $data): string
     {
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');

@@ -330,6 +330,7 @@ class SheetsSyncService
         try { $results['nama_juri'] = $this->syncNamaJuri(); } catch (\Exception $e) { $results['nama_juri'] = 'Error: ' . $e->getMessage(); }
         try { $results['hasil_juri'] = $this->syncHasilJuri(); } catch (\Exception $e) { $results['hasil_juri'] = 'Error: ' . $e->getMessage(); }
         try { $results['hasil_nominasi'] = $this->syncHasilNominasi(); } catch (\Exception $e) { $results['hasil_nominasi'] = 'Error: ' . $e->getMessage(); }
+        try { $results['nominasi_fix'] = $this->syncNominasiFix(); } catch (\Exception $e) { $results['nominasi_fix'] = 'Error: ' . $e->getMessage(); }
         
         return $results;
     }
@@ -558,6 +559,158 @@ class SheetsSyncService
         }
 
         return count($rows);
+    }
+
+        /* ═══════════════════════════════════════════
+       SHEET: NOMINASI FIX (FORMAT VERTIKAL)
+       A=No Urut, B=Kategori, C=Kelas, 
+       D=No Tank, E=Keterangan
+       ═══════════════════════════════════════════ */
+
+    public function syncNominasiFix()
+    {
+        $sheetName = $this->sheetNames['nominasi_fix'];
+
+        // ★ FIX 1: unique('ikan_id') agar 1 tank tidak muncul 2x
+        $nominasis = Nominasi::with('ikan')
+            ->where('status', 'approved')
+            ->get()
+            ->unique('ikan_id');
+
+        $this->sheets->clear($sheetName, 'A2:E500');
+
+        if ($nominasis->isEmpty()) return 0;
+
+        // Kelompokkan per kategori + kelas
+        $groups = [];
+        foreach ($nominasis as $n) {
+            $ikan = $n->ikan;
+            if (!$ikan || !$ikan->nomor_tank) continue;
+
+            $kat = strtoupper($ikan->kategori ?? '');
+            $kelas = $this->formatKelasNominasi($ikan->kategori, $ikan->kelas);
+
+            if ($kat === 'BONSAI') {
+                $groupKey = 'BONSAI';
+            } elseif ($kat === 'JUMBO') {
+                $groupKey = 'JUMBO';
+            } else {
+                $groupKey = $kat . ' ' . $kelas;
+            }
+
+            $groups[$groupKey][] = [
+                'kategori'  => $kat,
+                'kelas'     => $kelas,
+                'no_tank'   => $ikan->nomor_tank,
+            ];
+        }
+
+        ksort($groups);
+
+        $batch = [];
+        $formatRequests = [];
+        $sheetId = $this->sheets->getSheetId($sheetName);
+        $row = 2;
+
+        // ★ Hapus semua merge cell lama di range ini agar tidak berantakan
+        $formatRequests[] = [
+            'unmergeCells' => [
+                'range' => [
+                    'sheetId' => $sheetId,
+                    'startRowIndex' => 1,
+                    'endRowIndex' => 500,
+                    'startColumnIndex' => 0,
+                    'endColumnIndex' => 5
+                ]
+            ]
+        ];
+
+        foreach ($groups as $groupName => $items) {
+            // 1. Header Grup (Nama Kategori)
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => $groupName];
+            
+            // Format: Bold + Center + Merge A:E
+            $formatRequests[] = [
+                'mergeCells' => [
+                    'range' => [
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $row - 1, 'endRowIndex' => $row,
+                        'startColumnIndex' => 0, 'endColumnIndex' => 5
+                    ],
+                    'mergeType' => 'MERGE_ALL'
+                ]
+            ];
+            $formatRequests[] = [
+                'repeatCell' => [
+                    'range' => [
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $row - 1, 'endRowIndex' => $row,
+                        'startColumnIndex' => 0, 'endColumnIndex' => 5
+                    ],
+                    'cell' => [
+                        'userEnteredFormat' => [
+                            'horizontalAlignment' => 'CENTER',
+                            'textFormat' => ['bold' => true]
+                        ]
+                    ],
+                    'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)'
+                ]
+            ];
+            $row++;
+
+            // 2. Sub-header (Kolom)
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => 'NO URUT'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $row, 'value' => 'KATEGORI'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $row, 'value' => 'KELAS'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $row, 'value' => 'NO TANK'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => 'KETERANGAN'];
+
+            // Format: Background Biru Muda
+            $formatRequests[] = [
+                'repeatCell' => [
+                    'range' => [
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $row - 1, 'endRowIndex' => $row,
+                        'startColumnIndex' => 0, 'endColumnIndex' => 5
+                    ],
+                    'cell' => [
+                        'userEnteredFormat' => [
+                            'backgroundColor' => [
+                                'red' => 0.85, 'green' => 0.92, 'blue' => 0.98
+                            ]
+                        ]
+                    ],
+                    'fields' => 'userEnteredFormat(backgroundColor)'
+                ]
+            ];
+            $row++;
+
+            // 3. Data Rows
+            usort($items, fn($a, $b) => $a['no_tank'] <=> $b['no_tank']);
+
+            foreach ($items as $idx => $item) {
+                $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => $idx + 1];
+                $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $row, 'value' => $item['kategori']];
+                $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $row, 'value' => $item['kelas']];
+                $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $row, 'value' => $item['no_tank']];
+                $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => ''];
+                $row++;
+            }
+
+            // Baris kosong pemisah antar grup
+            $row++;
+        }
+
+        if (!empty($batch)) {
+            $this->sheets->batchUpdate($batch);
+        }
+
+        // ★ Jalankan formatting (merge, bold, warna biru)
+        if (!empty($formatRequests)) {
+            $this->sheets->formatCells($formatRequests);
+        }
+
+        return $nominasis->count();
     }
 
     private function formatKelasNominasi($kategori, $kelas): string

@@ -12,5 +12,6 @@ return [
         'rumus'           => 'RUMUS PENILAIAN',
         'nama_juri'       => 'NAMA JURI',
         'hasil_nominasi'  => 'HASIL NOMINASI',
+        'nominasi_fix'    => 'NOMINASI FIX',
     ],
 ];

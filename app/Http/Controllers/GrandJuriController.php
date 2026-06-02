@@ -193,13 +193,13 @@ class GrandJuriController extends Controller
             'catatan'     => $catatan,
         ]);
 
-        // ★ AUTO-SYNC SAAT APPROVE
         if ($action === 'approve') {
             try {
                 if ($this->sheetsSync->isReady()) {
                     $this->sheetsSync->syncSemuaNominasi();
                     $this->sheetsSync->syncSemuaPilNom();
                     $this->sheetsSync->syncHasilNominasi();
+                    $this->sheetsSync->syncNominasiFix();
                 }
             } catch (\Exception $e) {
                 \Log::error('Auto-sync nominasi gagal: ' . $e->getMessage());
