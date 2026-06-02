@@ -140,4 +140,5 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/sheets/sync-ploting-tank', [SheetsSyncController::class, 'syncPlotingTank']);
     Route::get('/api/sheets/sync-nama-juri', [SheetsSyncController::class, 'syncNamaJuri']);
     Route::get('/api/sheets/sync-hasil-juri', [SheetsSyncController::class, 'syncHasilJuri']);
+    Route::get('/api/sheets/sync-hasil-nominasi', [SheetsSyncController::class, 'syncHasilNominasi']);
 });

@@ -70,7 +70,7 @@ class SheetsSyncService
             ];
         })->toArray();
 
-        $this->sheets->clear($sheetName, 'A2:G2000');
+        $this->sheets->clear($sheetName, 'A2:G500');
         if (!empty($rows)) {
             $this->sheets->write($sheetName, 'A2', $rows);
         }
@@ -119,7 +119,7 @@ class SheetsSyncService
             ];
         })->toArray();
 
-        $this->sheets->clear($sheetName, 'A2:E2000');
+        $this->sheets->clear($sheetName, 'A2:E500');
         if (!empty($rows)) {
             $this->sheets->write($sheetName, 'A2', $rows);
         }
@@ -142,20 +142,31 @@ class SheetsSyncService
 
         if (!$classRanges || !is_array($classRanges)) return 0;
 
+        // ★ Mapping kelas → parent kategori (sesuai struktur sheet)
+        $kelasParentMap = [
+            'A'      => 'CENCU',
+            'D'      => 'CHINGWA',
+            'Bonsai' => 'CHINGWA',
+            'Jumbo'  => 'CHINGWA',
+        ];
+
         $rows = [];
         foreach ($classRanges as $kelas => $data) {
             $kategoris = $data['kategori'] ?? [];
+            $parent = $kelasParentMap[$kelas] ?? strtoupper($kelas);
+
             foreach ($kategoris as $katName => $range) {
                 $rows[] = [
-                    strtoupper($katName),
-                    $kelas,
-                    $range['min'] ?? '',
-                    $range['max'] ?? '',
+                    $parent,                        // B: Parent Kategori
+                    strtoupper($katName),           // C: Sub Kategori
+                    $kelas,                         // D: Kelas
+                    $range['min'] ?? '',            // E: Min
+                    $range['max'] ?? '',            // F: Max
                 ];
             }
         }
 
-        $this->sheets->clear($sheetName, 'B3:E100');
+        $this->sheets->clear($sheetName, 'B3:F100');
         if (!empty($rows)) {
             $this->sheets->write($sheetName, 'B3', $rows);
         }
@@ -316,10 +327,9 @@ class SheetsSyncService
         try { $results['nominasi'] = $this->syncSemuaNominasi(); } catch (\Exception $e) { $results['nominasi'] = 'Error: ' . $e->getMessage(); }
         try { $results['pil_nom'] = $this->syncSemuaPilNom(); } catch (\Exception $e) { $results['pil_nom'] = 'Error: ' . $e->getMessage(); }
         try { $results['ploting_tank'] = $this->syncPlotingTank(); } catch (\Exception $e) { $results['ploting_tank'] = 'Error: ' . $e->getMessage(); }
-        
-        // ★ TAMBAHKAN INI:
         try { $results['nama_juri'] = $this->syncNamaJuri(); } catch (\Exception $e) { $results['nama_juri'] = 'Error: ' . $e->getMessage(); }
         try { $results['hasil_juri'] = $this->syncHasilJuri(); } catch (\Exception $e) { $results['hasil_juri'] = 'Error: ' . $e->getMessage(); }
+        try { $results['hasil_nominasi'] = $this->syncHasilNominasi(); } catch (\Exception $e) { $results['hasil_nominasi'] = 'Error: ' . $e->getMessage(); }
         
         return $results;
     }
@@ -342,14 +352,14 @@ class SheetsSyncService
             ->orderBy('name')
             ->get();
 
-        // Kita akan letakkan di kolom yang jauh di kanan agar tidak menimpa rumus
-        // Misal mulai kolom AQ (ke-43)
+        // ★ TAMBAHAN: Hapus data lama sebelum tulis baru
+        $this->sheets->clear($sheetName, 'A1:C100');
+
         $startColIndex = 0; 
         $startRow = 1;
 
         $batch = [];
         
-        // Header
         $batch[] = [
             'sheet' => $sheetName, 
             'cell'  => $this->sheets->colToLetter($startColIndex + 1) . $startRow, 
@@ -505,6 +515,49 @@ class SheetsSyncService
         }
 
         return count($scorings);
+    }
+
+        /* ═══════════════════════════════════════════
+       SHEET: HASIL NOMINASI
+       A=Tanggal, B=Nama Juri, C=Nama Peserta,
+       D=Kategori, E=Kelas, F=Tim, G=Team, H=No Tank
+       ═══════════════════════════════════════════ */
+
+    public function syncHasilNominasi()
+    {
+        $sheetName = $this->sheetNames['hasil_nominasi'];
+        
+        $nominasis = Nominasi::with(['juri', 'reviewer', 'ikan.peserta'])
+            ->where('status', 'approved')
+            ->whereNotNull('reviewed_by')
+            ->orderByDesc('reviewed_at')
+            ->get();
+
+        $this->sheets->clear($sheetName, 'A2:H500');
+
+        if ($nominasis->isEmpty()) return 0;
+
+        $rows = $nominasis->map(function ($n) {
+            $ikan = $n->ikan;
+            $peserta = $ikan->peserta ?? null;
+
+            return [
+                $n->reviewed_at ? Carbon::parse($n->reviewed_at)->format('d/m/Y H:i:s') : '',
+                '✅ DISETUJUI GRAND JURI',
+                $peserta->nama_peserta ?? '',
+                strtoupper($ikan->kategori ?? ''),
+                $this->formatKelasNominasi($ikan->kategori, $ikan->kelas),
+                ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
+                $peserta->detail_anggota ?? '',
+                $ikan->nomor_tank ?? '',
+            ];
+        })->toArray();
+
+        if (!empty($rows)) {
+            $this->sheets->write($sheetName, 'A2', $rows);
+        }
+
+        return count($rows);
     }
 
     private function formatKelasNominasi($kategori, $kelas): string
