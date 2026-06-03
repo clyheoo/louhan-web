@@ -759,9 +759,28 @@ class AdminDashboardController extends Controller
 
     public function setTankRange(Request $request)
     {
-        $ranges = json_decode($request->ranges, true);
+        
+    $ranges = json_decode($request->ranges, true);
 
-        if (!$ranges || !is_array($ranges)) {
+    // ★ Jika array kosong = reset semua, langsung simpan tanpa validasi
+    if (is_array($ranges) && empty($ranges)) {
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'tank_class_ranges'],
+            ['value' => '[]', 'updated_at' => now()]
+        );
+
+        try {
+            if ($this->sheetsSync->isReady()) {
+                $this->sheetsSync->syncPlotingTank();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Sheets sync ploting gagal: ' . $e->getMessage());
+        }
+
+        return response()->json(['success' => true, 'message' => 'Semua pengaturan rentang sub-kategori telah dihapus.']);
+    }
+
+    if (!$ranges || !is_array($ranges)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Format data tidak valid.'
