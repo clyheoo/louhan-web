@@ -16,5 +16,6 @@ return [
         'nilai_juri'      => 'NILAI JURI',
         'cnt'             => 'CNT',
         'mvp'             => 'MVP',
+        'hasil_juri'      => 'HASIL JURI',
     ],
 ];
