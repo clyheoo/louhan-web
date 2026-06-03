@@ -535,14 +535,7 @@ public function syncPlotingTank()
             'FINNAGE', 'FINNAGE', ''
         ];
 
-        // Group scoring by juri
-        $groupedByJuri = $scorings->groupBy(function($s) {
-            return $s->juri_id . '|' . strtoupper($s->ikan->kategori ?? '') . '|' . ($s->kelas ?? $s->ikan->kelas ?? '-');
-        });
-
         $currentRow = 3;
-        $rowsPerBlock = 12;
-        $gapRows = 2;
 
         // Tulis sub-header HANYA SEKALI di baris 3 dan 4
         foreach ($subHeaders as $colIdx => $val) {
@@ -557,14 +550,8 @@ public function syncPlotingTank()
         }
         $currentRow++;
 
-        foreach ($groupedByJuri as $groupKey => $jurisScorings) {   
-            
-            // Tulis data nilai
-            $dataRowCount = 0;
-            foreach ($jurisScorings as $s) {
-                if ($dataRowCount >= $rowsPerBlock) break;
-                
-                $ikan = $s->ikan;
+        foreach ($scorings as $s) {
+            $ikan = $s->ikan;
                 $nd = $s->nilai_detail ?: [];
                 
                 // Defect eval
@@ -617,12 +604,7 @@ public function syncPlotingTank()
                     $batch[] = ['sheet' => $sheetName, 'cell' => $colLetter . $currentRow, 'value' => $val];
                 }
                 
-                $currentRow++;
-                $dataRowCount++;
-            }
-            
-            // Tambahkan baris kosong untuk gap
-            $currentRow += $gapRows;
+            $currentRow++;
         }
 
         // Kirim batch
