@@ -582,7 +582,7 @@ public function syncPlotingTank()
                     $gv('face', 'face'),                                              // F: FACE
                     $formatDefectPct('face_penalty'),                                 // G: DF FACE
                     $gv('body', 'bentuk'),                                            // H: BENTUK (BODY SHAPE)
-                    $gv('body', 'proporsional'),                                      // I: PROPOSIONAL
+                    $nd['body']['proporsi'] ?? 0,                                     // I: PROPOSIONAL
                     $gv('body', 'pangkal'),                                           // J: PANGKAL
                     $formatDefectPct('body_penalty'),                                 // K: DF BODY
                     $gv('marking', 'fullness'),                                       // L: FULLNESS (MARKING)
