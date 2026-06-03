@@ -580,6 +580,13 @@ class GrandJuriController extends Controller
             \Log::error('Auto-sync hasil juri gagal (edit): ' . $e->getMessage()); 
         }
 
+        // ★ AUTO-SYNC NILAI JURI
+        try { 
+            $this->sheetsSync->syncNilaiJuri(); 
+        } catch (\Exception $e) { 
+            \Log::error('Auto-sync NILAI JURI gagal (edit): ' . $e->getMessage()); 
+        }
+
         // ★ AUTO-SYNC MVP
         try { 
             $this->sheetsSync->syncMvp(); 

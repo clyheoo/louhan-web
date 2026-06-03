@@ -341,7 +341,7 @@ public function syncPlotingTank()
         try { $results['hasil_juri'] = $this->syncHasilJuri(); } catch (\Exception $e) { $results['hasil_juri'] = 'Error: ' . $e->getMessage(); }
         try { $results['hasil_nominasi'] = $this->syncHasilNominasi(); } catch (\Exception $e) { $results['hasil_nominasi'] = 'Error: ' . $e->getMessage(); }
         try { $results['nominasi_fix'] = $this->syncNominasiFix(); } catch (\Exception $e) { $results['nominasi_fix'] = 'Error: ' . $e->getMessage(); }
-        try { $results['cnt'] = $this->syncCnt(); } catch (\Exception $e) { $results['cnt'] = 'Error: ' . $e->getMessage(); }
+        try { $results['cnt'] = $this->syncNilaiJuri(); } catch (\Exception $e) { $results['cnt'] = 'Error: ' . $e->getMessage(); }
         try { $results['mvp'] = $this->syncMvp(); } catch (\Exception $e) { $results['mvp'] = 'Error: ' . $e->getMessage(); }
         
         return $results;
@@ -963,6 +963,98 @@ public function syncPlotingTank()
         }
 
         return $ikans->count();
+    }
+
+        /* ═══════════════════════════════════════════════════════
+       SHEET: NILAI JURI (NILAI FINAL SETELAH GRAND JURI EDIT)
+       28 kolom: A-AB (struktur sama CNT)
+       ═══════════════════════════════════════════════════════ */
+    public function syncNilaiJuri()
+    {
+        $sheetName = $this->sheetNames['nilai_juri'];
+
+        // Ambil 1 scoring terbaru per ikan (yang mana punya nilai dari juri biasa ATAU sudah di-edit grand juri)
+        $latestIds = \App\Models\Scoring::select('ikan_id', \DB::raw('MAX(id) as latest_id'))
+            ->groupBy('ikan_id')
+            ->pluck('latest_id', 'ikan_id')
+            ->toArray();
+
+        $scorings = \App\Models\Scoring::whereIn('id', $latestIds)
+            ->whereNotNull('juri_id')
+            ->with(['ikan.peserta', 'juri'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $this->sheets->clear($sheetName, 'A2:AB2000');
+
+        if ($scorings->isEmpty()) return 0;
+
+        $rows = [];
+        foreach ($scorings as $s) {
+            $ikan = $s->ikan;
+            $peserta = $ikan->peserta ?? null;
+            $nd = $s->nilai_detail ?: [];
+
+            $defectInput = [
+                'raw_head_penalty'    => $s->raw_head_penalty ?? ['0'],
+                'raw_face_penalty'    => $s->raw_face_penalty ?? ['0'],
+                'raw_body_penalty'    => $s->raw_body_penalty ?? ['0'],
+                'raw_finnage_penalty' => $s->raw_finnage_penalty ?? ['0'],
+            ];
+            $defectEval = \App\Helpers\PointCalculator::evaluateDefects($defectInput);
+
+            $gv = function($kat, $field) use ($nd) {
+                return $nd[$kat][$field] ?? 0;
+            };
+
+            $formatDefectKet = function($raw) {
+                if (!$raw || !is_array($raw)) return '-';
+                $filtered = array_filter($raw, fn($v) => $v && $v !== '0');
+                return empty($filtered) ? '-' : implode(', ', $filtered);
+            };
+
+            $formatDefectPct = function($key) use ($defectEval) {
+                $val = $defectEval[$key] ?? '0';
+                return $val === '0' ? 0 : (int) $val;
+            };
+
+            $rows[] = [
+                $s->created_at ? Carbon::parse($s->created_at)->format('d/m/Y H:i:s') : '',
+                $s->juri->name ?? '',
+                strtoupper($ikan->kategori ?? ''),
+                $s->kelas ?? $ikan->kelas ?? '-',
+                $ikan->nomor_tank ?? '',
+                $gv('overall', 'impression'),
+                $gv('head', 'size'),
+                $gv('head', 'bentuk'),
+                $formatDefectPct('head_penalty'),
+                $gv('face', 'face'),
+                $formatDefectPct('face_penalty'),
+                $gv('body', 'bentuk'),
+                $gv('body', 'proporsional'),
+                $gv('body', 'pangkal'),
+                $formatDefectPct('body_penalty'),
+                $gv('marking', 'fullness'),
+                $gv('marking', 'contrast'),
+                $gv('marking', 'bentuk'),
+                $gv('pearl', 'shinning') ?: ($nd['pearl']['shining'] ?? 0),
+                $gv('pearl', 'fullness'),
+                $gv('pearl', 'bentuk'),
+                $gv('color', 'komposisi'),
+                $gv('color', 'kecerahan'),
+                $gv('color', 'fullness'),
+                $gv('finnage', 'bentuk_sirip_dan_ekor') ?: ($nd['finnage']['bentuk'] ?? 0),
+                $gv('finnage', 'kecerahan'),
+                $formatDefectPct('finnage_penalty'),
+                $formatDefectKet($s->raw_head_penalty),
+            ];
+        }
+
+        if (!empty($rows)) {
+            $this->sheets->write($sheetName, 'A2', $rows);
+        }
+
+        return count($rows);
     }
 
     /* ═══════════════════════════════════════════════════════

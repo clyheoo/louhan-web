@@ -92,6 +92,12 @@ class SheetsSyncController extends Controller
         return response()->json(['success' => true, 'message' => "Sync {$count} nominasi fix.", 'count' => $count]);
     }
 
+    public function syncNilaiJuri()
+    {
+        $count = $this->sync->syncNilaiJuri();
+        return response()->json(['success' => true, 'message' => "Sync {$count} NILAI JURI.", 'count' => $count]);
+    }
+
     public function syncCnt()
     {
         $count = $this->sync->syncCnt();
