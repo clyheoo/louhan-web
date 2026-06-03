@@ -426,76 +426,69 @@ public function syncPlotingTank()
      * Kolom B-W = SUMPRODUCT dengan bobot dari RUMUS PENILAIAN
      * Pattern mengikuti sheet "Copy of HASIL JURI".
      */
-private function buildHasilJuriFormulaMatrix(int $startRow = 5, int $endRow = 104, string $sep = ','): array
+    private function buildHasilJuriFormulaMatrix(int $startRow = 5, int $endRow = 104, string $sep = ','): array
     {
         $matrix = [];
 
-        $filterFormula = "FILTER('NILAI JURI'!\$E\$2:\$E\$2001{$sep}"
-                       . "'NILAI JURI'!\$C\$2:\$C\$2001=\$A\$2{$sep}"
-                       . "'NILAI JURI'!\$D\$2:\$D\$2001=\$B\$2{$sep}"
-                       . "'NILAI JURI'!\$B\$2:\$B\$2001=\$C\$2)";
+        // FILTER: juri WAJIB match. Kategori & kelas opsional ("(SEMUA)" atau kosong = skip).
+        $filterFormula = "=IFERROR(FILTER('NILAI JURI'!\$E\$2:\$E\$2001{$sep}"
+                       . "'NILAI JURI'!\$B\$2:\$B\$2001=\$C\$2{$sep}"
+                       . "(('NILAI JURI'!\$C\$2:\$C\$2001=\$A\$2)+(\$A\$2=\"(SEMUA)\")+(\$A\$2=\"\"))>0{$sep}"
+                       . "(('NILAI JURI'!\$D\$2:\$D\$2001=\$B\$2)+(\$B\$2=\"(SEMUA)\")+(\$B\$2=\"\"))>0"
+                       . "){$sep}\"\")";
 
+        // [NILAI src, RUMUS bobot offset, RUMUS sub offset, isDefect]
+        // Offset adalah kolom RUMUS PENILAIAN: A=1, B=2, C=3, ..., AA=27
         $columnMap = [
-            ['F',  'B', 'C'],            // B: OVERAL
-            ['G',  'D', 'E'],            // C: SIZE HEAD  ← FIX: F→E (%SIZE)
-            ['H',  'D', 'F'],            // D: BENTUK HEAD
-            ['I',  null, null, true],    // E: DEEFCT HEAD ← FIX: defect raw, bukan kali bobot
-            ['J',  'G', 'H'],            // F: FACE
-            ['K',  null, null, true],    // G: DF FACE ← FIX: defect raw
-            ['L',  'I', 'J'],            // H: BENTUK BODY
-            ['M',  'I', 'K'],            // I: PROPOSIONAL ← FIX: J→K (%PROPOSIONAL)
-            ['N',  'I', 'L'],            // J: PANGKAL
-            ['O',  null, null, true],    // K: DF BODY ← FIX: defect raw
-            ['P',  'M', 'N'],            // L: FULLNESS MARKING
-            ['Q',  'M', 'O'],            // M: CONTRAST
-            ['R',  'M', 'P'],            // N: BENTUK MARKING
-            ['S',  'Q', 'R'],            // O: SHINNING PEARL
-            ['T',  'Q', 'S'],            // P: FULLNESS PEARL
-            ['U',  'Q', 'T'],            // Q: BENTUK PEARL
-            ['V',  'U', 'V'],            // R: KOMPOSISI COLOUR
-            ['W',  'U', 'W'],            // S: KECERAHAN COLOUR ← FIX: V→W (ambil kolom KECERAHAN, bukan KOMPOSISI)
-            ['X',  'U', 'X'],            // T: FULLNESS COLOUR ← FIX: W→X (ambil kolom FULLNESS + %FULLNESS)
-            ['Y',  'Y', 'Z'],            // U: BENTUK FINNAGE
-            ['Z',  'Y', 'AA'],           // V: KECERAHAN FINNAGE
-            ['AA', null, null, true],    // W: DF FINAGE ← FIX: defect raw
+            ['F',  2,  3,  false],   // B: OVERAL          | B=OVERAL, C=POINT
+            ['G',  4,  5,  false],   // C: SIZE HEAD       | D=HEAD, E=%SIZE
+            ['H',  4,  6,  false],   // D: BENTUK HEAD     | D=HEAD, F=%BENTUK K
+            ['I',  0,  0,  true],    // E: DEEFCT HEAD     (defect raw)
+            ['J',  7,  8,  false],   // F: FACE            | G=FACE, H=%FACE
+            ['K',  0,  0,  true],    // G: DF FACE         (defect raw)
+            ['L',  9,  10, false],   // H: BENTUK BODY     | I=BODYSHAPE, J=%BENTUK
+            ['M',  9,  11, false],   // I: PROPOSIONAL     | I, K=%PROPOSIONAL
+            ['N',  9,  12, false],   // J: PANGKAL         | I, L=%PANGKAL
+            ['O',  0,  0,  true],    // K: DF BODY         (defect raw)
+            ['P',  13, 14, false],   // L: FULLNESS MARKING| M=MARKING, N=FULLNESS
+            ['Q',  13, 15, false],   // M: CONTRAST        | M, O=CONTRAST
+            ['R',  13, 16, false],   // N: BENTUK MARKING  | M, P=BENTUK
+            ['S',  17, 18, false],   // O: SHINNING        | Q=PEARL, R=%SHINNING
+            ['T',  17, 19, false],   // P: FULLNESS PEARL  | Q, S=%FULLNES
+            ['U',  17, 20, false],   // Q: BENTUK PEARL    | Q, T=%BENTUK
+            ['V',  21, 22, false],   // R: KOMPOSISI       | U=COLOUR, V=%KOMPOSISI
+            ['W',  21, 23, false],   // S: KECERAHAN COLOUR| U, W=%KECERAHAN
+            ['X',  21, 24, false],   // T: FULLNESS COLOUR | U, X=%FULLNESS
+            ['Y',  25, 26, false],   // U: BENTUK FINNAGE  | Y=FINNAGE, Z=%bentuk sirip
+            ['Z',  25, 27, false],   // V: KECERAHAN FINNAGE| Y, AA=%KECERAHAN
+            ['AA', 0,  0,  true],    // W: DF FINAGE       (defect raw)
         ];
 
         for ($row = $startRow; $row <= $endRow; $row++) {
             $rowArr = [];
 
-            $offset = $row - $startRow + 1;
-            $rowArr[] = "=IFERROR(INDEX({$filterFormula}{$sep}{$offset}){$sep}\"\")";
+            // Kolom A: FILTER spill hanya di baris pertama
+            $rowArr[] = ($row === $startRow) ? $filterFormula : null;
 
-            foreach ($columnMap as $colDef) {
-                $isDefect = $colDef[3] ?? false;
-                $njCol = $colDef[0];
+            // Kategori tank pada baris ini (dari NILAI JURI), untuk VLOOKUP bobot
+            $tankKategori = "INDEX('NILAI JURI'!\$C\$2:\$C\$2001{$sep}"
+                          . "MATCH(\$A{$row}{$sep}'NILAI JURI'!\$E\$2:\$E\$2001{$sep}0))";
+
+            foreach ($columnMap as [$njCol, $bobotOffset, $subOffset, $isDefect]) {
+                // Sum nilai berdasarkan tank + juri saja (kategori/kelas tidak ikut filter)
+                $sumNilai = "SUMPRODUCT("
+                          . "('NILAI JURI'!\$E\$2:\$E\$2001=\$A{$row})*"
+                          . "('NILAI JURI'!\$B\$2:\$B\$2001=\$C\$2)*"
+                          . "'NILAI JURI'!\${$njCol}\$2:\${$njCol}\$2001)";
 
                 if ($isDefect) {
-                    // ★ DEFECT: ambil nilai mentah saja, JANGAN dikali bobot/persen
-                    $sumNilai = "SUMPRODUCT("
-                              . "('NILAI JURI'!\$E\$2:\$E\$2001=\$A{$row})*"
-                              . "('NILAI JURI'!\$B\$2:\$B\$2001=\$C\$2)*"
-                              . "('NILAI JURI'!\$C\$2:\$C\$2001=\$A\$2)*"
-                              . "('NILAI JURI'!\$D\$2:\$D\$2001=\$B\$2)*"
-                              . "'NILAI JURI'!\${$njCol}\$2:\${$njCol}\$2001)";
-
                     $rowArr[] = "=IF(\$A{$row}=\"\"{$sep}\"\"{$sep}{$sumNilai})";
                 } else {
-                    // ★ NORMAL: nilai × bobot × persen / 100
-                    $rpW1 = $colDef[1];
-                    $rpW2 = $colDef[2];
+                    // Bobot per baris berdasarkan kategori tank itu sendiri
+                    $bobot = "IFERROR(VLOOKUP({$tankKategori}{$sep}'RUMUS PENILAIAN'!\$A\$3:\$AA\$9{$sep}{$bobotOffset}{$sep}FALSE){$sep}0)";
+                    $sub   = "IFERROR(VLOOKUP({$tankKategori}{$sep}'RUMUS PENILAIAN'!\$A\$3:\$AA\$9{$sep}{$subOffset}{$sep}FALSE){$sep}0)";
 
-                    $sumNilai = "SUMPRODUCT("
-                              . "('NILAI JURI'!\$E\$2:\$E\$2001=\$A{$row})*"
-                              . "('NILAI JURI'!\$B\$2:\$B\$2001=\$C\$2)*"
-                              . "('NILAI JURI'!\$C\$2:\$C\$2001=\$A\$2)*"
-                              . "('NILAI JURI'!\$D\$2:\$D\$2001=\$B\$2)*"
-                              . "'NILAI JURI'!\${$njCol}\$2:\${$njCol}\$2001)";
-
-                    $sumW1 = "SUMPRODUCT(('RUMUS PENILAIAN'!\$A\$3:\$A\$9=\$A\$2)*'RUMUS PENILAIAN'!\${$rpW1}\$3:\${$rpW1}\$9)";
-                    $sumW2 = "SUMPRODUCT(('RUMUS PENILAIAN'!\$A\$3:\$A\$9=\$A\$2)*'RUMUS PENILAIAN'!\${$rpW2}\$3:\${$rpW2}\$9)";
-
-                    $rowArr[] = "=IF(\$A{$row}=\"\"{$sep}\"\"{$sep}({$sumNilai}*{$sumW1}*{$sumW2}/100))";
+                    $rowArr[] = "=IF(\$A{$row}=\"\"{$sep}\"\"{$sep}({$sumNilai}*{$bobot}*{$sub}/100))";
                 }
             }
 
@@ -589,16 +582,15 @@ private function buildHasilJuriFormulaMatrix(int $startRow = 5, int $endRow = 10
 // ★ Clear range dropdown source DULU sebelum tulis (urutan sengaja dibalik dari versi lama)
         $this->sheets->clear($sheetName, 'Z1:AB500');
 
-        // ★ Tulis kolom Z (kategori) sebagai satu range vertikal → pakai write(), bukan batchUpdate
-        //   Alasan: batchUpdate() skip kolom > Z, jadi AA/AB sebelumnya tidak pernah masuk.
-        $kategoriColumn = [['DAFTAR KATEGORI']];
+// Kategori dropdown: "(SEMUA)" sebagai opsi pertama → wildcard
+        $kategoriColumn = [['DAFTAR KATEGORI'], ['(SEMUA)']];
         foreach ($kategoris as $kat) {
             $kategoriColumn[] = [$kat];
         }
         $this->sheets->write($sheetName, 'Z1', $kategoriColumn);
 
-        // ★ Tulis kolom AA (kelas)
-        $kelasColumn = [['DAFTAR KELAS']];
+        // Kelas dropdown: "(SEMUA)" sebagai opsi pertama → wildcard
+        $kelasColumn = [['DAFTAR KELAS'], ['(SEMUA)']];
         foreach ($kelases as $kelas) {
             $kelasColumn[] = [$kelas];
         }
