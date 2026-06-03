@@ -445,6 +445,9 @@ class AdminDashboardController extends Controller
             'changed_by'   => auth()->user()->name,
         ]);
 
+        // ★ AUTO-SYNC NAMA JURI
+        try { $this->sheetsSync->syncNamaJuri(); } catch (\Exception $e) { \Log::warning('Sheets sync nama juri gagal (create user): ' . $e->getMessage()); }
+
         return response()->json([
             'success' => true, 
             'message' => 'User "' . $request->name . '" berhasil ditambahkan.'
@@ -457,6 +460,10 @@ class AdminDashboardController extends Controller
         $user = User::find($request->user_id);
         if ($user->id === auth()->id()) return response()->json(['success' => false, 'message' => 'Tidak bisa mengubah role sendiri.'], 403);
         $user->update(['role' => $request->new_role]);
+
+        // ★ AUTO-SYNC NAMA JURI
+        try { $this->sheetsSync->syncNamaJuri(); } catch (\Exception $e) { \Log::warning('Sheets sync nama juri gagal (change role): ' . $e->getMessage()); }
+
         return response()->json(['success' => true, 'message' => 'Role berhasil diubah.']);
     }
 
@@ -759,25 +766,26 @@ class AdminDashboardController extends Controller
 
     public function setTankRange(Request $request)
     {
-        
+
     $ranges = json_decode($request->ranges, true);
 
     // ★ Jika array kosong = reset semua, langsung simpan tanpa validasi
     if (is_array($ranges) && empty($ranges)) {
         \DB::table('settings')->updateOrInsert(
-            ['key' => 'tank_class_ranges'],
-            ['value' => '[]', 'updated_at' => now()]
+            ['key' => 'tank_reset_info'],
+            [
+                'value' => json_encode([
+                    'reason'   => $request->reason,
+                    'reset_at' => now()->toDateTimeString(),
+                ]),
+                'updated_at' => now(),
+            ]
         );
 
-        try {
-            if ($this->sheetsSync->isReady()) {
-                $this->sheetsSync->syncPlotingTank();
-            }
-        } catch (\Exception $e) {
-            \Log::warning('Sheets sync ploting gagal: ' . $e->getMessage());
-        }
+        // ★ AUTO-SYNC PESERTA (karena nomor tank dihapus)
+        try { $this->sheetsSync->syncSemuaPeserta(); } catch (\Exception $e) { \Log::warning('Sheets sync peserta gagal (reset tank): ' . $e->getMessage()); }
 
-        return response()->json(['success' => true, 'message' => 'Semua pengaturan rentang sub-kategori telah dihapus.']);
+        return response()->json(['success' => true, 'message' => 'Semua nomor tank berhasil direset. Data penilaian tetap aman.']);
     }
 
     if (!$ranges || !is_array($ranges)) {

@@ -83,6 +83,9 @@ class DashboardController extends Controller
             'dibuat_oleh' => 'user',
         ]);
 
+        // ★ AUTO-SYNC PESERTA
+        try { app(\App\Services\SheetsSyncService::class)->syncSemuaPeserta(); } catch (\Exception $e) { \Log::error('Sync peserta gagal (user storeIkan): ' . $e->getMessage()); }
+
         return response()->json([
             'success' => true, 
             'message' => 'Ikan berhasil ditambahkan!',
