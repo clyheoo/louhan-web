@@ -338,10 +338,10 @@ public function syncPlotingTank()
         try { $results['pil_nom'] = $this->syncSemuaPilNom(); } catch (\Exception $e) { $results['pil_nom'] = 'Error: ' . $e->getMessage(); }
         try { $results['ploting_tank'] = $this->syncPlotingTank(); } catch (\Exception $e) { $results['ploting_tank'] = 'Error: ' . $e->getMessage(); }
         try { $results['nama_juri'] = $this->syncNamaJuri(); } catch (\Exception $e) { $results['nama_juri'] = 'Error: ' . $e->getMessage(); }
+        try { $results['cnt'] = $this->syncNilaiJuri(); } catch (\Exception $e) { $results['cnt'] = 'Error: ' . $e->getMessage(); }
         try { $results['hasil_juri'] = $this->syncHasilJuri(); } catch (\Exception $e) { $results['hasil_juri'] = 'Error: ' . $e->getMessage(); }
         try { $results['hasil_nominasi'] = $this->syncHasilNominasi(); } catch (\Exception $e) { $results['hasil_nominasi'] = 'Error: ' . $e->getMessage(); }
         try { $results['nominasi_fix'] = $this->syncNominasiFix(); } catch (\Exception $e) { $results['nominasi_fix'] = 'Error: ' . $e->getMessage(); }
-        try { $results['cnt'] = $this->syncNilaiJuri(); } catch (\Exception $e) { $results['cnt'] = 'Error: ' . $e->getMessage(); }
         try { $results['mvp'] = $this->syncMvp(); } catch (\Exception $e) { $results['mvp'] = 'Error: ' . $e->getMessage(); }
         
         return $results;
@@ -430,34 +430,34 @@ private function buildHasilJuriFormulaMatrix(int $startRow = 5, int $endRow = 10
     {
         $matrix = [];
 
-        $filterFormula = "FILTER('NILAI JURI'!\$E\$3:\$E\$2001{$sep}"
-                       . "'NILAI JURI'!\$C\$3:\$C\$2001=\$A\$2{$sep}"
-                       . "'NILAI JURI'!\$D\$3:\$D\$2001=\$B\$2{$sep}"
-                       . "'NILAI JURI'!\$B\$3:\$B\$2001=\$C\$2)";
+        $filterFormula = "FILTER('NILAI JURI'!\$E\$2:\$E\$2001{$sep}"
+                       . "'NILAI JURI'!\$C\$2:\$C\$2001=\$A\$2{$sep}"
+                       . "'NILAI JURI'!\$D\$2:\$D\$2001=\$B\$2{$sep}"
+                       . "'NILAI JURI'!\$B\$2:\$B\$2001=\$C\$2)";
 
         $columnMap = [
-            ['F',  'B', 'C'],   // B: OVERAL
-            ['G',  'D', 'E'],   // C: SIZE HEAD
-            ['H',  'D', 'F'],   // D: BENTUK HEAD
-            ['I',  'D', 'F'],   // E: DEEFCT HEAD
-            ['J',  'G', 'H'],   // F: FACE
-            ['K',  'G', 'H'],   // G: DF FACE
-            ['L',  'I', 'J'],   // H: BENTUK BODY
-            ['M',  'I', 'K'],   // I: PROPOSIONAL
-            ['N',  'I', 'L'],   // J: PANGKAL
-            ['O',  'I', 'L'],   // K: DF BODY
-            ['P',  'M', 'N'],   // L: FULLNESS MARKING
-            ['Q',  'M', 'O'],   // M: CONTRAST
-            ['R',  'M', 'P'],   // N: BENTUK MARKING
-            ['S',  'Q', 'R'],   // O: SHINNING
-            ['T',  'Q', 'S'],   // P: FULLNESS PEARL
-            ['U',  'Q', 'T'],   // Q: BENTUK PEARL
-            ['V',  'U', 'V'],   // R: KOMPOSISI
-            ['V',  'U', 'W'],   // S: KECERAHAN COLOUR
-            ['W',  'U', 'W'],   // T: FULLNESS COLOUR
-            ['Y',  'Y', 'Z'],   // U: BENTUK FINNAGE
-            ['Z',  'Y', 'AA'],  // V: KECERAHAN FINNAGE
-            ['AA', 'Y', 'AA'],  // W: DF FINAGE
+            ['F',  'B', 'C'],            // B: OVERAL
+            ['G',  'D', 'E'],            // C: SIZE HEAD  ← FIX: F→E (%SIZE)
+            ['H',  'D', 'F'],            // D: BENTUK HEAD
+            ['I',  null, null, true],    // E: DEEFCT HEAD ← FIX: defect raw, bukan kali bobot
+            ['J',  'G', 'H'],            // F: FACE
+            ['K',  null, null, true],    // G: DF FACE ← FIX: defect raw
+            ['L',  'I', 'J'],            // H: BENTUK BODY
+            ['M',  'I', 'K'],            // I: PROPOSIONAL ← FIX: J→K (%PROPOSIONAL)
+            ['N',  'I', 'L'],            // J: PANGKAL
+            ['O',  null, null, true],    // K: DF BODY ← FIX: defect raw
+            ['P',  'M', 'N'],            // L: FULLNESS MARKING
+            ['Q',  'M', 'O'],            // M: CONTRAST
+            ['R',  'M', 'P'],            // N: BENTUK MARKING
+            ['S',  'Q', 'R'],            // O: SHINNING PEARL
+            ['T',  'Q', 'S'],            // P: FULLNESS PEARL
+            ['U',  'Q', 'T'],            // Q: BENTUK PEARL
+            ['V',  'U', 'V'],            // R: KOMPOSISI COLOUR
+            ['W',  'U', 'W'],            // S: KECERAHAN COLOUR ← FIX: V→W (ambil kolom KECERAHAN, bukan KOMPOSISI)
+            ['X',  'U', 'X'],            // T: FULLNESS COLOUR ← FIX: W→X (ambil kolom FULLNESS + %FULLNESS)
+            ['Y',  'Y', 'Z'],            // U: BENTUK FINNAGE
+            ['Z',  'Y', 'AA'],           // V: KECERAHAN FINNAGE
+            ['AA', null, null, true],    // W: DF FINAGE ← FIX: defect raw
         ];
 
         for ($row = $startRow; $row <= $endRow; $row++) {
@@ -466,18 +466,37 @@ private function buildHasilJuriFormulaMatrix(int $startRow = 5, int $endRow = 10
             $offset = $row - $startRow + 1;
             $rowArr[] = "=IFERROR(INDEX({$filterFormula}{$sep}{$offset}){$sep}\"\")";
 
-            foreach ($columnMap as [$njCol, $rpW1, $rpW2]) {
-                $sumNilai = "SUMPRODUCT("
-                          . "('NILAI JURI'!\$E\$3:\$E\$2001=\$A{$row})*"
-                          . "('NILAI JURI'!\$B\$3:\$B\$2001=\$C\$2)*"
-                          . "('NILAI JURI'!\$C\$3:\$C\$2001=\$A\$2)*"
-                          . "('NILAI JURI'!\$D\$3:\$D\$2001=\$B\$2)*"
-                          . "'NILAI JURI'!\${$njCol}\$3:\${$njCol}\$2001)";
+            foreach ($columnMap as $colDef) {
+                $isDefect = $colDef[3] ?? false;
+                $njCol = $colDef[0];
 
-                $sumW1 = "SUMPRODUCT(('RUMUS PENILAIAN'!\$A\$3:\$A\$9=\$A\$2)*'RUMUS PENILAIAN'!\${$rpW1}\$3:\${$rpW1}\$9)";
-                $sumW2 = "SUMPRODUCT(('RUMUS PENILAIAN'!\$A\$3:\$A\$9=\$A\$2)*'RUMUS PENILAIAN'!\${$rpW2}\$3:\${$rpW2}\$9)";
+                if ($isDefect) {
+                    // ★ DEFECT: ambil nilai mentah saja, JANGAN dikali bobot/persen
+                    $sumNilai = "SUMPRODUCT("
+                              . "('NILAI JURI'!\$E\$2:\$E\$2001=\$A{$row})*"
+                              . "('NILAI JURI'!\$B\$2:\$B\$2001=\$C\$2)*"
+                              . "('NILAI JURI'!\$C\$2:\$C\$2001=\$A\$2)*"
+                              . "('NILAI JURI'!\$D\$2:\$D\$2001=\$B\$2)*"
+                              . "'NILAI JURI'!\${$njCol}\$2:\${$njCol}\$2001)";
 
-                $rowArr[] = "=IF(\$A{$row}=\"\"{$sep}\"\"{$sep}({$sumNilai}*{$sumW1}*{$sumW2}/100))";
+                    $rowArr[] = "=IF(\$A{$row}=\"\"{$sep}\"\"{$sep}{$sumNilai})";
+                } else {
+                    // ★ NORMAL: nilai × bobot × persen / 100
+                    $rpW1 = $colDef[1];
+                    $rpW2 = $colDef[2];
+
+                    $sumNilai = "SUMPRODUCT("
+                              . "('NILAI JURI'!\$E\$2:\$E\$2001=\$A{$row})*"
+                              . "('NILAI JURI'!\$B\$2:\$B\$2001=\$C\$2)*"
+                              . "('NILAI JURI'!\$C\$2:\$C\$2001=\$A\$2)*"
+                              . "('NILAI JURI'!\$D\$2:\$D\$2001=\$B\$2)*"
+                              . "'NILAI JURI'!\${$njCol}\$2:\${$njCol}\$2001)";
+
+                    $sumW1 = "SUMPRODUCT(('RUMUS PENILAIAN'!\$A\$3:\$A\$9=\$A\$2)*'RUMUS PENILAIAN'!\${$rpW1}\$3:\${$rpW1}\$9)";
+                    $sumW2 = "SUMPRODUCT(('RUMUS PENILAIAN'!\$A\$3:\$A\$9=\$A\$2)*'RUMUS PENILAIAN'!\${$rpW2}\$3:\${$rpW2}\$9)";
+
+                    $rowArr[] = "=IF(\$A{$row}=\"\"{$sep}\"\"{$sep}({$sumNilai}*{$sumW1}*{$sumW2}/100))";
+                }
             }
 
             $matrix[] = $rowArr;
@@ -505,36 +524,70 @@ private function buildHasilJuriFormulaMatrix(int $startRow = 5, int $endRow = 10
         // Ke kolom Z (kategori), AA (kelas), AB (nama juri)
         // ═══════════════════════════════════════
         
-        // Ambil daftar kategori unik dari database
-        $kategoris = Ikan::whereNotNull('nomor_tank')
+        // ★ HYBRID: Gabungkan data terkini (Ikan/User) + data historis (Scoring)
+        // sehingga dropdown menampilkan SEMUA opsi di website DAN di NILAI JURI
+
+        // ★ Group by BOTH ikan_id + juri_id → semua juri per tank dipertahankan
+        $latestIds = \App\Models\Scoring::select('ikan_id', 'juri_id', \DB::raw('MAX(id) as latest_id'))
+            ->groupBy('ikan_id', 'juri_id')
+            ->pluck('latest_id')
+            ->toArray();
+
+        $scoringsForDropdown = \App\Models\Scoring::whereIn('id', $latestIds)
+            ->whereNotNull('juri_id')
+            ->with(['ikan', 'juri'])
+            ->get();
+
+        // ── KATEGORI ──
+        // Sumber 1: Data terkini dari tabel Ikan (website/database)
+        $katFromIkan = Ikan::whereNotNull('nomor_tank')
             ->select('kategori')
             ->distinct()
-            ->orderBy('kategori')
             ->pluck('kategori')
             ->map(fn($k) => strtoupper($k))
             ->toArray();
-        
-        // Ambil daftar kelas unik
-        $kelases = Ikan::whereNotNull('nomor_tank')
+        // Sumber 2: Data historis dari Scoring (bisa beda jika kategori pernah di-edit)
+        $katFromScoring = $scoringsForDropdown->pluck('ikan.kategori')
+            ->filter()
+            ->map(fn($k) => strtoupper($k))
+            ->toArray();
+        // Gabung + dedup
+        $kategoris = array_unique(array_merge($katFromIkan, $katFromScoring));
+        sort($kategoris);
+
+        // ── KELAS ──
+        // Sumber 1: Data terkini dari tabel Ikan
+        $kelasesFromIkan = Ikan::whereNotNull('nomor_tank')
             ->whereNotNull('kelas')
             ->select('kelas')
             ->distinct()
-            ->orderBy('kelas')
             ->pluck('kelas')
             ->toArray();
-        
-        // Tambahkan kelas khusus
-        if (!in_array('JUMBO', $kelases)) $kelases[] = 'JUMBO';
+        if (!in_array('JUMBO', $kelasesFromIkan)) $kelasesFromIkan[] = 'JUMBO';
+        // Sumber 2: Data historis dari Scoring (pakai logika sama persis syncNilaiJuri)
+        $kelasesFromScoring = $scoringsForDropdown->map(function ($s) {
+            return $s->kelas ?? ($s->ikan ? $s->ikan->kelas : null) ?? '-';
+        })->toArray();
+        // Gabung + dedup
+        $kelases = array_unique(array_merge($kelasesFromIkan, $kelasesFromScoring));
         sort($kelases);
-        
-        // Ambil daftar nama juri
-        $namasJuri = \App\Models\User::where('role', 'juri')
+
+        // ── NAMA JURI ──
+        // Sumber 1: Data terkini dari tabel User
+        $juriFromUser = \App\Models\User::where('role', 'juri')
             ->orderBy('name')
             ->pluck('name')
             ->toArray();
+        // Sumber 2: Data historis dari Scoring (termasuk juri yang sudah dihapus)
+        $juriFromScoring = $scoringsForDropdown->pluck('juri.name')
+            ->filter()
+            ->toArray();
+        // Gabung + dedup
+        $namasJuri = array_unique(array_merge($juriFromUser, $juriFromScoring));
+        sort($namasJuri);
         
 // ★ Clear range dropdown source DULU sebelum tulis (urutan sengaja dibalik dari versi lama)
-        $this->sheets->clear($sheetName, 'Z1:AB100');
+        $this->sheets->clear($sheetName, 'Z1:AB500');
 
         // ★ Tulis kolom Z (kategori) sebagai satu range vertikal → pakai write(), bukan batchUpdate
         //   Alasan: batchUpdate() skip kolom > Z, jadi AA/AB sebelumnya tidak pernah masuk.
@@ -613,21 +666,19 @@ private function buildHasilJuriFormulaMatrix(int $startRow = 5, int $endRow = 10
 
         // Sub-headers (baris 3 dan 4)
         $subHeaders = [
-            'NO TANK', 'OVERAL', 'SIZE', 'BENTUK', 'DEEFCT',
-            'FACE', 'DF FACE', 'BENTUK', 'PROPOSIONAL', 'PANGKAL',
-            'DF BODY', 'FULLNESS', 'CONTRAST', 'BENTUK',
-            'SHINNING', 'FULLNESS', 'BENTUK',
-            'KOMPOSISI', 'KECERAHAN', 'FULLNESS',
-            'BENTUK', 'KECERAHAN', 'DF FINAGE'
+            'NO TANK', 'OVERAL', 'HEAD', '', 'DEEFCT',
+            'FACE', 'DF FACE', 'BODY', '', '', 'DF BODY',
+            'MARKING', '', '', 'PEARL', '', '',
+            'COLOR', '', '', 'FINAGE', '', 'DF FINAGE'
         ];
 
         $subHeaders2 = [
-            '', '', 'HEAD', 'HEAD', '',
-            '', '', 'BODY SHAPE', 'BODY SHAPE', 'BODY SHAPE',
-            '', 'MARKING', 'MARKING', 'MARKING',
-            'PEARL', 'PEARL', 'PEARL',
-            'COLOUR', 'COLOUR', 'COLOUR',
-            'FINNAGE', 'FINNAGE', ''
+            '', '', 'SIZE', 'BENTUK', '',
+            '', '', 'BENTUK BADAN', 'PROPORSIONAL', 'PANGKAL', '',
+            'FULLNES', 'CONTRAST', 'BENTUK',
+            'SHINING', 'FULLNES', 'BENTUK',
+            'KOMPOSISI', 'KECERAHAN', 'FULLNES',
+            'BENTUK SIRIP', 'KECERAHAN', ''
         ];
 
 // Auto-detect separator argumen (',' untuk en_US, ';' untuk id_ID)
@@ -1095,10 +1146,10 @@ private function buildHasilJuriFormulaMatrix(int $startRow = 5, int $endRow = 10
     {
         $sheetName = $this->sheetNames['nilai_juri'];
 
-        // Ambil 1 scoring terbaru per ikan (yang mana punya nilai dari juri biasa ATAU sudah di-edit grand juri)
-        $latestIds = \App\Models\Scoring::select('ikan_id', \DB::raw('MAX(id) as latest_id'))
-            ->groupBy('ikan_id')
-            ->pluck('latest_id', 'ikan_id')
+        // Ambil 1 scoring terbaru per ikan PER JURI (agar semua juri masuk ke sheet)
+        $latestIds = \App\Models\Scoring::select('ikan_id', 'juri_id', \DB::raw('MAX(id) as latest_id'))
+            ->groupBy('ikan_id', 'juri_id')
+            ->pluck('latest_id')
             ->toArray();
 
         $scorings = \App\Models\Scoring::whereIn('id', $latestIds)
@@ -1137,7 +1188,8 @@ private function buildHasilJuriFormulaMatrix(int $startRow = 5, int $endRow = 10
 
             $formatDefectPct = function($key) use ($defectEval) {
                 $val = $defectEval[$key] ?? '0';
-                return $val === '0' ? 0 : (int) $val;
+                if ($val === '0' || $val === '' || $val === null) return 0;
+                return (int) str_replace('%', '', $val);
             };
 
             $rows[] = [
