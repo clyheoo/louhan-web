@@ -165,7 +165,7 @@ class GoogleSheetsService
         if (!$token) return null;
 
         $url = "https://sheets.googleapis.com/v4/spreadsheets/{$this->spreadsheetId}" . $uri;
-        $http = Http::withToken($token);
+        $http = Http::withToken($token)->timeout(60);
 
         if ($method === 'get') {
             $response = $http->get($url);
@@ -263,6 +263,81 @@ class GoogleSheetsService
         }
         Log::warning("Sheet '{$sheetName}' tidak ditemukan di spreadsheet");
         return null;
+    }
+
+    /**
+     * Set dropdown validation di satu cell, mengambil opsi dari range A1 lain.
+     * 
+     * Contoh:
+     *   setDataValidation('HASIL JURI', 'A2', "'HASIL JURI'!Z2:Z")
+     *   → Cell A2 jadi dropdown yang opsinya isi kolom Z mulai baris 2 ke bawah.
+     */
+    public function setDataValidation(string $sheetName, string $cell, string $sourceRangeA1)
+    {
+        if (!$this->isReady()) return false;
+
+        $sheetId = $this->getSheetId($sheetName);
+        if ($sheetId === null) return false;
+
+        // Parse "A2" → kolom & baris (0-based untuk Google API)
+        if (!preg_match('/^([A-Z]+)(\d+)$/', strtoupper($cell), $m)) {
+            Log::error("setDataValidation: format cell tidak valid: {$cell}");
+            return false;
+        }
+        $colIdx = $this->letterToCol($m[1]) - 1;
+        $rowIdx = (int) $m[2] - 1;
+
+        $request = [
+            'setDataValidation' => [
+                'range' => [
+                    'sheetId'          => $sheetId,
+                    'startRowIndex'    => $rowIdx,
+                    'endRowIndex'      => $rowIdx + 1,
+                    'startColumnIndex' => $colIdx,
+                    'endColumnIndex'   => $colIdx + 1,
+                ],
+                'rule' => [
+                    'condition' => [
+                        'type'   => 'ONE_OF_RANGE',
+                        'values' => [
+                            ['userEnteredValue' => '=' . $sourceRangeA1],
+                        ],
+                    ],
+                    'showCustomUi' => true,
+                    'strict'       => false,
+                ],
+            ],
+        ];
+
+        return $this->formatCells([$request]);
+    }
+
+    /**
+     * Auto-detect separator function args sesuai locale spreadsheet.
+     * Indonesia/EU pakai ';' (semicolon), US pakai ',' (comma).
+     */
+    public function getLocaleSeparator(): string
+    {
+        static $cached = null;
+        if ($cached !== null) return $cached;
+
+        if (!$this->isReady()) return ',';
+
+        try {
+            $data = $this->apiCall('get', '?fields=properties.locale');
+            $locale = $data['properties']['locale'] ?? 'en_US';
+
+            // Locales yang pakai koma sebagai argument separator
+            $commaLocales = ['en_US', 'en_GB', 'en_CA', 'en_AU', 'en_NZ', 'ja_JP', 'ko_KR', 'zh_CN', 'zh_TW'];
+            $cached = in_array($locale, $commaLocales) ? ',' : ';';
+
+            Log::info("Sheet locale: {$locale}, separator: '{$cached}'");
+            return $cached;
+        } catch (\Exception $e) {
+            Log::warning('getLocaleSeparator gagal: ' . $e->getMessage());
+            $cached = ',';
+            return $cached;
+        }
     }
 
     public function formatCells(array $requests)

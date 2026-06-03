@@ -420,6 +420,72 @@ public function syncPlotingTank()
         return count($juris);
     }
 
+    /**
+     * Generate matrix formula untuk HASIL JURI A5:W{endRow}.
+     * Kolom A = FILTER(no tank dari NILAI JURI berdasar A2/B2/C2)
+     * Kolom B-W = SUMPRODUCT dengan bobot dari RUMUS PENILAIAN
+     * Pattern mengikuti sheet "Copy of HASIL JURI".
+     */
+private function buildHasilJuriFormulaMatrix(int $startRow = 5, int $endRow = 104, string $sep = ','): array
+    {
+        $matrix = [];
+
+        $filterFormula = "FILTER('NILAI JURI'!\$E\$3:\$E\$2001{$sep}"
+                       . "'NILAI JURI'!\$C\$3:\$C\$2001=\$A\$2{$sep}"
+                       . "'NILAI JURI'!\$D\$3:\$D\$2001=\$B\$2{$sep}"
+                       . "'NILAI JURI'!\$B\$3:\$B\$2001=\$C\$2)";
+
+        $columnMap = [
+            ['F',  'B', 'C'],   // B: OVERAL
+            ['G',  'D', 'E'],   // C: SIZE HEAD
+            ['H',  'D', 'F'],   // D: BENTUK HEAD
+            ['I',  'D', 'F'],   // E: DEEFCT HEAD
+            ['J',  'G', 'H'],   // F: FACE
+            ['K',  'G', 'H'],   // G: DF FACE
+            ['L',  'I', 'J'],   // H: BENTUK BODY
+            ['M',  'I', 'K'],   // I: PROPOSIONAL
+            ['N',  'I', 'L'],   // J: PANGKAL
+            ['O',  'I', 'L'],   // K: DF BODY
+            ['P',  'M', 'N'],   // L: FULLNESS MARKING
+            ['Q',  'M', 'O'],   // M: CONTRAST
+            ['R',  'M', 'P'],   // N: BENTUK MARKING
+            ['S',  'Q', 'R'],   // O: SHINNING
+            ['T',  'Q', 'S'],   // P: FULLNESS PEARL
+            ['U',  'Q', 'T'],   // Q: BENTUK PEARL
+            ['V',  'U', 'V'],   // R: KOMPOSISI
+            ['V',  'U', 'W'],   // S: KECERAHAN COLOUR
+            ['W',  'U', 'W'],   // T: FULLNESS COLOUR
+            ['Y',  'Y', 'Z'],   // U: BENTUK FINNAGE
+            ['Z',  'Y', 'AA'],  // V: KECERAHAN FINNAGE
+            ['AA', 'Y', 'AA'],  // W: DF FINAGE
+        ];
+
+        for ($row = $startRow; $row <= $endRow; $row++) {
+            $rowArr = [];
+
+            $offset = $row - $startRow + 1;
+            $rowArr[] = "=IFERROR(INDEX({$filterFormula}{$sep}{$offset}){$sep}\"\")";
+
+            foreach ($columnMap as [$njCol, $rpW1, $rpW2]) {
+                $sumNilai = "SUMPRODUCT("
+                          . "('NILAI JURI'!\$E\$3:\$E\$2001=\$A{$row})*"
+                          . "('NILAI JURI'!\$B\$3:\$B\$2001=\$C\$2)*"
+                          . "('NILAI JURI'!\$C\$3:\$C\$2001=\$A\$2)*"
+                          . "('NILAI JURI'!\$D\$3:\$D\$2001=\$B\$2)*"
+                          . "'NILAI JURI'!\${$njCol}\$3:\${$njCol}\$2001)";
+
+                $sumW1 = "SUMPRODUCT(('RUMUS PENILAIAN'!\$A\$3:\$A\$9=\$A\$2)*'RUMUS PENILAIAN'!\${$rpW1}\$3:\${$rpW1}\$9)";
+                $sumW2 = "SUMPRODUCT(('RUMUS PENILAIAN'!\$A\$3:\$A\$9=\$A\$2)*'RUMUS PENILAIAN'!\${$rpW2}\$3:\${$rpW2}\$9)";
+
+                $rowArr[] = "=IF(\$A{$row}=\"\"{$sep}\"\"{$sep}({$sumNilai}*{$sumW1}*{$sumW2}/100))";
+            }
+
+            $matrix[] = $rowArr;
+        }
+
+        return $matrix;
+    }
+
     /* ═══════════════════════════════════════════
        SHEET: HASIL JURI
        Baris 1: Header label (KATEGORI, KELAS, NAMA JURI) - JANGAN DITIMPA
@@ -467,55 +533,85 @@ public function syncPlotingTank()
             ->pluck('name')
             ->toArray();
         
-        // Tulis header dropdown source
-        $batch = [];
-        $batch[] = ['sheet' => $sheetName, 'cell' => 'Z1', 'value' => 'DAFTAR KATEGORI'];
-        $batch[] = ['sheet' => $sheetName, 'cell' => 'AA1', 'value' => 'DAFTAR KELAS'];
-        $batch[] = ['sheet' => $sheetName, 'cell' => 'AB1', 'value' => 'DAFTAR NAMA JURI'];
-        
-        // Tulis data kategori
-        foreach ($kategoris as $idx => $kat) {
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'Z' . ($idx + 2), 'value' => $kat];
-        }
-        
-        // Tulis data kelas
-        foreach ($kelases as $idx => $kelas) {
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'AA' . ($idx + 2), 'value' => $kelas];
-        }
-        
-        // Tulis data nama juri
-        foreach ($namasJuri as $idx => $nama) {
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'AB' . ($idx + 2), 'value' => $nama];
-        }
-        
-        // Clear range dropdown source dulu
+// ★ Clear range dropdown source DULU sebelum tulis (urutan sengaja dibalik dari versi lama)
         $this->sheets->clear($sheetName, 'Z1:AB100');
-        
-        // ═══════════════════════════════════════
-        // BAGIAN 2: TULIS DATA NILAI KE BLOK PER JURI
-        // Mulai baris 3, hanya kolom A-W (jangan sentuh rumus di X+)
-        // ═══════════════════════════════════════
-        
-        // Ambil semua scoring yang sudah dikirim
-        $scorings = \App\Models\Scoring::whereNotNull('nilai_detail')
-            ->whereNotNull('juri_id')
-            ->with(['ikan.peserta', 'juri'])
-            ->orderBy('juri_id')
-            ->orderBy('ikan_id')
-            ->get();
 
-        // Clear data lama HANYA kolom A-W mulai baris 3
-        $this->sheets->clear($sheetName, 'A3:W5000');
+        // ★ Tulis kolom Z (kategori) sebagai satu range vertikal → pakai write(), bukan batchUpdate
+        //   Alasan: batchUpdate() skip kolom > Z, jadi AA/AB sebelumnya tidak pernah masuk.
+        $kategoriColumn = [['DAFTAR KATEGORI']];
+        foreach ($kategoris as $kat) {
+            $kategoriColumn[] = [$kat];
+        }
+        $this->sheets->write($sheetName, 'Z1', $kategoriColumn);
 
-        if ($scorings->isEmpty()) {
-            // Tetap tulis dropdown source meski tidak ada data
-            if (!empty($batch)) {
-                $this->sheets->batchUpdate($batch);
+        // ★ Tulis kolom AA (kelas)
+        $kelasColumn = [['DAFTAR KELAS']];
+        foreach ($kelases as $kelas) {
+            $kelasColumn[] = [$kelas];
+        }
+        $this->sheets->write($sheetName, 'AA1', $kelasColumn);
+
+        // ★ Tulis kolom AB (nama juri)
+        $juriColumn = [['DAFTAR NAMA JURI']];
+        foreach ($namasJuri as $nama) {
+            $juriColumn[] = [$nama];
+        }
+        $this->sheets->write($sheetName, 'AB1', $juriColumn);
+
+    // ★ Set dropdown validation A2, B2, C2 SEKALIGUS dalam 1 API call
+        //   (Sebelumnya 3 call terpisah → kena cURL timeout. 1 call = 1 round-trip.)
+        try {
+            $sheetId = $this->sheets->getSheetId($sheetName);
+            if ($sheetId !== null) {
+                $dropdownConfigs = [
+                    ['col' => 0, 'source' => "'{$sheetName}'!Z2:Z"],   // A2 → kategori
+                    ['col' => 1, 'source' => "'{$sheetName}'!AA2:AA"], // B2 → kelas
+                    ['col' => 2, 'source' => "'{$sheetName}'!AB2:AB"], // C2 → nama juri
+                ];
+
+                $validationRequests = [];
+                foreach ($dropdownConfigs as $cfg) {
+                    $validationRequests[] = [
+                        'setDataValidation' => [
+                            'range' => [
+                                'sheetId'          => $sheetId,
+                                'startRowIndex'    => 1,
+                                'endRowIndex'      => 2,
+                                'startColumnIndex' => $cfg['col'],
+                                'endColumnIndex'   => $cfg['col'] + 1,
+                            ],
+                            'rule' => [
+                                'condition' => [
+                                    'type'   => 'ONE_OF_RANGE',
+                                    'values' => [
+                                        ['userEnteredValue' => '=' . $cfg['source']],
+                                    ],
+                                ],
+                                'showCustomUi' => true,
+                                'strict'       => false,
+                            ],
+                        ],
+                    ];
+                }
+
+                $result = $this->sheets->formatCells($validationRequests);
+                Log::info('syncHasilJuri: setDataValidation batch result=' . var_export($result, true));
+            } else {
+                Log::warning('syncHasilJuri: getSheetId null untuk ' . $sheetName);
             }
-            return 0;
+        } catch (\Exception $e) {
+            Log::warning('setDataValidation HASIL JURI gagal: ' . $e->getMessage());
         }
 
-        // Sub-header untuk setiap blok (baris pertama blok)
+        // ★ Inisialisasi $batch kosong untuk dipakai oleh bagian penulisan nilai di bawah
+        $batch = [];
+        
+// ═══════════════════════════════════════
+        // BAGIAN 2: TULIS SUB-HEADER + FORMULA FILTER/SUMPRODUCT
+        // Dropdown A2/B2/C2 → tabel auto re-hitung
+        // ═══════════════════════════════════════
+
+        // Sub-headers (baris 3 dan 4)
         $subHeaders = [
             'NO TANK', 'OVERAL', 'SIZE', 'BENTUK', 'DEEFCT',
             'FACE', 'DF FACE', 'BENTUK', 'PROPOSIONAL', 'PANGKAL',
@@ -525,7 +621,6 @@ public function syncPlotingTank()
             'BENTUK', 'KECERAHAN', 'DF FINAGE'
         ];
 
-        // Sub-header baris kedua (kolom yang merge)
         $subHeaders2 = [
             '', '', 'HEAD', 'HEAD', '',
             '', '', 'BODY SHAPE', 'BODY SHAPE', 'BODY SHAPE',
@@ -535,87 +630,27 @@ public function syncPlotingTank()
             'FINNAGE', 'FINNAGE', ''
         ];
 
-        $currentRow = 3;
+// Auto-detect separator argumen (',' untuk en_US, ';' untuk id_ID)
+        $sep = $this->sheets->getLocaleSeparator();
+        
+        // Generate formula matrix untuk A5:W104 (100 baris)
+        $formulaMatrix = $this->buildHasilJuriFormulaMatrix(5, 104, $sep);
 
-        // Tulis sub-header HANYA SEKALI di baris 3 dan 4
-        foreach ($subHeaders as $colIdx => $val) {
-            $colLetter = $this->sheets->colToLetter($colIdx + 1);
-            $batch[] = ['sheet' => $sheetName, 'cell' => $colLetter . $currentRow, 'value' => $val];
-        }
-        $currentRow++;
+        // Gabung: row 3 = subHeaders, row 4 = subHeaders2, row 5+ = formulas
+        $fullData = array_merge([$subHeaders, $subHeaders2], $formulaMatrix);
 
-        foreach ($subHeaders2 as $colIdx => $val) {
-            $colLetter = $this->sheets->colToLetter($colIdx + 1);
-            $batch[] = ['sheet' => $sheetName, 'cell' => $colLetter . $currentRow, 'value' => $val];
-        }
-        $currentRow++;
+        // Clear seluruh area A3:W5000, lalu tulis sekaligus dalam 1 API call
+        $this->sheets->clear($sheetName, 'A3:W5000');
+        $writeResult = $this->sheets->write($sheetName, 'A3', $fullData);
 
-        foreach ($scorings as $s) {
-            $ikan = $s->ikan;
-                $nd = $s->nilai_detail ?: [];
-                
-                // Defect eval
-                $defectInput = [
-                    'raw_head_penalty'    => $s->raw_head_penalty ?? ['0'],
-                    'raw_face_penalty'    => $s->raw_face_penalty ?? ['0'],
-                    'raw_body_penalty'    => $s->raw_body_penalty ?? ['0'],
-                    'raw_finnage_penalty' => $s->raw_finnage_penalty ?? ['0'],
-                ];
-                $defectEval = \App\Helpers\PointCalculator::evaluateDefects($defectInput);
-                
-                $gv = function($kat, $field) use ($nd) {
-                    return $nd[$kat][$field] ?? 0;
-                };
-                
-                $formatDefectPct = function($key) use ($defectEval) {
-                    $val = $defectEval[$key] ?? '0';
-                    return $val === '0' ? 0 : (float) $val;
-                };
-                
-                // Kolom A-W sesuai struktur sheet HASIL JURI
-                $row = [
-                    $ikan->nomor_tank ?? '',                                          // A: NO TANK
-                    $gv('overall', 'impression'),                                     // B: OVERAL
-                    $gv('head', 'size'),                                              // C: SIZE (HEAD)
-                    $gv('head', 'bentuk'),                                            // D: BENTUK (HEAD)
-                    $formatDefectPct('head_penalty'),                                 // E: DEEFCT
-                    $gv('face', 'face'),                                              // F: FACE
-                    $formatDefectPct('face_penalty'),                                 // G: DF FACE
-                    $gv('body', 'bentuk'),                                            // H: BENTUK (BODY SHAPE)
-                    $nd['body']['proporsi'] ?? 0,                                     // I: PROPOSIONAL
-                    $gv('body', 'pangkal'),                                           // J: PANGKAL
-                    $formatDefectPct('body_penalty'),                                 // K: DF BODY
-                    $gv('marking', 'fullness'),                                       // L: FULLNESS (MARKING)
-                    $gv('marking', 'contrast'),                                       // M: CONTRAST
-                    $gv('marking', 'bentuk'),                                         // N: BENTUK
-                    $gv('pearl', 'shinning') ?: ($nd['pearl']['shining'] ?? 0),      // O: SHINNING
-                    $gv('pearl', 'fullness'),                                         // P: FULLNESS
-                    $gv('pearl', 'bentuk'),                                           // Q: BENTUK
-                    $gv('color', 'komposisi'),                                        // R: KOMPOSISI
-                    $gv('color', 'kecerahan'),                                        // S: KECERAHAN
-                    $gv('color', 'fullness'),                                         // T: FULLNESS
-                    $gv('finnage', 'bentuk_sirip_dan_ekor') ?: ($nd['finnage']['bentuk'] ?? 0), // U: BENTUK
-                    $gv('finnage', 'kecerahan'),                                      // V: KECERAHAN
-                    $formatDefectPct('finnage_penalty'),                              // W: DF FINAGE
-                ];
-                
-                foreach ($row as $colIdx => $val) {
-                    $colLetter = $this->sheets->colToLetter($colIdx + 1);
-                    $batch[] = ['sheet' => $sheetName, 'cell' => $colLetter . $currentRow, 'value' => $val];
-                }
-                
-            $currentRow++;
-        }
+        Log::info('syncHasilJuri: write formula result=' . var_export($writeResult, true));
 
-        // Kirim batch
-        if (!empty($batch)) {
-            $chunks = array_chunk($batch, 500);
-            foreach ($chunks as $chunk) {
-                $this->sheets->batchUpdate($chunk);
-            }
-        }
+        // Hitung jumlah scoring sebagai return value (info ke user)
+        $totalScorings = \App\Models\Scoring::whereNotNull('nilai_detail')
+            ->whereNotNull('juri_id')
+            ->count();
 
-        return count($scorings);
+        return $totalScorings;
     }
 
         /* ═══════════════════════════════════════════

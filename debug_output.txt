@@ -1,0 +1,300 @@
+﻿
+        // â˜… Inisialisasi $batch kosong untuk dipakai oleh bagian penulisan nilai di bawah
+        $batch = [];
+        
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // BAGIAN 2: TULIS DATA NILAI KE BLOK PER JURI
+        // Mulai baris 3, hanya kolom A-W (jangan sentuh rumus di X+)
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        
+        // Ambil semua scoring yang sudah dikirim
+        $scorings = \App\Models\Scoring::whereNotNull('nilai_detail')
+            ->whereNotNull('juri_id')
+            ->with(['ikan.peserta', 'juri'])
+            ->orderBy('juri_id')
+            ->orderBy('ikan_id')
+            ->get();
+
+        // Clear data lama HANYA kolom A-W mulai baris 3
+        $this->sheets->clear($sheetName, 'A3:W5000');
+
+        if ($scorings->isEmpty()) {
+            // Tetap tulis dropdown source meski tidak ada data
+            if (!empty($batch)) {
+                $this->sheets->batchUpdate($batch);
+            }
+            return 0;
+        }
+
+        // Sub-header untuk setiap blok (baris pertama blok)
+        $subHeaders = [
+            'NO TANK', 'OVERAL', 'SIZE', 'BENTUK', 'DEEFCT',
+            'FACE', 'DF FACE', 'BENTUK', 'PROPOSIONAL', 'PANGKAL',
+            'DF BODY', 'FULLNESS', 'CONTRAST', 'BENTUK',
+            'SHINNING', 'FULLNESS', 'BENTUK',
+            'KOMPOSISI', 'KECERAHAN', 'FULLNESS',
+            'BENTUK', 'KECERAHAN', 'DF FINAGE'
+        ];
+
+        // Sub-header baris kedua (kolom yang merge)
+        $subHeaders2 = [
+            '', '', 'HEAD', 'HEAD', '',
+            '', '', 'BODY SHAPE', 'BODY SHAPE', 'BODY SHAPE',
+            '', 'MARKING', 'MARKING', 'MARKING',
+            'PEARL', 'PEARL', 'PEARL',
+            'COLOUR', 'COLOUR', 'COLOUR',
+            'FINNAGE', 'FINNAGE', ''
+        ];
+
+        $currentRow = 3;
+
+        // Tulis sub-header HANYA SEKALI di baris 3 dan 4
+        foreach ($subHeaders as $colIdx => $val) {
+            $colLetter = $this->sheets->colToLetter($colIdx + 1);
+            $batch[] = ['sheet' => $sheetName, 'cell' => $colLetter . $currentRow, 'value' => $val];
+        }
+        $currentRow++;
+
+        foreach ($subHeaders2 as $colIdx => $val) {
+            $colLetter = $this->sheets->colToLetter($colIdx + 1);
+            $batch[] = ['sheet' => $sheetName, 'cell' => $colLetter . $currentRow, 'value' => $val];
+        }
+        $currentRow++;
+
+        foreach ($scorings as $s) {
+            $ikan = $s->ikan;
+                $nd = $s->nilai_detail ?: [];
+                
+                // Defect eval
+                $defectInput = [
+                    'raw_head_penalty'    => $s->raw_head_penalty ?? ['0'],
+                    'raw_face_penalty'    => $s->raw_face_penalty ?? ['0'],
+                    'raw_body_penalty'    => $s->raw_body_penalty ?? ['0'],
+                    'raw_finnage_penalty' => $s->raw_finnage_penalty ?? ['0'],
+                ];
+                $defectEval = \App\Helpers\PointCalculator::evaluateDefects($defectInput);
+                
+                $gv = function($kat, $field) use ($nd) {
+                    return $nd[$kat][$field] ?? 0;
+                };
+                
+                $formatDefectPct = function($key) use ($defectEval) {
+                    $val = $defectEval[$key] ?? '0';
+                    return $val === '0' ? 0 : (float) $val;
+                };
+                
+                // Kolom A-W sesuai struktur sheet HASIL JURI
+                $row = [
+                    $ikan->nomor_tank ?? '',                                          // A: NO TANK
+                    $gv('overall', 'impression'),                                     // B: OVERAL
+                    $gv('head', 'size'),                                              // C: SIZE (HEAD)
+                    $gv('head', 'bentuk'),                                            // D: BENTUK (HEAD)
+                    $formatDefectPct('head_penalty'),                                 // E: DEEFCT
+                    $gv('face', 'face'),                                              // F: FACE
+                    $formatDefectPct('face_penalty'),                                 // G: DF FACE
+                    $gv('body', 'bentuk'),                                            // H: BENTUK (BODY SHAPE)
+                    $nd['body']['proporsi'] ?? 0,                                     // I: PROPOSIONAL
+                    $gv('body', 'pangkal'),                                           // J: PANGKAL
+                    $formatDefectPct('body_penalty'),                                 // K: DF BODY
+                    $gv('marking', 'fullness'),                                       // L: FULLNESS (MARKING)
+                    $gv('marking', 'contrast'),                                       // M: CONTRAST
+                    $gv('marking', 'bentuk'),                                         // N: BENTUK
+                    $gv('pearl', 'shinning') ?: ($nd['pearl']['shining'] ?? 0),      // O: SHINNING
+                    $gv('pearl', 'fullness'),                                         // P: FULLNESS
+                    $gv('pearl', 'bentuk'),                                           // Q: BENTUK
+                    $gv('color', 'komposisi'),                                        // R: KOMPOSISI
+                    $gv('color', 'kecerahan'),                                        // S: KECERAHAN
+                    $gv('color', 'fullness'),                                         // T: FULLNESS
+                    $gv('finnage', 'bentuk_sirip_dan_ekor') ?: ($nd['finnage']['bentuk'] ?? 0), // U: BENTUK
+                    $gv('finnage', 'kecerahan'),                                      // V: KECERAHAN
+                    $formatDefectPct('finnage_penalty'),                              // W: DF FINAGE
+                ];
+                
+                foreach ($row as $colIdx => $val) {
+                    $colLetter = $this->sheets->colToLetter($colIdx + 1);
+                    $batch[] = ['sheet' => $sheetName, 'cell' => $colLetter . $currentRow, 'value' => $val];
+                }
+                
+            $currentRow++;
+        }
+
+        // Kirim batch
+        if (!empty($batch)) {
+            $chunks = array_chunk($batch, 500);
+            foreach ($chunks as $chunk) {
+                $this->sheets->batchUpdate($chunk);
+            }
+        }
+
+        return count($scorings);
+    }
+
+        /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       SHEET: HASIL NOMINASI
+       A=Tanggal, B=Nama Juri, C=Nama Peserta,
+       D=Kategori, E=Kelas, F=Tim, G=Team, H=No Tank
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+    public function syncHasilNominasi()
+    {
+        $sheetName = $this->sheetNames['hasil_nominasi'];
+        
+        $nominasis = Nominasi::with(['juri', 'reviewer', 'ikan.peserta'])
+            ->whereIn('status', ['approved', 'rejected'])
+            ->whereNotNull('reviewed_by')
+            ->orderByDesc('reviewed_at')
+            ->get();
+
+        $this->sheets->clear($sheetName, 'A2:H500');
+
+        if ($nominasis->isEmpty()) return 0;
+
+        $rows = $nominasis->map(function ($n) {
+            $ikan = $n->ikan;
+            $peserta = $ikan->peserta ?? null;
+
+            return [
+                $n->reviewed_at ? Carbon::parse($n->reviewed_at)->format('d/m/Y H:i:s') : '',
+                $n->status === 'approved' ? 'âœ… DISETUJUI GRAND JURI' : 'âŒ DITOLAK GRAND JURI',
+                $peserta->nama_peserta ?? '',
+                strtoupper($ikan->kategori ?? ''),
+                $this->formatKelasNominasi($ikan->kategori, $ikan->kelas),
+                ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
+                $peserta->detail_anggota ?? '',
+                $ikan->nomor_tank ?? '',
+            ];
+        })->toArray();
+
+        if (!empty($rows)) {
+            $this->sheets->write($sheetName, 'A2', $rows);
+        }
+
+        return count($rows);
+    }
+
+        /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       SHEET: NOMINASI FIX (FORMAT VERTIKAL)
+       A=No Urut, B=Kategori, C=Kelas, 
+       D=No Tank, E=Keterangan
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+    public function syncNominasiFix()
+    {
+        $sheetName = $this->sheetNames['nominasi_fix'];
+
+        $nominasis = Nominasi::with('ikan')
+            ->where('status', 'approved')
+            ->get()
+            ->unique('ikan_id');
+
+        $this->sheets->clear($sheetName, 'A3:E500');
+
+        if ($nominasis->isEmpty()) return 0;
+
+        $groups = [];
+        foreach ($nominasis as $n) {
+            $ikan = $n->ikan;
+            // â˜… Hanya skip jika ikan benar-benar tidak ada
+            if (!$ikan) continue;
+
+            $kat = strtoupper($ikan->kategori ?? '');
+            $kelas = $this->formatKelasNominasi($ikan->kategori, $ikan->kelas);
+
+            if ($kat === 'BONSAI') {
+                $groupKey = 'BONSAI';
+            } elseif ($kat === 'JUMBO') {
+                $groupKey = 'JUMBO';
+            } else {
+                $groupKey = $kat . ' ' . $kelas;
+            }
+
+            $groups[$groupKey][] = [
+                'kategori'  => $kat,
+                'kelas'     => $kelas,
+                'no_tank'   => $ikan->nomor_tank ?? '',
+            ];
+        }
+
+        ksort($groups);
+
+        $batch = [];
+        $formatRequests = [];
+        $sheetId = $this->sheets->getSheetId($sheetName);
+
+        $cyanBg = [
+            'red'   => 0.0,
+            'green' => 1.0,
+            'blue'  => 1.0,
+            'alpha' => 1.0
+        ];
+
+        $row = 3;
+
+        $formatRequests[] = [
+            'unmergeCells' => [
+                'range' => [
+                    'sheetId' => $sheetId,
+                    'startRowIndex' => 2,
+                    'endRowIndex' => 500,
+                    'startColumnIndex' => 0,
+                    'endColumnIndex' => 5
+                ]
+            ]
+        ];
+
+        foreach ($groups as $groupName => $items) {
+            // 1. Header Grup
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => $groupName];
+
+            $formatRequests[] = [
+                'mergeCells' => [
+                    'range' => [
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $row - 1, 'endRowIndex' => $row,
+                        'startColumnIndex' => 0, 'endColumnIndex' => 5
+                    ],
+                    'mergeType' => 'MERGE_ALL'
+                ]
+            ];
+            $formatRequests[] = [
+                'repeatCell' => [
+                    'range' => [
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $row - 1, 'endRowIndex' => $row,
+                        'startColumnIndex' => 0, 'endColumnIndex' => 5
+                    ],
+                    'cell' => [
+                        'userEnteredFormat' => [
+                            'horizontalAlignment' => 'CENTER',
+                            'backgroundColor'   => $cyanBg,
+                            'textFormat' => [
+                                'bold'     => true,
+                                'fontSize' => 17
+                            ]
+                        ]
+                    ],
+                    'fields' => 'userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)'
+                ]
+            ];
+            $row++;
+
+            // 2. Sub-header
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => 'NO URUT'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $row, 'value' => 'KATEGORI'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $row, 'value' => 'KELAS'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $row, 'value' => 'NO TANK'];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => 'KETERANGAN'];
+
+            $formatRequests[] = [
+                'repeatCell' => [
+                    'range' => [
+                        'sheetId' => $sheetId,
+                        'startRowIndex' => $row - 1, 'endRowIndex' => $row,
+                        'startColumnIndex' => 0, 'endColumnIndex' => 5
+                    ],
+                    'cell' => [
+                        'userEnteredFormat' => [
+                            'backgroundColor' => $cyanBg,
+                            'textFormat' => [
+                                'bold'     => false,
+                                'fontSize' => 10
