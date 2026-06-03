@@ -143,8 +143,27 @@ class JuriController extends Controller
 
         Scoring::create($scoringData);
 
-        return response()->json(['success' => true, 'message' => 'Nilai berhasil disimpan!']);
-    }
+                // ★ AUTO-SYNC: sheet langsung update begitu juri simpan nilai
+                try {
+                    app(\App\Services\SheetsSyncService::class)->syncCnt();
+                } catch (\Exception $e) {
+                    \Log::error('Auto-sync CNT gagal (simpan): ' . $e->getMessage());
+                }
+
+                try {
+                    app(\App\Services\SheetsSyncService::class)->syncHasilJuri();
+                } catch (\Exception $e) {
+                    \Log::error('Auto-sync HASIL JURI gagal (simpan): ' . $e->getMessage());
+                }
+
+                try {
+                    app(\App\Services\SheetsSyncService::class)->syncNilaiJuri();
+                } catch (\Exception $e) {
+                    \Log::error('Auto-sync NILAI JURI gagal (simpan): ' . $e->getMessage());
+                }
+
+                return response()->json(['success' => true, 'message' => 'Nilai berhasil disimpan!']);
+            }
 
     public function kirimKeGrandJuri(Request $request)
     {
@@ -176,11 +195,18 @@ class JuriController extends Controller
             \Log::error('Auto-sync CNT gagal (kirim): ' . $e->getMessage()); 
         }
 
-        // ★ AUTO-SYNC HASIL JURI
+// ★ AUTO-SYNC HASIL JURI
         try { 
             app(\App\Services\SheetsSyncService::class)->syncHasilJuri(); 
         } catch (\Exception $e) { 
             \Log::error('Auto-sync hasil juri gagal (kirim): ' . $e->getMessage()); 
+        }
+
+        // ★ AUTO-SYNC NILAI JURI (FIX: sebelumnya missing di sini)
+        try {
+            app(\App\Services\SheetsSyncService::class)->syncNilaiJuri();
+        } catch (\Exception $e) {
+            \Log::error('Auto-sync NILAI JURI gagal (kirim): ' . $e->getMessage());
         }
 
         return response()->json(['success' => true, 'message' => 'Nilai berhasil dikirim ke Grand Juri.']);

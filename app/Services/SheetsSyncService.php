@@ -1118,7 +1118,7 @@ public function syncPlotingTank()
                 $gv('face', 'face'),
                 $formatDefectPct('face_penalty'),
                 $gv('body', 'bentuk'),
-                $gv('body', 'proporsional'),
+                $nd['body']['proporsi'] ?? 0,
                 $gv('body', 'pangkal'),
                 $formatDefectPct('body_penalty'),
                 $gv('marking', 'fullness'),
@@ -1209,7 +1209,7 @@ public function syncPlotingTank()
                 $gv('face', 'face'),                                                    // J
                 $formatDefectPct('face_penalty'),                                       // K
                 $gv('body', 'bentuk'),                                                  // L
-                $gv('body', 'proporsional'),                                            // M
+                $nd['body']['proporsi'] ?? 0,                                           // M
                 $gv('body', 'pangkal'),                                                 // N
                 $formatDefectPct('body_penalty'),                                       // O
                 $gv('marking', 'fullness'),                                             // P
