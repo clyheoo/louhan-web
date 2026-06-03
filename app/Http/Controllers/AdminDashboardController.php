@@ -227,6 +227,8 @@ class AdminDashboardController extends Controller
             'total_peserta_unik' => $totalPesertaUnik,
             'sisa_tank'          => $sisaTank,
             'max_tank'       => $maxTankTotal,
+            'global_range_min' => $minGlobal,
+            'global_range_max' => $maxGlobal,
             'per_kategori'   => $perKategori,
             'top_10'         => $top10,
         ]);

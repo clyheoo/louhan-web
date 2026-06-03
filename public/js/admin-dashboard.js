@@ -741,7 +741,7 @@ function loadDashboard(){
         document.getElementById('sAvg').innerText=d.rata_rata||0;
         document.getElementById('sSisaTank').innerText=d.sisa_tank||0;
         document.getElementById('sPesertaUnik').innerText=d.total_peserta_unik||0;
-        document.getElementById('sSisaTankLabel').innerText='Sisa Tank (Max '+(d.max_tank||1000)+')';
+        document.getElementById('sSisaTankLabel').innerText='Sisa Tank ('+ (d.global_range_min||1) +' \u2013 '+ (d.global_range_max||1000) +')';
         renderChartKategori(d.per_kategori||{});
         renderChartStatus(d.sudah_dinilai||0,d.grand_edited||0,d.belum_dinilai||0);
         renderChartTop(d.top_10||[]);

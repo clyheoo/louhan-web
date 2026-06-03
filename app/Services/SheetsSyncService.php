@@ -133,46 +133,55 @@ class SheetsSyncService
        Mulai baris 3
        ═══════════════════════════════════════════ */
 
-    public function syncPlotingTank()
-    {
-        $sheetName = $this->sheetNames['ploting'];
-        $classRanges = json_decode(
-            DB::table('settings')->where('key', 'tank_class_ranges')->value('value'),
-            true
-        );
+public function syncPlotingTank()
+{
+    $sheetName = $this->sheetNames['ploting'];
 
-        if (!$classRanges || !is_array($classRanges)) return 0;
+    // ★ 1. Baca & tulis global range ke B1
+    $globalMax = (int) (DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+    $resultB1 = $this->sheets->writeCell($sheetName, 'B1', $globalMax);
+    Log::info('syncPlotingTank: B1 write result=' . var_export($resultB1, true) . ', value=' . $globalMax);
 
-        // ★ Mapping kelas → parent kategori (sesuai struktur sheet)
-        $kelasParentMap = [
-            'A'      => 'CENCU',
-            'D'      => 'CHINGWA',
-            'Bonsai' => 'CHINGWA',
-            'Jumbo'  => 'CHINGWA',
-        ];
+    // ★ 2. Baca sub-range dari database
+    $rawJson = DB::table('settings')->where('key', 'tank_class_ranges')->value('value');
+    Log::info('syncPlotingTank: raw JSON=' . $rawJson);
 
-        $rows = [];
-        foreach ($classRanges as $kelas => $data) {
-            $kategoris = $data['kategori'] ?? [];
-            $parent = $kelasParentMap[$kelas] ?? strtoupper($kelas);
+    $classRanges = json_decode($rawJson, true);
 
-            foreach ($kategoris as $katName => $range) {
-                $rows[] = [
-                    $parent,                        // B: Parent Kategori
-                    strtoupper($katName),           // C: Sub Kategori
-                    $kelas,                         // D: Kelas
-                    $range['min'] ?? '',            // E: Min
-                    $range['max'] ?? '',            // F: Max
-                ];
-            }
-        }
-
-        $this->sheets->clear($sheetName, 'B3:F100');
-        if (!empty($rows)) {
-            $this->sheets->write($sheetName, 'B3', $rows);
-        }
-        return count($rows);
+    if (!$classRanges || !is_array($classRanges)) {
+        Log::info('syncPlotingTank: tidak ada sub-range, return 1');
+        return 1;
     }
+
+    // ★ 3. Susun data: C=Kategori, D=Kelas, E=Min, F=Max
+    $rows = [];
+    foreach ($classRanges as $kelas => $data) {
+        $kategoris = $data['kategori'] ?? [];
+        foreach ($kategoris as $katName => $range) {
+            $rows[] = [
+                strtoupper($katName),
+                $kelas,
+                $range['min'] ?? '',
+                $range['max'] ?? '',
+            ];
+        }
+    }
+
+    Log::info('syncPlotingTank: rows=' . json_encode($rows));
+
+    // ★ 4. Clear & tulis
+    $clearResult = $this->sheets->clear($sheetName, 'A3:D100');
+    Log::info('syncPlotingTank: clear result=' . var_export($clearResult, true));
+
+    if (!empty($rows)) {
+        $writeResult = $this->sheets->write($sheetName, 'A3', $rows);
+        Log::info('syncPlotingTank: write result=' . var_export($writeResult, true));
+    } else {
+        Log::info('syncPlotingTank: rows kosong, skip write');
+    }
+
+    return count($rows);
+}
 
     /* ═══════════════════════════════════════════
        SHEET: PIL NOM
