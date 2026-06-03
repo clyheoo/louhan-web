@@ -169,6 +169,14 @@ class JuriController extends Controller
         $scoring->update(['submitted_to_grand' => true]);
 
         // ★ AUTO-SYNC HASIL JURI
+        // ★ AUTO-SYNC CNT
+        try { 
+            app(\App\Services\SheetsSyncService::class)->syncCnt(); 
+        } catch (\Exception $e) { 
+            \Log::error('Auto-sync CNT gagal (kirim): ' . $e->getMessage()); 
+        }
+
+        // ★ AUTO-SYNC HASIL JURI
         try { 
             app(\App\Services\SheetsSyncService::class)->syncHasilJuri(); 
         } catch (\Exception $e) { 

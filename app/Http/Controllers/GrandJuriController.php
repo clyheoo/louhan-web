@@ -566,6 +566,14 @@ class GrandJuriController extends Controller
         ]);
 
         // ★ AUTO-SYNC HASIL JURI
+        // ★ AUTO-SYNC CNT
+        try { 
+            $this->sheetsSync->syncCnt(); 
+        } catch (\Exception $e) { 
+            \Log::error('Auto-sync CNT gagal (edit): ' . $e->getMessage()); 
+        }
+
+        // ★ AUTO-SYNC HASIL JURI
         try { 
             $this->sheetsSync->syncHasilJuri(); 
         } catch (\Exception $e) { 

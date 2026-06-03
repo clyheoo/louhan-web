@@ -341,6 +341,7 @@ public function syncPlotingTank()
         try { $results['hasil_juri'] = $this->syncHasilJuri(); } catch (\Exception $e) { $results['hasil_juri'] = 'Error: ' . $e->getMessage(); }
         try { $results['hasil_nominasi'] = $this->syncHasilNominasi(); } catch (\Exception $e) { $results['hasil_nominasi'] = 'Error: ' . $e->getMessage(); }
         try { $results['nominasi_fix'] = $this->syncNominasiFix(); } catch (\Exception $e) { $results['nominasi_fix'] = 'Error: ' . $e->getMessage(); }
+        try { $results['cnt'] = $this->syncCnt(); } catch (\Exception $e) { $results['cnt'] = 'Error: ' . $e->getMessage(); }
         try { $results['mvp'] = $this->syncMvp(); } catch (\Exception $e) { $results['mvp'] = 'Error: ' . $e->getMessage(); }
         
         return $results;
@@ -428,7 +429,8 @@ public function syncPlotingTank()
         $sheetName = $this->sheetNames['rumus'];
         
         // Ambil semua scoring yang sudah dikirim
-        $scorings = \App\Models\Scoring::where('submitted_to_grand', true)
+    $scorings = \App\Models\Scoring::whereNotNull('nilai_detail')
+            ->whereNotNull('juri_id')
             ->with(['ikan.peserta', 'juri'])
             ->orderBy('ikan_id')
             ->orderBy('juri_id')
@@ -961,6 +963,98 @@ public function syncPlotingTank()
         }
 
         return $ikans->count();
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       SHEET: CNT (NILAI JURI MENTAH)
+       28 kolom: A-AB
+       ═══════════════════════════════════════════════════════ */
+    public function syncCnt()
+    {
+        $sheetName = $this->sheetNames['cnt'];
+
+        $scorings = \App\Models\Scoring::whereNotNull('nilai_detail')
+            ->whereNotNull('juri_id')
+            ->with(['ikan.peserta', 'juri'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Clear baris 2 ke bawah (baris 1 = header manual)
+        $this->sheets->clear($sheetName, 'A2:AB2000');
+
+        if ($scorings->isEmpty()) return 0;
+
+        $rows = [];
+        foreach ($scorings as $s) {
+            $ikan = $s->ikan;
+            $peserta = $ikan->peserta ?? null;
+            $nd = $s->nilai_detail ?: [];
+
+            // Defect eval
+            $defectInput = [
+                'raw_head_penalty'    => $s->raw_head_penalty ?? ['0'],
+                'raw_face_penalty'    => $s->raw_face_penalty ?? ['0'],
+                'raw_body_penalty'    => $s->raw_body_penalty ?? ['0'],
+                'raw_finnage_penalty' => $s->raw_finnage_penalty ?? ['0'],
+            ];
+            $defectEval = \App\Helpers\PointCalculator::evaluateDefects($defectInput);
+
+            // Helper: ambil nilai atau 0
+            $gv = function($kat, $field) use ($nd) {
+                return $nd[$kat][$field] ?? 0;
+            };
+
+            // Helper: format defect keterangan
+            $formatDefectKet = function($raw) {
+                if (!$raw || !is_array($raw)) return '-';
+                $filtered = array_filter($raw, fn($v) => $v && $v !== '0');
+                return empty($filtered) ? '-' : implode(', ', $filtered);
+            };
+
+            // Helper: format defect persen
+            $formatDefectPct = function($key) use ($defectEval) {
+                $val = $defectEval[$key] ?? '0';
+                return $val === '0' ? 0 : (int) $val;
+            };
+
+            $rows[] = [
+                $s->created_at ? Carbon::parse($s->created_at)->format('d/m/Y H:i:s') : '',  // A
+                $s->juri->name ?? '',                                                     // B
+                strtoupper($ikan->kategori ?? ''),                                       // C
+                $s->kelas ?? $ikan->kelas ?? '-',                                        // D
+                $ikan->nomor_tank ?? '',                                                // E
+                $gv('overall', 'impression'),                                            // F
+                $gv('head', 'size'),                                                    // G
+                $gv('head', 'bentuk'),                                                  // H
+                $formatDefectPct('head_penalty'),                                       // I
+                $gv('face', 'face'),                                                    // J
+                $formatDefectPct('face_penalty'),                                       // K
+                $gv('body', 'bentuk'),                                                  // L
+                $gv('body', 'proporsional'),                                            // M
+                $gv('body', 'pangkal'),                                                 // N
+                $formatDefectPct('body_penalty'),                                       // O
+                $gv('marking', 'fullness'),                                             // P
+                $gv('marking', 'contrast'),                                              // Q
+                $gv('marking', 'bentuk'),                                               // R
+                $gv('pearl', 'shinning') ?: ($nd['pearl']['shining'] ?? 0),            // S
+                $gv('pearl', 'fullness'),                                               // T
+                $gv('pearl', 'bentuk'),                                                 // U
+                $gv('color', 'komposisi'),                                               // V
+                $gv('color', 'kecerahan'),                                               // W
+                $gv('color', 'fullness'),                                               // X
+                $gv('finnage', 'bentuk_sirip_dan_ekor') ?: ($nd['finnage']['bentuk'] ?? 0), // Y
+                $gv('finnage', 'kecerahan'),                                             // Z
+                $formatDefectPct('finnage_penalty'),                                    // AA
+                $formatDefectKet($s->raw_head_penalty),                                 // AB
+            ];
+        }
+
+        // Tulis mulai A2 (menggunakan write() karena mendukung kolom di atas Z)
+        if (!empty($rows)) {
+            $this->sheets->write($sheetName, 'A2', $rows);
+        }
+
+        return count($rows);
     }
 
     private function formatKelasNominasi($kategori, $kelas): string
