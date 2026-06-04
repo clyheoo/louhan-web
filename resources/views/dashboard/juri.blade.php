@@ -649,14 +649,28 @@ function buildSelectHtml(currentVal, type) {
 // HELPERS: DEFECT EVALUATION (EXISTING)
 // ═══════════════════════════════════════════════════════════════
 function evalDefects(ts) {
-    let minorCount = 0;
     const parts = ['head','face','body','finnage'];
     const status = {};
-    parts.forEach(p => { status[p] = {minor:false,mayor:false,items:[]}; });
-    parts.forEach(p => { const defs = ts.defects['raw_'+p+'_penalty'] || ['0']; defs.forEach(d => { if (d && d !== '0') { status[p].items.push(d); if (MINOR_DEFECTS.includes(d)) { minorCount++; status[p].minor = true; } if (MAYOR_DEFECTS.includes(d)) { status[p].mayor = true; } } }); });
-    const globalMayor = minorCount >= 3;
+    parts.forEach(p => { status[p] = {minorCount:0, mayor:false, items:[]}; });
+    parts.forEach(p => {
+        const defs = ts.defects['raw_'+p+'_penalty'] || ['0'];
+        defs.forEach(d => {
+            if (d && d !== '0') {
+                status[p].items.push(d);
+                if (MINOR_DEFECTS.includes(d)) { status[p].minorCount++; }
+                if (MAYOR_DEFECTS.includes(d)) { status[p].mayor = true; }
+            }
+        });
+    });
     const results = {};
-    parts.forEach(p => { if (status[p].items.length > 0) { const isMayor = status[p].mayor || (status[p].minor && globalMayor); results[p] = isMayor ? '30%' : '10%'; } else { results[p] = ''; } });
+    parts.forEach(p => {
+        if (status[p].items.length > 0) {
+            const isMayor = status[p].mayor || (status[p].minorCount >= 2);
+            results[p] = isMayor ? '30%' : '10%';
+        } else {
+            results[p] = '';
+        }
+    });
     return results;
 }
 
