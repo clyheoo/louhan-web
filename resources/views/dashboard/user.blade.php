@@ -1244,6 +1244,90 @@
             .step-arrow { flex: 1; }
         }
 
+                /* ====================================================
+           UNDIAN LOCK OVERLAY — GEMBOK VISUAL
+           ==================================================== */
+        .undian-lock-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+            background: rgba(4, 7, 15, 0.90);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            padding: 32px 20px;
+        }
+        .undian-lock-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .undian-lock-overlay .lock-visual {
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(239, 68, 68, 0.06));
+            border: 2px solid rgba(239, 68, 68, 0.45);
+            display: grid;
+            place-items: center;
+            animation: lockPulse 2.5s ease-in-out infinite;
+            box-shadow: 0 0 35px rgba(239, 68, 68, 0.25);
+        }
+        .undian-lock-overlay .lock-visual i {
+            font-size: 34px;
+            color: #FCA5A5;
+            filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.5));
+        }
+        .undian-lock-overlay .lock-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 800;
+            color: #FCA5A5;
+            letter-spacing: 0.02em;
+            text-align: center;
+        }
+        .undian-lock-overlay .lock-desc {
+            font-size: 12px;
+            color: var(--text-mid);
+            text-align: center;
+            max-width: 300px;
+            line-height: 1.6;
+        }
+        .undian-lock-overlay .lock-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            border-radius: 999px;
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.30);
+            font-size: 11px;
+            font-weight: 700;
+            color: #FCA5A5;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .undian-lock-overlay .lock-badge i {
+            font-size: 10px;
+        }
+        @keyframes lockPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 35px rgba(239, 68, 68, 0.25); }
+            50% { transform: scale(1.06); box-shadow: 0 0 55px rgba(239, 68, 68, 0.40); }
+        }
+        @media (max-width: 768px) {
+            .undian-lock-overlay .lock-visual { width: 68px; height: 68px; }
+            .undian-lock-overlay .lock-visual i { font-size: 28px; }
+            .undian-lock-overlay .lock-title { font-size: 14px; }
+            .undian-lock-overlay .lock-desc { font-size: 11px; max-width: 240px; }
+        }
+
         /* Reduced motion + Low-end device fallback */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.1s !important; }
@@ -1513,7 +1597,13 @@
                 <div class="col-stack">
 
                     <!-- CARD: MESIN UNDIAN -->
-                    <div class="glass-card machine-card">
+                    <div class="glass-card machine-card" id="cardMesinUndian">
+                        <div class="undian-lock-overlay" id="lockMesinUndian">
+                            <div class="lock-visual"><i class="fas fa-lock"></i></div>
+                            <div class="lock-title">Mesin Undian Dikunci</div>
+                            <div class="lock-desc">Pengundian nomor tank saat ini belum dibuka oleh panitia. Anda tetap bisa mendaftarkan ikan, namun belum bisa melakukan undian.</div>
+                            <div class="lock-badge"><i class="fas fa-hourglass-half"></i> Menunggu Panitia Membuka</div>
+                        </div>
                         <div class="card-header">
                             <h2 class="card-title">
                                 <span class="title-icon"><i class="fas fa-dice"></i></span>
@@ -1551,7 +1641,13 @@
                     </div>
 
                     <!-- CARD: DAFTAR IKAN -->
-                    <div class="glass-card machine-card">
+                    <div class="glass-card machine-card" id="cardDaftarIkan">
+                        <div class="undian-lock-overlay" id="lockDaftarIkan">
+                            <div class="lock-visual"><i class="fas fa-lock"></i></div>
+                            <div class="lock-title">Undian Dikunci</div>
+                            <div class="lock-desc">Daftar ikan Anda sudah tercatat. Nomor tank akan bisa diundi setelah panitia membuka mesin undian.</div>
+                            <div class="lock-badge"><i class="fas fa-hourglass-half"></i> Menunggu Pembukaan Undian</div>
+                        </div>
                         <div class="card-header">
                             <h2 class="card-title">
                                 <span class="title-icon"><i class="fas fa-list"></i></span>
@@ -1827,6 +1923,34 @@
         let isMvpOpen = false;
         let currentMvpSubmitted = false;
         let isUndianOpen = true; // ★ Default true, akan diupdate polling
+        
+        // ★ FUNGSI: Update visual lock pada card Mesin Undian & Daftar Ikan
+        function updateUndianLockUI(isOpen) {
+            var lockMesin = document.getElementById('lockMesinUndian');
+            var lockDaftar = document.getElementById('lockDaftarIkan');
+
+            if (lockMesin) {
+                if (isOpen) { lockMesin.classList.remove('show'); }
+                else { lockMesin.classList.add('show'); }
+            }
+            if (lockDaftar) {
+                if (isOpen) { lockDaftar.classList.remove('show'); }
+                else { lockDaftar.classList.add('show'); }
+            }
+
+            // ★ Disable/enable semua tombol ACAK di daftar ikan
+            document.querySelectorAll('.btn-acak-kecil').forEach(function(btn) {
+                if (!isOpen) {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.4';
+                    btn.style.cursor = 'not-allowed';
+                } else {
+                    btn.disabled = false;
+                    btn.style.opacity = '';
+                    btn.style.cursor = '';
+                }
+            });
+        }
         let pollingInterval = null;
         let auth401Count = 0;
         const MAX_401_RETRY = 5;
@@ -1877,26 +2001,7 @@
                 const undianOpen = response.undian_open ?? true;
                 if (undianOpen !== isUndianOpen) {
                     isUndianOpen = undianOpen;
-                    // Update semua tombol ACAK yang ada
-                    document.querySelectorAll('.ikan-item').forEach(el => {
-                        const tank = el.querySelector('.tank-num');
-                        const isDiundi = tank && !tank.classList.contains('empty');
-                        const rightDiv = el.querySelector('.ikan-item-right');
-                        if (!rightDiv || isDiundi) return;
-
-                        let acakBtn = rightDiv.querySelector('.btn-acak-kecil');
-                        if (!isUndianOpen && acakBtn) {
-                            acakBtn.disabled = true;
-                            acakBtn.innerHTML = '<i class="fas fa-lock"></i> DIKUNCI';
-                            acakBtn.style.opacity = '0.5';
-                            acakBtn.style.cursor = 'not-allowed';
-                        } else if (isUndianOpen && acakBtn && acakBtn.disabled) {
-                            acakBtn.disabled = false;
-                            acakBtn.innerHTML = '<i class="fas fa-shuffle"></i> ACAK';
-                            acakBtn.style.opacity = '';
-                            acakBtn.style.cursor = '';
-                        }
-                    });
+                    updateUndianLockUI(isUndianOpen);
                 }
 
                 if (mvpOpen !== isMvpOpen || mvpSubmitted !== currentMvpSubmitted) {
@@ -1968,7 +2073,7 @@
                         newEl.className = 'ikan-item';
                         newEl.id = `ikan-item-${ikan.id}`;
                         newEl.style.animation = 'cardEntry 0.5s ease both';
-                        const acakBtnHtml = !ikan.nomor_tank ? (isUndianOpen ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<button class="btn-acak-kecil" disabled style="opacity:0.5; cursor:not-allowed;"><i class="fas fa-lock"></i> DIKUNCI</button>`) : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`;
+                        const acakBtnHtml = !ikan.nomor_tank ? (isUndianOpen ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<button class="btn-acak-kecil" disabled style="opacity:0.4; cursor:not-allowed;"><i class="fas fa-lock"></i> DIKUNCI</button>`) : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`;
                         newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${ikan.nama_peserta || document.getElementById('namaPeserta').value} ${badge}</h4>${kategoriKelasLineHtml(ikan.kategori, ikan.kelas)}</div><div class="ikan-item-right">${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${acakBtnHtml}</div>`;
                         listContainer.prepend(newEl);
                         currentIkans[ikan.id] = { kategori: ikan.kelas ? 'Kelas ' + ikan.kelas : '', nomor_tank: ikan.nomor_tank ?? '--', is_mvp: ikan.is_mvp };
