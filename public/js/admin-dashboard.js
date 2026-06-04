@@ -1,3 +1,27 @@
+/* ═══════════════════════════════════════════════
+   GLOBAL LOADER UTILITY
+   ═══════════════════════════════════════════════ */
+function showLoader(msg){
+    var el = document.getElementById('globalLoader');
+    if(!el) return;
+    var t = el.querySelector('.loader-text');
+    if(t) t.textContent = msg || 'Memproses...';
+    el.classList.add('show');
+}
+function hideLoader(){
+    var el = document.getElementById('globalLoader');
+    if(el) el.classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════
+   CHART.JS DEFAULTS (DARK THEME)
+   ═══════════════════════════════════════════════ */
+if(window.Chart){
+    Chart.defaults.color = '#94A3B8';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+}
+
 var currentTankMax = 1000;
 var kelasList = ['A','B','C','D','E'];
 var allScoringData = [];
@@ -750,19 +774,39 @@ function loadDashboard(){
 
 function renderChartKategori(data){
     var labels=Object.keys(data),vals=Object.values(data);
-    var colors=['#2563eb','#7c3aed','#10b981','#f59e0b','#ef4444','#14b8a6','#f97316','#6366f1'];
+    var colors=['#22D3EE','#A855F7','#10B981','#F59E0B','#EF4444','#14B8A6','#F97316','#6366F1'];
     if(chartKat)chartKat.destroy();
     chartKat=new Chart(document.getElementById('chartKategori'),{
-        type:'bar',data:{labels:labels,datasets:[{data:vals,backgroundColor:colors.slice(0,labels.length),borderRadius:6,borderSkipped:false}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}},x:{ticks:{font:{size:10}}}}}
+        type:'bar',
+        data:{labels:labels,datasets:[{data:vals,backgroundColor:colors.slice(0,labels.length),borderRadius:6,borderSkipped:false}]},
+        options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins:{legend:{display:false}},
+            scales:{
+                y:{beginAtZero:true,ticks:{font:{size:10},color:'#94A3B8'},grid:{color:'rgba(255,255,255,.06)'}},
+                x:{ticks:{font:{size:10},color:'#94A3B8'},grid:{display:false}}
+            }
+        }
     });
 }
 
 function renderChartStatus(dinilai,grand,belum){
     if(chartStat)chartStat.destroy();
     chartStat=new Chart(document.getElementById('chartStatus'),{
-        type:'doughnut',data:{labels:['Sudah Dinilai','Grand Juri Edit','Belum Dinilai'],datasets:[{data:[dinilai,grand,belum],backgroundColor:['#10b981','#7c3aed','#f59e0b'],borderWidth:0,spacing:2}]},
-        options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}}}
+        type:'doughnut',
+        data:{
+            labels:['Sudah Dinilai','Grand Juri Edit','Belum Dinilai'],
+            datasets:[{data:[dinilai,grand,belum],backgroundColor:['#10B981','#A855F7','#F59E0B'],borderWidth:0,spacing:2}]
+        },
+        options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            cutout:'65%',
+            plugins:{
+                legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8,color:'#E2E8F0'}}
+            }
+        }
     });
 }
 
@@ -836,12 +880,12 @@ function renderChartTop(data){
             scales:{
                 x:{
                     beginAtZero:true,
-                    title:{display:true,text:'POINT',font:{size:10,family:'Plus Jakarta Sans',weight:'800'},color:'#d97706'},
-                    ticks:{font:{size:10,family:'Plus Jakarta Sans'}},
-                    grid:{color:'#f1f5f9'}
+                    title:{display:true,text:'POINT',font:{size:10,family:'Plus Jakarta Sans',weight:'800'},color:'#FCD34D'},
+                    ticks:{font:{size:10,family:'Plus Jakarta Sans'},color:'#94A3B8'},
+                    grid:{color:'rgba(255,255,255,.06)'}
                 },
                 y:{
-                    ticks:{font:{size:9,family:'Plus Jakarta Sans',weight:'600'}},
+                    ticks:{font:{size:9,family:'Plus Jakarta Sans',weight:'600'},color:'#E2E8F0'},
                     grid:{display:false}
                 }
             }
@@ -866,7 +910,7 @@ function loadScoringData(){
 
 function renderTable(data){
     var tb=document.getElementById('tBody');tb.innerHTML='';
-    if(!data||data.length===0){tb.innerHTML='<tr><td colspan="10"><div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada data.</p></div></td></tr>';return;}
+    if(!data||data.length===0){tb.innerHTML='<tr><td colspan="11"><div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada data.</p></div></td></tr>';return;}
     for(var i=0;i<data.length;i++){
         var p=data[i],tr=document.createElement('tr');
 
@@ -2253,3 +2297,106 @@ loadGlobalRangeDisplay();
 loadDashboard();
 loadScoringData();
 loadUsers();
+
+/* ═══════════════════════════════════════════════
+   SIDEBAR NAVIGATION
+   ═══════════════════════════════════════════════ */
+(function initSidebar(){
+    var pageTitles = {
+        dashboard:    { title:'Dashboard',                       sub:'Ringkasan statistik & grafik kontes', icon:'fa-gauge-high' },
+        penilaian:    { title:'Data Penilaian',                  sub:'Semua input nilai dari Juri & Grand Juri', icon:'fa-table-list' },
+        users:        { title:'Kelola User',                     sub:'Manajemen akun pengguna sistem', icon:'fa-users-gear' },
+        registrasi:   { title:'Registrasi & Undian Tank',        sub:'Pendaftaran peserta, undian, dan rentang nomor', icon:'fa-database' },
+        mvp:          { title:'Kelola MVP',                      sub:'Manajemen pendaftaran ikan MVP', icon:'fa-star' }
+    };
+    var loaded = { dashboard:true }; // dashboard loaded by initial loadDashboard()
+
+    window.activatePage = function(pageId){
+        // Toggle section visibility
+        document.querySelectorAll('.page-section').forEach(function(s){
+            s.style.display = (s.dataset.page === pageId) ? 'block' : 'none';
+        });
+        // Highlight sidebar
+        document.querySelectorAll('.sidebar-item').forEach(function(a){
+            if(a.dataset.page === pageId) a.classList.add('active');
+            else a.classList.remove('active');
+        });
+        // Update topbar title
+        var info = pageTitles[pageId] || pageTitles.dashboard;
+        var ptEl = document.getElementById('pageTitle');
+        var psEl = document.getElementById('pageSubtitle');
+        if(ptEl) ptEl.innerHTML = '<i class="fas '+info.icon+'"></i> '+info.title;
+        if(psEl) psEl.textContent = info.sub;
+
+        // Lazy-load data per page (cuma sekali)
+        if(!loaded[pageId]){
+            loaded[pageId] = true;
+            if(pageId === 'penilaian'){ loadScoringData(); }
+            if(pageId === 'users'){ /* loadUsers sudah jalan di init */ }
+            if(pageId === 'registrasi'){ loadPesertaOld(); loadTankRange(); loadGlobalRangeDisplay(); }
+            if(pageId === 'mvp'){ loadMvpData(); loadMvpStatus(); loadMvpPeserta(); }
+        } else {
+            // Refresh ringan saat dibuka ulang (opsional)
+            if(pageId === 'mvp'){ loadMvpStatus(); }
+        }
+
+        document.body.classList.remove('sidebar-open');
+        window.scrollTo({top:0,behavior:'smooth'});
+    };
+
+    document.querySelectorAll('.sidebar-item').forEach(function(a){
+        a.addEventListener('click', function(e){
+            e.preventDefault();
+            activatePage(this.dataset.page);
+        });
+    });
+
+    var mt = document.getElementById('menuToggle');
+    if(mt) mt.addEventListener('click', function(){ document.body.classList.toggle('sidebar-open'); });
+    var ov = document.getElementById('sidebarOverlay');
+    if(ov) ov.addEventListener('click', function(){ document.body.classList.remove('sidebar-open'); });
+
+    // Override openModal supaya panggilan ke modalOld/modalMvp diarahkan ke page section
+    var __origOpenModal = window.openModal;
+    window.openModal = function(id){
+        if(id === 'modalOld'){ activatePage('registrasi'); return; }
+        if(id === 'modalMvp'){ activatePage('mvp'); return; }
+        __origOpenModal(id);
+    };
+})();
+
+/* ═══════════════════════════════════════════════
+   LOADING STATE OVERLAY UNTUK FETCH UTAMA
+   (wraps existing functions tanpa mengubah backend)
+   ═══════════════════════════════════════════════ */
+(function attachLoaderToFetches(){
+    // loadScoringData — tambahin overlay
+    var __origLoadScoring = window.loadScoringData;
+    if(typeof __origLoadScoring === 'function'){
+        window.loadScoringData = function(){
+            var tb = document.getElementById('tBody');
+            if(tb) tb.innerHTML='<tr><td colspan="11"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat data penilaian...</p></div></td></tr>';
+            return __origLoadScoring.apply(this, arguments);
+        };
+    }
+    // loadMvpStatus
+    var __origLoadStatus = window.loadMvpStatus;
+    if(typeof __origLoadStatus === 'function'){
+        window.loadMvpStatus = function(){
+            var btn = document.getElementById('btnToggleMvp');
+            if(btn){ btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; btn.disabled=true; }
+            return __origLoadStatus.apply(this, arguments);
+        };
+    }
+    // loadDashboard - kasih placeholder
+    var __origLoadDash = window.loadDashboard;
+    if(typeof __origLoadDash === 'function'){
+        window.loadDashboard = function(){
+            ['sTotal','sDinilai','sGrand','sBelum','sJuri','sAvg','sSisaTank','sPesertaUnik'].forEach(function(id){
+                var el = document.getElementById(id);
+                if(el && el.innerText === '0') el.innerText = '…';
+            });
+            return __origLoadDash.apply(this, arguments);
+        };
+    }
+})();

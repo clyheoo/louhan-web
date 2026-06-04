@@ -1421,10 +1421,48 @@
                                     <i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN PROFIL
                                 </button>
                             </form>
-
-                            <button class="submit-btn btn-green" style="margin-top: 12px;" onclick="openModalIkan()">
-                                <i class="fas fa-circle-plus" style="margin-right:8px;"></i>MASUKKAN DATA IKAN
-                            </button>
+                            <!-- FORM INLINE TAMBAH IKAN -->
+                            <div id="inlineFormIkan" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--bd-2);">
+                                <h3 style="font-size:15px; font-weight:800; color:var(--text-hi); margin-bottom:16px; display:flex; align-items:center; gap:10px;">
+                                    <span style="width:30px; height:30px; border-radius:10px; display:grid; place-items:center; background:rgba(34,211,238,0.10); border:1px solid rgba(34,211,238,0.20); color:var(--cyan-400); font-size:13px;"><i class="fas fa-fish"></i></span>
+                                    Masukkan Data Ikan
+                                </h3>
+                                <form id="formIkan">
+                                    @csrf
+                                    <div class="form-group" style="margin-bottom:14px;">
+                                        <label class="form-label">Kategori</label>
+                                        <div class="input-wrapper">
+                                            <select name="kategori" id="ikanKategoriSelect" class="form-select" required style="padding-left:14px;">
+                                                <option value="" disabled selected>Pilih Kategori Ikan</option>
+                                                <option value="Cencu">Cencu</option>
+                                                <option value="Chginwa">Chginwa</option>
+                                                <option value="Freemarking">Freemarking</option>
+                                                <option value="Goldenbase">Goldenbase</option>
+                                                <option value="Klasik">Klasik</option>
+                                                <option value="Bonsai">Bonsai</option>
+                                                <option value="Jumbo">Jumbo</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" id="ikanKelasWrap" style="margin-bottom:0;">
+                                        <label class="form-label">Kelas</label>
+                                        <div class="input-wrapper">
+                                            <select name="kelas" id="ikanKelasSelect" class="form-select" style="padding-left:14px;">
+                                                <option value="" disabled selected>Pilih Kelas</option>
+                                                <option value="A">Kelas A</option>
+                                                <option value="B">Kelas B</option>
+                                                <option value="C">Kelas C</option>
+                                                <option value="D">Kelas D</option>
+                                                <option value="E">Kelas E</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; gap:10px; margin-top:18px;">
+                                        <button type="reset" class="modal-close-btn" style="flex:1; padding:12px 14px;">Reset</button>
+                                        <button type="submit" class="submit-btn" style="flex:1; margin-top:0; font-size:13px;">Simpan Ikan</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
 
@@ -1581,7 +1619,7 @@
                                 <div class="ikan-empty-state">
                                     <div class="empty-icon"><i class="fas fa-fish"></i></div>
                                     <strong style="color:var(--text); display:block; margin-bottom:4px;">Belum ada ikan terdaftar</strong>
-                                    Klik tombol <em style="color:var(--cyan-300); font-style:normal; font-weight:700;">"MASUKKAN DATA IKAN"</em> untuk menambahkan ikan kontes Anda.
+                                    Isi form <em style="color:var(--cyan-300); font-style:normal; font-weight:700;">"Masukkan Data Ikan"</em> di kolom kiri untuk menambahkan ikan kontes Anda.
                                 </div>
                             @endif
                         </div>
@@ -1592,52 +1630,6 @@
 
             </div>
         </main>
-    </div>
-
-    <!-- ==================== MODAL: TAMBAH IKAN ==================== -->
-    <div class="modal-overlay" id="modalIkan">
-        <div class="modal-card">
-            <div class="modal-icon blue"><i class="fas fa-fish"></i></div>
-            <h2 class="modal-title">Masukkan Data Ikan</h2>
-            <p class="modal-desc">Isi kategori dan kelas untuk ikan yang akan dilombakan dalam kontes.</p>
-            <form id="formIkan">
-                @csrf
-                <div class="modal-form">
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label class="form-label">Kategori</label>
-                        <div class="input-wrapper">
-                            <select name="kategori" id="ikanKategoriSelect" class="form-select" required style="padding-left:14px;">
-                                <option value="" disabled selected>Pilih Kategori Ikan</option>
-                                <option value="Cencu">Cencu</option>
-                                <option value="Chginwa">Chginwa</option>
-                                <option value="Freemarking">Freemarking</option>
-                                <option value="Goldenbase">Goldenbase</option>
-                                <option value="Klasik">Klasik</option>
-                                <option value="Bonsai">Bonsai</option>
-                                <option value="Jumbo">Jumbo</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group" id="ikanKelasWrap" style="margin-bottom:0;">
-                        <label class="form-label">Kelas</label>
-                        <div class="input-wrapper">
-                            <select name="kelas" id="ikanKelasSelect" class="form-select" style="padding-left:14px;">
-                                <option value="" disabled selected>Pilih Kelas</option>
-                                <option value="A">Kelas A</option>
-                                <option value="B">Kelas B</option>
-                                <option value="C">Kelas C</option>
-                                <option value="D">Kelas D</option>
-                                <option value="E">Kelas E</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="modal-close-btn" onclick="document.getElementById('modalIkan').classList.remove('show')">Batal</button>
-                    <button type="submit" class="submit-btn" style="width:auto; padding: 13px 30px; margin-top:0; font-size:13px;">Simpan Ikan</button>
-                </div>
-            </form>
-        </div>
     </div>
 
     <!-- ==================== MODAL: SUKSES ==================== -->
@@ -1753,7 +1745,6 @@
             .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
             .then(data => {
                 if (data.success) {
-                    document.getElementById('modalIkan').classList.remove('show');
                     formIkan.reset();
                     resetIkanFormState();
                     let listContainer = document.getElementById('ikanListContainer');
@@ -2069,9 +2060,9 @@
 
         function openModalIkan() {
             resetIkanFormState();
-            document.getElementById('modalIkan').classList.add('show');
+            var el = document.getElementById('inlineFormIkan');
+            el.style.display = el.style.display === 'block' ? 'none' : 'block';
         }
-
         function kelasLineHtml(kategori, kelas) {
             if (!kelas || noKelasKategori.indexOf(kategori) !== -1) return '';
             return '<p>Kelas ' + kelas + '</p>';
