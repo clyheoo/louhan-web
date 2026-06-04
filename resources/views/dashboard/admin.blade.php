@@ -362,7 +362,7 @@
     .dropdown-empty{ padding:24px; text-align:center; font-size:12px; color:var(--text-low); }
 
     /* ===== MODALS ===== */
-    .modal-bg{ position:fixed; inset:0; background:rgba(2,6,14,.78); backdrop-filter:blur(6px); z-index:99; display:none; place-items:center; padding:16px; }
+    .modal-bg{ position:fixed; inset:0; background:rgba(2,6,14,.92); z-index:99; display:none; place-items:center; padding:16px; }
     .modal-bg.show{ display:grid; }
     .modal-box{
         background:linear-gradient(180deg, var(--ocean-800) 0%, var(--ocean-900) 100%);
@@ -386,7 +386,7 @@
     .modal-foot{ padding:14px 22px; border-top:1px solid var(--bd-1); display:flex; justify-content:flex-end; gap:9px; background:var(--ocean-900); }
 
     /* ===== POPUP ===== */
-    .popup-overlay{ position:fixed; inset:0; background:rgba(2,6,14,.78); backdrop-filter:blur(6px); z-index:99999; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .3s; padding:16px; }
+    .popup-overlay{ position:fixed; inset:0; background:rgba(2,6,14,.92); z-index:99999; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .25s; padding:16px; }
     .popup-overlay.show{ opacity:1; pointer-events:all; }
     .popup-card{
         background:linear-gradient(180deg, var(--ocean-800), var(--ocean-900));
@@ -549,6 +549,21 @@
     @media (prefers-reduced-motion: reduce){
         *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.1s!important; }
     }
+        /* ═══ PERFORMANCE: Hentikan render gradient body saat modal/popup tampil ═══ */
+    body:has(.modal-bg.show)::before,
+    body:has(.popup-overlay.show)::before{
+        display:none;
+    }
+
+    /* Hindari shadow berat saat mengetik di modal */
+    .modal-bg.show .form-input-modal:focus,
+    .modal-bg.show .form-control:focus{
+        box-shadow:0 0 0 2px rgba(34,211,238,.18) !important;
+    }
+
+    /* Optimasi animasi popup */
+    .popup-card,
+    .modal-box{ will-change:transform,opacity; }
     </style>
 </head>
 

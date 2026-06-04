@@ -48,8 +48,11 @@ class AdminDashboardController extends Controller
             'kelas'      => 'required|string|max:10',
         ]);
 
+        $peserta = Peserta::find($request->peserta_id);
+
         Ikan::create([
             'peserta_id' => $request->peserta_id,
+            'nama_peserta' => $peserta ? $peserta->nama_peserta : '-', // ★ SNAPSHOT NAMA SAAT ITU
             'kategori'   => $request->kategori,
             'kelas'      => $request->kelas,
         ]);
@@ -97,6 +100,7 @@ class AdminDashboardController extends Controller
 
         $ikan = Ikan::create([
             'peserta_id'   => $peserta->id,
+            'nama_peserta' => $peserta->nama_peserta, // ★ SNAPSHOT NAMA SAAT ITU
             'kategori'     => $request->kategori,
             'kelas'        => $kelas,
             'dibuat_oleh'  => 'admin',

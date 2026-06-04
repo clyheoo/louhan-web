@@ -11,13 +11,14 @@ class Ikan extends Model
 
     protected $fillable = [
         'peserta_id', 
+        'nama_peserta', // ★ TAMBAHKAN INI
         'kategori', 
         'kelas', 
         'nomor_tank',
         'dibuat_oleh',
         'diubah_oleh',
         'is_locked',
-        'is_mvp', // ★ TAMBAHKAN INI
+        'is_mvp',
     ];
 
     protected $casts = [

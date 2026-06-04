@@ -78,6 +78,7 @@ class DashboardController extends Controller
 
         $ikan = Ikan::create([
             'peserta_id' => $peserta->id,
+            'nama_peserta' => $peserta->nama_peserta, // ★ SNAPSHOT NAMA SAAT ITU
             'kategori'   => $request->kategori,
             'kelas'      => $kelas,
             'dibuat_oleh' => 'user',
@@ -589,6 +590,7 @@ class DashboardController extends Controller
         $ikans = $peserta->ikans()->orderBy('created_at', 'desc')->get()->map(function($ikan) {
             return [
                 'id' => $ikan->id,
+                'nama_peserta' => $ikan->nama_peserta, // ★ KIRIM NAMA HISTORIS KE FRONTEND
                 'kategori' => $ikan->kategori,
                 'kelas' => $ikan->kelas,
                 'nomor_tank' => $ikan->nomor_tank,

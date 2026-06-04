@@ -135,6 +135,53 @@ function renderRangeSummary(){
     var totalKat = 0;
     var allKeys = kelasList.concat(noKelasKategori);
 
+    var hasAnyRange = false;
+    for(var ci=0; ci<allKeys.length; ci++){
+        var ck = allKeys[ci];
+        var ckKats = kelasRangeData[ck] ? kelasRangeData[ck].kategori || {} : {};
+        if(Object.keys(ckKats).length > 0){ hasAnyRange = true; break; }
+    }
+
+    if(hasAnyRange){
+        html = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">' +
+            '<button type="button" onclick="resetAllRanges()" style="padding:6px 12px;border:1px solid rgba(239,68,68,.35);border-radius:8px;background:rgba(239,68,68,.12);color:#FCA5A5;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .2s;" onmouseover="this.style.background=\'var(--danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(239,68,68,.12)\';this.style.color=\'#FCA5A5\'">' +
+            '<i class="fas fa-rotate-left"></i> Reset Semua Rentang</button></div>';
+    }
+
+    for(var i=0; i<allKeys.length; i++){
+        var k = allKeys[i];
+        var kats = kelasRangeData[k] ? kelasRangeData[k].kategori || {} : {};
+        var keys = Object.keys(kats);
+        if(keys.length === 0) continue;
+
+        totalKelas++;
+        totalKat += keys.length;
+        var isNoKelas = noKelasKategori.indexOf(k) !== -1;
+        html += '<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.06);border-radius:9px;">';
+        html += '<b style="color:#FCD34D;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;min-width:60px;">'+(isNoKelas ? k : 'Kelas '+k)+'</b>';
+        html += '<span style="color:#475569;font-size:11px;">→</span>';
+        var parts = [];
+        for(var j=0; j<keys.length; j++){
+            var name = keys[j];
+            var r = kats[name];
+            parts.push('<span style="background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.35);border-radius:6px;padding:3px 9px;font-weight:700;font-size:11px;color:#FCD34D;display:inline-flex;align-items:center;gap:5px;">'+name+'<span style="color:#67E8F9;font-weight:800;background:rgba(34,211,238,.1);padding:0 5px;border-radius:4px;">'+r.min+'\u2013'+r.max+'</span></span>');
+        }
+        html += parts.join('');
+        html += '</div>';
+    }
+
+    if(!hasAnyRange){
+        wrap.style.display = 'none';
+        return;
+    }
+
+    if(totalKelas > 0){
+        html = '<div style="margin-bottom:12px;color:#FCD34D;font-weight:700;font-size:12px;display:flex;align-items:center;gap:6px;"><i class="fas fa-chart-pie" style="color:var(--gold-400);"></i> <b style="color:#fff;">'+totalKelas+'</b> group terkonfigurasi, <b style="color:#fff;">'+totalKat+'</b> kategori memiliki rentang khusus.</div>' + html;
+    }
+    el.innerHTML = html;
+    wrap.style.display = 'block';
+    var allKeys = kelasList.concat(noKelasKategori);
+
     /* Cek apakah ada rentang yang sudah dikonfigurasi */
     var hasAnyRange = false;
     for(var ci=0; ci<allKeys.length; ci++){
@@ -267,6 +314,35 @@ function renderKategoriGrid(kelas){
             var hasSub = kat && kat.min && kat.max;
             var card = document.createElement('div');
             card.id = 'kat_card_' + name;
+            card.style.cssText='background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:14px 12px;text-align:center;transition:border-color .2s,box-shadow .2s,background .2s;';
+            card.innerHTML=
+                '<div style="font-size:11px;font-weight:800;color:#FCD34D;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">'+name+'</div>'+
+                '<div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;">'+
+                    '<input type="number" id="kat_'+name+'_min" value="'+(hasSub?kat.min:'')+'" placeholder="Dari" style="width:100%;text-align:center;font-weight:700;padding:9px 6px;font-size:13px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#F8FAFC;outline:none;font-family:inherit;transition:all .2s;" oninput="onKatInputChange()" onfocus="this.style.borderColor=\'#22D3EE\';this.style.background=\'rgba(0,0,0,.4)\';this.style.boxShadow=\'0 0 0 3px rgba(34,211,238,.1)\'" onblur="if(!this.style.borderColor.includes(\'239\')){this.style.borderColor=\'rgba(255,255,255,.14)\';this.style.background=\'rgba(0,0,0,.28)\';this.style.boxShadow=\'\';}">'+
+                    '<span style="font-weight:800;color:#FBBF24;font-size:13px;">\u2013</span>'+
+                    '<input type="number" id="kat_'+name+'_max" value="'+(hasSub?kat.max:'')+'" placeholder="Sampai" style="width:100%;text-align:center;font-weight:700;padding:9px 6px;font-size:13px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#F8FAFC;outline:none;font-family:inherit;transition:all .2s;" oninput="onKatInputChange()" onfocus="this.style.borderColor=\'#22D3EE\';this.style.background=\'rgba(0,0,0,.4)\';this.style.boxShadow=\'0 0 0 3px rgba(34,211,238,.1)\'" onblur="if(!this.style.borderColor.includes(\'239\')){this.style.borderColor=\'rgba(255,255,255,.14)\';this.style.background=\'rgba(0,0,0,.28)\';this.style.boxShadow=\'\';}">'+
+                '</div>'+
+                '<div id="kat_hint_'+name+'" style="font-size:9.5px;color:#94A3B8;font-weight:600;transition:color .2s;">Kosongkan = pakai rentang global</div>';
+            container.appendChild(card);
+        })(katsToShow[i]);
+    }
+    var existing = kelasRangeData[kelas] ? kelasRangeData[kelas].kategori || {} : {};
+
+    var katsToShow;
+    if(kelas === 'Bonsai'){
+        katsToShow = ['Bonsai'];
+    } else if(kelas === 'Jumbo'){
+        katsToShow = ['Jumbo'];
+    } else {
+        katsToShow = kategoriListWithKelas;
+    }
+
+    for(var i=0;i<katsToShow.length;i++){
+        (function(name){
+            var kat = existing[name] || null;
+            var hasSub = kat && kat.min && kat.max;
+            var card = document.createElement('div');
+            card.id = 'kat_card_' + name;
             card.style.cssText='background:#fff;border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center;transition:border-color .2s,box-shadow .2s;';
             card.innerHTML=
                 '<div style="font-size:11px;font-weight:800;color:#1e293b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">'+name+'</div>'+
@@ -300,10 +376,10 @@ function validateAndHighlight(kelas){
         var hint = document.getElementById('kat_hint_' + name);
         var minEl = document.getElementById('kat_' + name + '_min');
         var maxEl = document.getElementById('kat_' + name + '_max');
-        if(card){ card.style.borderColor='#fde68a'; card.style.boxShadow='none'; }
-        if(hint){ hint.style.color='var(--light)'; hint.textContent='Kosongkan = pakai rentang global'; }
-        if(minEl){ minEl.style.borderColor=''; minEl.style.boxShadow=''; }
-        if(maxEl){ maxEl.style.borderColor=''; maxEl.style.boxShadow=''; }
+        if(card){ card.style.borderColor='rgba(255,255,255,.10)'; card.style.boxShadow='none'; card.style.background='linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015))'; }
+        if(hint){ hint.style.color='#94A3B8'; hint.textContent='Kosongkan = pakai rentang global'; }
+        if(minEl){ minEl.style.borderColor='rgba(255,255,255,.14)'; minEl.style.boxShadow=''; }
+        if(maxEl){ maxEl.style.borderColor='rgba(255,255,255,.14)'; maxEl.style.boxShadow=''; }
     }
 
     for(var i=0; i<checkKats.length; i++){
@@ -346,10 +422,10 @@ function highlightCardError(name, msg){
     var hint = document.getElementById('kat_hint_' + name);
     var minEl = document.getElementById('kat_' + name + '_min');
     var maxEl = document.getElementById('kat_' + name + '_max');
-    if(card){ card.style.borderColor='#fca5a5'; card.style.boxShadow='0 0 0 2px rgba(239,68,68,.1)'; }
-    if(hint){ hint.style.color='var(--danger)'; hint.textContent=msg; }
-    if(minEl){ minEl.style.borderColor='var(--danger)'; }
-    if(maxEl){ maxEl.style.borderColor='var(--danger)'; }
+    if(card){ card.style.borderColor='rgba(239,68,68,.55)'; card.style.boxShadow='0 0 0 2px rgba(239,68,68,.12)'; card.style.background='rgba(239,68,68,.06)'; }
+    if(hint){ hint.style.color='#FCA5A5'; hint.textContent=msg; }
+    if(minEl){ minEl.style.borderColor='rgba(239,68,68,.65)'; }
+    if(maxEl){ maxEl.style.borderColor='rgba(239,68,68,.65)'; }
 }
 
 function gatherInputRanges(kelas){
