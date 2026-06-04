@@ -25,10 +25,14 @@ class DashboardController extends Controller
         // Ambil semua ikan milik peserta ini
         $ikansSaya = $pesertaSaya ? $pesertaSaya->ikans()->orderBy('created_at', 'desc')->get() : collect();
 
+        // ★ Cek status mesin undian (default true/buka jika belum ada setting)
+        $undianOpen = (bool)(\DB::table('settings')->where('key', 'undian_registration_open')->value('value') ?? true);
+
         return view('dashboard.user', [
             'user' => $user, 
             'pesertaSaya' => $pesertaSaya,
-            'ikansSaya' => $ikansSaya
+            'ikansSaya' => $ikansSaya,
+            'undianOpen' => $undianOpen,
         ]);
     }
 

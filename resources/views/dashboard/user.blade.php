@@ -7,6 +7,7 @@
     $mvpCount = 0;
     try { $mvpCount = $ikansSaya->where('is_mvp', true)->count(); } catch (\Throwable $e) { $mvpCount = 0; }
     $initial = strtoupper(mb_substr(trim($user->name), 0, 1));
+    $undianOpen = $undianOpen ?? true; // ★ Dari controller, default true
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -1598,7 +1599,7 @@
 
                     <!-- CARD: MESIN UNDIAN -->
                     <div class="glass-card machine-card" id="cardMesinUndian">
-                        <div class="undian-lock-overlay" id="lockMesinUndian">
+                        <div class="undian-lock-overlay {{ !$undianOpen ? 'show' : '' }}" id="lockMesinUndian">
                             <div class="lock-visual"><i class="fas fa-lock"></i></div>
                             <div class="lock-title">Mesin Undian Dikunci</div>
                             <div class="lock-desc">Pengundian nomor tank saat ini belum dibuka oleh panitia. Anda tetap bisa mendaftarkan ikan, namun belum bisa melakukan undian.</div>
@@ -1642,7 +1643,7 @@
 
                     <!-- CARD: DAFTAR IKAN -->
                     <div class="glass-card machine-card" id="cardDaftarIkan">
-                        <div class="undian-lock-overlay" id="lockDaftarIkan">
+                        <div class="undian-lock-overlay {{ !$undianOpen ? 'show' : '' }}" id="lockDaftarIkan">
                             <div class="lock-visual"><i class="fas fa-lock"></i></div>
                             <div class="lock-title">Undian Dikunci</div>
                             <div class="lock-desc">Daftar ikan Anda sudah tercatat. Nomor tank akan bisa diundi setelah panitia membuka mesin undian.</div>
@@ -1700,9 +1701,15 @@
                                                     {{ $ikan->nomor_tank ?? '--' }}
                                                 </div>
                                                 @if(!$ikan->nomor_tank)
-                                                    <button class="btn-acak-kecil" onclick="mulaiAcak({{ $ikan->id }}, this)">
-                                                        <i class="fas fa-shuffle"></i> ACAK
-                                                    </button>
+                                                    @if($undianOpen)
+                                                        <button class="btn-acak-kecil" onclick="mulaiAcak({{ $ikan->id }}, this)">
+                                                            <i class="fas fa-shuffle"></i> ACAK
+                                                        </button>
+                                                    @else
+                                                        <button class="btn-acak-kecil" disabled style="opacity:0.4; cursor:not-allowed;">
+                                                            <i class="fas fa-lock"></i> DIKUNCI
+                                                        </button>
+                                                    @endif
                                                 @else
                                                     <span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>
                                                 @endif
@@ -1922,8 +1929,8 @@
         let currentIkans = {};
         let isMvpOpen = false;
         let currentMvpSubmitted = false;
-        let isUndianOpen = true; // ★ Default true, akan diupdate polling
-        
+        let isUndianOpen = {{ $undianOpen ? 'true' : 'false' }}; // ★ Dari server, tanpa delay
+
         // ★ FUNGSI: Update visual lock pada card Mesin Undian & Daftar Ikan
         function updateUndianLockUI(isOpen) {
             var lockMesin = document.getElementById('lockMesinUndian');
@@ -2169,6 +2176,9 @@
                 console.error('Polling error:', err);
             });
         }
+
+        // ★ INIT LOCK UI SEGERA (tanpa tunggu polling)
+        updateUndianLockUI(isUndianOpen);
 
         setTimeout(function() {
             console.log('Starting polling...');
