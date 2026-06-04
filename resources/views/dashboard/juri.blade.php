@@ -303,6 +303,7 @@
 <script>
 
 var NO_KELAS_KATEGORI = ['Bonsai', 'Jumbo'];
+var authUserId = {{ Auth::id() }};
 function isNoKelas(kat) { return NO_KELAS_KATEGORI.indexOf(kat) !== -1; }
 function kelasLabel(kelas) { return kelas ? 'Kelas ' + kelas : ''; }
 function kelasDisplay(kategori, kelas) { return isNoKelas(kategori) ? '' : '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50">Kelas ' + kelas + '</div>'; }
@@ -619,6 +620,33 @@ const GUIDELINES = {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// LOCALSTORAGE PERSIST (DRAFT NILAI)
+// ═══════════════════════════════════════════════════════════════
+function getDraftKey() { return 'juri_draft_' + authUserId; }
+function saveDraft() { try { localStorage.setItem(getDraftKey(), JSON.stringify(tankScores)); } catch(e) {} }
+function loadDraft() {
+    try {
+        var raw = localStorage.getItem(getDraftKey());
+        if (!raw) return;
+        var saved = JSON.parse(raw);
+        var scoredIds = {};
+        appData.my_scores.forEach(function(s) { scoredIds[s.ikan_id] = true; });
+        Object.keys(saved).forEach(function(id) {
+            if (!scoredIds[parseInt(id)]) { tankScores[id] = saved[id]; }
+        });
+    } catch(e) {}
+}
+function removeDraft(tankId) {
+    try {
+        var raw = localStorage.getItem(getDraftKey());
+        if (!raw) return;
+        var saved = JSON.parse(raw);
+        delete saved[tankId];
+        localStorage.setItem(getDraftKey(), JSON.stringify(saved));
+    } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
 // STATE (EXISTING)
 // ═══════════════════════════════════════════════════════════════
 let appData = { available_tanks:[], my_scores:[], all_scored:{}, scored_counts:{} };
@@ -689,7 +717,7 @@ function getDefectBtnHtml(tankId, partKey, ts) {
 // ═══════════════════════════════════════════════════════════════
 function initTankScores(tanks) { tanks.forEach(t => { if (!tankScores[t.id]) { tankScores[t.id] = { scores: { overall:{impression:''}, head:{size:'',bentuk:''}, face:{face:''}, body:{bentuk:'',proporsi:'',pangkal:''}, marking:{fullness:'',contrast:'',bentuk:''}, pearl:{shinning:'',fullness:'',bentuk:''}, color:{komposisi:'',kecerahan:'',fullness:''}, finnage:{bentuk:'',kecerahan:''} }, defects: { raw_head_penalty:['0'], raw_face_penalty:['0'], raw_body_penalty:['0'], raw_finnage_penalty:['0'] } }; } }); }
 function getVal(tankId, key) { const parts = key.split('.'); if (parts[0] === 'defect') return null; return tankScores[tankId]?.scores?.[parts[0]]?.[parts[1]] || ''; }
-function setVal(tankId, key, val) { const parts = key.split('.'); if (!tankScores[tankId]) return; if (!tankScores[tankId].scores[parts[0]]) tankScores[tankId].scores[parts[0]] = {}; tankScores[tankId].scores[parts[0]][parts[1]] = val; }
+function setVal(tankId, key, val) { const parts = key.split('.'); if (!tankScores[tankId]) return; if (!tankScores[tankId].scores[parts[0]]) tankScores[tankId].scores[parts[0]] = {}; tankScores[tankId].scores[parts[0]][parts[1]] = val; saveDraft(); }
 function getFilteredTanks() { const fKat = document.getElementById('filter-kategori').value; const fKelas = document.getElementById('filter-kelas').value; let tanks = appData.available_tanks; if (fKat) tanks = tanks.filter(t => t.kategori === fKat); if (fKelas && !isNoKelas(fKat)) tanks = tanks.filter(t => t.kelas === fKelas); return tanks.filter(t => !appData.all_scored[t.id]); }
 
 // ═══════════════════════════════════════════════════════════════
@@ -783,7 +811,7 @@ function openDefect(tankId, partKey) {
     document.getElementById('modal-defect').classList.remove('hidden');
 }
 function onDefectCheck(cb) { if (!defectModal) return; let vals = [...defectModal.values]; if (cb.value === '0') { vals = ['0']; } else { vals = vals.filter(v => v !== '0'); if (vals.includes(cb.value)) { vals = vals.filter(v => v !== cb.value); } else { vals.push(cb.value); } } if (vals.length === 0) vals = ['0']; defectModal.values = vals; }
-function saveDefect() { if (!defectModal) return; const { tankId, partKey, values } = defectModal; if (!tankScores[tankId]) return; tankScores[tankId].defects['raw_'+partKey+'_penalty'] = values; defectModal = null; document.getElementById('modal-defect').classList.add('hidden'); renderFormTable(); }
+function saveDefect() { if (!defectModal) return; const { tankId, partKey, values } = defectModal; if (!tankScores[tankId]) return; tankScores[tankId].defects['raw_'+partKey+'_penalty'] = values; defectModal = null; document.getElementById('modal-defect').classList.add('hidden'); saveDraft(); renderFormTable(); }
 
 // ═══════════════════════════════════════════════════════════════
 // BATCH SUBMIT (EXISTING)
@@ -846,7 +874,7 @@ async function batchSubmit() {
                     defect_data: ts.defects,
                 })
             });
-            if (res.success) success++; else { fail++; loopErrors.push(res.message || 'Gagal menyimpan Tank ' + tank.nomor_tank); }
+            if (res.success) { success++; removeDraft(tank.id); } else { fail++; loopErrors.push(res.message || 'Gagal menyimpan Tank ' + tank.nomor_tank); }
         } catch(e) { fail++; loopErrors.push('Gagal menyimpan Tank ' + tank.nomor_tank + ' (koneksi error)'); }
     }
 
@@ -878,7 +906,7 @@ function lihatDetail(scoringId) {
     if (!s) return;
     var nd = s.nilai_detail || {};
     var html = '<div style="text-align:left;font-size:12px;line-height:2;">';
-    html += '<b>Tank:</b> T' + (s.ikan ? s.ikan.nomor_tank : '-') + '<br>';
+    html += '<b>Tank:</b> ' + (s.ikan ? s.ikan.nomor_tank : '-') + '<br>';
     html += '<b>Kelas:</b> ' + (s.kelas || '-') + '<br>';
     html += '<b>Total Nilai:</b> ' + (s.total_nilai || 0) + '<br>';
     html += '<hr style="margin:8px 0;border-color:#e2e8f0;">';
@@ -891,7 +919,7 @@ function lihatDetail(scoringId) {
     html += '<b>Color:</b> ' + (nd.color ? (nd.color.komposisi||'-') + ' / ' + (nd.color.kecerahan||'-') + ' / ' + (nd.color.fullness||'-') : '-') + '<br>';
     html += '<b>Finnage:</b> ' + (nd.finnage ? (nd.finnage.bentuk||'-') + ' / ' + (nd.finnage.kecerahan||'-') : '-') + '<br>';
     html += '</div>';
-    showSuccessPopup('Detail Nilai T' + (s.ikan ? s.ikan.nomor_tank : '-'), html);
+    showSuccessPopup('Detail Nilai' + (s.ikan ? s.ikan.nomor_tank : '-'), html);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -905,6 +933,7 @@ async function loadJuriData() {
         appData.all_scored = res.all_scored || {};
         appData.scored_counts = res.scored_counts || {};
         initTankScores(appData.available_tanks);
+        loadDraft();
         populateFilter();
         renderFormTable();
         renderLiveTable();
