@@ -79,6 +79,7 @@ class DashboardController extends Controller
         $ikan = Ikan::create([
             'peserta_id' => $peserta->id,
             'nama_peserta' => $peserta->nama_peserta, // ★ SNAPSHOT NAMA SAAT ITU
+            'detail_anggota' => $peserta->detail_anggota, // ★ SNAPSHOT TEAM/CLUB SAAT ITU
             'kategori'   => $request->kategori,
             'kelas'      => $kelas,
             'dibuat_oleh' => 'user',
@@ -591,6 +592,7 @@ class DashboardController extends Controller
             return [
                 'id' => $ikan->id,
                 'nama_peserta' => $ikan->nama_peserta, // ★ KIRIM NAMA HISTORIS KE FRONTEND
+                'detail_anggota' => $ikan->detail_anggota, // ★ KIRIM TEAM/CLUB HISTORIS KE FRONTEND
                 'kategori' => $ikan->kategori,
                 'kelas' => $ikan->kelas,
                 'nomor_tank' => $ikan->nomor_tank,

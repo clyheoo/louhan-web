@@ -43,7 +43,7 @@ class SheetsSyncService
             $ikan->kategori ?? '',
             $this->formatKelas($ikan->kategori, $ikan->kelas),
             ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
-            $peserta->detail_anggota ?? '',
+            $ikan->detail_anggota ?? '',
             $ikan->nomor_tank ?? '',
         ];
 
@@ -66,7 +66,7 @@ class SheetsSyncService
                 $ikan->kategori ?? '',
                 $this->formatKelas($ikan->kategori, $ikan->kelas),
                 ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
-                $peserta->detail_anggota ?? '',
+                $ikan->detail_anggota ?? '',
                 $ikan->nomor_tank ?? '',
             ];
         })->toArray();
@@ -245,7 +245,7 @@ public function syncPlotingTank()
             $ikan->kategori ?? '',
             $this->formatKelas($ikan->kategori, $ikan->kelas),
             ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
-            $peserta->detail_anggota ?? '',
+            $ikan->detail_anggota ?? '',
             $noTank ?? '',
         ];
 
@@ -302,7 +302,7 @@ public function syncPlotingTank()
             $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $actualRow, 'value' => $ikan->kategori ?? ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $actualRow, 'value' => $this->formatKelas($ikan->kategori, $ikan->kelas)];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'F' . $actualRow, 'value' => ucfirst($peserta->jenis_keanggotaan ?? 'Team')];
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'G' . $actualRow, 'value' => $peserta->detail_anggota ?? ''];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'G' . $actualRow, 'value' => $ikan->detail_anggota ?? ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'H' . $actualRow, 'value' => $noTank ?? ''];
 
             // ★ TAMBAHAN: Tulis ke kolom mapping
@@ -727,7 +727,7 @@ public function syncPlotingTank()
                 strtoupper($ikan->kategori ?? ''),
                 $this->formatKelasNominasi($ikan->kategori, $ikan->kelas),
                 ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
-                $peserta->detail_anggota ?? '',
+                $ikan->detail_anggota ?? '',
                 $ikan->nomor_tank ?? '',
             ];
         })->toArray();
@@ -945,7 +945,7 @@ public function syncPlotingTank()
             
             // ★ SNAPSHOT: Ambil nama historis dari ikan pertama, bukan dari profil
             $nama = $items->first()->nama_peserta ?? ($peserta->nama_peserta ?? 'Unknown');
-            $team = $peserta->detail_anggota ?? '';
+            $team = $items->first()->detail_anggota ?? ($peserta->detail_anggota ?? '');
 
             $headerText = $nama;
             if ($team) $headerText .= ' - ' . $team;
