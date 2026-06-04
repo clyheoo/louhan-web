@@ -39,7 +39,7 @@ class SheetsSyncService
 
         $row = [
             $ikan->created_at ? Carbon::parse($ikan->created_at)->format('m/d/Y H:i:s') : now()->format('m/d/Y H:i:s'),
-            $peserta->nama_peserta ?? '',
+            $ikan->nama_peserta ?? '',
             $ikan->kategori ?? '',
             $this->formatKelas($ikan->kategori, $ikan->kelas),
             ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
@@ -62,7 +62,7 @@ class SheetsSyncService
             $peserta = $ikan->peserta;
             return [
                 $ikan->created_at ? Carbon::parse($ikan->created_at)->format('m/d/Y H:i:s') : '',
-                $peserta->nama_peserta ?? '',
+                $ikan->nama_peserta ?? '',
                 $ikan->kategori ?? '',
                 $this->formatKelas($ikan->kategori, $ikan->kelas),
                 ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
@@ -241,7 +241,7 @@ public function syncPlotingTank()
         $row = [
             $nominasi->created_at ? Carbon::parse($nominasi->created_at)->format('d/m/Y H:i:s') : now()->format('d/m/Y H:i:s'),
             $juri->name ?? '',
-            $peserta->nama_peserta ?? '',
+            $ikan->nama_peserta ?? '',
             $ikan->kategori ?? '',
             $this->formatKelas($ikan->kategori, $ikan->kelas),
             ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
@@ -298,7 +298,7 @@ public function syncPlotingTank()
             // Data utama A-H
             $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $actualRow, 'value' => $n->created_at ? Carbon::parse($n->created_at)->format('d/m/Y H:i:s') : ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $actualRow, 'value' => $juri->name ?? ''];
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $actualRow, 'value' => $peserta->nama_peserta ?? ''];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $actualRow, 'value' => $ikan->nama_peserta ?? ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $actualRow, 'value' => $ikan->kategori ?? ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $actualRow, 'value' => $this->formatKelas($ikan->kategori, $ikan->kelas)];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'F' . $actualRow, 'value' => ucfirst($peserta->jenis_keanggotaan ?? 'Team')];
@@ -723,7 +723,7 @@ public function syncPlotingTank()
             return [
                 $n->reviewed_at ? Carbon::parse($n->reviewed_at)->format('d/m/Y H:i:s') : '',
                 $n->status === 'approved' ? '✅ DISETUJUI GRAND JURI' : '❌ DITOLAK GRAND JURI',
-                $peserta->nama_peserta ?? '',
+                $ikan->nama_peserta ?? '',
                 strtoupper($ikan->kategori ?? ''),
                 $this->formatKelasNominasi($ikan->kategori, $ikan->kelas),
                 ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
@@ -942,7 +942,9 @@ public function syncPlotingTank()
 
         foreach ($groups as $pesertaId => $items) {
             $peserta = $items->first()->peserta;
-            $nama = $peserta->nama_peserta ?? 'Unknown';
+            
+            // ★ SNAPSHOT: Ambil nama historis dari ikan pertama, bukan dari profil
+            $nama = $items->first()->nama_peserta ?? ($peserta->nama_peserta ?? 'Unknown');
             $team = $peserta->detail_anggota ?? '';
 
             $headerText = $nama;
@@ -956,9 +958,12 @@ public function syncPlotingTank()
                 $point = $this->hitungFinalPoint($ikan);
                 $totalPoint += $point;
 
+                // ★ SNAPSHOT: Gunakan nama peserta historis per ikan
+                $ikanNama = $ikan->nama_peserta ?? $nama;
+
                 $rows[] = [
                     $no,
-                    $nama,
+                    $ikanNama,
                     strtoupper($ikan->kategori ?? ''),
                     $ikan->nomor_tank ?? '',
                     $point
