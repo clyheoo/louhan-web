@@ -1392,13 +1392,13 @@
                                 <div class="form-group">
                                     <label class="form-label">Nama Peserta</label>
                                     <div class="input-wrapper">
-                                        <input type="text" name="nama_peserta" id="namaPeserta" class="form-input" value="{{ $user->name }}" readonly>
-                                        <i class="fas fa-lock input-icon" style="font-size:12px;"></i>
+                                        <input type="text" name="nama_peserta" id="namaPeserta" class="form-input" value="{{ $user->name }}">
+                                        <i class="fas fa-user input-icon" style="font-size:12px;"></i>
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Jenis Keanggotaan</label>
-                                    <div class="toggle-group" @if($profilLengkap) style="opacity:0.55;pointer-events:none;" @endif>
+                                    <div class="toggle-group">
                                         <div class="toggle-option">
                                             <input type="radio" name="jenis_keanggotaan" id="perorangan" value="perorangan" {{ !$pesertaSaya || $pesertaSaya->jenis_keanggotaan == 'perorangan' ? 'checked' : '' }}>
                                             <label for="perorangan"><i class="fas fa-user" style="margin-right:5px"></i>Perorangan</label>
@@ -1412,17 +1412,14 @@
                                 <div class="form-group">
                                     <label class="form-label" id="labelDetail">{{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'Nama Team / Club' : 'Kota Asal' }}</label>
                                     <div class="input-wrapper">
-                                        <input type="text" name="detail_anggota" id="inputDetail" class="form-input" placeholder="Contoh: Jakarta" value="{{ $pesertaSaya->detail_anggota ?? '' }}" {{ $profilLengkap ? 'readonly' : '' }} required>
+                                        <input type="text" name="detail_anggota" id="inputDetail" class="form-input" placeholder="Contoh: Jakarta" value="{{ $pesertaSaya->detail_anggota ?? '' }}" required>
                                         <i class="fas {{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'fa-shield-halved' : 'fa-city' }} input-icon" id="iconDetail"></i>
                                     </div>
                                     <div class="input-error-msg" id="errDetail"></div>
                                 </div>
-
-                                @if(!$profilLengkap)
                                 <button type="submit" class="submit-btn" id="submitBtn">
                                     <i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN PROFIL
                                 </button>
-                                @endif
                             </form>
 
                             <button class="submit-btn btn-green" style="margin-top: 12px;" onclick="openModalIkan()">
@@ -1597,10 +1594,6 @@
         </main>
     </div>
 
-    @if($profilLengkap)
-    <script>document.addEventListener('DOMContentLoaded', function(){ lockProfilForm(); });</script>
-    @endif
-
     <!-- ==================== MODAL: TAMBAH IKAN ==================== -->
     <div class="modal-overlay" id="modalIkan">
         <div class="modal-card">
@@ -1717,8 +1710,6 @@
             if (btn) btn.style.display = 'none';
         }
 
-        @if($profilLengkap) lockProfilForm(); @endif
-
         const regForm = document.getElementById('regForm');
         const submitBtn = document.getElementById('submitBtn');
 
@@ -1730,7 +1721,7 @@
             formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
             apiFetch('{{ route("store.registrasi") }}', { method: 'POST', body: formData })
             .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
-            .then(data => { if (data.success) { document.getElementById('successModal').classList.add('show'); lockProfilForm(); } })
+            .then(data => { if (data.success) { document.getElementById('successModal').classList.add('show'); } })
             .catch(err => {
                 const errEl = document.getElementById('errDetail');
                 if (err.errors && err.errors.detail_anggota) { errEl.textContent = err.errors.detail_anggota[0]; errEl.style.display = 'block'; }
