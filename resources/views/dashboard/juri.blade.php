@@ -72,7 +72,7 @@
                         Pilih Tank untuk Dinominasikan
                     </h2>
                     <button onclick="nomLoadData()" class="px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 transition-colors flex items-center gap-1.5">
-                        <i class="fas fa-sync-alt"></i> Refresh
+                        <i id="nom-refresh-icon" class="fas fa-sync-alt"></i> Refresh
                     </button>
                 </div>
                 <div id="nom-filter-info" class="hidden mb-4 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-xs font-semibold text-blue-700 flex items-center gap-2">
@@ -406,6 +406,8 @@ function nomShowApprovedAnim() {
 }
 
 async function nomLoadData() {
+    var icon = document.getElementById('nom-refresh-icon');
+    if (icon) icon.classList.add('animate-spin');
     try {
         const res = await apiFetch('/api/juri/tanks-nominasi');
         nomState.tanks = res.tanks || [];
@@ -416,6 +418,7 @@ async function nomLoadData() {
     } catch (e) {
         showWarningModal([{type:'select', msg:'Gagal memuat data tank.'}]);
     }
+    if (icon) icon.classList.remove('animate-spin');
 }
 
 function nomRenderFilterBtns() {

@@ -135,7 +135,7 @@
                 <button onclick="loadNominasi()" class="w-full flex items-center justify-between">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-sync-alt text-emerald-600 text-xl"></i>
+                            <i id="gj-refresh-icon" class="fas fa-sync-alt text-emerald-600 text-xl"></i>
                         </div>
                         <p class="text-sm font-bold text-slate-700">Refresh Data</p>
                     </div>
@@ -392,10 +392,19 @@ async function approveAllInGroup(btn, ids) {
     loadHistory();
 }
 
-/* ── silent=true = tidak tampilkan error popup ── */
+/* ── silent=true = tidak tampilkan error popup & tidak spin icon ── */
 async function loadNominasi(silent) {
+    var icon = document.getElementById('gj-refresh-icon');
+    if (icon && !silent) icon.classList.add('animate-spin');
     try {
         var res = await apiFetch('/api/grand-juri/nominasi');
+
+        if (!res || res.error) {
+            if (!silent) showWarningModal([{ msg: (res && res.message) ? res.message : 'Gagal memuat data nominasi.' }]);
+            if (icon && !silent) icon.classList.remove('animate-spin');
+            return;
+        }
+
         document.getElementById('stat-juri').textContent = res.total_juri || 0;
         document.getElementById('stat-tank').textContent = res.total_pending || 0;
 
@@ -405,6 +414,7 @@ async function loadNominasi(silent) {
         if (!res.grouped || res.grouped.length === 0) {
             list.innerHTML = '';
             empty.classList.remove('hidden');
+            if (icon && !silent) icon.classList.remove('animate-spin');
             return;
         }
 
@@ -446,6 +456,7 @@ async function loadNominasi(silent) {
     } catch(e) {
         if (!silent) showWarningModal([{ msg: 'Gagal memuat data nominasi.' }]);
     }
+    if (icon && !silent) icon.classList.remove('animate-spin');
 }
 
 let histData = { approved: [], rejected: [] };
