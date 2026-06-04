@@ -197,7 +197,7 @@ class AdminDashboardController extends Controller
                 $point = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
 
                 return [
-                    'nama'       => $ikan->peserta?->nama_peserta ?? 'Unknown',
+                    'nama'       => $ikan->nama_peserta ?? 'Unknown',
                     'total'      => $ikanTotalMap[$ikan->id],
                     'point'      => (float) $point,
                     'kategori'   => $ikan->kategori ?? '—',
@@ -374,7 +374,7 @@ class AdminDashboardController extends Controller
             return [
                 'id'                 => $ikan->id,
                 'peserta_id'         => $ikan->peserta_id,
-                'nama_peserta'       => $peserta->nama_peserta ?? 'Unknown',
+                'nama_peserta'       => $ikan->nama_peserta ?? 'Unknown',
                 'kategori'           => $ikan->kategori,
                 'kelas'              => $latestKelas ?? $ikan->kelas ?? '-',
                 'nomor_tank'         => $ikan->nomor_tank,
@@ -527,7 +527,7 @@ class AdminDashboardController extends Controller
         switch ($type) {
             case 'total_ikan':
                 $rows = Ikan::whereNotNull('nomor_tank')->with('peserta')->orderBy('nomor_tank')->get()->map(function ($i, $idx) {
-                    return [$idx + 1, $i->peserta->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—'];
+                    return [$idx + 1, $i->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—'];
                 })->toArray();
                 return response()->json(['title' => 'Total Ikan Terdaftar', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS'], 'rows' => $rows]);
 
@@ -539,7 +539,7 @@ class AdminDashboardController extends Controller
                     ->orderByDesc('jml')
                     ->get()
                     ->map(function ($i, $idx) {
-                        return [$idx + 1, $i->peserta->nama_peserta ?? 'Unknown', $i->jml];
+                        return [$idx + 1, $i->nama_peserta ?? 'Unknown', $i->jml];
                     })->toArray();
                 return response()->json(['title' => 'Total Peserta', 'columns' => ['#', 'PESERTA', 'JUMLAH IKAN'], 'rows' => $rows]);
 
@@ -551,7 +551,7 @@ class AdminDashboardController extends Controller
                     ->groupBy('ikan_id')->get()->keyBy('ikan_id');
                 $rows = Ikan::whereIn('id', $sudahIds)->with('peserta')->orderBy('nomor_tank')->get()->map(function ($i, $idx) use ($stats) {
                     $s = $stats[$i->id];
-                    return [$idx + 1, $i->peserta->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—', $s ? $s->jml : 0, $s ? $s->total : 0];
+                    return [$idx + 1, $i->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—', $s ? $s->jml : 0, $s ? $s->total : 0];
                 })->toArray();
                 return response()->json(['title' => 'Sudah Dinilai Juri', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS', 'JURI', 'TOTAL NILAI'], 'rows' => $rows]);
 
@@ -579,7 +579,7 @@ class AdminDashboardController extends Controller
                     ->orderBy('nomor_tank')
                     ->get()
                     ->map(function ($i, $idx) {
-                        return [$idx + 1, $i->peserta->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—'];
+                        return [$idx + 1, $i->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—'];
                     })->toArray();
                 return response()->json(['title' => 'Belum Dinilai', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS'], 'rows' => $rows]);
 
@@ -947,7 +947,7 @@ class AdminDashboardController extends Controller
         $ikans = Ikan::where('is_mvp', true)->with('peserta')->orderBy('kategori')->orderBy('kelas')->get()->map(function($ikan) {
             return [
                 'id' => $ikan->id,
-                'nama_peserta' => $ikan->peserta->nama_peserta ?? '-',
+                'nama_peserta' => $ikan->nama_peserta ?? '-',
                 'detail_anggota' => $ikan->peserta->detail_anggota ?? '-',
                 'kategori' => $ikan->kategori,
                 'kelas' => $ikan->kelas,
