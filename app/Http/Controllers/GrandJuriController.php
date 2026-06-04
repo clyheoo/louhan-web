@@ -135,7 +135,7 @@ class GrandJuriController extends Controller
                             'nomor_tank'    => $ikan->nomor_tank ?? null,
                             'kategori'      => $ikan->kategori ?? null,
                             'kelas'         => $ikan->kelas ?? null,
-                            'nama_peserta'  => optional($ikan->peserta)->nama_peserta ?? 'Unknown',
+                            'nama_peserta'  => $ikan->nama_peserta ?? 'Unknown',
                             'detail_anggota'=> optional($ikan->peserta)->detail_anggota ?? '—',
                             'submitted_at'  => $n->created_at->toISOString(),
                         ];
@@ -236,7 +236,7 @@ class GrandJuriController extends Controller
                         'nomor_tank'   => $ikan ? $ikan->nomor_tank : null,
                         'kategori'     => $ikan ? $ikan->kategori : null,
                         'kelas'        => $ikan ? $ikan->kelas : null,
-                        'nama_peserta' => optional($ikan->peserta)->nama_peserta ?? 'Unknown',
+                        'nama_peserta' => $ikan->nama_peserta ?? 'Unknown',
                         'reviewed_at'  => $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-',
                     ];
                 })->values()->toArray(),
@@ -255,7 +255,7 @@ class GrandJuriController extends Controller
                         'nomor_tank'   => $ikan ? $ikan->nomor_tank : null,
                         'kategori'     => $ikan ? $ikan->kategori : null,
                         'kelas'        => $ikan ? $ikan->kelas : null,
-                        'nama_peserta' => optional($ikan->peserta)->nama_peserta ?? 'Unknown',
+                        'nama_peserta' => $ikan->nama_peserta ?? 'Unknown',
                         'catatan'      => $n->catatan ?: null,
                         'reviewed_at'  => $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-',
                     ];
@@ -413,7 +413,7 @@ class GrandJuriController extends Controller
 
             return [
                 'id'                    => $ikan->id,
-                'nama_peserta'          => $peserta->nama_peserta ?? 'Unknown',
+                'nama_peserta'          => $ikan->nama_peserta ?? 'Unknown',
                 'kategori'              => $ikan->kategori,
                 'kelas'                 => $latestKelas ?? $ikan->kelas ?? '-',
                 'nomor_tank'            => $ikan->nomor_tank,
@@ -727,7 +727,7 @@ class GrandJuriController extends Controller
 
         $data = $query->orderBy('created_at', 'desc')->get()->map(function ($scoring) {
             return [
-                'nama_peserta' => $scoring->ikan->peserta->nama_peserta ?? 'Unknown',
+                'nama_peserta' => $scoring->ikan->nama_peserta ?? 'Unknown',
                 'nomor_tank'   => $scoring->ikan->nomor_tank ?? '—',
                 'kategori'     => $scoring->ikan->kategori ?? '—',
                 'total_nilai'  => $scoring->total_nilai ?? 0,
@@ -761,7 +761,7 @@ class GrandJuriController extends Controller
         $data = [];
         foreach ($ikans as $ikan) {
             $data[] = [
-                'nama_peserta' => $ikan->peserta->nama_peserta ?? 'Unknown',
+                'nama_peserta' => $ikan->nama_peserta ?? 'Unknown',
                 'nomor_tank'   => $ikan->nomor_tank,
                 'juri_nama'    => $ikan->scorings->first()?->juri?->name ?? '—',
                 'total_nilai'  => $ikan->scorings->first()?->total_nilai ?? 0,
@@ -803,7 +803,7 @@ class GrandJuriController extends Controller
         $data = $query->orderBy('nomor_tank')->get()->map(function ($ikan) {
             $scoring = $ikan->scorings->first();
             return [
-                'nama_peserta'  => $ikan->peserta->nama_peserta ?? 'Unknown',
+                'nama_peserta'  => $ikan->nama_peserta ?? 'Unknown',
                 'nomor_tank'    => $ikan->nomor_tank,
                 'kategori'      => $ikan->kategori ?? '—',
                 'kelas'         => $scoring ? ($scoring->kelas ?? '—') : ($ikan->kelas ?? '—'),
@@ -839,7 +839,7 @@ class GrandJuriController extends Controller
 
             $data[] = [
                 'peserta_id' => $pesertaId,
-                'nama_peserta' => $peserta->nama_peserta ?? '-',
+                'nama_peserta' => $ikanList->first()->nama_peserta ?? ($peserta->nama_peserta ?? '-'),
                 'detail_anggota' => $peserta->detail_anggota ?? '-',
                 'total_mvp' => $ikanList->count(),
                 'ikans' => $ikanDetails
@@ -914,7 +914,7 @@ class GrandJuriController extends Controller
 
                 $allItems[] = [
                     'ikan_id'           => $ikan->id,
-                    'nama_peserta'      => $ikan->peserta->nama_peserta ?? 'Unknown',
+                    'nama_peserta'      => $ikan->nama_peserta ?? 'Unknown',
                     'detail_anggota'    => $ikan->peserta->detail_anggota ?? '—',
                     'kategori'          => $ikan->kategori,
                     'kelas'             => $ikan->kelas ?? '-',
@@ -1007,7 +1007,7 @@ class GrandJuriController extends Controller
 
             $groups[$key][] = [
                 'ikan_id'           => $ikan->id,
-                'nama_peserta'      => $ikan->peserta->nama_peserta ?? 'Unknown',
+                'nama_peserta'      => $ikan->nama_peserta ?? 'Unknown',
                 'detail_anggota'    => $ikan->peserta->detail_anggota ?? '—',
                 'kategori'          => $ikan->kategori,
                 'kelas'             => $ikan->kelas ?? '-',

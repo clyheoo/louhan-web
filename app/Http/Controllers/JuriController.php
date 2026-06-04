@@ -252,7 +252,7 @@ class JuriController extends Controller
                     'nomor_tank'    => $n->ikan->nomor_tank ?? null,
                     'kategori'      => $n->ikan->kategori ?? null,
                     'kelas'         => $n->ikan->kelas ?? null,
-                    'nama_peserta'  => $n->ikan->peserta->nama_peserta ?? 'Unknown',
+                    'nama_peserta'  => $n->ikan->nama_peserta ?? 'Unknown',
                     'status'        => $n->status,
                     'catatan'       => $n->catatan,
                     'reviewed_at'   => $n->reviewed_at?->toISOString(),
@@ -343,7 +343,7 @@ class JuriController extends Controller
                     'nomor_tank'     => $ikan->nomor_tank,
                     'kategori'       => $ikan->kategori,
                     'kelas'          => $ikan->kelas,
-                    'nama_peserta'   => $ikan->peserta->nama_peserta ?? 'Unknown',
+                    'nama_peserta'   => $ikan->nama_peserta ?? 'Unknown',
                     'detail_anggota' => $ikan->peserta->detail_anggota ?? '—',
                 ];
             });
