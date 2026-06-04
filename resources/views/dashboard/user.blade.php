@@ -1387,7 +1387,7 @@
                             @endif
                         </div>
                         <div class="card-body">
-                            <form id="regForm">
+                            <form id="formIkan">
                                 @csrf
                                 <div class="form-group">
                                     <label class="form-label">Nama Peserta</label>
@@ -1417,18 +1417,13 @@
                                     </div>
                                     <div class="input-error-msg" id="errDetail"></div>
                                 </div>
-                                <button type="submit" class="submit-btn" id="submitBtn">
-                                    <i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN PROFIL
-                                </button>
-                            </form>
-                            <!-- FORM INLINE TAMBAH IKAN -->
-                            <div id="inlineFormIkan" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--bd-2);">
-                                <h3 style="font-size:15px; font-weight:800; color:var(--text-hi); margin-bottom:16px; display:flex; align-items:center; gap:10px;">
-                                    <span style="width:30px; height:30px; border-radius:10px; display:grid; place-items:center; background:rgba(34,211,238,0.10); border:1px solid rgba(34,211,238,0.20); color:var(--cyan-400); font-size:13px;"><i class="fas fa-fish"></i></span>
-                                    Masukkan Data Ikan
-                                </h3>
-                                <form id="formIkan">
-                                    @csrf
+
+                                <!-- FORM TAMBAH IKAN (GABUNG) -->
+                                <div id="inlineFormIkan" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--bd-2);">
+                                    <h3 style="font-size:15px; font-weight:800; color:var(--text-hi); margin-bottom:16px; display:flex; align-items:center; gap:10px;">
+                                        <span style="width:30px; height:30px; border-radius:10px; display:grid; place-items:center; background:rgba(34,211,238,0.10); border:1px solid rgba(34,211,238,0.20); color:var(--cyan-400); font-size:13px;"><i class="fas fa-fish"></i></span>
+                                        Masukkan Data Ikan
+                                    </h3>
                                     <div class="form-group" style="margin-bottom:14px;">
                                         <label class="form-label">Kategori</label>
                                         <div class="input-wrapper">
@@ -1458,11 +1453,11 @@
                                         </div>
                                     </div>
                                     <div style="display:flex; gap:10px; margin-top:18px;">
-                                        <button type="reset" class="modal-close-btn" style="flex:1; padding:12px 14px;">Reset</button>
-                                        <button type="submit" class="submit-btn" style="flex:1; margin-top:0; font-size:13px;">Simpan Ikan</button>
+                                        <button type="button" class="modal-close-btn" style="flex:1; padding:12px 14px;" onclick="resetIkanFields()">Reset</button>
+                                        <button type="submit" class="submit-btn" style="flex:1; margin-top:0; font-size:13px;"><i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN</button>
                                     </div>
-                                </form>
-                            </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
 
@@ -1706,51 +1701,65 @@
             if (btn) btn.style.display = 'none';
         }
 
-        const regForm = document.getElementById('regForm');
-        const submitBtn = document.getElementById('submitBtn');
 
-        regForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>MEMPROSES...';
-            const formData = new FormData(regForm);
-            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-            apiFetch('{{ route("store.registrasi") }}', { method: 'POST', body: formData })
-            .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
-            .then(data => { if (data.success) { document.getElementById('successModal').classList.add('show'); } })
-            .catch(err => {
-                const errEl = document.getElementById('errDetail');
-                if (err.errors && err.errors.detail_anggota) { errEl.textContent = err.errors.detail_anggota[0]; errEl.style.display = 'block'; }
-                else { alert('Terjadi kesalahan pada server.'); }
-            })
-            .finally(() => {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN PROFIL';
-            });
-        });
+
+        // ★ HELPER: Reset hanya field ikan (profil tetap terisi untuk tambah ikan berikutnya)
+        function resetIkanFields() {
+            if (ikanKategoriSelect) ikanKategoriSelect.value = '';
+            if (ikanKelasSelectEl) ikanKelasSelectEl.value = '';
+            resetIkanFormState();
+        }
 
         const formIkan = document.getElementById('formIkan');
         formIkan.addEventListener('submit', function(e) {
             e.preventDefault();
 
+            // ★ VALIDASI PROFIL
+            var namaPeserta = document.getElementById('namaPeserta').value.trim();
+            var jenisKeanggotaan = document.querySelector('input[name="jenis_keanggotaan"]:checked');
+            var detailAnggota = document.getElementById('inputDetail').value.trim();
+
+            if(!namaPeserta){ alert('Isi Nama Peserta terlebih dahulu.'); return; }
+            if(!detailAnggota){ alert(document.getElementById('labelDetail').textContent + ' wajib diisi.'); return; }
+
+            // ★ VALIDASI IKAN
             var selectedKategori = ikanKategoriSelect ? ikanKategoriSelect.value : '';
-            if(!selectedKategori){ alert('Pilih kategori terlebih dahulu.'); return; }
-            if(noKelasKategori.indexOf(selectedKategori) === -1){
-                var selectedKelas = ikanKelasSelectEl ? ikanKelasSelectEl.value : '';
-                if(!selectedKelas){ alert('Pilih kelas terlebih dahulu.'); return; }
-            }
+            if(!selectedKategori){ alert('Pilih kategori ikan terlebih dahulu.'); return; }
+            var selectedKelas = ikanKelasSelectEl ? ikanKelasSelectEl.value : '';
+            if(noKelasKategori.indexOf(selectedKategori) === -1 && !selectedKelas){ alert('Pilih kelas ikan terlebih dahulu.'); return; }
 
             const btnSubmit = formIkan.querySelector('.submit-btn');
             btnSubmit.disabled = true;
             btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
-            const formData = new FormData(formIkan);
-            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-            apiFetch('{{ route("store.ikan") }}', { method: 'POST', body: formData })
+
+            // ★ STEP 1: SIMPAN PROFIL DULU
+            const profilFormData = new FormData();
+            profilFormData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+            profilFormData.append('nama_peserta', namaPeserta);
+            profilFormData.append('jenis_keanggotaan', jenisKeanggotaan ? jenisKeanggotaan.value : 'perorangan');
+            profilFormData.append('detail_anggota', detailAnggota);
+
+            apiFetch('{{ route("store.registrasi") }}', { method: 'POST', body: profilFormData })
             .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); })
+            .then(profilRes => {
+                if (!profilRes.success) throw new Error('Profil gagal disimpan');
+
+                // ★ STEP 2: SIMPAN IKAN
+                const ikanFormData = new FormData();
+                ikanFormData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+                ikanFormData.append('kategori', selectedKategori);
+                if (noKelasKategori.indexOf(selectedKategori) === -1) {
+                    ikanFormData.append('kelas', selectedKelas);
+                }
+
+                return apiFetch('{{ route("store.ikan") }}', { method: 'POST', body: ikanFormData })
+                .then(res => { if (!res.ok) return res.json().then(data => { throw data; }); return res.json(); });
+            })
             .then(data => {
                 if (data.success) {
-                    formIkan.reset();
-                    resetIkanFormState();
+                    // Reset HANYA field ikan, profil tetap terisi untuk tambah ikan berikutnya
+                    resetIkanFields();
+
                     let listContainer = document.getElementById('ikanListContainer');
                     let emptyState = document.querySelector('.ikan-empty-state');
                     if (emptyState) emptyState.remove();
@@ -1763,16 +1772,29 @@
                     const newEl = document.createElement('div');
                     newEl.className = 'ikan-item';
                     newEl.id = `ikan-item-${data.ikan.id}`;
-                    newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${data.ikan.nama_peserta || document.getElementById('namaPeserta').value}</h4>${kategoriKelasLineHtml(data.ikan.kategori, data.ikan.kelas)}</div><div class="ikan-item-right"><div class="tank-num empty" id="tank-num-${data.ikan.id}">--</div><button class="btn-acak-kecil" onclick="mulaiAcak(${data.ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button></div>`;
+                    newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${data.ikan.nama_peserta || namaPeserta}</h4>${kategoriKelasLineHtml(data.ikan.kategori, data.ikan.kelas)}</div><div class="ikan-item-right"><div class="tank-num empty" id="tank-num-${data.ikan.id}">--</div><button class="btn-acak-kecil" onclick="mulaiAcak(${data.ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button></div>`;
                     listContainer.prepend(newEl);
                     currentIkans[data.ikan.id] = { kategori: data.ikan.kelas ? 'Kelas ' + data.ikan.kelas : '', nomor_tank: '--', is_mvp: false };
+
+                    // Tampilkan modal sukses
+                    document.getElementById('successModalTitle').textContent = 'Berhasil Disimpan!';
+                    document.getElementById('successModalDesc').innerHTML = 'Profil dan data ikan <strong>' + formatKategoriKelas(data.ikan.kategori, data.ikan.kelas) + '</strong> berhasil disimpan.';
+                    document.getElementById('successModal').classList.add('show');
                 }
             })
             .catch(err => {
-                if (err.errors) { let msg = ''; Object.values(err.errors).forEach(function(e) { msg += e[0] + '\n'; }); alert(msg); }
-                else { alert(err.message || 'Gagal menambahkan ikan.'); }
+                if (err.errors) { 
+                    let msg = ''; 
+                    Object.values(err.errors).forEach(function(e) { msg += e[0] + '\n'; }); 
+                    alert(msg); 
+                } else { 
+                    alert(err.message || 'Gagal menyimpan data.'); 
+                }
             })
-            .finally(() => { btnSubmit.disabled = false; btnSubmit.innerHTML = 'Simpan Ikan'; });
+            .finally(() => { 
+                btnSubmit.disabled = false; 
+                btnSubmit.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>SIMPAN'; 
+            });
         });
 
         // --- HELPER: API FETCH MENGGUNAKAN XMLHttpRequest ---
