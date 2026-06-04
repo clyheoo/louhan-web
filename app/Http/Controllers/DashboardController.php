@@ -80,6 +80,7 @@ class DashboardController extends Controller
             'peserta_id' => $peserta->id,
             'nama_peserta' => $peserta->nama_peserta, // ★ SNAPSHOT NAMA SAAT ITU
             'detail_anggota' => $peserta->detail_anggota, // ★ SNAPSHOT TEAM/CLUB SAAT ITU
+            'jenis_keanggotaan' => $peserta->jenis_keanggotaan, // ★ SNAPSHOT JENIS KEANGGOTAAN SAAT ITU
             'kategori'   => $request->kategori,
             'kelas'      => $kelas,
             'dibuat_oleh' => 'user',
@@ -591,8 +592,9 @@ class DashboardController extends Controller
         $ikans = $peserta->ikans()->orderBy('created_at', 'desc')->get()->map(function($ikan) {
             return [
                 'id' => $ikan->id,
-                'nama_peserta' => $ikan->nama_peserta, // ★ KIRIM NAMA HISTORIS KE FRONTEND
-                'detail_anggota' => $ikan->detail_anggota, // ★ KIRIM TEAM/CLUB HISTORIS KE FRONTEND
+                'nama_peserta' => $ikan->nama_peserta,
+                'detail_anggota' => $ikan->detail_anggota,
+                'jenis_keanggotaan' => $ikan->jenis_keanggotaan, // ★ KIRIM JENIS KEANGGOTAAN HISTORIS
                 'kategori' => $ikan->kategori,
                 'kelas' => $ikan->kelas,
                 'nomor_tank' => $ikan->nomor_tank,

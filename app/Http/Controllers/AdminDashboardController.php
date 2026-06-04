@@ -52,8 +52,9 @@ class AdminDashboardController extends Controller
 
         Ikan::create([
             'peserta_id' => $request->peserta_id,
-            'nama_peserta' => $peserta ? $peserta->nama_peserta : '-', // ★ SNAPSHOT NAMA SAAT ITU
-            'detail_anggota' => $peserta ? $peserta->detail_anggota : '-', // ★ SNAPSHOT TEAM/CLUB SAAT ITU
+            'nama_peserta' => $peserta ? $peserta->nama_peserta : '-',
+            'detail_anggota' => $peserta ? $peserta->detail_anggota : '-',
+            'jenis_keanggotaan' => $peserta ? $peserta->jenis_keanggotaan : 'perorangan', // ★ SNAPSHOT
             'kategori'   => $request->kategori,
             'kelas'      => $request->kelas,
         ]);
@@ -101,8 +102,9 @@ class AdminDashboardController extends Controller
 
         $ikan = Ikan::create([
             'peserta_id'   => $peserta->id,
-            'nama_peserta' => $peserta->nama_peserta, // ★ SNAPSHOT NAMA SAAT ITU
-            'detail_anggota' => $peserta->detail_anggota, // ★ SNAPSHOT TEAM/CLUB SAAT ITU
+            'nama_peserta' => $peserta->nama_peserta,
+            'detail_anggota' => $peserta->detail_anggota,
+            'jenis_keanggotaan' => $peserta->jenis_keanggotaan, // ★ SNAPSHOT
             'kategori'     => $request->kategori,
             'kelas'        => $kelas,
             'dibuat_oleh'  => 'admin',

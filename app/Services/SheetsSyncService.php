@@ -42,8 +42,8 @@ class SheetsSyncService
             $ikan->nama_peserta ?? '',
             $ikan->kategori ?? '',
             $this->formatKelas($ikan->kategori, $ikan->kelas),
-            ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
-            $ikan->detail_anggota ?? '',
+                ucfirst($ikan->jenis_keanggotaan ?? 'Team'),
+                $ikan->detail_anggota ?? '',
             $ikan->nomor_tank ?? '',
         ];
 
@@ -65,7 +65,7 @@ class SheetsSyncService
                 $ikan->nama_peserta ?? '',
                 $ikan->kategori ?? '',
                 $this->formatKelas($ikan->kategori, $ikan->kelas),
-                ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
+                ucfirst($ikan->jenis_keanggotaan ?? 'Team'),
                 $ikan->detail_anggota ?? '',
                 $ikan->nomor_tank ?? '',
             ];
@@ -244,8 +244,8 @@ public function syncPlotingTank()
             $ikan->nama_peserta ?? '',
             $ikan->kategori ?? '',
             $this->formatKelas($ikan->kategori, $ikan->kelas),
-            ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
-            $ikan->detail_anggota ?? '',
+                ucfirst($ikan->jenis_keanggotaan ?? 'Team'),
+                $ikan->detail_anggota ?? '',
             $noTank ?? '',
         ];
 
@@ -301,7 +301,7 @@ public function syncPlotingTank()
             $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $actualRow, 'value' => $ikan->nama_peserta ?? ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $actualRow, 'value' => $ikan->kategori ?? ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $actualRow, 'value' => $this->formatKelas($ikan->kategori, $ikan->kelas)];
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'F' . $actualRow, 'value' => ucfirst($peserta->jenis_keanggotaan ?? 'Team')];
+            $batch[] = ['sheet' => $sheetName, 'cell' => 'F' . $actualRow, 'value' => ucfirst($ikan->jenis_keanggotaan ?? 'Team')];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'G' . $actualRow, 'value' => $ikan->detail_anggota ?? ''];
             $batch[] = ['sheet' => $sheetName, 'cell' => 'H' . $actualRow, 'value' => $noTank ?? ''];
 
@@ -726,7 +726,7 @@ public function syncPlotingTank()
                 $ikan->nama_peserta ?? '',
                 strtoupper($ikan->kategori ?? ''),
                 $this->formatKelasNominasi($ikan->kategori, $ikan->kelas),
-                ucfirst($peserta->jenis_keanggotaan ?? 'Team'),
+                ucfirst($ikan->jenis_keanggotaan ?? 'Team'),
                 $ikan->detail_anggota ?? '',
                 $ikan->nomor_tank ?? '',
             ];

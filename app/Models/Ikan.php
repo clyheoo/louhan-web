@@ -11,8 +11,9 @@ class Ikan extends Model
 
     protected $fillable = [
         'peserta_id', 
-        'nama_peserta', // ★ TAMBAHKAN INI
+        'nama_peserta',
         'detail_anggota', 
+        'jenis_keanggotaan', // ★ TAMBAHKAN INI
         'kategori', 
         'kelas', 
         'nomor_tank',
