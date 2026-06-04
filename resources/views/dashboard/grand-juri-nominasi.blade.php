@@ -239,16 +239,27 @@ async function apiFetch(url, opts = {}) {
     const defaults = { headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } };
     try {
         const res = await fetch(url, { ...defaults, ...opts, headers: { ...defaults.headers, ...(opts.headers || {}) } });
+        if (!res.ok) {
+            console.error('[apiFetch] HTTP Error:', res.status, res.statusText);
+            return { error: true, message: 'Server error (HTTP ' + res.status + ')' };
+        }
         var text = await res.text();
         if (!text || text.trim() === '') {
             return { error: true, message: 'Server mengembalikan respons kosong.' };
         }
         try {
-            return JSON.parse(text);
+            var json = JSON.parse(text);
+            if (json.error) {
+                console.error('[apiFetch] API Error:', json.message);
+                return json;
+            }
+            return json;
         } catch(e) {
+            console.error('[apiFetch] JSON Parse Error:', text.substring(0, 200));
             return { error: true, message: 'Respons tidak valid dari server.' };
         }
     } catch(e) {
+        console.error('[apiFetch] Network Error:', e.message);
         return { error: true, message: 'Gagal terhubung ke server.' };
     }
 }
@@ -398,7 +409,6 @@ async function loadNominasi(silent) {
     if (icon && !silent) icon.classList.add('animate-spin');
     try {
         var res = await apiFetch('/api/grand-juri/nominasi');
-
         if (!res || res.error) {
             if (!silent) showWarningModal([{ msg: (res && res.message) ? res.message : 'Gagal memuat data nominasi.' }]);
             if (icon && !silent) icon.classList.remove('animate-spin');
@@ -411,49 +421,67 @@ async function loadNominasi(silent) {
         var list = document.getElementById('nom-list');
         var empty = document.getElementById('nom-empty');
 
-        if (!res.grouped || res.grouped.length === 0) {
-            list.innerHTML = '';
-            empty.classList.remove('hidden');
+        if (!res.grouped || !Array.isArray(res.grouped) || res.grouped.length === 0) {
+            if (empty) empty.classList.remove('hidden');
             if (icon && !silent) icon.classList.remove('animate-spin');
             return;
         }
 
-        empty.classList.add('hidden');
+        if (empty) empty.classList.add('hidden');
         var html = '';
 
-        res.grouped.forEach(function(group) {
-            html += '<div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden fade-in">';
-            html += '<div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center justify-between">';
-            html += '<div class="flex items-center gap-3">';
-            html += '<div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-user text-blue-600"></i></div>';
-            html += '<div><h3 class="text-sm font-extrabold text-slate-800">' + group.juri_name + '</h3>';
-            html += '<p class="text-[10px] font-bold text-slate-500">' + group.tanks.length + ' tank dinominasikan</p></div></div>';
-            html += '<div class="flex gap-2">';
-            html += '<button onclick="approveAllInGroup(this, ' + JSON.stringify(group.tanks.map(function(t){return t.nominasi_id;})) + ')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"><i class="fas fa-check-double"></i> ACC Semua</button>';
-            html += '</div></div>';
-            html += '<div class="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">';
+        for (var g = 0; g < res.grouped.length; g++) {
+            try {
+                var group = res.grouped[g];
+                if (!group || !group.tanks || !Array.isArray(group.tanks)) continue;
 
-            group.tanks.forEach(function(tank) {
-                html += '<div id="tank-card-' + tank.nominasi_id + '" class="p-3 rounded-xl border border-slate-200 bg-white hover:shadow-md transition-all">';
-                html += '<div class="flex justify-between items-start mb-3">';
-                html += '<div class="w-11 h-11 rounded-[10px] flex items-center justify-center font-extrabold text-lg shadow-sm bg-slate-800 text-white">' + tank.nomor_tank + '</div>';
-                html += '</div>';
-                html += '<div class="flex flex-col gap-1.5 mb-3">';
-                html += '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-blue-50 text-blue-700 truncate text-center border border-blue-100/50">' + tank.kategori + '</div>';
-                html += (tank.kelas && !isNoKelasGJ(tank.kategori) ? '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50">Kelas ' + tank.kelas + '</div>' : '');
-                html += '</div>';
-                html += '<div class="text-[10px] font-semibold text-slate-600 truncate mb-3" title="' + tank.nama_peserta + '">' + tank.nama_peserta + '</div>';
-                html += '<div class="grid grid-cols-2 gap-2">';
-                html += '<button onclick="approveNominasi(this, ' + tank.nominasi_id + ')" class="py-2 rounded-lg text-[10px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1"><i class="fas fa-check"></i> ACC</button>';
-                html += '<button onclick="showRejectConfirm(' + tank.nominasi_id + ', ' + tank.nomor_tank + ')" class="py-2 rounded-lg text-[10px] font-bold text-white bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center gap-1"><i class="fas fa-times"></i> Tolak</button>';
+                var tankIds = [];
+                for (var ti = 0; ti < group.tanks.length; ti++) {
+                    if (group.tanks[ti] && group.tanks[ti].nominasi_id) tankIds.push(group.tanks[ti].nominasi_id);
+                }
+
+                html += '<div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden fade-in">';
+                html += '<div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center justify-between">';
+                html += '<div class="flex items-center gap-3">';
+                html += '<div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-user text-blue-600"></i></div>';
+                html += '<div><h3 class="text-sm font-extrabold text-slate-800">' + (group.juri_name || 'Unknown') + '</h3>';
+                html += '<p class="text-[10px] font-bold text-slate-500">' + group.tanks.length + ' tank dinominasikan</p></div></div>';
+                html += '<div class="flex gap-2">';
+                html += '<button onclick="approveAllInGroup(this, ' + JSON.stringify(tankIds) + ')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"><i class="fas fa-check-double"></i> ACC Semua</button>';
                 html += '</div></div>';
-            });
+                html += '<div class="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">';
 
-            html += '</div></div>';
-        });
+                for (var t = 0; t < group.tanks.length; t++) {
+                    try {
+                        var tank = group.tanks[t];
+                        if (!tank || !tank.nominasi_id) continue;
+                        var kelasHtml = '';
+                        if (tank.kelas && !isNoKelasGJ(tank.kategori)) {
+                            kelasHtml = '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 truncate text-center border border-emerald-100/50">Kelas ' + tank.kelas + '</div>';
+                        }
+                        html += '<div id="tank-card-' + tank.nominasi_id + '" class="p-3 rounded-xl border border-slate-200 bg-white hover:shadow-md transition-all">';
+                        html += '<div class="flex justify-between items-start mb-3">';
+                        html += '<div class="w-11 h-11 rounded-[10px] flex items-center justify-center font-extrabold text-lg shadow-sm bg-slate-800 text-white">' + (tank.nomor_tank || '?') + '</div>';
+                        html += '</div>';
+                        html += '<div class="flex flex-col gap-1.5 mb-3">';
+                        html += '<div class="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-blue-50 text-blue-700 truncate text-center border border-blue-100/50">' + (tank.kategori || '-') + '</div>';
+                        html += kelasHtml;
+                        html += '</div>';
+                        html += '<div class="text-[10px] font-semibold text-slate-600 truncate mb-3">' + (tank.nama_peserta || 'Unknown') + '</div>';
+                        html += '<div class="grid grid-cols-2 gap-2">';
+                        html += '<button onclick="approveNominasi(this, ' + tank.nominasi_id + ')" class="py-2 rounded-lg text-[10px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1"><i class="fas fa-check"></i> ACC</button>';
+                        html += '<button onclick="showRejectConfirm(' + tank.nominasi_id + ', ' + (tank.nomor_tank || 0) + ')" class="py-2 rounded-lg text-[10px] font-bold text-white bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center gap-1"><i class="fas fa-times"></i> Tolak</button>';
+                        html += '</div></div>';
+                    } catch(e2) { console.warn('[loadNominasi] Skip tank:', e2); }
+                }
+
+                html += '</div></div>';
+            } catch(e1) { console.warn('[loadNominasi] Skip group:', e1); }
+        }
 
         list.innerHTML = html;
     } catch(e) {
+        console.error('[loadNominasi] FATAL:', e);
         if (!silent) showWarningModal([{ msg: 'Gagal memuat data nominasi.' }]);
     }
     if (icon && !silent) icon.classList.remove('animate-spin');
