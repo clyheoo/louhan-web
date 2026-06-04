@@ -1826,6 +1826,7 @@
         let currentIkans = {};
         let isMvpOpen = false;
         let currentMvpSubmitted = false;
+        let isUndianOpen = true; // ★ Default true, akan diupdate polling
         let pollingInterval = null;
         let auth401Count = 0;
         const MAX_401_RETRY = 5;
@@ -1871,6 +1872,32 @@
                 const mvpSubmitted = response.mvp_submitted || false;
 
                 if (response.tank_range_max) tankDrawMax = response.tank_range_max;
+
+                // ★ UPDATE STATUS MESIN UNDIAN
+                const undianOpen = response.undian_open ?? true;
+                if (undianOpen !== isUndianOpen) {
+                    isUndianOpen = undianOpen;
+                    // Update semua tombol ACAK yang ada
+                    document.querySelectorAll('.ikan-item').forEach(el => {
+                        const tank = el.querySelector('.tank-num');
+                        const isDiundi = tank && !tank.classList.contains('empty');
+                        const rightDiv = el.querySelector('.ikan-item-right');
+                        if (!rightDiv || isDiundi) return;
+
+                        let acakBtn = rightDiv.querySelector('.btn-acak-kecil');
+                        if (!isUndianOpen && acakBtn) {
+                            acakBtn.disabled = true;
+                            acakBtn.innerHTML = '<i class="fas fa-lock"></i> DIKUNCI';
+                            acakBtn.style.opacity = '0.5';
+                            acakBtn.style.cursor = 'not-allowed';
+                        } else if (isUndianOpen && acakBtn && acakBtn.disabled) {
+                            acakBtn.disabled = false;
+                            acakBtn.innerHTML = '<i class="fas fa-shuffle"></i> ACAK';
+                            acakBtn.style.opacity = '';
+                            acakBtn.style.cursor = '';
+                        }
+                    });
+                }
 
                 if (mvpOpen !== isMvpOpen || mvpSubmitted !== currentMvpSubmitted) {
                     isMvpOpen = mvpOpen;
@@ -1941,7 +1968,8 @@
                         newEl.className = 'ikan-item';
                         newEl.id = `ikan-item-${ikan.id}`;
                         newEl.style.animation = 'cardEntry 0.5s ease both';
-                        newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${ikan.nama_peserta || document.getElementById('namaPeserta').value} ${badge}</h4>${kategoriKelasLineHtml(ikan.kategori, ikan.kelas)}</div><div class="ikan-item-right">${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${!ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`}</div>`;
+                        const acakBtnHtml = !ikan.nomor_tank ? (isUndianOpen ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<button class="btn-acak-kecil" disabled style="opacity:0.5; cursor:not-allowed;"><i class="fas fa-lock"></i> DIKUNCI</button>`) : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`;
+                        newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${ikan.nama_peserta || document.getElementById('namaPeserta').value} ${badge}</h4>${kategoriKelasLineHtml(ikan.kategori, ikan.kelas)}</div><div class="ikan-item-right">${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${acakBtnHtml}</div>`;
                         listContainer.prepend(newEl);
                         currentIkans[ikan.id] = { kategori: ikan.kelas ? 'Kelas ' + ikan.kelas : '', nomor_tank: ikan.nomor_tank ?? '--', is_mvp: ikan.is_mvp };
                     } else {
@@ -2125,6 +2153,10 @@
 
         function mulaiAcak(ikanId, btnElement) {
             if (btnElement.disabled) return;
+            if (!isUndianOpen) {
+                alert('Mesin undian belum dibuka oleh panitia. Silakan tunggu.');
+                return;
+            }
             btnElement.disabled = true;
             btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             lcdInfo.textContent = 'Sedang mengundi...';

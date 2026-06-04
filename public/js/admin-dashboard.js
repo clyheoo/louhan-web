@@ -2197,6 +2197,46 @@ function toggleMvpRegistration() {
     .finally(() => { btn.disabled = false; });
 }
 
+/* ═══ KELOLA MESIN UNDIAN ═══ */
+function loadUndianStatus() {
+    fetch('/api/admin/undian-status', {headers:{'Accept':'application/json'}})
+    .then(r => r.json())
+    .then(d => {
+        updateUndianToggleUI(d.is_open || false);
+    })
+    .catch(() => updateUndianToggleUI(true));
+}
+
+function toggleUndianRegistration() {
+    var btn = document.getElementById('btnToggleUndian');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    fetch('/api/admin/toggle-undian-registration', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}})
+    .then(r => r.json())
+    .then(d => {
+        if(d.success) {
+            updateUndianToggleUI(d.is_open);
+            popupSuccess('Status Mesin Undian Diperbarui', d.message);
+        } else popupError('Gagal', d.message);
+    })
+    .catch(() => popupError('Error', 'Gagal menghubungi server'))
+    .finally(() => { btn.disabled = false; });
+}
+
+function updateUndianToggleUI(isOpen) {
+    var btn = document.getElementById('btnToggleUndian');
+    var txt = document.getElementById('undianStatusText');
+    if(isOpen) {
+        btn.innerHTML = '<i class="fas fa-lock-open"></i> KUNCI MESIN UNDIAN';
+        btn.style.background = 'var(--danger)'; btn.style.boxShadow = '0 3px 10px rgba(239,68,68,.2)';
+        txt.innerHTML = '<i class="fas fa-circle-check" style="color:var(--success);"></i> Mesin Undian sedang <b style="color:var(--success);">DIBUKA</b>. Peserta dapat mengacak nomor tank.';
+    } else {
+        btn.innerHTML = '<i class="fas fa-lock"></i> BUKA MESIN UNDIAN';
+        btn.style.background = 'var(--success)'; btn.style.boxShadow = '0 3px 10px rgba(34,197,94,.2)';
+        txt.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--danger);"></i> Mesin Undian sedang <b style="color:var(--danger);">DIKUNCI</b>. Peserta hanya bisa mendaftarkan ikan.';
+    }
+}
+
 function updateMvpToggleUI(isOpen) {
     var btn = document.getElementById('btnToggleMvp');
     var txt = document.getElementById('mvpStatusText');
@@ -2383,7 +2423,8 @@ loadUsers();
         penilaian:    { title:'Data Penilaian',                  sub:'Semua input nilai dari Juri & Grand Juri', icon:'fa-table-list' },
         users:        { title:'Kelola User',                     sub:'Manajemen akun pengguna sistem', icon:'fa-users-gear' },
         registrasi:   { title:'Registrasi & Undian Tank',        sub:'Pendaftaran peserta, undian, dan rentang nomor', icon:'fa-database' },
-        mvp:          { title:'Kelola MVP',                      sub:'Manajemen pendaftaran ikan MVP', icon:'fa-star' }
+        mvp:          { title:'Kelola MVP',                      sub:'Manajemen pendaftaran ikan MVP', icon:'fa-star' },
+        undian:       { title:'Kelola Mesin Undian',             sub:'Membuka dan mengunci mesin undian tank untuk peserta', icon:'fa-dice' }
     };
     var loaded = { dashboard:true }; // dashboard loaded by initial loadDashboard()
 
@@ -2411,6 +2452,7 @@ loadUsers();
             if(pageId === 'users'){ /* loadUsers sudah jalan di init */ }
             if(pageId === 'registrasi'){ loadPesertaOld(); loadTankRange(); loadGlobalRangeDisplay(); }
             if(pageId === 'mvp'){ loadMvpData(); loadMvpStatus(); loadMvpPeserta(); }
+            if(pageId === 'undian'){ loadUndianStatus(); }
         } else {
             // Refresh ringan saat dibuka ulang (opsional)
             if(pageId === 'mvp'){ loadMvpStatus(); }

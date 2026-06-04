@@ -267,6 +267,12 @@ class DashboardController extends Controller
     {
         $request->validate(['ikan_id' => 'required|exists:ikans,id']);
 
+        // ★ GUARD: Cek apakah mesin undian dibuka
+        $isOpen = \DB::table('settings')->where('key', 'undian_registration_open')->value('value');
+        if (!$isOpen || $isOpen === '0') {
+            return response()->json(['success' => false, 'message' => 'Mesin undian belum dibuka oleh panitia.'], 403);
+        }
+
         $ikan = Ikan::where('id', $request->ikan_id)
             ->whereHas('peserta', fn($q) => $q->where('user_id', Auth::id()))
             ->whereNull('nomor_tank')
@@ -575,6 +581,7 @@ class DashboardController extends Controller
 
         $mvpOpen = (bool)(\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
         $mvpSubmitted = $peserta ? $peserta->is_mvp_submitted : false;
+        $undianOpen = (bool)(\DB::table('settings')->where('key', 'undian_registration_open')->value('value') ?? true);
 
         // ★ TAMBAHKAN INI (taruh di atas if (!$peserta))
         $maxTankRange = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
@@ -585,7 +592,8 @@ class DashboardController extends Controller
                 'reset_info' => $resetInfo, 
                 'mvp_open' => $mvpOpen, 
                 'mvp_submitted' => $mvpSubmitted,
-                'tank_range_max' => $maxTankRange,  // ★ TAMBAHKAN INI
+                'undian_open' => $undianOpen,
+                'tank_range_max' => $maxTankRange,
             ]);
         }
 
@@ -608,7 +616,8 @@ class DashboardController extends Controller
             'reset_info' => $resetInfo,
             'mvp_open' => $mvpOpen,
             'mvp_submitted' => $mvpSubmitted,
-            'tank_range_max' => $maxTankRange,  // ★ TAMBAHKAN INI
+            'undian_open' => $undianOpen,
+            'tank_range_max' => $maxTankRange,
         ]);
     }
 

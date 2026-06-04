@@ -590,6 +590,7 @@
             <a class="sidebar-item" data-page="users"><i class="fas fa-users-gear"></i> Kelola User</a>
             <a class="sidebar-item" data-page="registrasi"><i class="fas fa-database"></i> Registrasi & Undian</a>
             <a class="sidebar-item" data-page="mvp"><i class="fas fa-star"></i> Kelola MVP</a>
+            <a class="sidebar-item" data-page="undian"><i class="fas fa-dice"></i> Kelola Mesin Undian</a>
         </nav>
 
         <div class="sidebar-foot">
@@ -975,6 +976,25 @@
                                 <thead><tr><th style="width:30px;">#</th><th>PESERTA</th><th>ASAL / TEAM</th><th>KATEGORI</th><th>KELAS</th><th>NO. TANK</th><th style="text-align:center;">AKSI</th></tr></thead>
                                 <tbody id="mvpTableBody"><tr><td colspan="7"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div></td></tr></tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ═══════════ PAGE: MESIN UNDIAN ═══════════ -->
+            <section class="page-section" data-page="undian" style="display:none;">
+
+                <div class="glass-card">
+                    <div class="card-head">
+                        <h3><span class="ti"><i class="fas fa-dice"></i></span>Status Mesin Undian Tank</h3>
+                        <button class="btn-primary" id="btnToggleUndian" onclick="toggleUndianRegistration()" style="padding:8px 16px; font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
+                    </div>
+                    <div class="card-body">
+                        <div style="font-size:13px; color:var(--text);" id="undianStatusText">Memuat status...</div>
+                        <div style="background:rgba(34,211,238,.08);border:1px solid var(--bd-cyan);border-radius:11px;padding:10px 14px;margin-top:12px;display:flex;gap:8px;align-items:flex-start;">
+                            <i class="fas fa-circle-info" style="color:var(--cyan-400);margin-top:2px;"></i>
+                            <span style="font-size:11px;color:var(--cyan-300);line-height:1.5;">Jika dikunci, peserta tetap bisa mendaftarkan ikan, namun tidak bisa mengacak nomor tank. Gunakan ini untuk mengatur jadwal pengundian.</span>
                         </div>
                     </div>
                 </div>

@@ -984,6 +984,29 @@ class AdminDashboardController extends Controller
         return response()->json(['is_open' => $isOpen]);
     }
 
+    public function toggleUndianRegistration()
+    {
+        $current = \DB::table('settings')->where('key', 'undian_registration_open')->value('value');
+        $newVal = ($current === '1') ? '0' : '1';
+        
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'undian_registration_open'],
+            ['value' => $newVal, 'updated_at' => now()]
+        );
+
+        return response()->json([
+            'success' => true, 
+            'is_open' => (bool)$newVal,
+            'message' => $newVal === '1' ? 'Mesin Undian DIBUKA untuk user.' : 'Mesin Undian DITUTUP untuk user.'
+        ]);
+    }
+
+    public function getUndianStatus()
+    {
+        $isOpen = (bool)(\DB::table('settings')->where('key', 'undian_registration_open')->value('value') ?? true);
+        return response()->json(['is_open' => $isOpen]);
+    }
+
     public function deleteMvpIkan(Request $request)
     {
         $request->validate([

@@ -113,6 +113,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/mvp-ikan', [AdminDashboardController::class, 'getMvpIkan']);
     Route::post('/api/admin/toggle-mvp-registration', [AdminDashboardController::class, 'toggleMvpRegistration']);
     Route::get('/api/admin/mvp-status', [AdminDashboardController::class, 'getMvpStatus']);
+    Route::post('/api/admin/toggle-undian-registration', [AdminDashboardController::class, 'toggleUndianRegistration']);
+    Route::get('/api/admin/undian-status', [AdminDashboardController::class, 'getUndianStatus']);
     Route::post('/api/admin/delete-mvp-ikan', [AdminDashboardController::class, 'deleteMvpIkan']);
     Route::get('/api/admin/mvp-submitted-peserta', [AdminDashboardController::class, 'getMvpSubmittedPeserta']);
     Route::post('/api/admin/unlock-mvp-peserta', [AdminDashboardController::class, 'unlockMvpPeserta']);
