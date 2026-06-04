@@ -1595,10 +1595,14 @@
                                     @foreach($ikansSaya as $index => $ikan)
                                         <div class="ikan-item" id="ikan-item-{{ $ikan->id }}">
                                             <div class="ikan-item-info">
-                                                <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>{{ $ikan->kategori }}@if($ikan->dibuat_oleh === 'admin')<span class="badge-admin"><i class="fas fa-shield-halved"></i> Admin</span>@endif</h4>
-                                                @if($ikan->kelas && !in_array($ikan->kategori, ['Bonsai', 'Jumbo']))
-                                                <p>Kelas {{ $ikan->kelas }}</p>
-                                                @endif
+                                                <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>{{ $ikan->nama_peserta ?? $user->name }}@if($ikan->dibuat_oleh === 'admin')<span class="badge-admin"><i class="fas fa-shield-halved"></i> Admin</span>@endif</h4>
+                                                @php
+                                                    $katKelasText = $ikan->kategori;
+                                                    if ($ikan->kelas && !in_array($ikan->kategori, ['Bonsai', 'Jumbo'])) {
+                                                        $katKelasText = $ikan->kategori . ' - Kelas ' . $ikan->kelas;
+                                                    }
+                                                @endphp
+                                                <p>{{ $katKelasText }}</p>
                                             </div>
                                             <div class="ikan-item-right">
                                                 <div class="tank-num {{ $ikan->nomor_tank ? 'filled' : 'empty' }}" id="tank-num-{{ $ikan->id }}">
@@ -1759,7 +1763,7 @@
                     const newEl = document.createElement('div');
                     newEl.className = 'ikan-item';
                     newEl.id = `ikan-item-${data.ikan.id}`;
-                    newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${data.ikan.kategori}</h4>${kelasLineHtml(data.ikan.kategori, data.ikan.kelas)}</div><div class="ikan-item-right"><div class="tank-num empty" id="tank-num-${data.ikan.id}">--</div><button class="btn-acak-kecil" onclick="mulaiAcak(${data.ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button></div>`;
+                    newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${data.ikan.nama_peserta || document.getElementById('namaPeserta').value}</h4>${kategoriKelasLineHtml(data.ikan.kategori, data.ikan.kelas)}</div><div class="ikan-item-right"><div class="tank-num empty" id="tank-num-${data.ikan.id}">--</div><button class="btn-acak-kecil" onclick="mulaiAcak(${data.ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button></div>`;
                     listContainer.prepend(newEl);
                     currentIkans[data.ikan.id] = { kategori: data.ikan.kelas ? 'Kelas ' + data.ikan.kelas : '', nomor_tank: '--', is_mvp: false };
                 }
@@ -1915,7 +1919,7 @@
                         newEl.className = 'ikan-item';
                         newEl.id = `ikan-item-${ikan.id}`;
                         newEl.style.animation = 'cardEntry 0.5s ease both';
-                        newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${ikan.kategori} ${badge}</h4>${kelasLineHtml(ikan.kategori, ikan.kelas)}</div><div class="ikan-item-right">${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${!ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`}</div>`;
+                        newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${ikan.nama_peserta || document.getElementById('namaPeserta').value} ${badge}</h4>${kategoriKelasLineHtml(ikan.kategori, ikan.kelas)}</div><div class="ikan-item-right">${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${!ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`}</div>`;
                         listContainer.prepend(newEl);
                         currentIkans[ikan.id] = { kategori: ikan.kelas ? 'Kelas ' + ikan.kelas : '', nomor_tank: ikan.nomor_tank ?? '--', is_mvp: ikan.is_mvp };
                     } else {
@@ -1923,15 +1927,23 @@
                         const currentTank = ikan.nomor_tank ?? '--';
 
                         var infoDiv = existingEl.querySelector('.ikan-item-info');
+                        var existingH4 = infoDiv ? infoDiv.querySelector('h4') : null;
                         var existingP = infoDiv ? infoDiv.querySelector('p') : null;
-                        var newLine = kelasLineHtml(ikan.kategori, ikan.kelas);
-                        if (newLine) {
-                            if (existingP) { existingP.textContent = 'Kelas ' + ikan.kelas; }
-                            else if (infoDiv) { var newP = document.createElement('p'); newP.textContent = 'Kelas ' + ikan.kelas; infoDiv.appendChild(newP); }
-                        } else {
-                            if (existingP) existingP.remove();
+
+                        if (existingH4) {
+                            var badgeHtml = ikan.dibuat_oleh === 'admin' ? ' <span class="badge-admin"><i class="fas fa-shield-halved"></i> Admin</span>' : '';
+                            existingH4.innerHTML = '<i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>' + (ikan.nama_peserta || document.getElementById('namaPeserta').value) + badgeHtml;
                         }
-                        currentIkans[ikan.id].kategori = ikan.kelas ? 'Kelas ' + ikan.kelas : '';
+
+                        var kategoriKelasText = formatKategoriKelas(ikan.kategori, ikan.kelas);
+                        if (existingP) {
+                            existingP.textContent = kategoriKelasText;
+                        } else if (infoDiv) {
+                            var newP = document.createElement('p');
+                            newP.textContent = kategoriKelasText;
+                            infoDiv.appendChild(newP);
+                        }
+                        currentIkans[ikan.id].kategori = kategoriKelasText;
 
                         if (currentIkans[ikan.id].is_mvp !== ikan.is_mvp && isMvpOpen) {
                             let mvpBtn = existingEl.querySelector('.btn-mvp-star');
@@ -2063,9 +2075,10 @@
             var el = document.getElementById('inlineFormIkan');
             el.style.display = el.style.display === 'block' ? 'none' : 'block';
         }
-        function kelasLineHtml(kategori, kelas) {
-            if (!kelas || noKelasKategori.indexOf(kategori) !== -1) return '';
-            return '<p>Kelas ' + kelas + '</p>';
+
+        function kategoriKelasLineHtml(kategori, kelas) {
+            if (noKelasKategori.indexOf(kategori) !== -1 || !kelas) return '<p>' + kategori + '</p>';
+            return '<p>' + kategori + ' - Kelas ' + kelas + '</p>';
         }
 
         function formatKategoriKelas(kategori, kelas) {
