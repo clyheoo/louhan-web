@@ -912,7 +912,14 @@ function loadScoringData(){
 
 function renderTable(data){
     var tb=document.getElementById('tBody');tb.innerHTML='';
-    if(!data||data.length===0){tb.innerHTML='<tr><td colspan="11"><div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada data.</p></div></td></tr>';return;}
+
+    /* ★ RESET state checkbox saat re-render */
+    var master = document.getElementById('checkAllRows');
+    if(master){ master.checked = false; master.indeterminate = false; }
+    var bulkBtn = document.getElementById('btnBulkDelete');
+    if(bulkBtn) bulkBtn.style.display = 'none';
+
+    if(!data||data.length===0){tb.innerHTML='<tr><td colspan="12"><div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada data.</p></div></td></tr>';return;}
     for(var i=0;i<data.length;i++){
         var p=data[i],tr=document.createElement('tr');
 
@@ -959,6 +966,7 @@ function renderTable(data){
         }
 
         tr.innerHTML=
+            '<td style="text-align:center;padding-right:6px;"><input type="checkbox" class="row-check" data-id="'+p.id+'" data-name="'+esc(p.nama_peserta).replace(/"/g,'&quot;')+'" onchange="onRowCheckChange()" style="cursor:pointer;width:15px;height:15px;accent-color:var(--cyan-400);vertical-align:middle;"></td>'+
             '<td style="font-weight:700;color:var(--light);font-size:11px;">'+(i+1)+'</td>'+
             '<td style="font-weight:700;">'+esc(p.nama_peserta)+'</td>'+
             '<td style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;">'+esc(p.kategori)+'</td>'+
@@ -969,7 +977,7 @@ function renderTable(data){
             '<td>'+tv+'</td>'+
             '<td style="text-align:center;">'+pv+'</td>'+
             '<td><span class="status-badge '+sc+'">'+st+'</span></td>'+
-            '<td><div style="display:flex;gap:4px;"><button class="btn-xs blue" onclick="openDetail('+i+')"><i class="fas fa-eye"></i></button><button class="btn-xs" style="background:#fffbeb;color:#d97706;border:1px solid #fde68a;" onclick="openBonusModal('+i+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i></button><button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button></div></td>';        tb.appendChild(tr);
+            '<td><div style="display:flex;gap:4px;"><button class="btn-xs blue" onclick="openDetail('+i+')"><i class="fas fa-eye"></i></button><button class="btn-xs gold" onclick="openBonusModal('+i+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i></button><button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button></div></td>';        tb.appendChild(tr);
     }
 }
 
@@ -1572,6 +1580,163 @@ function renderUserDetailModal(d){
     }
 
     document.getElementById('userDetailBody').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════
+   AUTO-INJECT TOMBOL "HAPUS TERPILIH" KE FILTER BAR
+   (dijalankan saat halaman siap, idempoten)
+   ═══════════════════════════════════════════════ */
+function ensureBulkDeleteButton(){
+    if(document.getElementById('btnBulkDelete')) return; // sudah ada, skip
+
+    var filterStatus = document.getElementById('filterStatus');
+    if(!filterStatus) return;
+
+    var filterBar = filterStatus.closest('.filter-bar');
+    if(!filterBar) return;
+
+    var btn = document.createElement('button');
+    btn.id = 'btnBulkDelete';
+    btn.type = 'button';
+    btn.onclick = bulkDeleteIkan;
+    btn.style.cssText = ''
+        + 'display:none;'
+        + 'padding:10px 16px;'
+        + 'border-radius:11px;'
+        + 'border:1px solid rgba(239,68,68,.45);'
+        + 'background:rgba(239,68,68,.15);'
+        + 'color:#FCA5A5;'
+        + 'font-family:inherit;'
+        + 'font-size:11.5px;'
+        + 'font-weight:800;'
+        + 'cursor:pointer;'
+        + 'letter-spacing:.02em;'
+        + 'transition:all .2s;'
+        + 'align-items:center;'
+        + 'gap:7px;'
+        + 'white-space:nowrap;';
+    btn.innerHTML = '<i class="fas fa-trash-can"></i> Hapus Terpilih <span id="bulkDeleteCount" style="font-weight:900;color:#fff;background:rgba(239,68,68,.5);padding:1px 7px;border-radius:5px;">0</span>';
+
+    btn.addEventListener('mouseenter', function(){
+        this.style.background = 'var(--danger)';
+        this.style.color = '#fff';
+        this.style.transform = 'translateY(-1px)';
+    });
+    btn.addEventListener('mouseleave', function(){
+        this.style.background = 'rgba(239,68,68,.15)';
+        this.style.color = '#FCA5A5';
+        this.style.transform = 'translateY(0)';
+    });
+
+    filterBar.appendChild(btn);
+}
+
+/* Jalankan saat DOM siap dan saat halaman penilaian dibuka */
+if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', ensureBulkDeleteButton);
+} else {
+    ensureBulkDeleteButton();
+}
+
+/* ═══════════════════════════════════════════════
+   BULK DELETE — CHECKBOX & MASSAL HAPUS
+   ═══════════════════════════════════════════════ */
+function toggleAllRows(masterCheckbox){
+    var checks = document.querySelectorAll('.row-check');
+    for(var i=0; i<checks.length; i++){
+        checks[i].checked = masterCheckbox.checked;
+    }
+    updateBulkDeleteButton();
+}
+
+function onRowCheckChange(){
+    var checks = document.querySelectorAll('.row-check');
+    var checkedCount = 0;
+    for(var i=0; i<checks.length; i++){
+        if(checks[i].checked) checkedCount++;
+    }
+    var master = document.getElementById('checkAllRows');
+    if(master){
+        master.checked = (checkedCount > 0 && checkedCount === checks.length);
+        master.indeterminate = (checkedCount > 0 && checkedCount < checks.length);
+    }
+    updateBulkDeleteButton();
+}
+
+function updateBulkDeleteButton(){
+    var checked = document.querySelectorAll('.row-check:checked');
+    var btn = document.getElementById('btnBulkDelete');
+    var counter = document.getElementById('bulkDeleteCount');
+    if(!btn) return;
+    if(checked.length > 0){
+        btn.style.display = 'inline-flex';
+        if(counter) counter.textContent = checked.length;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function bulkDeleteIkan(){
+    var checks = document.querySelectorAll('.row-check:checked');
+    if(!checks.length){
+        popupInfo('Belum Ada Pilihan','Pilih minimal satu data terlebih dahulu.');
+        return;
+    }
+
+    var ids = [], names = [];
+    for(var i=0; i<checks.length; i++){
+        ids.push(checks[i].dataset.id);
+        names.push(checks[i].dataset.name);
+    }
+
+    var listHtml = '<div style="text-align:left;max-height:170px;overflow-y:auto;font-size:11px;line-height:1.8;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.18);border-radius:8px;padding:10px 12px;margin-top:10px;">';
+    var shown = Math.min(names.length, 10);
+    for(var j=0; j<shown; j++){
+        listHtml += '• ' + esc(names[j]) + '<br>';
+    }
+    if(names.length > 10){
+        listHtml += '<i style="color:var(--text-mid);">... dan ' + (names.length - 10) + ' lainnya</i>';
+    }
+    listHtml += '</div>';
+
+    popupConfirm(
+        'Hapus Data Penilaian Massal',
+        'Yakin ingin menghapus <strong>' + ids.length + ' data ikan</strong> berikut?' + listHtml +
+        '<div style="font-size:11px;color:var(--danger);margin-top:8px;"><i class="fas fa-triangle-exclamation"></i> Semua nilai penilaian terkait juga akan dihapus permanen.</div>',
+        'Ya, Hapus Semua',
+        function(){ executeBulkDeleteIkan(ids); }
+    );
+}
+
+function executeBulkDeleteIkan(ids){
+    showLoader('Menghapus ' + ids.length + ' data...');
+
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    for(var i=0; i<ids.length; i++){
+        fd.append('ikan_ids[]', ids[i]);
+    }
+
+    fetch('/api/admin/bulk-delete-ikan', {
+        method:'POST',
+        headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
+        body:fd
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        hideLoader();
+        if(d.success){
+            loadScoringData();
+            loadDashboard();
+            popupSuccess('Berhasil Dihapus', d.message || (ids.length + ' data berhasil dihapus.'));
+        } else {
+            popupError('Gagal Menghapus', d.message || 'Terjadi kesalahan.');
+        }
+    })
+    .catch(function(){
+        hideLoader();
+        popupError('Kesalahan Jaringan', 'Gagal menghubungi server.');
+    });
 }
 
 /* ═══════════════════════════════════════════════

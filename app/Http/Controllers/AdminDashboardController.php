@@ -647,6 +647,41 @@ class AdminDashboardController extends Controller
         'mini_champion'    => 'MINI CHAMPION',
     ];
 
+    public function bulkDeleteIkan(Request $request)
+    {
+        $request->validate([
+            'ikan_ids'   => 'required|array|min:1',
+            'ikan_ids.*' => 'integer|exists:ikans,id',
+        ]);
+
+        $ikanIds = $request->ikan_ids;
+
+        // 1. Hapus semua scoring terkait
+        Scoring::whereIn('ikan_id', $ikanIds)->delete();
+
+        // 2. Hapus semua bonus points terkait
+        \App\Models\IkanBonusPoint::whereIn('ikan_id', $ikanIds)->delete();
+
+        // 3. Hapus data ikan
+        $deleted = Ikan::whereIn('id', $ikanIds)->delete();
+
+        // ★ AUTO-SYNC KE GOOGLE SHEETS
+        try {
+            if ($this->sheetsSync->isReady()) {
+                $this->sheetsSync->syncSemuaPeserta();
+                $this->sheetsSync->syncHasilJuri();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Sheets sync gagal saat bulk delete ikan: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success'       => true,
+            'message'       => $deleted . ' data ikan beserta nilai penilaiannya berhasil dihapus.',
+            'deleted_count' => $deleted,
+        ]);
+    }
+
     public function addBonus(Request $request)
     {
         $request->validate([

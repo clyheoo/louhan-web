@@ -262,6 +262,8 @@
     .btn-xs.red:hover{ background:var(--danger); color:#fff; }
     .btn-xs.purple{ background:rgba(168,85,247,.12); color:#D8B4FE; border:1px solid rgba(168,85,247,.3); }
     .btn-xs.purple:hover{ background:var(--purple); color:#fff; }
+    .btn-xs.gold{ background:rgba(245,158,11,.12); color:var(--gold-300); border:1px solid var(--bd-gold); }
+    .btn-xs.gold:hover{ background:var(--gold-500); color:#fff; }
 
     .btn-primary{
         padding:11px 20px;
@@ -765,11 +767,14 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
+                                        <th style="width:34px;text-align:center;padding-right:6px;">
+                                            <input type="checkbox" id="checkAllRows" onchange="toggleAllRows(this)" style="cursor:pointer;width:15px;height:15px;accent-color:var(--cyan-400);vertical-align:middle;">
+                                        </th>
                                         <th>#</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>TANK</th><th>ASAL / TEAM</th>
                                         <th>DINILAI OLEH</th><th>TOTAL NILAI</th><th>POINT</th><th>STATUS</th><th>AKSI</th>
                                     </tr>
                                 </thead>
-                                <tbody id="tBody"><tr><td colspan="11"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat data...</p></div></td></tr></tbody>
+                                <tbody id="tBody"><tr><td colspan="12"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat data...</p></div></td></tr></tbody>
                             </table>
                         </div>
                     </div>

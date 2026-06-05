@@ -103,6 +103,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/delete-user', [AdminDashboardController::class, 'deleteUser']);
     Route::post('/api/admin/register-peserta-ikan', [AdminDashboardController::class, 'registerPesertaIkan']);
     Route::post('/api/admin/delete-ikan', [AdminDashboardController::class, 'deleteIkan']);
+    Route::post('/api/admin/bulk-delete-ikan', [AdminDashboardController::class, 'bulkDeleteIkan']);
     Route::get('/api/admin/get-peserta-by-user', [AdminDashboardController::class, 'getPesertaByUser']);
     Route::get('/api/admin/user-peserta-detail', [AdminDashboardController::class, 'getUserPesertaDetail']);
     Route::post('/api/admin/update-peserta-data', [AdminDashboardController::class, 'updatePesertaData']);
