@@ -328,8 +328,8 @@
     }
     select optgroup { font-weight: 700; color: var(--cyan-300) !important; }
     input::placeholder { color: var(--text-faint) !important; }
-    input:disabled { color: var(--text-low) !important; background: rgba(255,255,255,0.02) !important; }
-    select:disabled { color: var(--text-low) !important; background: rgba(255,255,255,0.02) !important; }
+    input:disabled { color: var(--text) !important; background: rgba(255,255,255,0.02) !important; }
+    select:disabled { color: var(--text) !important; background: rgba(255,255,255,0.02) !important; }
 
     /* ── SCROLLBAR ── */
     .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }

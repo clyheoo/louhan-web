@@ -44,17 +44,17 @@
                             <input type="text" id="nom-search" placeholder="Cari no tank..." class="w-full px-3 py-2.5 rounded-lg text-xs font-semibold outline-none" style="border:1px solid var(--bd-2);background:var(--glass-2);color:var(--text-hi);">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold uppercase mb-2" style="color:var(--text-low);">Kategori</label>
+                            <label class="block text-[11px] font-bold uppercase mb-2" style="color:var(--text);">Kategori</label>
                             <div id="nom-kategori-btns" class="flex flex-wrap gap-1.5"></div>
                         </div>
                         <div id="nom-kelas-wrap">
-                            <label class="block text-[10px] font-bold uppercase mb-2" style="color:var(--text-low);">Kelas</label>
+                            <label class="block text-[11px] font-bold uppercase mb-2" style="color:var(--text);">Kelas</label>
                             <div id="nom-kelas-btns" class="flex flex-wrap gap-1.5"></div>
                         </div>
                     </div>
                     <div class="p-4 space-y-3" style="background:rgba(255,255,255,0.03);border-top:1px solid var(--bd-1);">
                         <div class="flex justify-between items-center">
-                            <span class="text-xs font-bold" style="color:var(--text-low);">Tank Terpilih</span>
+                            <span class="text-xs font-bold" style="color:var(--text);">Tank Terpilih</span>
                             <span id="nom-count-badge" class="px-2.5 py-1 rounded-lg text-xs font-black" style="background:rgba(34,211,238,0.12);color:var(--cyan-300);">0</span>
                         </div>
                         <button id="nom-btn-submit" onclick="nomSubmit()" disabled class="w-full py-3 rounded-xl font-bold text-sm text-white cursor-not-allowed transition-all flex items-center justify-center gap-2" style="background:var(--glass-strong);">
@@ -144,23 +144,23 @@
                     {{-- Filter + Kelas --}}
                     <div class="grid grid-cols-3 gap-2">
                         <div>
-                            <label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--text-low);">Kategori</label>
+                            <label class="block text-[11px] font-bold uppercase mb-1" style="color:var(--text);">Kategori</label>
                             <select id="filter-kategori" onchange="onFilterChange()" class="w-full px-2 py-2 rounded-md outline-none text-xs font-semibold" style="border:1px solid var(--bd-2);background:var(--glass-2);color:var(--text-hi);"></select>
                         </div>
                         <div id="scoring-kelas-wrap">
-                            <label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--text-low);">Kelas</label>
-                            <select id="filter-kelas" onchange="onFilterChange()" class="w-full px-2 py-2 rounded-md font-bold text-center outline-none text-xs" style="border:1px solid var(--bd-2);background:var(--glass-2);color:var(--text-hi);">
+                            <label class="block text-[11px] font-bold uppercase mb-1" style="color:var(--text);">Kelas</label>
+                            <select id="filter-kelas" onchange="onFilterChange()"class="w-full px-2 py-2 rounded-md font-bold text-center outline-none text-xs" style="border:1px solid var(--bd-2);background:var(--glass-2);color:var(--text-hi);">
                                 <option value="">Semua Kelas</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--text-low);">Nama Juri</label>
+                            <label class="block text-[11px] font-bold uppercase mb-1" style="color:var(--text);">Nama Juri</label>
                             <input type="text" value="{{ Auth::user()->name }}" disabled class="w-full px-2 py-2 rounded-md text-xs font-semibold cursor-not-allowed" style="border:1px solid var(--bd-1);background:rgba(255,255,255,0.02);color:var(--text-low);">
                         </div>
                     </div>
 
                     {{-- Info Counter --}}
-                    <div id="filter-info" class="hidden px-3 py-1.5 rounded-md text-[10px] font-semibold flex justify-between items-center" style="background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.22);color:var(--cyan-300);">
+                    <div id="filter-info" class="hidden px-3 py-1.5 rounded-md text-[11px] font-semibold flex justify-between items-center" style="background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.22);color:var(--cyan-300);">
                         <span>Tersisa: <b id="filter-remaining">0</b></span>
                         <span style="color:rgba(34,211,238,0.3);">|</span>
                         <span>Sudah Nilai: <b id="filter-scored">0</b></span>
@@ -170,7 +170,7 @@
                 {{-- Tab Kriteria + Pedoman --}}
                 <div class="p-2 flex flex-col gap-2" style="background:rgba(255,255,255,0.04);border-bottom:1px solid var(--bd-1);">
                     <div class="flex justify-between items-center px-1">
-                        <span class="text-[10px] font-black uppercase tracking-widest" style="color:var(--text-faint);">Kriteria:</span>
+                        <span class="text-[11px] font-black uppercase tracking-widest" style="color:var(--text-low);">Kriteria:</span>
                         <button type="button" onclick="toggleGuideline()" id="btn-guideline" class="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold transition shadow-sm" style="background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);">
                             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                             Pedoman
@@ -188,7 +188,7 @@
                 {{-- TABEL FORM --}}
                 <div class="overflow-auto flex-1 custom-scrollbar" style="max-height:460px;background:rgba(255,255,255,0.02);">
                     <table class="w-full text-xs text-left min-w-[max-content]">
-                        <thead style="background:rgba(255,255,255,0.10);color:var(--text-mid);font-weight:bold;" class="sticky top-0 z-20 shadow-sm">
+                        <thead style="background:rgba(255,255,255,0.10);color:var(--text);font-weight:bold;" class="sticky top-0 z-20 shadow-sm">
                             <tr id="form-thead"></tr>
                         </thead>
                         <tbody id="form-tbody" style="border-top-color:var(--bd-1);"></tbody>
@@ -225,7 +225,7 @@
                 </div>
                 <div class="overflow-auto flex-1 custom-scrollbar">
                     <table class="w-full text-[10px] md:text-xs text-left whitespace-nowrap">
-                        <thead class="sticky top-0 z-20 shadow-sm" style="background:rgba(255,255,255,0.10);color:var(--text-mid);font-weight:bold;border-bottom:1px solid var(--bd-1);">
+                        <thead class="sticky top-0 z-20 shadow-sm" style="background:rgba(255,255,255,0.10);color:var(--text);font-weight:bold;border-bottom:1px solid var(--bd-1);">
                             <tr>
                                 <th class="px-2 py-2.5 sticky left-0 z-30 w-12 text-center" style="background:rgba(255,255,255,0.10);border-right:1px solid var(--bd-1);">Tank</th>
                                 <th class="px-2 py-2.5 w-16" style="border-right:1px solid var(--bd-1);">Kelas</th>
@@ -266,7 +266,7 @@
         </div>
         <div class="p-5 overflow-y-auto flex-1 custom-scrollbar">
             <div class="flex justify-between items-center mb-3">
-                <span class="text-xs font-bold" style="color:var(--text-low);">Tank Terpilih</span>
+                <span class="text-xs font-bold" style="color:var(--text);">Tank Terpilih</span>
                 <span id="nom-preview-count" class="px-2.5 py-1 rounded-lg text-xs font-black" style="background:rgba(34,211,238,0.12);color:var(--cyan-300);">0</span>
             </div>
             <div id="nom-preview-list" class="space-y-2"></div>
@@ -375,7 +375,7 @@
         flex-shrink: 0;
     }
     #nom-waiting-list .wait-pending {
-        font-size: 10px; font-weight: 700; padding: 3px 8px;
+        font-size: 11px; font-weight: 700; padding: 3px 8px;
         border-radius: 999px; margin-left: auto;
         background: rgba(245,158,11,0.10); color: var(--gold-300);
         border: 1px solid rgba(245,158,11,0.25);
@@ -464,7 +464,7 @@
     /* ── GUIDELINE POINTS ── */
     #guideline-points li {
         display: flex; align-items: flex-start; gap: 6px;
-        font-size: 10px; color: var(--text-mid); line-height: 1.55;
+        font-size: 11px; color: var(--text); line-height: 1.55;
     }
     #guideline-points li::before { content: '•'; color: var(--gold-400); margin-top: 1px; flex-shrink: 0; }
 
@@ -480,7 +480,7 @@
         #nom-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
         #nom-grid .tank-num-badge { width: 44px; height: 44px; font-size: 1.15rem; border-radius: 11px; }
         #nom-grid > div { padding: 10px !important; }
-        #form-thead th, #form-tbody td { padding: 6px 4px !important; font-size: 10px !important; }
+        #form-thead th, #form-tbody td { padding: 6px 4px !important; font-size: 11px !important; }
         #live-body td { padding: 6px 4px !important; }
     }
 </style>
@@ -590,9 +590,9 @@ function nomRenderFilterBtns() {
     const katDiv = document.getElementById('nom-kategori-btns');
     const kelDiv = document.getElementById('nom-kelas-btns');
     katDiv.innerHTML = '<button onclick="nomSetKat(\'\')" class="nom-kat-btn px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors" style="background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:white;border-color:transparent;box-shadow:0 2px 8px -4px rgba(6,182,212,0.4);">Semua</button>' +
-        nomState.kategoris.map(k => '<button onclick="nomSetKat(\'' + k + '\')" class="nom-kat-btn px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors" style="background:var(--glass-2);color:var(--text-mid);border-color:var(--bd-2);">' + k + '</button>').join('');
+        nomState.kategoris.map(k => '<button onclick="nomSetKat(\'' + k + '\')" class="nom-kat-btn px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-colors" style="background:var(--glass-2);color:var(--text);border-color:var(--bd-2);">' + k + '</button>').join('');
     kelDiv.innerHTML = '<button onclick="nomSetKelas(\'\')" class="nom-kel-btn px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors" style="background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:white;border-color:transparent;box-shadow:0 2px 8px -4px rgba(6,182,212,0.4);">Semua</button>' +
-        nomState.kelass.map(k => '<button onclick="nomSetKelas(\'' + k + '\')" class="nom-kel-btn px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors" style="background:var(--glass-2);color:var(--text-mid);border-color:var(--bd-2);">' + k + '</button>').join('');
+        nomState.kelass.map(k => '<button onclick="nomSetKelas(\'' + k + '\')" class="nom-kel-btn px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-colors" style="background:var(--glass-2);color:var(--text);border-color:var(--bd-2);">' + k + '</button>').join('');
 }
 
 function nomSetKat(val) {
@@ -603,7 +603,7 @@ function nomSetKat(val) {
         if (b.textContent.trim() === (val || 'Semua')) {
             b.style.cssText = 'background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:white;border-color:transparent;box-shadow:0 2px 8px -4px rgba(6,182,212,0.4);';
         } else {
-            b.style.cssText = 'background:var(--glass-2);color:var(--text-mid);border-color:var(--bd-2);';
+            b.style.cssText = 'background:var(--glass-2);color:var(--text);border-color:var(--bd-2);';
         }
     });
     nomUpdateFilterInfo(); nomRenderGrid();
@@ -615,7 +615,7 @@ function nomSetKelas(val) {
         if (b.textContent.trim() === (val || 'Semua')) {
             b.style.cssText = 'background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:white;border-color:transparent;box-shadow:0 2px 8px -4px rgba(6,182,212,0.4);';
         } else {
-            b.style.cssText = 'background:var(--glass-2);color:var(--text-mid);border-color:var(--bd-2);';
+            b.style.cssText = 'background:var(--glass-2);color:var(--text);border-color:var(--bd-2);';
         }
     });
     nomRenderGrid();
@@ -874,8 +874,8 @@ function renderTabs() {
         const isActive = g.id === activeTab;
         const style = isActive
             ? 'background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:white;border-color:transparent;box-shadow:0 2px 8px -4px rgba(6,182,212,0.4);'
-            : 'background:var(--glass-2);color:var(--text-mid);border-color:var(--bd-2);';
-        return '<button type="button" onclick="switchTab(\''+g.id+'\')" id="tab-'+g.id+'" class="px-3 py-1.5 text-[10px] font-bold whitespace-nowrap rounded-md flex-shrink-0 border" style="'+style+'">'+g.title+'</button>';
+            : 'background:var(--glass-2);color:var(--text);border-color:var(--bd-2);';
+        return '<button type="button" onclick="switchTab(\''+g.id+'\')" id="tab-'+g.id+'" class="px-3 py-1.5 text-[11px] font-bold whitespace-nowrap rounded-md flex-shrink-0 border" style="'+style+'">'+g.title+'</button>';
     }).join('');
 }
 
@@ -904,7 +904,7 @@ function renderFormTable() {
             const val = getVal(tank.id, f.key);
             return '<td class="p-1.5"><select onchange="setVal('+tank.id+',\''+f.key+'\',this.value)" class="w-full px-2 py-2 border rounded text-center font-mono font-bold outline-none cursor-pointer text-sm" style="border-color:var(--bd-2);background:var(--glass-2);color:var(--text-hi);">'+buildSelectHtml(val, f.type)+'</select></td>';
         }).join('');
-        return '<tr><td class="p-1 sticky left-0 z-10" style="background:rgba(255,255,255,0.04);border-right:1px solid var(--bd-1);box-shadow:2px 0 5px -2px rgba(0,0,0,0.1);"><input type="number" disabled value="'+tank.nomor_tank+'" class="w-[50px] mx-auto block px-1 py-2 rounded text-center font-bold text-sm cursor-not-allowed" style="background:rgba(255,255,255,0.02);border:1px solid var(--bd-1);color:var(--text-low);"></td>'+cells+'</tr>';
+        return '<tr><td class="p-1 sticky left-0 z-10" style="background:rgba(255,255,255,0.04);border-right:1px solid var(--bd-1);box-shadow:2px 0 5px -2px rgba(0,0,0,0.1);"><input type="number" disabled value="'+tank.nomor_tank+'" class="w-[50px] mx-auto block px-1 py-2 rounded text-center font-bold text-sm cursor-not-allowed" style="background:rgba(255,255,255,0.02);border:1px solid var(--bd-1);color:var(--text-hi);"></td>'+cells+'</tr>';
     }).join('');
 }
 
@@ -923,7 +923,7 @@ function renderLiveTable() {
             if (raw && Array.isArray(raw) && raw[0]!=='0' && raw.length>0) defHtml += '<span class="live-defect-tag">'+raw.join(', ')+'</span>';
         });
         if (!defHtml) defHtml = '<span style="color:var(--text-faint);">-</span>';
-        return '<tr><td class="px-2 py-2 font-bold text-center text-xs" style="background:rgba(255,255,255,0.04);border-right:1px solid var(--bd-1);color:var(--text-hi);">'+(t?t.nomor_tank:'-')+'</td><td class="px-2 py-2" style="border-right:1px solid var(--bd-1);"><div style="font-size:10px;font-weight:700;color:var(--text-hi);">'+(t?.kategori||'-')+'</div><div style="font-size:9px;color:var(--cyan-400);font-weight:700;">KLS:'+(s.kelas||'-')+'</div></td><td class="px-2 py-2 text-center font-mono font-bold" style="border-right:1px solid var(--bd-1);color:var(--cyan-300);background:rgba(34,211,238,0.06);">'+(nd.overall?.impression||'-')+'</td><td class="px-2 py-2 text-center font-mono text-[10px]" style="border-right:1px solid var(--bd-1);color:var(--text-mid);">'+fmt('head',['size','bentuk'])+'</td><td class="px-2 py-2 text-center font-mono text-[10px]" style="border-right:1px solid var(--bd-1);color:var(--text-mid);">'+(nd.face?.face||'-')+'</td><td class="px-2 py-2 text-center font-mono text-[10px]" style="border-right:1px solid var(--bd-1);color:var(--text-mid);">'+fmt('body',['bentuk','proporsi','pangkal'])+'</td><td class="px-2 py-2 text-center font-mono text-[10px]" style="border-right:1px solid var(--bd-1);color:var(--text-mid);">'+fmt('marking',['fullness','contrast','bentuk'])+'</td><td class="px-2 py-2 text-center font-mono text-[10px]" style="border-right:1px solid var(--bd-1);color:var(--text-mid);">'+fmt('pearl',['shinning','fullness','bentuk'])+'</td><td class="px-2 py-2 text-center font-mono text-[10px]" style="border-right:1px solid var(--bd-1);color:var(--text-mid);">'+fmt('color',['komposisi','kecerahan','fullness'])+'</td><td class="px-2 py-2 text-center font-mono text-[10px]" style="border-right:1px solid var(--bd-1);color:var(--text-mid);">'+fmt('finnage',['bentuk','kecerahan'])+'</td><td class="px-2 py-2 text-left align-top min-w-[100px] whitespace-normal" style="border-right:1px solid var(--bd-1);">'+defHtml+'</td><td class="px-2 py-2 text-center"><button onclick="lihatDetail('+s.id+')" class="live-detail-btn"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>Detail</button></td></tr>';
+        return '<tr><td class="px-2 py-2 font-bold text-center text-xs" style="background:rgba(255,255,255,0.04);border-right:1px solid var(--bd-1);color:var(--text-hi);">'+(t?t.nomor_tank:'-')+'</td><td class="px-2 py-2" style="border-right:1px solid var(--bd-1);"><div style="font-size:10px;font-weight:700;color:var(--text-hi);">'+(t?.kategori||'-')+'</div><div style="font-size:9px;color:var(--cyan-400);font-weight:700;">KLS:'+(s.kelas||'-')+'</div></td><td class="px-2 py-2 text-center font-mono font-bold" style="border-right:1px solid var(--bd-1);color:var(--cyan-300);background:rgba(34,211,238,0.06);">'+(nd.overall?.impression||'-')+'</td><td class="px-2 py-2 text-center font-mono text-[11px]" style="border-right:1px solid var(--bd-1);color:var(--text-hi);">'+fmt('head',['size','bentuk'])+'</td><td class="px-2 py-2 text-center font-mono text-[11px]" style="border-right:1px solid var(--bd-1);color:var(--text-hi);">'+(nd.face?.face||'-')+'</td><td class="px-2 py-2 text-center font-mono text-[11px]" style="border-right:1px solid var(--bd-1);color:var(--text-hi);">'+fmt('body',['bentuk','proporsi','pangkal'])+'</td><td class="px-2 py-2 text-center font-mono text-[11px]" style="border-right:1px solid var(--bd-1);color:var(--text-hi);">'+fmt('marking',['fullness','contrast','bentuk'])+'</td><td class="px-2 py-2 text-center font-mono text-[11px]" style="border-right:1px solid var(--bd-1);color:var(--text-hi);">'+fmt('pearl',['shinning','fullness','bentuk'])+'</td><td class="px-2 py-2 text-center font-mono text-[11px]" style="border-right:1px solid var(--bd-1);color:var(--text-hi);">'+fmt('color',['komposisi','kecerahan','fullness'])+'</td><td class="px-2 py-2 text-center font-mono text-[11px]" style="border-right:1px solid var(--bd-1);color:var(--text-hi);">'+fmt('finnage',['bentuk','kecerahan'])+'</td><td class="px-2 py-2 text-left align-top min-w-[100px] whitespace-normal" style="border-right:1px solid var(--bd-1);">'+defHtml+'</td><td class="px-2 py-2 text-center"><button onclick="lihatDetail('+s.id+')" class="live-detail-btn"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>Detail</button></td></tr>';
     }).join('');
 }
 
@@ -959,7 +959,7 @@ function updateGuidelineBtn() {
     if (showGuideline) {
         b.style.cssText = 'background:linear-gradient(135deg,var(--gold-500),#B45309);border-color:transparent;color:white;box-shadow:0 2px 8px -4px rgba(245,158,11,0.4);';
     } else {
-        b.style.cssText = 'background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);';
+        b.style.cssText = 'background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text);';
     }
 }
 
