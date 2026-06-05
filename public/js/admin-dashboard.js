@@ -28,7 +28,7 @@ var allScoringData = [];
 var chartKat, chartStat, chartTop;
 var _confirmCallback = null;
 var kelasRangeData = {};
-var allKategoriList = ['Cencu','Chginwa','Freemarking','Goldenbase','Klasik','Bonsai','Jumbo'];
+var allKategoriList = ['Cencu','Chingwa','Freemarking','Goldenbase','Klasik','Bonsai','Jumbo'];
 var noKelasKategori = ['Bonsai', 'Jumbo'];
 var kategoriListWithKelas = allKategoriList.filter(function(k){ return noKelasKategori.indexOf(k) === -1; });
 

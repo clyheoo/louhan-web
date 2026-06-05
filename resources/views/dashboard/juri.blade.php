@@ -928,7 +928,7 @@ function renderLiveTable() {
 }
 
 function populateFilter() {
-    document.getElementById('filter-kategori').innerHTML = '<option value="">Semua Kategori</option>' + ['Bonsai','Cencu','Chginwa','Freemarking','Goldenbase','Jumbo','Klasik'].map(c => '<option value="'+c+'">'+c+'</option>').join('');
+    document.getElementById('filter-kategori').innerHTML = '<option value="">Semua Kategori</option>' + ['Bonsai','Cencu','Chingwa','Freemarking','Goldenbase','Jumbo','Klasik'].map(c => '<option value="'+c+'">'+c+'</option>').join('');
     document.getElementById('filter-kelas').innerHTML = '<option value="">Semua Kelas</option>' + ['A','B','C','D','E'].map(c => '<option value="'+c+'">Kelas '+c+'</option>').join('');
     document.getElementById('filter-kategori').onchange = function() {
         var kelasWrap = document.getElementById('scoring-kelas-wrap');

@@ -788,7 +788,7 @@
                             </div>
                             <select class="filter-select" id="pointFilterKategori" onchange="loadPointRanking()">
                                 <option value="">🏷️ Semua Kategori</option>
-                                <option value="Cencu">Cencu</option><option value="Chginwa">Chginwa</option><option value="Freemarking">Freemarking</option><option value="Goldenbase">Goldenbase</option><option value="Klasik">Klasik</option><option value="Bonsai">Bonsai</option><option value="Jumbo">Jumbo</option>
+                                <option value="Cencu">Cencu</option><option value="Chingwa">Chingwa</option><option value="Freemarking">Freemarking</option><option value="Goldenbase">Goldenbase</option><option value="Klasik">Klasik</option><option value="Bonsai">Bonsai</option><option value="Jumbo">Jumbo</option>
                             </select>
                             <select class="filter-select" id="pointFilterKelas" onchange="loadPointRanking()" style="min-width:120px;">
                                 <option value="">📐 Semua Kelas</option>

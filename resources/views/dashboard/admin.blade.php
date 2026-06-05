@@ -724,7 +724,7 @@
                             <div class="search-box"><i class="fas fa-search"></i><input type="text" id="filterSearch" placeholder="Cari nama peserta..."></div>
                             <select class="filter-select" id="filterKategori">
                                 <option value="">Semua Kategori</option>
-                                <option>Cencu</option><option>Chginwa</option><option>Freemarking</option>
+                                <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
                                 <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
                             </select>
                             <select class="filter-select" id="filterStatus">
@@ -890,7 +890,7 @@
                                         <label class="form-label">Kategori</label>
                                         <select name="kategori" class="form-control" required>
                                             <option value="" disabled selected>Pilih Kategori</option>
-                                            <option>Cencu</option><option>Chginwa</option><option>Freemarking</option>
+                                            <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
                                             <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
                                         </select>
                                     </div>
