@@ -1389,7 +1389,7 @@
                 <div class="hero-welcome">
                     <span class="hero-eyebrow"><i class="fas fa-sparkles" style="font-size:9px;"></i> Dashboard Peserta</span>
                     <h2 class="hero-h2">Selamat datang, <em>{{ explode(' ', trim($user->name))[0] }}</em></h2>
-                    <p class="hero-sub">Pantau status ikan kontes Anda, lakukan undian nomor tank, dan daftarkan ikan-ikan terbaik Anda ke kompetisi <strong style="color:var(--gold-300);">MVP Louhan Club Indonesia</strong>.</p>
+                    <p class="hero-sub">Pantau status ikan kontes Anda, lakukan undian nomor tank, dan daftarkan ikan louhan terbaik Anda ke kompetisi <strong style="color:var(--gold-300);">Louhan Club Indonesia</strong>.</p>
                 </div>
 
                 <div class="stat-row">
