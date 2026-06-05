@@ -729,6 +729,84 @@ class AdminDashboardController extends Controller
         return response()->json(['found' => false]);
     }
 
+    /* ═══════════════════════════════════════════
+    DETAIL RIWAYAT PESERTA PER USER
+    ═══════════════════════════════════════════ */
+    public function getUserPesertaDetail(Request $request)
+    {
+        $request->validate(['user_id' => 'required|exists:users,id']);
+
+        $user    = User::find($request->user_id);
+        $peserta = Peserta::where('user_id', $request->user_id)->first();
+
+        $currentProfile = null;
+        $ikansList      = [];
+        $uniqueCombos   = [];
+
+        if ($peserta) {
+            $currentProfile = [
+                'nama_peserta'      => $peserta->nama_peserta,
+                'jenis_keanggotaan' => $peserta->jenis_keanggotaan,
+                'detail_anggota'    => $peserta->detail_anggota,
+                'is_mvp_submitted'  => (bool) $peserta->is_mvp_submitted,
+                'updated_at'        => $peserta->updated_at
+                    ? $peserta->updated_at->format('d M Y H:i')
+                    : null,
+            ];
+
+            $rawIkans = $peserta->ikans()->orderBy('created_at', 'desc')->get();
+            $comboMap = [];
+
+            foreach ($rawIkans as $ikan) {
+                $ikansList[] = [
+                    'id'                => $ikan->id,
+                    'nama_peserta'      => $ikan->nama_peserta ?? '-',
+                    'jenis_keanggotaan' => $ikan->jenis_keanggotaan ?? '-',
+                    'detail_anggota'    => $ikan->detail_anggota ?? '-',
+                    'kategori'          => $ikan->kategori ?? '-',
+                    'kelas'             => $ikan->kelas ?? '-',
+                    'nomor_tank'        => $ikan->nomor_tank,
+                    'dibuat_oleh'       => $ikan->dibuat_oleh ?? 'user',
+                    'is_mvp'            => (bool) $ikan->is_mvp,
+                    'created_at'        => $ikan->created_at
+                        ? $ikan->created_at->format('d M Y H:i')
+                        : '-',
+                ];
+
+                // Hitung kombinasi unik (nama + jenis + asal)
+                $key = ($ikan->nama_peserta ?? '') . '|'
+                    . ($ikan->jenis_keanggotaan ?? '') . '|'
+                    . ($ikan->detail_anggota ?? '');
+
+                if (!isset($comboMap[$key])) {
+                    $comboMap[$key] = [
+                        'nama_peserta'      => $ikan->nama_peserta ?? '-',
+                        'jenis_keanggotaan' => $ikan->jenis_keanggotaan ?? '-',
+                        'detail_anggota'    => $ikan->detail_anggota ?? '-',
+                        'count'             => 0,
+                    ];
+                }
+                $comboMap[$key]['count']++;
+            }
+
+            $uniqueCombos = array_values($comboMap);
+        }
+
+        return response()->json([
+            'user' => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+                'role'  => $user->role ?? 'user',
+            ],
+            'has_peserta'         => $peserta !== null,
+            'current_profile'     => $currentProfile,
+            'unique_combinations' => $uniqueCombos,
+            'ikans'               => $ikansList,
+            'total_ikan'          => count($ikansList),
+        ]);
+    }
+
     public function updatePesertaData(Request $request)
     {
         $request->validate([

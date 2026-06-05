@@ -1465,6 +1465,116 @@ function deleteIkan(ikanId, nama){
 }
 
 /* ═══════════════════════════════════════════════
+   USER PESERTA DETAIL (RIWAYAT IDENTITAS)
+   ═══════════════════════════════════════════════ */
+function openUserDetail(uid, name){
+    document.getElementById('userDetailBody').innerHTML =
+        '<div class="empty-state" style="padding:30px;"><i class="fas fa-spinner fa-spin"></i><p>Memuat data peserta...</p></div>';
+    openModal('modalUserDetail');
+
+    fetch('/api/admin/user-peserta-detail?user_id=' + uid, {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){ renderUserDetailModal(d); })
+    .catch(function(){
+        document.getElementById('userDetailBody').innerHTML =
+            '<div class="empty-state" style="padding:30px;"><i class="fas fa-triangle-exclamation" style="color:var(--danger);font-size:24px;opacity:.6;"></i><p style="color:var(--danger);margin-top:8px;">Gagal memuat data.</p></div>';
+    });
+}
+
+function renderUserDetailModal(d){
+    var html = '';
+
+    /* === HEADER: USER INFO === */
+    html += '<div style="background:linear-gradient(135deg, rgba(168,85,247,.12), rgba(168,85,247,.04));border:1px solid rgba(168,85,247,.30);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">';
+    html += '<div style="min-width:0;"><h4 style="font-size:14px;font-weight:800;color:#D8B4FE;margin-bottom:4px;">' + esc(d.user.name) + '</h4>';
+    html += '<div style="font-size:11px;color:var(--text-mid);">' + esc(d.user.email) + '</div></div>';
+    html += '<div style="background:rgba(168,85,247,.2);color:#D8B4FE;padding:5px 12px;border-radius:8px;font-size:10px;font-weight:800;border:1px solid rgba(168,85,247,.4);letter-spacing:.3px;">' + (roleLabels[d.user.role] || 'USER') + '</div>';
+    html += '</div>';
+
+    /* === JIKA BELUM ADA PROFIL PESERTA === */
+    if(!d.has_peserta){
+        html += '<div class="empty-state" style="padding:36px 20px;"><i class="fas fa-user-slash" style="font-size:28px;opacity:.4;"></i><p style="margin-top:10px;font-size:12px;color:var(--text-mid);">User ini belum memiliki profil peserta atau belum mendaftarkan ikan apapun.</p></div>';
+        document.getElementById('userDetailBody').innerHTML = html;
+        return;
+    }
+
+    /* === SECTION 1: PROFIL AKTIF === */
+    var p = d.current_profile;
+    var jenisLabel = p.jenis_keanggotaan === 'team' ? 'Team / Club' : 'Perorangan';
+    var asalLabel  = p.jenis_keanggotaan === 'team' ? 'Nama Team / Club' : 'Kota Asal';
+
+    html += '<div style="margin-bottom:18px;">';
+    html += '<div style="font-size:10px;font-weight:800;color:var(--cyan-300);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;"><i class="fas fa-user-check" style="margin-right:5px;"></i>Profil Aktif Saat Ini</div>';
+    html += '<div style="background:var(--glass-2);border:1px solid var(--bd-cyan);border-radius:12px;padding:14px 16px;">';
+    html += '<div style="display:grid;grid-template-columns:150px 1fr;gap:10px 14px;font-size:12px;">';
+    html += '<div style="color:var(--text-mid);font-weight:700;">Nama Peserta</div><div style="color:var(--text-hi);font-weight:700;">' + esc(p.nama_peserta || '-') + '</div>';
+    html += '<div style="color:var(--text-mid);font-weight:700;">Jenis Keanggotaan</div><div style="color:var(--text-hi);font-weight:700;">' + esc(jenisLabel) + '</div>';
+    html += '<div style="color:var(--text-mid);font-weight:700;">' + esc(asalLabel) + '</div><div style="color:var(--text-hi);font-weight:700;">' + esc(p.detail_anggota || '-') + '</div>';
+    if(p.updated_at){
+        html += '<div style="color:var(--text-mid);font-weight:700;">Terakhir Diubah</div><div style="color:var(--text-low);font-size:11px;">' + esc(p.updated_at) + '</div>';
+    }
+    html += '</div></div></div>';
+
+    /* === SECTION 2: KOMBINASI UNIK === */
+    if(d.unique_combinations && d.unique_combinations.length > 0){
+        html += '<div style="margin-bottom:18px;">';
+        html += '<div style="font-size:10px;font-weight:800;color:var(--gold-300);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;"><i class="fas fa-layer-group" style="margin-right:5px;"></i>Identitas yang Pernah Dipakai untuk Mendaftar Ikan (' + d.unique_combinations.length + ')</div>';
+
+        if(d.unique_combinations.length === 1){
+            html += '<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:10px 14px;font-size:11px;color:#6EE7B7;line-height:1.6;"><i class="fas fa-check-circle" style="margin-right:4px;"></i>User ini konsisten menggunakan <b>1 identitas</b> untuk semua ikannya.</div>';
+        } else {
+            html += '<div style="background:rgba(245,158,11,.08);border:1px solid var(--bd-gold);border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:var(--gold-300);line-height:1.6;"><i class="fas fa-triangle-exclamation" style="margin-right:4px;"></i>User ini menggunakan <b>' + d.unique_combinations.length + ' identitas berbeda</b> dalam riwayat pendaftaran ikan.</div>';
+
+            html += '<div style="overflow-x:auto;border:1px solid var(--bd-2);border-radius:12px;">';
+            html += '<table class="data-table" style="min-width:auto;">';
+            html += '<thead><tr><th style="width:30px;">#</th><th>NAMA PESERTA</th><th>JENIS</th><th>ASAL / TEAM</th><th style="text-align:center;">JUMLAH IKAN</th></tr></thead><tbody>';
+            for(var i=0; i<d.unique_combinations.length; i++){
+                var c = d.unique_combinations[i];
+                var jLabel = c.jenis_keanggotaan === 'team' ? 'Team' : (c.jenis_keanggotaan === 'perorangan' ? 'Perorangan' : c.jenis_keanggotaan);
+                html += '<tr>';
+                html += '<td style="font-weight:700;color:var(--text-low);font-size:11px;">' + (i+1) + '</td>';
+                html += '<td style="font-weight:700;">' + esc(c.nama_peserta) + '</td>';
+                html += '<td style="font-size:11px;color:var(--muted);">' + esc(jLabel) + '</td>';
+                html += '<td style="font-size:11px;">' + esc(c.detail_anggota) + '</td>';
+                html += '<td style="text-align:center;font-weight:800;color:var(--cyan-300);font-size:13px;">' + c.count + '<span style="font-size:10px;color:var(--text-low);font-weight:600;"> ikan</span></td>';
+                html += '</tr>';
+            }
+            html += '</tbody></table></div>';
+        }
+        html += '</div>';
+    }
+
+    /* === SECTION 3: DETAIL PER IKAN === */
+    if(d.ikans && d.ikans.length > 0){
+        html += '<div>';
+        html += '<div style="font-size:10px;font-weight:800;color:#D8B4FE;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;"><i class="fas fa-fish" style="margin-right:5px;"></i>Detail Setiap Ikan yang Didaftarkan (' + d.total_ikan + ')</div>';
+        html += '<div style="overflow-x:auto;border:1px solid var(--bd-2);border-radius:12px;max-height:300px;overflow-y:auto;">';
+        html += '<table class="data-table" style="min-width:780px;">';
+        html += '<thead><tr><th style="width:30px;">#</th><th>NAMA (SAAT DAFTAR)</th><th>JENIS</th><th>ASAL/TEAM</th><th>KATEGORI</th><th>KELAS</th><th>TANK</th><th>TANGGAL DAFTAR</th></tr></thead><tbody>';
+        for(var i=0; i<d.ikans.length; i++){
+            var ik = d.ikans[i];
+            var jLabel2 = ik.jenis_keanggotaan === 'team' ? 'Team' : (ik.jenis_keanggotaan === 'perorangan' ? 'Perorangan' : ik.jenis_keanggotaan);
+            html += '<tr>';
+            html += '<td style="font-weight:700;color:var(--text-low);font-size:11px;">' + (i+1) + '</td>';
+            html += '<td style="font-weight:700;font-size:11px;">' + esc(ik.nama_peserta) + '</td>';
+            html += '<td style="font-size:11px;color:var(--muted);">' + esc(jLabel2) + '</td>';
+            html += '<td style="font-size:11px;">' + esc(ik.detail_anggota) + '</td>';
+            html += '<td style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);">' + esc(ik.kategori) + '</td>';
+            html += '<td style="font-size:11px;">' + esc(ik.kelas) + '</td>';
+            html += '<td style="font-weight:700;color:var(--primary);font-size:11px;">' + (ik.nomor_tank ? 'Tank '+ik.nomor_tank : '<span style="color:var(--text-low);font-weight:600;">—</span>') + '</td>';
+            html += '<td style="font-size:10px;color:var(--text-low);white-space:nowrap;">' + esc(ik.created_at) + '</td>';
+            html += '</tr>';
+        }
+        html += '</tbody></table></div>';
+        html += '</div>';
+    } else {
+        html += '<div class="empty-state" style="padding:24px;"><i class="fas fa-inbox" style="font-size:24px;opacity:.4;"></i><p style="margin-top:8px;font-size:12px;color:var(--text-mid);">Profil peserta sudah ada, tetapi belum ada ikan yang didaftarkan.</p></div>';
+    }
+
+    document.getElementById('userDetailBody').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════
    EXPORT CSV
    ═══════════════════════════════════════════════ */
 var statTypeIcons={total_ikan:'fa-fish',total_peserta:'fa-users',sudah_dinilai:'fa-check-double',grand_edit:'fa-crown',belum_dinilai:'fa-clock',juri_aktif:'fa-user-pen'};
@@ -2014,6 +2124,8 @@ function renderUserList(data){
             '</div>';
 
         var actions='';
+        /* ★ Tombol Detail Peserta — selalu tampil (termasuk untuk diri sendiri & admin lain) */
+        actions+='<button class="btn-xs purple" onclick="openUserDetail('+u.id+',\''+safeName+'\')" title="Lihat Riwayat Identitas Peserta"><i class="fas fa-id-card"></i></button>';
         if(!isMe&&!isOtherAdmin){
             actions+='<button class="btn-xs blue" onclick="openPwdModal('+u.id+',\''+safeName+'\')" title="Password"><i class="fas fa-key"></i></button>';
         }

@@ -104,6 +104,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/register-peserta-ikan', [AdminDashboardController::class, 'registerPesertaIkan']);
     Route::post('/api/admin/delete-ikan', [AdminDashboardController::class, 'deleteIkan']);
     Route::get('/api/admin/get-peserta-by-user', [AdminDashboardController::class, 'getPesertaByUser']);
+    Route::get('/api/admin/user-peserta-detail', [AdminDashboardController::class, 'getUserPesertaDetail']);
     Route::post('/api/admin/update-peserta-data', [AdminDashboardController::class, 'updatePesertaData']);
     Route::get('/api/list-users', [DashboardController::class, 'getListUsers'])->name('api.list.users');
     Route::post('/api/update-password', [DashboardController::class, 'updatePasswordUser'])->name('api.update.password');

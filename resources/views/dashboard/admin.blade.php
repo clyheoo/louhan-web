@@ -1132,6 +1132,22 @@
     </div>
 </div>
 
+<!-- ═══════════ MODAL: USER PESERTA DETAIL ═══════════ -->
+<div class="modal-bg" id="modalUserDetail" style="--mw:820px;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-id-card" style="color:#D8B4FE;"></i> Detail Peserta &amp; Riwayat Identitas</h3>
+            <button class="modal-close" onclick="closeModal('modalUserDetail')"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" id="userDetailBody">
+            <div class="empty-state" style="padding:30px;"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-cancel" onclick="closeModal('modalUserDetail')">Tutup</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════════ POPUP SUCCESS ═══════════ -->
 <div class="popup-overlay" id="popupSuccess">
     <div class="popup-card">
