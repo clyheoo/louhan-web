@@ -1643,12 +1643,6 @@
 
                     <!-- CARD: DAFTAR IKAN -->
                     <div class="glass-card machine-card" id="cardDaftarIkan">
-                        <div class="undian-lock-overlay {{ !$undianOpen ? 'show' : '' }}" id="lockDaftarIkan">
-                            <div class="lock-visual"><i class="fas fa-lock"></i></div>
-                            <div class="lock-title">Undian Dikunci</div>
-                            <div class="lock-desc">Daftar ikan Anda sudah tercatat. Nomor tank akan bisa diundi setelah panitia membuka mesin undian.</div>
-                            <div class="lock-badge"><i class="fas fa-hourglass-half"></i> Menunggu Pembukaan Undian</div>
-                        </div>
                         <div class="card-header">
                             <h2 class="card-title">
                                 <span class="title-icon"><i class="fas fa-list"></i></span>
@@ -1701,15 +1695,9 @@
                                                     {{ $ikan->nomor_tank ?? '--' }}
                                                 </div>
                                                 @if(!$ikan->nomor_tank)
-                                                    @if($undianOpen)
-                                                        <button class="btn-acak-kecil" onclick="mulaiAcak({{ $ikan->id }}, this)">
-                                                            <i class="fas fa-shuffle"></i> ACAK
-                                                        </button>
-                                                    @else
-                                                        <button class="btn-acak-kecil" disabled style="opacity:0.4; cursor:not-allowed;">
-                                                            <i class="fas fa-lock"></i> DIKUNCI
-                                                        </button>
-                                                    @endif
+                                                    <button class="btn-acak-kecil" onclick="mulaiAcak({{ $ikan->id }}, this)" style="{{ $undianOpen ? '' : 'display:none;' }}">
+                                                        <i class="fas fa-shuffle"></i> ACAK
+                                                    </button>
                                                 @else
                                                     <span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>
                                                 @endif
@@ -1875,7 +1863,7 @@
                     const newEl = document.createElement('div');
                     newEl.className = 'ikan-item';
                     newEl.id = `ikan-item-${data.ikan.id}`;
-                    newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${data.ikan.nama_peserta || namaPeserta}</h4>${kategoriKelasLineHtml(data.ikan.kategori, data.ikan.kelas)}</div><div class="ikan-item-right"><div class="tank-num empty" id="tank-num-${data.ikan.id}">--</div><button class="btn-acak-kecil" onclick="mulaiAcak(${data.ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button></div>`;
+                    newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${data.ikan.nama_peserta || namaPeserta}</h4>${kategoriKelasLineHtml(data.ikan.kategori, data.ikan.kelas)}</div><div class="ikan-item-right"><div class="tank-num empty" id="tank-num-${data.ikan.id}">--</div><button class="btn-acak-kecil" onclick="mulaiAcak(${data.ikan.id}, this)" style="${isUndianOpen ? '' : 'display:none;'}"><i class="fas fa-shuffle"></i> ACAK</button></div>`;
                     listContainer.prepend(newEl);
                     currentIkans[data.ikan.id] = { kategori: data.ikan.kelas ? 'Kelas ' + data.ikan.kelas : '', nomor_tank: '--', is_mvp: false };
 
@@ -1934,27 +1922,19 @@
         // ★ FUNGSI: Update visual lock pada card Mesin Undian & Daftar Ikan
         function updateUndianLockUI(isOpen) {
             var lockMesin = document.getElementById('lockMesinUndian');
-            var lockDaftar = document.getElementById('lockDaftarIkan');
 
             if (lockMesin) {
                 if (isOpen) { lockMesin.classList.remove('show'); }
                 else { lockMesin.classList.add('show'); }
             }
-            if (lockDaftar) {
-                if (isOpen) { lockDaftar.classList.remove('show'); }
-                else { lockDaftar.classList.add('show'); }
-            }
 
-            // ★ Disable/enable semua tombol ACAK di daftar ikan
+            // ★ Sembunyikan/tampilkan tombol ACAK di daftar ikan
             document.querySelectorAll('.btn-acak-kecil').forEach(function(btn) {
                 if (!isOpen) {
-                    btn.disabled = true;
-                    btn.style.opacity = '0.4';
-                    btn.style.cursor = 'not-allowed';
+                    btn.style.display = 'none';
                 } else {
+                    btn.style.display = 'inline-flex';
                     btn.disabled = false;
-                    btn.style.opacity = '';
-                    btn.style.cursor = '';
                 }
             });
         }
@@ -2080,7 +2060,7 @@
                         newEl.className = 'ikan-item';
                         newEl.id = `ikan-item-${ikan.id}`;
                         newEl.style.animation = 'cardEntry 0.5s ease both';
-                        const acakBtnHtml = !ikan.nomor_tank ? (isUndianOpen ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>` : `<button class="btn-acak-kecil" disabled style="opacity:0.4; cursor:not-allowed;"><i class="fas fa-lock"></i> DIKUNCI</button>`) : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`;
+                        const acakBtnHtml = !ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)" style="${isUndianOpen ? '' : 'display:none;'}"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`;
                         newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${ikan.nama_peserta || document.getElementById('namaPeserta').value} ${badge}</h4>${kategoriKelasLineHtml(ikan.kategori, ikan.kelas)}</div><div class="ikan-item-right">${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${acakBtnHtml}</div>`;
                         listContainer.prepend(newEl);
                         currentIkans[ikan.id] = { kategori: ikan.kelas ? 'Kelas ' + ikan.kelas : '', nomor_tank: ikan.nomor_tank ?? '--', is_mvp: ikan.is_mvp };
@@ -2125,7 +2105,7 @@
                                 let checkmark = existingEl.querySelector('.fa-circle-check');
                                 if (checkmark) {
                                     const parent = checkmark.closest('span') || checkmark.parentElement;
-                                    if (parent) parent.outerHTML = `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)"><i class="fas fa-shuffle"></i> ACAK</button>`;
+                                    if (parent) parent.outerHTML = `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)" style="${isUndianOpen ? '' : 'display:none;'}"><i class="fas fa-shuffle"></i> ACAK</button>`;
                                 }
                             }
                             currentIkans[ikan.id].nomor_tank = '--';
