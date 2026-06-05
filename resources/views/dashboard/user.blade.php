@@ -1515,7 +1515,7 @@
                                             <select name="kategori" id="ikanKategoriSelect" class="form-select" required style="padding-left:14px;">
                                                 <option value="" disabled selected>Pilih Kategori Ikan</option>
                                                 <option value="Cencu">Cencu</option>
-                                                <option value="chingwa">Chingwa</option>
+                                                <option value="Chingwa">Chingwa</option>
                                                 <option value="Freemarking">Freemarking</option>
                                                 <option value="Goldenbase">Goldenbase</option>
                                                 <option value="Klasik">Klasik</option>
@@ -1661,7 +1661,7 @@
                             <select class="fish-filter" id="fishFilterKategori" aria-label="Filter kategori">
                                 <option value="">Semua Kategori</option>
                                 <option value="Cencu">Cencu</option>
-                                <option value="chingwa">Chingwa</option>
+                                <option value="Chingwa">Chingwa</option>
                                 <option value="Freemarking">Freemarking</option>
                                 <option value="Goldenbase">Goldenbase</option>
                                 <option value="Klasik">Klasik</option>
@@ -1796,6 +1796,16 @@
 
         // ★ HELPER: Reset hanya field ikan (profil tetap terisi untuk tambah ikan berikutnya)
         function resetIkanFields() {
+            // Reset Profil
+            var namaEl = document.getElementById('namaPeserta');
+            if (namaEl) namaEl.value = '';
+            var peroranganRadio = document.getElementById('perorangan');
+            if (peroranganRadio) peroranganRadio.checked = true;
+            updateToggleUI();
+            var detailEl = document.getElementById('inputDetail');
+            if (detailEl) detailEl.value = '';
+
+            // Reset Ikan
             if (ikanKategoriSelect) ikanKategoriSelect.value = '';
             if (ikanKelasSelectEl) ikanKelasSelectEl.value = '';
             resetIkanFormState();
@@ -2379,10 +2389,11 @@
 
             document.querySelectorAll('.ikan-item').forEach(function(el) {
                 var h4 = el.querySelector('.ikan-item-info h4');
+                var pEl = el.querySelector('.ikan-item-info p');
                 var tank = el.querySelector('.tank-num');
-                var text = (h4 ? h4.textContent : '').toLowerCase() + ' ' + ((el.querySelector('.ikan-item-info p') || {}).textContent || '').toLowerCase();
+                var text = (h4 ? h4.textContent : '').toLowerCase() + ' ' + (pEl ? pEl.textContent : '').toLowerCase();
                 var matchSearch = !q || text.indexOf(q) !== -1;
-                var matchKat = !katFilter || (h4 && h4.textContent.toLowerCase().indexOf(katFilter.toLowerCase()) !== -1);
+                var matchKat = !katFilter || (pEl && pEl.textContent.toLowerCase().indexOf(katFilter.toLowerCase()) !== -1);
                 var isDiundi = tank && !tank.classList.contains('empty');
                 var matchSts = !stsFilter || (stsFilter === 'diundi' && isDiundi) || (stsFilter === 'belum' && !isDiundi);
 
