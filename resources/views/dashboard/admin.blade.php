@@ -564,6 +564,33 @@
     /* Optimasi animasi popup */
     .popup-card,
     .modal-box{ will-change:transform,opacity; }
+
+    /* ═══ SCROLLBAR DI DALAM MODAL USER DETAIL ═══ */
+    #userDetailBody ::-webkit-scrollbar{
+        width:7px;
+        height:7px;
+    }
+    #userDetailBody ::-webkit-scrollbar-track{
+        background:rgba(255,255,255,.02);
+        border-radius:10px;
+    }
+    #userDetailBody ::-webkit-scrollbar-thumb{
+        background:var(--glass-strong);
+        border-radius:10px;
+        border:1px solid rgba(255,255,255,.04);
+        transition:background .2s;
+    }
+    #userDetailBody ::-webkit-scrollbar-thumb:hover{
+        background:var(--bd-cyan);
+    }
+    #userDetailBody ::-webkit-scrollbar-corner{
+        background:transparent;
+    }
+    /* Firefox */
+    #userDetailBody *{
+        scrollbar-width:thin;
+        scrollbar-color:var(--glass-strong) transparent;
+    }
     </style>
 </head>
 
@@ -761,7 +788,20 @@
                             <span style="font-size:11px;color:var(--text-mid);font-weight:600;" id="userCount">0 user</span>
                             <div style="position:relative;flex:1;max-width:280px;">
                                 <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-low);"></i>
-                                <input type="text" id="searchUser" placeholder="Cari user..." autocomplete="off" style="width:100%;padding:8px 12px 8px 32px;border:1px solid var(--bd-2);border-radius:10px;font-family:inherit;font-size:11.5px;outline:none;background:var(--glass-2);color:var(--text-hi);">
+                                <input type="search"
+                                    id="searchUser"
+                                    name="user_filter_keyword_x9"
+                                    placeholder="Cari user..."
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    data-lpignore="true"
+                                    data-form-type="other"
+                                    data-1p-ignore="true"
+                                    readonly
+                                    onfocus="this.removeAttribute('readonly');"
+                                    style="width:100%;padding:8px 12px 8px 32px;border:1px solid var(--bd-2);border-radius:10px;font-family:inherit;font-size:11.5px;outline:none;background:var(--glass-2);color:var(--text-hi);">
                             </div>
                         </div>
                         <div class="user-list" id="userList">

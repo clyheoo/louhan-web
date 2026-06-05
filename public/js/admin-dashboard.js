@@ -2124,8 +2124,10 @@ function renderUserList(data){
             '</div>';
 
         var actions='';
-        /* ★ Tombol Detail Peserta — selalu tampil (termasuk untuk diri sendiri & admin lain) */
-        actions+='<button class="btn-xs purple" onclick="openUserDetail('+u.id+',\''+safeName+'\')" title="Lihat Riwayat Identitas Peserta"><i class="fas fa-id-card"></i></button>';
+        /* ★ Tombol Detail Peserta — HANYA untuk role 'user' (peserta), bukan admin/juri/grand_juri */
+        if(role === 'user'){
+            actions+='<button class="btn-xs purple" onclick="openUserDetail('+u.id+',\''+safeName+'\')" title="Lihat Riwayat Identitas Peserta"><i class="fas fa-id-card"></i></button>';
+        }
         if(!isMe&&!isOtherAdmin){
             actions+='<button class="btn-xs blue" onclick="openPwdModal('+u.id+',\''+safeName+'\')" title="Password"><i class="fas fa-key"></i></button>';
         }
