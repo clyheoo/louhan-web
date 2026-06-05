@@ -924,6 +924,62 @@ class AdminDashboardController extends Controller
             'max' => 'required|integer|min:1|gte:min',
         ]);
 
+        $newMin = (int) $request->min;
+        $newMax = (int) $request->max;
+
+        // ═══════════════════════════════════════════════
+        // ★ VALIDASI BARU: Cek apakah rentang global baru
+        // masih bisa menampung SEMUA sub-rentang per kategori
+        // yang sudah dikonfigurasi sebelumnya.
+        // ═══════════════════════════════════════════════
+        $classRanges = json_decode(
+            \DB::table('settings')->where('key', 'tank_class_ranges')->value('value'),
+            true
+        );
+
+        if (is_array($classRanges) && !empty($classRanges)) {
+            $conflicts = [];
+            $noKelasKategori = ['Bonsai', 'Jumbo'];
+
+            foreach ($classRanges as $kelas => $data) {
+                if (!isset($data['kategori']) || !is_array($data['kategori'])) continue;
+
+                foreach ($data['kategori'] as $katName => $katData) {
+                    $katMin = (int) ($katData['min'] ?? 0);
+                    $katMax = (int) ($katData['max'] ?? 0);
+                    if ($katMin < 1 || $katMax < 1) continue;
+
+                    // Sub-rentang harus berada di DALAM rentang global baru
+                    if ($katMin < $newMin || $katMax > $newMax) {
+                        $label = in_array($kelas, $noKelasKategori)
+                            ? $kelas
+                            : 'Kelas ' . $kelas;
+                        $conflicts[] = '<b>' . e($katName) . '</b> di ' . $label
+                                    . ' (' . $katMin . '–' . $katMax . ')';
+                    }
+                }
+            }
+
+            if (!empty($conflicts)) {
+                $msg  = 'Rentang global baru <b>(' . $newMin . '–' . $newMax . ')</b> ';
+                $msg .= 'tidak dapat menampung sub-rentang berikut:<br><br>';
+                $msg .= '<div style="text-align:left;line-height:1.8;">';
+                foreach ($conflicts as $c) {
+                    $msg .= '• ' . $c . '<br>';
+                }
+                $msg .= '</div><br>';
+                $msg .= 'Silakan perbesar rentang global, atau hapus / sesuaikan sub-rentang di atas terlebih dahulu.';
+
+                return response()->json([
+                    'success' => false,
+                    'message' => $msg,
+                ], 422);
+            }
+        }
+        // ═══════════════════════════════════════════════
+        // ★ AKHIR VALIDASI BARU
+        // ═══════════════════════════════════════════════
+
         \DB::table('settings')->updateOrInsert(
             ['key' => 'tank_range_min'],
             ['value' => $request->min, 'updated_at' => now()]
