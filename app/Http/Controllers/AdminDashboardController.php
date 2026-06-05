@@ -651,34 +651,38 @@ class AdminDashboardController extends Controller
     {
         $request->validate([
             'ikan_ids'   => 'required|array|min:1',
-            'ikan_ids.*' => 'integer|exists:ikans,id',
+            'ikan_ids.*' => 'integer', // ★ Hapus 'exists:ikans,id' — sangat lambat untuk array besar (1 query per ID)
         ]);
 
         $ikanIds = $request->ikan_ids;
 
-        // 1. Hapus semua scoring terkait
-        Scoring::whereIn('ikan_id', $ikanIds)->delete();
+        // ★ Bungkus dalam transaction agar atomic & sedikit lebih cepat
+        \DB::transaction(function () use ($ikanIds) {
+            Scoring::whereIn('ikan_id', $ikanIds)->delete();
+            \App\Models\IkanBonusPoint::whereIn('ikan_id', $ikanIds)->delete();
+            Ikan::whereIn('id', $ikanIds)->delete();
+        });
 
-        // 2. Hapus semua bonus points terkait
-        \App\Models\IkanBonusPoint::whereIn('ikan_id', $ikanIds)->delete();
+        $deletedCount = count($ikanIds);
 
-        // 3. Hapus data ikan
-        $deleted = Ikan::whereIn('id', $ikanIds)->delete();
-
-        // ★ AUTO-SYNC KE GOOGLE SHEETS
-        try {
-            if ($this->sheetsSync->isReady()) {
-                $this->sheetsSync->syncSemuaPeserta();
-                $this->sheetsSync->syncHasilJuri();
+        // ★ DEFER Google Sheets sync — jalankan SETELAH response terkirim ke browser.
+        //   User langsung dapat respons sukses, sync berjalan di background.
+        $sheetsSync = $this->sheetsSync;
+        app()->terminating(function () use ($sheetsSync) {
+            try {
+                if ($sheetsSync->isReady()) {
+                    $sheetsSync->syncSemuaPeserta();
+                    $sheetsSync->syncHasilJuri();
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Sheets sync gagal saat bulk delete ikan: ' . $e->getMessage());
             }
-        } catch (\Exception $e) {
-            \Log::warning('Sheets sync gagal saat bulk delete ikan: ' . $e->getMessage());
-        }
+        });
 
         return response()->json([
             'success'       => true,
-            'message'       => $deleted . ' data ikan beserta nilai penilaiannya berhasil dihapus.',
-            'deleted_count' => $deleted,
+            'message'       => $deletedCount . ' data ikan beserta nilai penilaiannya berhasil dihapus.',
+            'deleted_count' => $deletedCount,
         ]);
     }
 
