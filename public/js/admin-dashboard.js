@@ -144,7 +144,7 @@ function renderRangeSummary(){
 
     if(hasAnyRange){
         html = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">' +
-            '<button type="button" onclick="resetAllRanges()" style="padding:6px 12px;border:1px solid rgba(239,68,68,.35);border-radius:8px;background:rgba(239,68,68,.12);color:#FCA5A5;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .2s;" onmouseover="this.style.background=\'var(--danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(239,68,68,.12)\';this.style.color=\'#FCA5A5\'">' +
+            '<button type="button" onclick="resetAllRanges()" style="padding:6px 12px;border:1px solid rgba(239,68,68,.5);border-radius:8px;background:rgba(239,68,68,.18);color:#F87171;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .2s;" onmouseover="this.style.background=\'var(--danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(239,68,68,.18)\';this.style.color=\'#F87171\'">' +
             '<i class="fas fa-rotate-left"></i> Reset Semua Rentang</button></div>';
     }
 
@@ -157,14 +157,14 @@ function renderRangeSummary(){
         totalKelas++;
         totalKat += keys.length;
         var isNoKelas = noKelasKategori.indexOf(k) !== -1;
-        html += '<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.06);border-radius:9px;">';
+        html += '<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08);border-radius:9px;">';
         html += '<b style="color:#FCD34D;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;min-width:60px;">'+(isNoKelas ? k : 'Kelas '+k)+'</b>';
-        html += '<span style="color:#475569;font-size:11px;">→</span>';
+        html += '<span style="color:#94A3B8;font-size:11px;">→</span>';
         var parts = [];
         for(var j=0; j<keys.length; j++){
             var name = keys[j];
             var r = kats[name];
-            parts.push('<span style="background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.35);border-radius:6px;padding:3px 9px;font-weight:700;font-size:11px;color:#FCD34D;display:inline-flex;align-items:center;gap:5px;">'+name+'<span style="color:#67E8F9;font-weight:800;background:rgba(34,211,238,.1);padding:0 5px;border-radius:4px;">'+r.min+'\u2013'+r.max+'</span></span>');
+            parts.push('<span style="background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.25);border-radius:6px;padding:3px 9px;font-weight:700;font-size:11px;color:#FDE68A;display:inline-flex;align-items:center;gap:5px;">'+name+'<span style="color:#A5F3FC;font-weight:800;background:rgba(34,211,238,.15);padding:0 5px;border-radius:4px;">'+r.min+'\u2013'+r.max+'</span></span>');
         }
         html += parts.join('');
         html += '</div>';
@@ -176,53 +176,8 @@ function renderRangeSummary(){
     }
 
     if(totalKelas > 0){
-        html = '<div style="margin-bottom:12px;color:#FCD34D;font-weight:700;font-size:12px;display:flex;align-items:center;gap:6px;"><i class="fas fa-chart-pie" style="color:var(--gold-400);"></i> <b style="color:#fff;">'+totalKelas+'</b> group terkonfigurasi, <b style="color:#fff;">'+totalKat+'</b> kategori memiliki rentang khusus.</div>' + html;
+        html = '<div style="margin-bottom:12px;color:#FDE68A;font-weight:700;font-size:12px;display:flex;align-items:center;gap:6px;"><i class="fas fa-chart-pie" style="color:var(--gold-400);"></i> <b style="color:#fff;">'+totalKelas+'</b> group terkonfigurasi, <b style="color:#fff;">'+totalKat+'</b> kategori memiliki rentang khusus.</div>' + html;
     }
-    el.innerHTML = html;
-    wrap.style.display = 'block';
-    var allKeys = kelasList.concat(noKelasKategori);
-
-    /* Cek apakah ada rentang yang sudah dikonfigurasi */
-    var hasAnyRange = false;
-    for(var ci=0; ci<allKeys.length; ci++){
-        var ck = allKeys[ci];
-        var ckKats = kelasRangeData[ck] ? kelasRangeData[ck].kategori || {} : {};
-        if(Object.keys(ckKats).length > 0){ hasAnyRange = true; break; }
-    }
-
-    /* Tombol reset hanya muncul jika ada rentang */
-    if(hasAnyRange){
-        html = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">' +
-            '<button type="button" onclick="resetAllRanges()" style="padding:6px 12px;border:1px solid #fca5a5;border-radius:7px;background:var(--danger-lt);color:var(--danger);font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .2s;" onmouseover="this.style.background=\'var(--danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'var(--danger-lt)\';this.style.color=\'var(--danger\'">' +
-            '<i class="fas fa-rotate-left"></i> Reset Semua Rentang</button></div>';
-    }
-
-    for(var i=0; i<allKeys.length; i++){
-        var k = allKeys[i];
-        var kats = kelasRangeData[k] ? kelasRangeData[k].kategori || {} : {};
-        var keys = Object.keys(kats);
-        if(keys.length === 0) continue;
-
-        totalKelas++;
-        totalKat += keys.length;
-        var isNoKelas = noKelasKategori.indexOf(k) !== -1;
-        html += '<div style="margin-bottom:6px;"><b style="color:#92400e;">'+(isNoKelas ? k : 'Kelas '+k)+'</b> \u2192 ';
-        var parts = [];
-        for(var j=0; j<keys.length; j++){
-            var name = keys[j];
-            var r = kats[name];
-            parts.push('<span style="background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;font-weight:700;">'+name+' <span style="color:#1e40af;">'+r.min+'\u2013'+r.max+'</span></span>');
-        }
-        html += parts.join(' &nbsp; ');
-        html += '</div>';
-    }
-
-    if(!html){
-        wrap.style.display = 'none';
-        return;
-    }
-
-    html = '<div style="margin-bottom:6px;color:#b45309;font-weight:600;"><i class="fas fa-chart-pie" style="margin-right:4px;"></i> '+totalKelas+' group terkonfigurasi, '+totalKat+' kategori memiliki rentang khusus.</div>' + html;
     el.innerHTML = html;
     wrap.style.display = 'block';
 }
@@ -323,35 +278,6 @@ function renderKategoriGrid(kelas){
                     '<input type="number" id="kat_'+name+'_max" value="'+(hasSub?kat.max:'')+'" placeholder="Sampai" style="width:100%;text-align:center;font-weight:700;padding:9px 6px;font-size:13px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#F8FAFC;outline:none;font-family:inherit;transition:all .2s;" oninput="onKatInputChange()" onfocus="this.style.borderColor=\'#22D3EE\';this.style.background=\'rgba(0,0,0,.4)\';this.style.boxShadow=\'0 0 0 3px rgba(34,211,238,.1)\'" onblur="if(!this.style.borderColor.includes(\'239\')){this.style.borderColor=\'rgba(255,255,255,.14)\';this.style.background=\'rgba(0,0,0,.28)\';this.style.boxShadow=\'\';}">'+
                 '</div>'+
                 '<div id="kat_hint_'+name+'" style="font-size:9.5px;color:#94A3B8;font-weight:600;transition:color .2s;">Kosongkan = pakai rentang global</div>';
-            container.appendChild(card);
-        })(katsToShow[i]);
-    }
-    var existing = kelasRangeData[kelas] ? kelasRangeData[kelas].kategori || {} : {};
-
-    var katsToShow;
-    if(kelas === 'Bonsai'){
-        katsToShow = ['Bonsai'];
-    } else if(kelas === 'Jumbo'){
-        katsToShow = ['Jumbo'];
-    } else {
-        katsToShow = kategoriListWithKelas;
-    }
-
-    for(var i=0;i<katsToShow.length;i++){
-        (function(name){
-            var kat = existing[name] || null;
-            var hasSub = kat && kat.min && kat.max;
-            var card = document.createElement('div');
-            card.id = 'kat_card_' + name;
-            card.style.cssText='background:#fff;border:1px solid #fde68a;border-radius:10px;padding:14px;text-align:center;transition:border-color .2s,box-shadow .2s;';
-            card.innerHTML=
-                '<div style="font-size:11px;font-weight:800;color:#1e293b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">'+name+'</div>'+
-                '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">'+
-                    '<input type="number" id="kat_'+name+'_min" value="'+(hasSub?kat.min:'')+'" class="form-control" placeholder="Dari" style="text-align:center;font-weight:700;padding:8px;font-size:13px;transition:border-color .2s,box-shadow .2s;" oninput="onKatInputChange()">'+
-                    '<span style="font-weight:600;color:#d97706;">\u2013</span>'+
-                    '<input type="number" id="kat_'+name+'_max" value="'+(hasSub?kat.max:'')+'" class="form-control" placeholder="Sampai" style="text-align:center;font-weight:700;padding:8px;font-size:13px;transition:border-color .2s,box-shadow .2s;" oninput="onKatInputChange()">'+
-                '</div>'+
-                '<div id="kat_hint_'+name+'" style="font-size:9px;color:var(--light);font-weight:600;transition:color .2s;">Kosongkan = pakai rentang global</div>';
             container.appendChild(card);
         })(katsToShow[i]);
     }
