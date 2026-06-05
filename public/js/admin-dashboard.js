@@ -2226,6 +2226,7 @@ function toggleUndianRegistration() {
 function updateUndianToggleUI(isOpen) {
     var btn = document.getElementById('btnToggleUndian');
     var txt = document.getElementById('undianStatusText');
+    if(btn) btn.disabled = false;
     if(isOpen) {
         btn.innerHTML = '<i class="fas fa-lock-open"></i> KUNCI MESIN UNDIAN';
         btn.style.background = 'var(--danger)'; btn.style.boxShadow = '0 3px 10px rgba(239,68,68,.2)';
@@ -2240,6 +2241,7 @@ function updateUndianToggleUI(isOpen) {
 function updateMvpToggleUI(isOpen) {
     var btn = document.getElementById('btnToggleMvp');
     var txt = document.getElementById('mvpStatusText');
+    if(btn) btn.disabled = false;
     if(isOpen) {
         btn.innerHTML = '<i class="fas fa-lock-open"></i> TUTUP MVP';
         btn.style.background = 'var(--danger)'; btn.style.boxShadow = '0 3px 10px rgba(239,68,68,.2)';
