@@ -1515,7 +1515,7 @@
                                             <select name="kategori" id="ikanKategoriSelect" class="form-select" required style="padding-left:14px;">
                                                 <option value="" disabled selected>Pilih Kategori Ikan</option>
                                                 <option value="Cencu">Cencu</option>
-                                                <option value="Chginwa">Chginwa</option>
+                                                <option value="chingwa">Chingwa</option>
                                                 <option value="Freemarking">Freemarking</option>
                                                 <option value="Goldenbase">Goldenbase</option>
                                                 <option value="Klasik">Klasik</option>
@@ -1667,7 +1667,7 @@
                             <select class="fish-filter" id="fishFilterKategori" aria-label="Filter kategori">
                                 <option value="">Semua Kategori</option>
                                 <option value="Cencu">Cencu</option>
-                                <option value="Chginwa">Chginwa</option>
+                                <option value="chingwa">chingwa</option>
                                 <option value="Freemarking">Freemarking</option>
                                 <option value="Goldenbase">Goldenbase</option>
                                 <option value="Klasik">Klasik</option>
