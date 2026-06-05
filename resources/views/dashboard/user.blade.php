@@ -1667,7 +1667,7 @@
                             <select class="fish-filter" id="fishFilterKategori" aria-label="Filter kategori">
                                 <option value="">Semua Kategori</option>
                                 <option value="Cencu">Cencu</option>
-                                <option value="chingwa">chingwa</option>
+                                <option value="chingwa">Chingwa</option>
                                 <option value="Freemarking">Freemarking</option>
                                 <option value="Goldenbase">Goldenbase</option>
                                 <option value="Klasik">Klasik</option>
