@@ -193,6 +193,19 @@ class GrandJuriController extends Controller
             'catatan'     => $catatan,
         ]);
 
+                // ★ CASCADE REJECT: Jika satu nominasi ditolak, tolak semua nominasi lain untuk ikan_id yang sama
+        if ($action === 'reject') {
+            Nominasi::where('ikan_id', $nominasi->ikan_id)
+                ->where('id', '!=', $nominasi->id)
+                ->where('status', '!=', 'rejected') // Update yang pending atau approved
+                ->update([
+                    'status'      => 'rejected',
+                    'reviewed_by' => auth()->id(),
+                    'reviewed_at' => now(),
+                    'catatan'     => 'Otomatis ditolak karena nominasi lain untuk tank ini ditolak.',
+                ]);
+        }
+
         if ($action === 'approve') {
             try {
                 if ($this->sheetsSync->isReady()) {

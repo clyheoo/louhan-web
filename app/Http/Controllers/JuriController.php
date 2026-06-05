@@ -12,8 +12,17 @@ class JuriController extends Controller
 {
     public function getJuriData()
     {
-        $approvedIkanIds = Nominasi::where('status', 'approved')
+        // ★ Cari ikan_id yang pernah ditolak, ikan tersebut tidak berhak masuk penilaian
+        $rejectedIkanIds = Nominasi::where('status', 'rejected')
             ->pluck('ikan_id')
+            ->unique()
+            ->toArray();
+
+        // ★ Hanya ambil ikan_id yang approved DAN tidak ada di daftar rejected
+        $approvedIkanIds = Nominasi::where('status', 'approved')
+            ->whereNotIn('ikan_id', $rejectedIkanIds)
+            ->pluck('ikan_id')
+            ->unique()
             ->toArray();
 
         $hasApproved = count($approvedIkanIds) > 0;
