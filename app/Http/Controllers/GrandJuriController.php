@@ -468,7 +468,7 @@ class GrandJuriController extends Controller
                 'bonus_list'            => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
                 'total_bonus'           => (int) $ikan->bonusPoints->sum('points'),
                 'final_point'           => (float) $totalPointSemua + (int) $ikan->bonusPoints->sum('points'),
-                'point_breakdown'       => !empty($finalAvgDetail) ? PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail) : null,
+                'point_breakdown'       => !empty($finalAvgDetail) ? PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail, $mergedDefect) : null,
                 'point_config'          => $pointConfig ? [
                     'overall' => (float)$pointConfig->overall_bobot,
                     'head'    => (float)$pointConfig->head_bobot,
@@ -1051,7 +1051,17 @@ class GrandJuriController extends Controller
                 }
             }
 
-            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+            // ★ Ambil defect data: prioritas Grand Juri edit, fallback ke scoring terbaru
+            $defectSource = $scorings->first(function ($s) { return $s->edited_by_grand_juri; })
+                         ?? $scorings->sortByDesc('updated_at')->first();
+            $mergedDefect = [
+                'raw_head_penalty'    => $defectSource ? ($defectSource->raw_head_penalty    ?: ['0']) : ['0'],
+                'raw_face_penalty'    => $defectSource ? ($defectSource->raw_face_penalty    ?: ['0']) : ['0'],
+                'raw_body_penalty'    => $defectSource ? ($defectSource->raw_body_penalty    ?: ['0']) : ['0'],
+                'raw_finnage_penalty' => $defectSource ? ($defectSource->raw_finnage_penalty ?: ['0']) : ['0'],
+            ];
+
+            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail, $mergedDefect);
             $totalBonus = (int) $ikan->bonusPoints->sum('points');
             $finalPoint = $totalPoint + $totalBonus;
             $noKelasKategori = ['Bonsai', 'Jumbo'];

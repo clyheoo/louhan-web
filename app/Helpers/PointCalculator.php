@@ -168,7 +168,7 @@ class PointCalculator
     }
 
     // ★ FUNGSI BREAKDOWN UNTUK TAMPILAN DETAIL (SUDAH DIADAPTASI RUMUS BARU)
-    public static function hitungBreakdown(string $kategori, array $nd): array
+    public static function hitungBreakdown(string $kategori, array $nd, array $defectData = []): array
     {
         $cfg = ScoringPointConfig::where('kategori', $kategori)->first();
         if (!$cfg || empty($nd)) return [];
@@ -186,13 +186,16 @@ class PointCalculator
             'color' => (float)$cfg->color_bobot, 'finnage' => (float)$cfg->finnage_bobot,
         ];
 
+        $categoryPoints = [];
+        $categoryParts = [];
+
         foreach ($labels as $kat => $label) {
             $pt = 0; $parts = [];
 
             if ($kat === 'overall') {
                 $v = (float)($nd['overall']['impression'] ?? 0);
                 $pt = ($v * $bobots['overall'] * (float)$cfg->overall_point) / 100;
-                $parts[] = "({$v}×{$bobots['overall']}×{$cfg->overall_point}/100)=" . round($pt);
+                $parts[] = "({$v}×{$bobots['overall']}×{$cfg->overall_point}/100)=" . round($pt, 2);
             } 
             elseif ($kat === 'head') {
                 $v1 = (float)($nd['head']['size'] ?? 0);
@@ -200,19 +203,19 @@ class PointCalculator
                 $v2 = (float)($nd['head']['bentuk'] ?? 0);
                 $p2 = ($v2 * $bobots['head'] * (float)$cfg->head_bentuk_k_pct) / 100;
                 $pt = $p1 + $p2;
-                $parts[] = "({$v1}×{$bobots['head']}×{$cfg->head_size_pct}/100)=" . round($p1);
-                $parts[] = "({$v2}×{$bobots['head']}×{$cfg->head_bentuk_k_pct}/100)=" . round($p2);
+                $parts[] = "({$v1}×{$bobots['head']}×{$cfg->head_size_pct}/100)=" . round($p1, 2);
+                $parts[] = "({$v2}×{$bobots['head']}×{$cfg->head_bentuk_k_pct}/100)=" . round($p2, 2);
             } 
             elseif ($kat === 'face') {
                 if (isset($nd['face']['face'])) {
                     $v = (float)$nd['face']['face'];
                     $pt = ($v * $bobots['face'] * (float)$cfg->face_face_pct) / 100;
-                    $parts[] = "({$v}×{$bobots['face']}×{$cfg->face_face_pct}/100)=" . round($pt);
+                    $parts[] = "({$v}×{$bobots['face']}×{$cfg->face_face_pct}/100)=" . round($pt, 2);
                 } else {
                     $faceSum = 0;
                     foreach (['pipi','mata','bibir','kondisi'] as $k) { $faceSum += (float)($nd['face'][$k] ?? 0); }
                     $pt = ($faceSum * $bobots['face'] * (float)$cfg->face_face_pct) / 100;
-                    $parts[] = "(Sum:{$faceSum}×{$bobots['face']}×{$cfg->face_face_pct}/100)=" . round($pt);
+                    $parts[] = "(Sum:{$faceSum}×{$bobots['face']}×{$cfg->face_face_pct}/100)=" . round($pt, 2);
                 }
             } 
             elseif ($kat === 'body') {
@@ -220,54 +223,83 @@ class PointCalculator
                 $v2 = (float)($nd['body']['proporsi'] ?? 0); $p2 = ($v2 * $bobots['body'] * (float)$cfg->body_proposional_pct) / 100;
                 $v3 = (float)($nd['body']['pangkal'] ?? 0); $p3 = ($v3 * $bobots['body'] * (float)$cfg->body_pangkal_pct) / 100;
                 $pt = $p1 + $p2 + $p3;
-                $parts[] = "({$v1}×{$bobots['body']}×{$cfg->body_bentuk_pct}/100)=" . round($p1);
-                $parts[] = "({$v2}×{$bobots['body']}×{$cfg->body_proposional_pct}/100)=" . round($p2);
-                $parts[] = "({$v3}×{$bobots['body']}×{$cfg->body_pangkal_pct}/100)=" . round($p3);
+                $parts[] = "({$v1}×{$bobots['body']}×{$cfg->body_bentuk_pct}/100)=" . round($p1, 2);
+                $parts[] = "({$v2}×{$bobots['body']}×{$cfg->body_proposional_pct}/100)=" . round($p2, 2);
+                $parts[] = "({$v3}×{$bobots['body']}×{$cfg->body_pangkal_pct}/100)=" . round($p3, 2);
             } 
             elseif ($kat === 'marking') {
                 $v1 = (float)($nd['marking']['fullness'] ?? 0); $p1 = ($v1 * $bobots['marking'] * (float)$cfg->marking_fullness_pct) / 100;
                 $v2 = (float)($nd['marking']['contrast'] ?? 0); $p2 = ($v2 * $bobots['marking'] * (float)$cfg->marking_contrast_pct) / 100;
                 $v3 = (float)($nd['marking']['bentuk'] ?? 0); $p3 = ($v3 * $bobots['marking'] * (float)$cfg->marking_bentuk_pct) / 100;
                 $pt = $p1 + $p2 + $p3;
-                $parts[] = "({$v1}×{$bobots['marking']}×{$cfg->marking_fullness_pct}/100)=" . round($p1);
-                $parts[] = "({$v2}×{$bobots['marking']}×{$cfg->marking_contrast_pct}/100)=" . round($p2);
-                $parts[] = "({$v3}×{$bobots['marking']}×{$cfg->marking_bentuk_pct}/100)=" . round($p3);
+                $parts[] = "({$v1}×{$bobots['marking']}×{$cfg->marking_fullness_pct}/100)=" . round($p1, 2);
+                $parts[] = "({$v2}×{$bobots['marking']}×{$cfg->marking_contrast_pct}/100)=" . round($p2, 2);
+                $parts[] = "({$v3}×{$bobots['marking']}×{$cfg->marking_bentuk_pct}/100)=" . round($p3, 2);
             } 
             elseif ($kat === 'pearl') {
                 $v1 = (float)($nd['pearl']['shinning'] ?? $nd['pearl']['shining'] ?? 0); $p1 = ($v1 * $bobots['pearl'] * (float)$cfg->pearl_shinning_pct) / 100;
                 $v2 = (float)($nd['pearl']['fullness'] ?? 0); $p2 = ($v2 * $bobots['pearl'] * (float)$cfg->pearl_fullnes_pct) / 100;
                 $v3 = (float)($nd['pearl']['bentuk'] ?? 0); $p3 = ($v3 * $bobots['pearl'] * (float)$cfg->pearl_bentuk_pearl_pct) / 100;
                 $pt = $p1 + $p2 + $p3;
-                $parts[] = "({$v1}×{$bobots['pearl']}×{$cfg->pearl_shinning_pct}/100)=" . round($p1);
-                $parts[] = "({$v2}×{$bobots['pearl']}×{$cfg->pearl_fullnes_pct}/100)=" . round($p2);
-                $parts[] = "({$v3}×{$bobots['pearl']}×{$cfg->pearl_bentuk_pearl_pct}/100)=" . round($p3);
+                $parts[] = "({$v1}×{$bobots['pearl']}×{$cfg->pearl_shinning_pct}/100)=" . round($p1, 2);
+                $parts[] = "({$v2}×{$bobots['pearl']}×{$cfg->pearl_fullnes_pct}/100)=" . round($p2, 2);
+                $parts[] = "({$v3}×{$bobots['pearl']}×{$cfg->pearl_bentuk_pearl_pct}/100)=" . round($p3, 2);
             } 
             elseif ($kat === 'color') {
                 $v1 = (float)($nd['color']['komposisi'] ?? 0); $p1 = ($v1 * $bobots['color'] * (float)$cfg->color_komposisi_pct) / 100;
                 $v2 = (float)($nd['color']['kecerahan'] ?? 0); $p2 = ($v2 * $bobots['color'] * (float)$cfg->color_kecerahan_pct) / 100;
                 $v3 = (float)($nd['color']['fullness'] ?? 0); $p3 = ($v3 * $bobots['color'] * (float)$cfg->color_fullness_colour_pct) / 100;
                 $pt = $p1 + $p2 + $p3;
-                $parts[] = "({$v1}×{$bobots['color']}×{$cfg->color_komposisi_pct}/100)=" . round($p1);
-                $parts[] = "({$v2}×{$bobots['color']}×{$cfg->color_kecerahan_pct}/100)=" . round($p2);
-                $parts[] = "({$v3}×{$bobots['color']}×{$cfg->color_fullness_colour_pct}/100)=" . round($p3);
+                $parts[] = "({$v1}×{$bobots['color']}×{$cfg->color_komposisi_pct}/100)=" . round($p1, 2);
+                $parts[] = "({$v2}×{$bobots['color']}×{$cfg->color_kecerahan_pct}/100)=" . round($p2, 2);
+                $parts[] = "({$v3}×{$bobots['color']}×{$cfg->color_fullness_colour_pct}/100)=" . round($p3, 2);
             } 
             elseif ($kat === 'finnage') {
                 $v1 = (float)($nd['finnage']['bentuk'] ?? 0); $p1 = ($v1 * $bobots['finnage'] * (float)$cfg->finnage_bentuk_sirip_ekor_pct) / 100;
                 $v2 = (float)($nd['finnage']['kecerahan'] ?? 0); $p2 = ($v2 * $bobots['finnage'] * (float)$cfg->finnage_kecerahan_pct) / 100;
                 $pt = $p1 + $p2;
-                $parts[] = "({$v1}×{$bobots['finnage']}×{$cfg->finnage_bentuk_sirip_ekor_pct}/100)=" . round($p1);
-                $parts[] = "({$v2}×{$bobots['finnage']}×{$cfg->finnage_kecerahan_pct}/100)=" . round($p2);
+                $parts[] = "({$v1}×{$bobots['finnage']}×{$cfg->finnage_bentuk_sirip_ekor_pct}/100)=" . round($p1, 2);
+                $parts[] = "({$v2}×{$bobots['finnage']}×{$cfg->finnage_kecerahan_pct}/100)=" . round($p2, 2);
+            }
+
+            $categoryPoints[$kat] = $pt;
+            $categoryParts[$kat] = $parts;
+        }
+
+        // ★ TERAPKAN DEFECT PENALTY (SAMA PERSIS DENGAN hitungPoint)
+        $defectEvals = [];
+        if (!empty($defectData)) {
+            $evaluated = self::evaluateDefects($defectData);
+            $defectParts = ['head', 'face', 'body', 'finnage'];
+            
+            foreach ($defectParts as $p) {
+                $penaltyKey = "{$p}_penalty";
+                if (!empty($evaluated[$penaltyKey])) {
+                    $penaltyPercent = (float)str_replace('%', '', $evaluated[$penaltyKey]);
+                    $categoryPoints[$p] = $categoryPoints[$p] * (1 - ($penaltyPercent / 100));
+                    $defectEvals[$p] = $penaltyPercent;
+                }
+            }
+        }
+
+        // Build the result array
+        foreach ($labels as $kat => $label) {
+            $pt = $categoryPoints[$kat];
+            $penaltySuffix = '';
+            if (isset($defectEvals[$kat])) {
+                $penaltySuffix = ' (Defect -' . $defectEvals[$kat] . '%)';
             }
 
             $b[$kat] = [
-                'label'  => $label,
+                'label'  => $label . $penaltySuffix,
                 'bobot'  => $bobots[$kat],
-                'point'  => round($pt),
-                'parts'  => $parts,
+                'point'  => round($pt, 2), // ★ FIX: Gunakan 2 desimal agar sumnya pas dengan total
+                'parts'  => $categoryParts[$kat],
             ];
         }
 
-        $b['total'] = round(array_sum(array_column($b, 'point')));
+        // ★ TOTAL DIHITUNG DARI DESIMAL EXACT (BUKAN DARI ROUND PER KATEGORI)
+        $b['total'] = round(array_sum($categoryPoints), 2);
         return $b;
     }
 

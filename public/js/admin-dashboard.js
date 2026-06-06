@@ -1138,7 +1138,7 @@ function renderDetailView(p){
         html+='<div style="margin-top:16px;border:2px solid rgba(245,158,11,.25);border-radius:12px;overflow:hidden;">';
         html+='<div style="padding:10px 16px;background:linear-gradient(135deg,rgba(245,158,11,.10),rgba(245,158,11,.04));border-bottom:1px solid rgba(245,158,11,.20);display:flex;justify-content:space-between;align-items:center;">';
         html+='<span style="font-size:11px;font-weight:800;color:#FFFFFF;text-transform:uppercase;"><i class="fas fa-trophy" style="margin-right:6px;color:var(--gold-400);"></i>SISTEM POINT</span>';
-        html+='<span style="font-size:11px;font-weight:700;color:var(--gold-300);">Total: <b>'+pb.total+'</b> / 100</span>';
+        html+='<span style="font-size:11px;font-weight:700;color:var(--gold-300);">Total: <b>'+pb.total+'</b></span>';
         html+='</div><div style="padding:0;">';
         var katLabels={'overall':'Overall','head':'Head','face':'Face','body':'Body Shape','marking':'Marking','pearl':'Pearl','color':'Color','finnage':'Finnage'};
         for(var ki in katLabels){

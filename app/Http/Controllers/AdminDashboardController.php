@@ -198,7 +198,23 @@ class AdminDashboardController extends Controller
                             : 0;
                     }
                 }
-                $point = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+                // ★ Ambil defect data: prioritas Grand Juri edit, fallback ke scoring terbaru
+                $mergedDefect = [
+                    'raw_head_penalty'    => ['0'],
+                    'raw_face_penalty'    => ['0'],
+                    'raw_body_penalty'    => ['0'],
+                    'raw_finnage_penalty' => ['0'],
+                ];
+                $grandEdited = $ikan->scorings->first(function ($s) { return $s->edited_by_grand_juri; });
+                $defectSource = $grandEdited ?: $ikan->scorings->sortByDesc('updated_at')->first();
+                if ($defectSource) {
+                    $mergedDefect['raw_head_penalty']    = $defectSource->raw_head_penalty    ?: ['0'];
+                    $mergedDefect['raw_face_penalty']    = $defectSource->raw_face_penalty    ?: ['0'];
+                    $mergedDefect['raw_body_penalty']    = $defectSource->raw_body_penalty    ?: ['0'];
+                    $mergedDefect['raw_finnage_penalty'] = $defectSource->raw_finnage_penalty ?: ['0'];
+                }
+
+                $point = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail, $mergedDefect);
 
                 return [
                     'nama'       => $ikan->nama_peserta ?? 'Unknown',
@@ -339,7 +355,23 @@ class AdminDashboardController extends Controller
                 }
             }
 
-            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+            // ★ Ambil defect data: prioritas Grand Juri edit, fallback ke scoring terbaru
+            $mergedDefect = [
+                'raw_head_penalty'    => ['0'],
+                'raw_face_penalty'    => ['0'],
+                'raw_body_penalty'    => ['0'],
+                'raw_finnage_penalty' => ['0'],
+            ];
+            $grandEdited = $scorings->first(function ($s) { return $s->edited_by_grand_juri; });
+            $defectSource = $grandEdited ?: $scorings->sortByDesc('updated_at')->first();
+            if ($defectSource) {
+                $mergedDefect['raw_head_penalty']    = $defectSource->raw_head_penalty    ?: ['0'];
+                $mergedDefect['raw_face_penalty']    = $defectSource->raw_face_penalty    ?: ['0'];
+                $mergedDefect['raw_body_penalty']    = $defectSource->raw_body_penalty    ?: ['0'];
+                $mergedDefect['raw_finnage_penalty'] = $defectSource->raw_finnage_penalty ?: ['0'];
+            }
+
+            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail, $mergedDefect);
 
             $pointConfig = ScoringPointConfig::where('kategori', $ikan->kategori)->first();
 
@@ -404,7 +436,7 @@ class AdminDashboardController extends Controller
                     'color'   => (float)$pointConfig->color_bobot,
                     'finnage' => (float)$pointConfig->finnage_bobot,
                 ] : null,
-                'point_breakdown'    => $finalAvgDetail ? PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail) : null,
+                'point_breakdown'    => $finalAvgDetail ? PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail, $mergedDefect) : null,
                 'all_scorings'       => $allScoringsData,
                 'detail_list_per_juri' => $detailListPerJuri,
             ];

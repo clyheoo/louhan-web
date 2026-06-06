@@ -1440,7 +1440,23 @@ public function syncPlotingTank()
             }
         }
 
-        $calculatedPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+        // ★ Ambil defect data: prioritas Grand Juri edit, fallback ke scoring terbaru
+        $mergedDefect = [
+            'raw_head_penalty'    => ['0'],
+            'raw_face_penalty'    => ['0'],
+            'raw_body_penalty'    => ['0'],
+            'raw_finnage_penalty' => ['0'],
+        ];
+        $grandEdited = $scorings->first(function ($s) { return $s->edited_by_grand_juri; });
+        $defectSource = $grandEdited ?: $scorings->sortByDesc('updated_at')->first();
+        if ($defectSource) {
+            $mergedDefect['raw_head_penalty']    = $defectSource->raw_head_penalty    ?: ['0'];
+            $mergedDefect['raw_face_penalty']    = $defectSource->raw_face_penalty    ?: ['0'];
+            $mergedDefect['raw_body_penalty']    = $defectSource->raw_body_penalty    ?: ['0'];
+            $mergedDefect['raw_finnage_penalty'] = $defectSource->raw_finnage_penalty ?: ['0'];
+        }
+
+        $calculatedPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail, $mergedDefect);
         return (float) ($calculatedPoint + $totalBonus);
     }
 }
