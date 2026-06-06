@@ -894,11 +894,11 @@ public function syncPlotingTank()
        Maks 4 tabel per baris, gap 1 kolom
        Batas kolom W
        ═══════════════════════════════════════════ */
-    public function syncMvp()
+public function syncMvp()
     {
         $sheetName = $this->sheetNames['mvp'];
 
-        $ikans = Ikan::where('is_mvp', true)
+        $mvpIkans = Ikan::where('is_mvp', true)
             ->whereHas('peserta', function ($q) {
                 $q->where('is_mvp_submitted', true);
             })
@@ -907,7 +907,7 @@ public function syncPlotingTank()
 
         $sheetId = $this->sheets->getSheetId($sheetName);
 
-        // ★ Clear + unmerge seluruh area kerja
+        // ★ Clear + unmerge
         $this->sheets->clear($sheetName, 'A1:W1000');
         if ($sheetId !== null) {
             try {
@@ -918,7 +918,7 @@ public function syncPlotingTank()
                             'startRowIndex'    => 0,
                             'endRowIndex'      => 1000,
                             'startColumnIndex' => 0,
-                            'endColumnIndex'   => 23, // A-W
+                            'endColumnIndex'   => 23,
                         ]
                     ]
                 ]]);
@@ -927,7 +927,81 @@ public function syncPlotingTank()
             }
         }
 
-        if ($ikans->isEmpty()) return 0;
+        if ($mvpIkans->isEmpty()) return 0;
+
+        // ★ BUILD RANKINGS CACHE per (kategori + kelas)
+        $combos = $mvpIkans->map(function ($i) {
+            return $i->kategori . '|' . ($i->kelas ?? '-');
+        })->unique()->values();
+
+        $rankCache = [];
+        foreach ($combos as $combo) {
+            [$kat, $kls] = explode('|', $combo, 2);
+            $kls = ($kls === '-') ? null : $kls;
+
+            $q = Ikan::where('is_locked', true)
+                ->whereNotNull('nomor_tank')
+                ->where('kategori', $kat)
+                ->whereHas('scorings')
+                ->with(['scorings', 'bonusPoints']);
+            if ($kls !== null) $q->where('kelas', $kls);
+            else                $q->whereNull('kelas');
+            $pool = $q->get();
+
+            $items = [];
+            foreach ($pool as $pi) {
+                $avgDetail = [];
+                foreach ($pi->scorings as $s) {
+                    if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                        foreach ($s->nilai_detail as $kt => $fields) {
+                            if (!is_array($fields)) continue;
+                            foreach ($fields as $fid => $val) {
+                                if (!isset($avgDetail[$kt][$fid])) {
+                                    $avgDetail[$kt][$fid] = ['sum' => 0, 'count' => 0];
+                                }
+                                $avgDetail[$kt][$fid]['sum']   += (float)($val ?? 0);
+                                $avgDetail[$kt][$fid]['count']++;
+                            }
+                        }
+                    }
+                }
+                $finalAvg = [];
+                foreach ($avgDetail as $kt => $f) {
+                    foreach ($f as $fid => $d) {
+                        $finalAvg[$kt][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                    }
+                }
+                $grandEdited  = $pi->scorings->first(function ($s) { return $s->edited_by_grand_juri; });
+                $defectSource = $grandEdited ?: $pi->scorings->sortByDesc('updated_at')->first();
+                $merged = [
+                    'raw_head_penalty'    => ['0'],
+                    'raw_face_penalty'    => ['0'],
+                    'raw_body_penalty'    => ['0'],
+                    'raw_finnage_penalty' => ['0'],
+                ];
+                if ($defectSource) {
+                    $merged['raw_head_penalty']    = $defectSource->raw_head_penalty    ?: ['0'];
+                    $merged['raw_face_penalty']    = $defectSource->raw_face_penalty    ?: ['0'];
+                    $merged['raw_body_penalty']    = $defectSource->raw_body_penalty    ?: ['0'];
+                    $merged['raw_finnage_penalty'] = $defectSource->raw_finnage_penalty ?: ['0'];
+                }
+                $items[] = [
+                    'ikan_id'     => $pi->id,
+                    'total_point' => (float) PointCalculator::hitungPoint($pi->kategori, $finalAvg, $merged),
+                    'total_bonus' => (int) $pi->bonusPoints->sum('points'),
+                ];
+            }
+
+            $ranked = PointCalculator::hitungRankPoints($items, 'total_point');
+            $cache  = [];
+            foreach ($ranked as $idx => $r) {
+                $cache[$r['ikan_id']] = [
+                    'rank_point' => $r['rank_point'],
+                    'position'   => $idx + 1,
+                ];
+            }
+            $rankCache[$combo] = $cache;
+        }
 
         // ─── Konfigurasi Layout ───
         $COLS_PER_TABLE = 5;
@@ -941,22 +1015,32 @@ public function syncPlotingTank()
             $col += $COLS_PER_TABLE + $COL_GAP;
         }
 
-        // ★ GROUP BY detail_anggota (Kota / Team)
-        $groups = $ikans->groupBy(function ($ikan) {
+        $groups = $mvpIkans->groupBy(function ($ikan) {
             $key = trim($ikan->detail_anggota ?? '');
             return $key === '' ? '(Tanpa Kota/Team)' : $key;
         });
 
-        // ─── Siapkan Data Per Kota/Team ───
+        $bonusLabels = [
+            'best_of_the_best' => 'BEST OF THE BEST',
+            'best_of_show'     => 'BEST OF SHOW',
+            'grand_champion'   => 'GRAND CHAMPION',
+            'young_champion'   => 'YOUNG CHAMPION',
+            'junior'           => 'JUNIOR',
+            'baby_champion'    => 'BABY CHAMPION',
+            'mini_champion'    => 'MINI CHAMPION',
+        ];
+
         $teamData = [];
         foreach ($groups as $detailAnggota => $items) {
-            // ★ PREFIX HEADER berdasarkan jenis_keanggotaan
             $jenis  = strtolower(trim($items->first()->jenis_keanggotaan ?? 'perorangan'));
             $prefix = ($jenis === 'team') ? 'Team/Club' : 'Kota';
             $headerText = $prefix . ' - ' . $detailAnggota;
 
             $rows = [];
-            $totalPoint = 0;
+            $sumRankOnly    = 0;
+            $sumFinalRank   = 0;
+            $bonusDescParts = [];
+            $juaraDescParts = [];
             $no = 1;
 
             $sorted = $items->sortBy(function ($ikan) {
@@ -964,26 +1048,54 @@ public function syncPlotingTank()
             });
 
             foreach ($sorted as $ikan) {
-                $point = $this->hitungFinalPoint($ikan);
-                $totalPoint += $point;
+                $combo    = $ikan->kategori . '|' . ($ikan->kelas ?? '-');
+                $rankInfo = $rankCache[$combo][$ikan->id] ?? ['rank_point' => 0, 'position' => 0];
+                $rankPt   = (int) $rankInfo['rank_point'];
+                $position = (int) $rankInfo['position'];
+
+                $bonus = (int) $ikan->bonusPoints->sum('points');
+                $final = $rankPt + $bonus;
+
+                $sumRankOnly  += $rankPt;
+                $sumFinalRank += $final;
+
+                $kelasDisp = in_array($ikan->kategori, ['Bonsai', 'Jumbo']) ? '' : ($ikan->kelas ?? '');
+                $katKelasDisp = strtoupper($ikan->kategori ?? '') . ($kelasDisp ? ' ' . $kelasDisp : '');
 
                 $rows[] = [
                     $no,
                     $ikan->nama_peserta ?? '—',
-                    strtoupper($ikan->kategori ?? ''),
+                    $katKelasDisp,
                     $ikan->nomor_tank ?? '',
-                    $point,
+                    $final,
                 ];
+
+                $bonusTypes = $ikan->bonusPoints->pluck('bonus_type')->toArray();
+                if (!empty($bonusTypes)) {
+                    $labels = array_map(function ($t) use ($bonusLabels) {
+                        return $bonusLabels[$t] ?? strtoupper($t);
+                    }, $bonusTypes);
+                    $bonusDescParts[] = '[Tank ' . ($ikan->nomor_tank ?? '?') . '] ' . implode(', ', $labels) . ' (+' . $bonus . ')';
+                }
+
+                if ($rankPt > 0 && $position >= 1 && $position <= 10) {
+                    $juaraDescParts[] = 'Juara ' . $position . ' ' . $katKelasDisp . ' (Tank ' . ($ikan->nomor_tank ?? '?') . ')';
+                }
+
                 $no++;
             }
 
-            $tableHeight = 2 + count($rows) + 1;
+            // tableHeight = 2 (header + sub-header) + n data rows + 1 (TOTAL) + 3 (new rows)
+            $tableHeight = 2 + count($rows) + 1 + 3;
 
             $teamData[] = [
-                'header'     => $headerText,
-                'rows'       => $rows,
-                'totalPoint' => $totalPoint,
-                'height'     => $tableHeight,
+                'header'       => $headerText,
+                'rows'         => $rows,
+                'sumRankOnly'  => $sumRankOnly,
+                'sumFinalRank' => $sumFinalRank,
+                'bonusDesc'    => empty($bonusDescParts) ? '—' : implode(' | ', $bonusDescParts),
+                'juaraDesc'    => empty($juaraDescParts) ? '—' : implode(' | ', $juaraDescParts),
+                'height'       => $tableHeight,
             ];
         }
 
@@ -991,13 +1103,10 @@ public function syncPlotingTank()
             return strcmp($a['header'], $b['header']);
         });
 
-        // ─── PHASE 1: Build batch write + format requests ───
+        // ─── PHASE 1: Build batch ───
         $batch          = [];
         $formatRequests = [];
-        $mergeRequests  = [];
-
-        // Track posisi baris setiap team untuk merge nanti
-        $teamRowMap = []; // [teamIndex => startRow]
+        $teamRowMap     = [];
 
         $currentRow = 1;
         $teamIndex  = 0;
@@ -1008,34 +1117,33 @@ public function syncPlotingTank()
             $maxHeight = 0;
 
             for ($i = 0; $i < $TABLES_PER_ROW && $teamIndex < $totalTeam; $i++) {
-            $rowTeams[] = [
-                        'data'     => $teamData[$teamIndex],
-                        'colStart' => $tableColStarts[$i],
-                        'index'    => $teamIndex,
-                    ];
-                    // ★ Simpan ROW & COL secara eksplisit untuk dipakai di Phase 4/5/6
-                    $teamRowMap[$teamIndex] = [
-                        'row' => $currentRow,
-                        'cs'  => $tableColStarts[$i],
-                    ];
-                    $maxHeight = max($maxHeight, $teamData[$teamIndex]['height']);
-                    $teamIndex++;
+                $rowTeams[] = [
+                    'data'     => $teamData[$teamIndex],
+                    'colStart' => $tableColStarts[$i],
+                    'index'    => $teamIndex,
+                ];
+                $teamRowMap[$teamIndex] = [
+                    'row' => $currentRow,
+                    'cs'  => $tableColStarts[$i],
+                ];
+                $maxHeight = max($maxHeight, $teamData[$teamIndex]['height']);
+                $teamIndex++;
             }
 
             foreach ($rowTeams as $rt) {
                 $data = $rt['data'];
                 $cs   = $rt['colStart'];
 
-                // ── Baris 1: Header (tulis di kolom pertama dari blok)
+                // Baris 1: Header
                 $batch[] = [
                     'sheet' => $sheetName,
                     'cell'  => $this->sheets->colToLetter($cs + 1) . $currentRow,
                     'value' => $data['header'],
                 ];
 
-                // ── Baris 2: Sub-Header
+                // Baris 2: Sub-Header (★ POINT → RANK POINT)
                 $subRow = $currentRow + 1;
-                $subHeaders = ['NO', 'NAMA PESERTA', 'KATEGORI', 'NO TANK', 'POINT'];
+                $subHeaders = ['NO', 'NAMA PESERTA', 'KATEGORI', 'NO TANK', 'RANK POINT'];
                 foreach ($subHeaders as $ci => $val) {
                     $batch[] = [
                         'sheet' => $sheetName,
@@ -1044,7 +1152,7 @@ public function syncPlotingTank()
                     ];
                 }
 
-                // ── Baris 3+: Data Ikan
+                // Baris 3+: Data Ikan
                 $dataRow = $subRow + 1;
                 foreach ($data['rows'] as $row) {
                     foreach ($row as $ci => $val) {
@@ -1057,46 +1165,86 @@ public function syncPlotingTank()
                     $dataRow++;
                 }
 
-                // ── Baris TOTAL
+                // Baris TOTAL (★ sekarang dari sum FINAL rank point)
+                $totalRow = $dataRow;
                 $batch[] = [
                     'sheet' => $sheetName,
-                    'cell'  => $this->sheets->colToLetter($cs + 3) . $dataRow,
+                    'cell'  => $this->sheets->colToLetter($cs + 3) . $totalRow,
                     'value' => 'TOTAL',
                 ];
                 $batch[] = [
                     'sheet' => $sheetName,
+                    'cell'  => $this->sheets->colToLetter($cs + 5) . $totalRow,
+                    'value' => (int) $data['sumFinalRank'],
+                ];
+                $dataRow++;
+
+                // ★ NEW ROW 1: RANK POINT (tanpa bonus)
+                $batch[] = [
+                    'sheet' => $sheetName,
+                    'cell'  => $this->sheets->colToLetter($cs + 1) . $dataRow,
+                    'value' => 'RANK POINT',
+                ];
+                $batch[] = [
+                    'sheet' => $sheetName,
                     'cell'  => $this->sheets->colToLetter($cs + 5) . $dataRow,
-                    'value' => (int) $data['totalPoint'],
+                    'value' => (int) $data['sumRankOnly'],
+                ];
+                $dataRow++;
+
+                // ★ NEW ROW 2: KETERANGAN BONUS POINT
+                $batch[] = [
+                    'sheet' => $sheetName,
+                    'cell'  => $this->sheets->colToLetter($cs + 1) . $dataRow,
+                    'value' => 'KETERANGAN BONUS',
+                ];
+                $batch[] = [
+                    'sheet' => $sheetName,
+                    'cell'  => $this->sheets->colToLetter($cs + 2) . $dataRow,
+                    'value' => $data['bonusDesc'],
+                ];
+                $dataRow++;
+
+                // ★ NEW ROW 3: JUARA PER KAT+KELAS
+                $batch[] = [
+                    'sheet' => $sheetName,
+                    'cell'  => $this->sheets->colToLetter($cs + 1) . $dataRow,
+                    'value' => 'JUARA',
+                ];
+                $batch[] = [
+                    'sheet' => $sheetName,
+                    'cell'  => $this->sheets->colToLetter($cs + 2) . $dataRow,
+                    'value' => $data['juaraDesc'],
                 ];
 
-                // ── Format: sub-header (background abu, bold)
+                // Format sub-header
                 if ($sheetId !== null) {
-                    $formatRequests[] = [
-                    'repeatCell' => [
-                        'range' => [
-                            'sheetId'          => $sheetId,
-                            'startRowIndex'    => $subRow - 1,
-                            'endRowIndex'      => $subRow,
-                            'startColumnIndex' => $cs,
-                            'endColumnIndex'   => $cs + $COLS_PER_TABLE,
-                        ],
-                        'cell' => [
-                            'userEnteredFormat' => [
-                                'horizontalAlignment' => 'CENTER',
-                                'textFormat' => ['bold' => true, 'fontSize' => 10],
-                            ],
-                        ],
-                        'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)',
-                    ],
-                ];
-
-                    // ── Format: TOTAL row (background krem, bold)
                     $formatRequests[] = [
                         'repeatCell' => [
                             'range' => [
                                 'sheetId'          => $sheetId,
-                                'startRowIndex'    => $dataRow - 1,
-                                'endRowIndex'      => $dataRow,
+                                'startRowIndex'    => $subRow - 1,
+                                'endRowIndex'      => $subRow,
+                                'startColumnIndex' => $cs,
+                                'endColumnIndex'   => $cs + $COLS_PER_TABLE,
+                            ],
+                            'cell' => [
+                                'userEnteredFormat' => [
+                                    'horizontalAlignment' => 'CENTER',
+                                    'textFormat' => ['bold' => true, 'fontSize' => 10],
+                                ],
+                            ],
+                            'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)',
+                        ],
+                    ];
+
+                    // ★ Format TOTAL + 3 NEW rows (bold)
+                    $formatRequests[] = [
+                        'repeatCell' => [
+                            'range' => [
+                                'sheetId'          => $sheetId,
+                                'startRowIndex'    => $totalRow - 1,
+                                'endRowIndex'      => $totalRow + 3, // TOTAL + 3 new rows
                                 'startColumnIndex' => $cs,
                                 'endColumnIndex'   => $cs + $COLS_PER_TABLE,
                             ],
@@ -1114,14 +1262,14 @@ public function syncPlotingTank()
             $currentRow += $maxHeight + 2;
         }
 
-        // ─── PHASE 2: Eksekusi batch (tulis data) ───
+        // ─── PHASE 2: Eksekusi batch ───
         if (!empty($batch)) {
             foreach (array_chunk($batch, 500) as $chunk) {
                 $this->sheets->batchUpdate($chunk);
             }
         }
 
-        // ─── PHASE 3: Apply format requests (sub-header & TOTAL) ───
+        // ─── PHASE 3: Apply format requests ───
         if (!empty($formatRequests) && $sheetId !== null) {
             foreach (array_chunk($formatRequests, 50) as $chunk) {
                 try {
@@ -1132,7 +1280,7 @@ public function syncPlotingTank()
             }
         }
 
-    // ─── PHASE 4: MERGE HEADER per team — individual API call agar 1 gagal tidak menggagalkan yg lain ───
+        // ─── PHASE 4: MERGE HEADER per team ───
         if ($sheetId !== null) {
             foreach ($teamData as $idx => $data) {
                 $headerRow = $teamRowMap[$idx]['row'];
@@ -1157,92 +1305,92 @@ public function syncPlotingTank()
             }
         }
 
-        // ─── PHASE 5: CENTER + BOLD HEADER (SETELAH merge, tanpa background) ───
-            if ($sheetId !== null) {
-                $headerFormatRequests = [];
-                foreach ($teamData as $idx => $data) {
-                    $headerRow = $teamRowMap[$idx]['row'];
-                    $cs        = $teamRowMap[$idx]['cs'];
+        // ─── PHASE 5: CENTER + BOLD HEADER ───
+        if ($sheetId !== null) {
+            $headerFormatRequests = [];
+            foreach ($teamData as $idx => $data) {
+                $headerRow = $teamRowMap[$idx]['row'];
+                $cs        = $teamRowMap[$idx]['cs'];
 
-                    $headerFormatRequests[] = [
-                        'repeatCell' => [
-                            'range' => [
-                                'sheetId'          => $sheetId,
-                                'startRowIndex'    => $headerRow - 1,
-                                'endRowIndex'      => $headerRow,
-                                'startColumnIndex' => $cs,
-                                'endColumnIndex'   => $cs + $COLS_PER_TABLE,
-                            ],
-                            'cell' => [
-                                'userEnteredFormat' => [
-                                    'horizontalAlignment' => 'CENTER',
-                                    'verticalAlignment'   => 'MIDDLE',
-                                    'textFormat' => [
-                                        'bold'     => true,
-                                        'fontSize' => 11,
-                                    ],
+                $headerFormatRequests[] = [
+                    'repeatCell' => [
+                        'range' => [
+                            'sheetId'          => $sheetId,
+                            'startRowIndex'    => $headerRow - 1,
+                            'endRowIndex'      => $headerRow,
+                            'startColumnIndex' => $cs,
+                            'endColumnIndex'   => $cs + $COLS_PER_TABLE,
+                        ],
+                        'cell' => [
+                            'userEnteredFormat' => [
+                                'horizontalAlignment' => 'CENTER',
+                                'verticalAlignment'   => 'MIDDLE',
+                                'textFormat' => [
+                                    'bold'     => true,
+                                    'fontSize' => 11,
                                 ],
                             ],
-                            'fields' => 'userEnteredFormat(horizontalAlignment,verticalAlignment,textFormat)',
                         ],
-                    ];
-                }
-
-                if (!empty($headerFormatRequests)) {
-                    try {
-                        foreach (array_chunk($headerFormatRequests, 50) as $chunk) {
-                            $this->sheets->formatCells($chunk);
-                        }
-                    } catch (\Exception $e) {
-                        Log::warning('Format header MVP gagal (tidak kritis): ' . $e->getMessage());
-                    }
-                }
-            }
-
-            // ─── PHASE 6: BORDER mengelilingi setiap tabel (outer + inner grid) ───
-            if ($sheetId !== null) {
-                $borderRequests = [];
-                $borderStyle = [
-                    'style' => 'SOLID',
-                    'color' => ['red' => 0, 'green' => 0, 'blue' => 0],
+                        'fields' => 'userEnteredFormat(horizontalAlignment,verticalAlignment,textFormat)',
+                    ],
                 ];
+            }
 
-                foreach ($teamData as $idx => $data) {
-                    $headerRow = $teamRowMap[$idx]['row'];
-                    $cs        = $teamRowMap[$idx]['cs'];
-                    // height = 2 (header + sub-header) + n rows + 1 (TOTAL row)
-                    $tableEndRow = $headerRow - 1 + $data['height']; // 0-based exclusive
-
-                    $borderRequests[] = [
-                        'updateBorders' => [
-                            'range' => [
-                                'sheetId'          => $sheetId,
-                                'startRowIndex'    => $headerRow - 1,
-                                'endRowIndex'      => $tableEndRow,
-                                'startColumnIndex' => $cs,
-                                'endColumnIndex'   => $cs + $COLS_PER_TABLE,
-                            ],
-                            'top'             => $borderStyle,
-                            'bottom'          => $borderStyle,
-                            'left'            => $borderStyle,
-                            'right'           => $borderStyle,
-                            'innerHorizontal' => $borderStyle,
-                            'innerVertical'   => $borderStyle,
-                        ],
-                    ];
+            if (!empty($headerFormatRequests)) {
+                try {
+                    foreach (array_chunk($headerFormatRequests, 50) as $chunk) {
+                        $this->sheets->formatCells($chunk);
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Format header MVP gagal (tidak kritis): ' . $e->getMessage());
                 }
+            }
+        }
 
-                if (!empty($borderRequests)) {
-                    foreach (array_chunk($borderRequests, 50) as $chunk) {
-                        try {
-                            $this->sheets->formatCells($chunk);
-                        } catch (\Exception $e) {
-                            Log::warning('Border MVP gagal (tidak kritis): ' . $e->getMessage());
-                        }
+        // ─── PHASE 6: BORDER ───
+        if ($sheetId !== null) {
+            $borderRequests = [];
+            $borderStyle = [
+                'style' => 'SOLID',
+                'color' => ['red' => 0, 'green' => 0, 'blue' => 0],
+            ];
+
+            foreach ($teamData as $idx => $data) {
+                $headerRow   = $teamRowMap[$idx]['row'];
+                $cs          = $teamRowMap[$idx]['cs'];
+                $tableEndRow = $headerRow - 1 + $data['height'];
+
+                $borderRequests[] = [
+                    'updateBorders' => [
+                        'range' => [
+                            'sheetId'          => $sheetId,
+                            'startRowIndex'    => $headerRow - 1,
+                            'endRowIndex'      => $tableEndRow,
+                            'startColumnIndex' => $cs,
+                            'endColumnIndex'   => $cs + $COLS_PER_TABLE,
+                        ],
+                        'top'             => $borderStyle,
+                        'bottom'          => $borderStyle,
+                        'left'            => $borderStyle,
+                        'right'           => $borderStyle,
+                        'innerHorizontal' => $borderStyle,
+                        'innerVertical'   => $borderStyle,
+                    ],
+                ];
+            }
+
+            if (!empty($borderRequests)) {
+                foreach (array_chunk($borderRequests, 50) as $chunk) {
+                    try {
+                        $this->sheets->formatCells($chunk);
+                    } catch (\Exception $e) {
+                        Log::warning('Border MVP gagal (tidak kritis): ' . $e->getMessage());
                     }
                 }
             }
-        return $ikans->count();
+        }
+
+        return $mvpIkans->count();
     }
 
         /* ═══════════════════════════════════════════════════════

@@ -303,15 +303,26 @@ class PointCalculator
         return $b;
     }
 
+    // ★ MAPPING RANK POINT TOP 10 (posisi → rank point)
+    const RANK_POINT_MAPPING = [
+        1 => 100, 2 => 80, 3 => 60, 4 => 45, 5 => 35,
+        6 => 30,  7 => 25, 8 => 20, 9 => 15, 10 => 10,
+    ];
+
     public static function hitungRankPoints(array $items, string $key = 'total_point'): array
     {
+        // Sort DESC by $key (default: 'total_point' — RAW point dari nilai)
         usort($items, function ($a, $b) use ($key) {
             $va = $a[$key] ?? 0; $vb = $b[$key] ?? 0;
             return $va === $vb ? 0 : ($va < $vb ? 1 : -1);
         });
 
         foreach ($items as $i => &$item) {
-            $item['rank_point'] = max(1, 100 - $i);
+            $position  = $i + 1;
+            $rankPoint = self::RANK_POINT_MAPPING[$position] ?? 0; // posisi 11+ → 0
+            $bonus     = (int) ($item['total_bonus'] ?? 0);
+            $item['rank_point']       = $rankPoint;                 // dari posisi
+            $item['final_rank_point'] = $rankPoint + $bonus;        // rank + bonus
         }
 
         return $items;

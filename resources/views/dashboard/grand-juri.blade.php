@@ -1070,9 +1070,10 @@ function openBonusModalGj(id){
     html+='<div><h4 style="font-size:14px;font-weight:800;color:var(--text-hi);">'+esc(p.nama_peserta)+'</h4>';
     html+='<div style="font-size:11px;color:var(--gold-300);margin-top:3px;display:flex;gap:12px;"><span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - '+esc(p.kelas)+'</span><span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span></div></div>';
     html+='<div style="text-align:center;flex-shrink:0;">';
-    html+='<div style="font-size:9px;color:var(--gold-300);font-weight:800;letter-spacing:.5px;">POINT DASAR</div>';
-    html+='<div style="font-family:\'Fraunces\',serif;font-size:22px;font-weight:500;color:var(--gold-300);letter-spacing:-.02em;">'+(p.total_point||0)+'</div>';
-    if(p.total_bonus>0){html+='<div style="font-size:9px;color:#34D399;font-weight:800;margin-top:2px;">+ '+p.total_bonus+' BONUS</div>';html+='<div style="font-family:\'Fraunces\',serif;font-size:26px;font-weight:500;color:#34D399;letter-spacing:-.02em;">'+(p.final_point||0)+'</div>';}
+    html+='<div style="font-size:9px;color:var(--gold-300);font-weight:800;letter-spacing:.5px;">RANK POINT</div>';
+    html+='<div style="font-family:\'Fraunces\',serif;font-size:22px;font-weight:500;color:var(--gold-300);letter-spacing:-.02em;">'+(p.rank_point||0)+'</div>';
+    if(p.total_bonus>0){html+='<div style="font-size:9px;color:#34D399;font-weight:800;margin-top:2px;">+ '+p.total_bonus+' BONUS</div>';html+='<div style="font-family:\'Fraunces\',serif;font-size:26px;font-weight:500;color:#34D399;letter-spacing:-.02em;">'+(p.final_rank_point||p.rank_point||0)+'</div>';}
+    if((p.rank_point||0)===0 && (p.total_bonus||0)===0){html+='<div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-top:4px;">(Tidak masuk Top 10)</div>';}
     html+='</div></div>';
     html+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Pilih Bonus Point (+100 per jenis)</div>';
     var blist=p.bonus_list||[];
@@ -1103,7 +1104,7 @@ function addBonusGj(type, el){
     var fd=new FormData();fd.append('_token',getCsrf());fd.append('ikan_id',currentBonusIkanId);fd.append('bonus_type',type);
     fetch('/api/grand-juri/add-bonus',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
     .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
-    .then(function(d){if(d.success){loadPointRanking();loadPeserta(document.getElementById('searchInput').value);loadMvpGj();document.getElementById('popupSuccessDesc').innerHTML='<b>'+esc(bonusTypes.find(function(b){return b.key===type;}).label)+'</b> (+100) berhasil ditambahkan.<br><span style="font-size:11px;color:var(--text-muted);">Ranking sudah diperbarui otomatis.</span>';showPopup('popupSuccess');closeModal('modalBonus');}else{document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';showPopup('popupError');}})
+    .then(function(d){if(d.success){loadPointRanking();loadPeserta(document.getElementById('searchInput').value);loadMvpGj();document.getElementById('popupSuccessDesc').innerHTML='<b>'+esc(bonusTypes.find(function(b){return b.key===type;}).label)+'</b> (+100 ke <b>RANK POINT</b>) berhasil ditambahkan.<br><span style="font-size:11px;color:var(--text-muted);">Total team di MVP & ranking sudah diperbarui otomatis.</span>';showPopup('popupSuccess');closeModal('modalBonus');}else{document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';showPopup('popupError');}})
     .catch(function(e){var msg=(e&&e.message)?e.message:'Kesalahan jaringan.';document.getElementById('popupErrorDesc').textContent=msg;showPopup('popupError');});
 }
 
@@ -1277,7 +1278,10 @@ function loadMvpGj(){
                     nomor_tank: ikan.nomor_tank,
                     total_point: 0,
                     total_bonus: ikan.total_bonus||0,
-                    final_point: ikan.total_bonus||0,
+                    final_point: 0,
+                    rank_point: ikan.rank_point||0,             // ★ NEW
+                    final_rank_point: ikan.final_rank_point||0, // ★ NEW
+                    position: ikan.position||0,                 // ★ NEW
                     bonus_list: ikan.bonus_list||[]
                 };
             });
@@ -1287,19 +1291,38 @@ function loadMvpGj(){
 
 function openMvpDetail(idx){
     var p=window._mvpData[idx];if(!p)return;
-    var html='<div class="detail-note purple-note"><i class="fas fa-circle-info"></i><span>Kota/Team <strong>'+esc(p.detail_anggota)+'</strong> mendaftarkan <strong>'+p.total_mvp+'</strong> ikan MVP dari <strong>'+p.jumlah_peserta+'</strong> peserta. Klik tombol <i class="fas fa-trophy" style="color:var(--gold-500);"></i> untuk kelola bonus per ikan.</span></div>';
-    html+='<table class="gen-table"><thead><tr><th>NO</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>NO. TANK</th><th>BONUS</th><th>AKSI</th></tr></thead><tbody>';
+    var totalNote = (p.total_team_rank_point!==undefined) ? ' Total Rank Point Team: <strong>'+p.total_team_rank_point+'</strong> (rank '+p.total_rank_only+' + bonus '+(p.total_team_rank_point-p.total_rank_only)+').' : '';
+    var html='<div class="detail-note purple-note"><i class="fas fa-circle-info"></i><span>Kota/Team <strong>'+esc(p.detail_anggota)+'</strong> mendaftarkan <strong>'+p.total_mvp+'</strong> ikan MVP dari <strong>'+p.jumlah_peserta+'</strong> peserta.'+totalNote+' Rank Point dihitung dari posisi <strong>Top 10 per Kategori+Kelas</strong>.</span></div>';
+    html+='<table class="gen-table"><thead><tr><th>NO</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>NO. TANK</th><th style="text-align:center;">RANK POINT</th><th>BONUS</th><th>AKSI</th></tr></thead><tbody>';
     p.ikans.forEach(function(ikan,i){
         var bonusCount=(ikan.bonus_list||[]).length;
         var bonusHtml=bonusCount>0
             ? '<span class="badge badge-success"><i class="fas fa-trophy" style="margin-right:3px;font-size:9px;color:var(--gold-500);"></i>+'+ikan.total_bonus+' ('+bonusCount+')</span>'
             : '<span style="font-size:11px;color:var(--text-muted);">—</span>';
+        var rankPt=ikan.rank_point||0;
+        var finalRank=ikan.final_rank_point||0;
+        var pos=ikan.position||0;
+        var rankHtml;
+        if(rankPt>0){
+            var rkBg,rkColor;
+            if(rankPt===100){rkBg='rgba(16,185,129,.14)';rkColor='#34D399';}
+            else if(rankPt>=60){rkBg='var(--warning-lt)';rkColor='var(--gold-300)';}
+            else if(rankPt>=30){rkBg='rgba(34,211,238,.08)';rkColor='var(--cyan-300)';}
+            else{rkBg='var(--purple-light)';rkColor='var(--purple)';}
+            rankHtml='<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:800;background:'+rkBg+';color:'+rkColor+';">'+finalRank+'</span>';
+            rankHtml+='<div style="font-size:9px;color:var(--text-muted);font-weight:700;margin-top:2px;">Juara '+pos+(ikan.total_bonus>0?' • '+rankPt+'+'+ikan.total_bonus:'')+'</div>';
+        } else {
+            rankHtml=ikan.total_bonus>0
+                ? '<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:800;background:var(--success-lt);color:#34D399;">'+ikan.total_bonus+'</span><div style="font-size:9px;color:var(--text-muted);font-weight:700;margin-top:2px;">bonus saja</div>'
+                : '<span style="font-size:11px;color:var(--text-muted);">—</span>';
+        }
         html+='<tr>'
             +'<td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td>'
             +'<td style="font-weight:700;">'+esc(ikan.nama_peserta)+'</td>'
             +'<td style="font-weight:600;">'+esc(ikan.kategori)+'</td>'
             +'<td>'+esc(ikan.kelas||'-')+'</td>'
             +'<td style="font-weight:700;color:var(--purple);">'+(ikan.nomor_tank?'Tank '+ikan.nomor_tank:'—')+'</td>'
+            +'<td style="text-align:center;">'+rankHtml+'</td>'
             +'<td>'+bonusHtml+'</td>'
             +'<td><button class="btn-sm" style="background:var(--warning-lt);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);" onclick="openBonusModalGj('+ikan.ikan_id+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i> Bonus</button></td>'
             +'</tr>';
@@ -1321,7 +1344,7 @@ function setPointScope(s){
     if(s!=='global'){document.getElementById('btnScopeGlobal').style.cssText='font-size:11px;padding:7px 14px;background:var(--warning-lt);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);';}
     document.getElementById('pointFilterKategori').style.display=(s==='global')?'none':'';
     document.getElementById('pointFilterKelas').style.display=(s==='global')?'none':'';
-    document.getElementById('globalTopNWrap').style.display=(s==='global')?'flex':'none';
+    document.getElementById('globalTopNWrap').style.display='none'; // ★ Force Top 10 — selector tidak perlu lagi
     loadPointRanking();
 }
 
@@ -1341,21 +1364,27 @@ function loadPointRanking(){
             html+='<div class="card-title" style="font-size:13px;margin:0;"><i class="fas '+(isGlobal?'fa-globe':'fa-layer-group')+'" style="color:var(--gold-500);"></i> '+esc(g.group_name)+'</div>';
             html+='<span style="font-size:11px;color:var(--gold-300);font-weight:700;">'+g.total+' peserta</span></div>';
             html+='<div class="table-wrap" style="border-radius:0 0 10px 10px;border:1px solid rgba(245,158,11,.20);border-top:none;"><table class="result-table" style="min-width:800px;">';
-            html+='<thead><tr><th style="width:40px;text-align:center;">#</th><th>PESERTA</th>'+(isGlobal?'<th>KATEGORI</th>':'')+'<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:90px;text-align:center;">POINT</th><th style="width:80px;text-align:center;">RANK</th></tr></thead><tbody>';
+            html+='<thead><tr><th style="width:40px;text-align:center;">#</th><th>PESERTA</th>'+(isGlobal?'<th>KATEGORI</th>':'')+'<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:80px;text-align:center;">POINT</th><th style="width:100px;text-align:center;">RANK POINT</th></tr></thead><tbody>';
             g.data.forEach(function(d,i){
-                var rank=d.rank_point??0;var fp=d.final_point??0;var bonus=d.total_bonus||0;var posisi=i+1;
+                var rankPt=d.rank_point??0;var frp=d.final_rank_point??rankPt;var basePt=d.total_point??0;var bonus=d.total_bonus||0;var posisi=i+1;
                 var rankBg,rankColor,rankBorder;
-                if(rank>=98){rankBg='rgba(16,185,129,.12)';rankColor='#34D399';rankBorder='rgba(16,185,129,.30)';}
-                else if(rank>=90){rankBg='var(--warning-lt)';rankColor='var(--gold-300)';rankBorder='rgba(245,158,11,.30)';}
-                else if(rank>=75){rankBg='rgba(34,211,238,.08)';rankColor='var(--cyan-300)';rankBorder='rgba(34,211,238,.25)';}
-                else{rankBg='var(--glass-2)';rankColor='var(--text-muted)';rankBorder='var(--bd-2)';}
-                var medalHtml='';if(rank===100)medalHtml='<i class="fas fa-medal" style="color:var(--gold-500);font-size:12px;margin-right:4px;" title="Rank 100"></i>';else if(rank===99)medalHtml='<i class="fas fa-medal" style="color:var(--text-muted);font-size:12px;margin-right:4px;" title="Rank 99"></i>';else if(rank===98)medalHtml='<i class="fas fa-medal" style="color:var(--gold-600);font-size:12px;margin-right:4px;" title="Rank 98"></i>';
+                if(rankPt===100){rankBg='rgba(16,185,129,.14)';rankColor='#34D399';rankBorder='rgba(16,185,129,.35)';}
+                else if(rankPt>=60){rankBg='var(--warning-lt)';rankColor='var(--gold-300)';rankBorder='rgba(245,158,11,.30)';}
+                else if(rankPt>=30){rankBg='rgba(34,211,238,.08)';rankColor='var(--cyan-300)';rankBorder='rgba(34,211,238,.25)';}
+                else if(rankPt>=10){rankBg='var(--purple-light)';rankColor='var(--purple)';rankBorder='rgba(124,58,237,.25)';}
+                else{rankBg='var(--glass-2)';rankColor='var(--text-faint)';rankBorder='var(--bd-2)';}
+                var medalHtml='';
+                if(rankPt===100)medalHtml='<i class="fas fa-medal" style="color:var(--gold-500);font-size:12px;margin-right:4px;" title="Juara 1"></i>';
+                else if(rankPt===80)medalHtml='<i class="fas fa-medal" style="color:#C0C0C0;font-size:12px;margin-right:4px;" title="Juara 2"></i>';
+                else if(rankPt===60)medalHtml='<i class="fas fa-medal" style="color:#CD7F32;font-size:12px;margin-right:4px;" title="Juara 3"></i>';
                 html+='<tr><td style="text-align:center;font-weight:800;color:var(--text-muted);">'+posisi+'</td><td style="font-weight:700;">'+medalHtml+esc(d.nama_peserta)+'</td>';
                 if(isGlobal)html+='<td style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">'+esc(d.kategori)+'</td>';
                 html+='<td style="font-weight:700;color:var(--purple);text-align:center;">'+(d.nomor_tank||'—')+'</td><td style="text-align:center;">'+esc(d.kelas)+'</td><td style="font-size:11px;color:var(--text-muted);">'+esc(d.detail_anggota)+'</td>';
                 html+='<td style="text-align:center;"><div style="font-weight:800;">'+(d.total_nilai_semua??0)+'</div>';if(d.jumlah_juri>0)html+='<div style="font-size:9px;color:var(--text-muted);font-weight:600;">'+d.jumlah_juri+' juri</div>';html+='</td>';
-                html+='<td style="text-align:center;"><div style="font-family:\'Fraunces\',serif;font-weight:500;font-size:15px;color:'+(bonus>0?'#34D399':'var(--primary)')+';letter-spacing:-.02em;">'+fp+'</div>';if(bonus>0)html+='<div style="font-size:9px;color:#34D399;font-weight:800;"><i class="fas fa-trophy" style="font-size:7px;"></i> +'+bonus+'</div>';html+='</td>';
-                html+='<td style="text-align:center;"><span style="display:inline-block;padding:5px 14px;border-radius:8px;font-size:14px;font-weight:900;background:'+rankBg+';color:'+rankColor+';border:1px solid '+rankBorder+';">'+rank+'</span></td></tr>';
+                html+='<td style="text-align:center;"><div style="font-family:\'Fraunces\',serif;font-weight:500;font-size:15px;color:var(--primary);letter-spacing:-.02em;">'+basePt+'</div></td>';
+                html+='<td style="text-align:center;"><span style="display:inline-block;padding:5px 14px;border-radius:8px;font-size:14px;font-weight:900;background:'+rankBg+';color:'+rankColor+';border:1px solid '+rankBorder+';">'+frp+'</span>';
+                if(bonus>0)html+='<div style="font-size:9px;color:#34D399;font-weight:800;margin-top:3px;"><i class="fas fa-trophy" style="font-size:7px;"></i> '+rankPt+' + '+bonus+'</div>';
+                html+='</td></tr>';
             });
             html+='</tbody></table></div></div>';
         });el.innerHTML=html;
