@@ -219,9 +219,9 @@
                 <div class="px-4 py-3 flex items-center gap-3" style="border-bottom:1px solid var(--bd-1);background:rgba(255,255,255,0.03);">
                     <h2 class="font-bold flex items-center gap-2 text-sm md:text-base" style="color:var(--text-hi);">
                         <svg class="w-4 h-4 md:w-5 md:h-5" style="color:var(--cyan-400);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        Live Data (Nilai Saya)
+                        Data Penilaian Saya
                     </h2>
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" id="live-count" style="background:var(--glass-3);color:var(--text-low);">0</span>
+                    <span class="text-[12px] font-bold px-2 py-0.5 rounded-full" id="live-count" style="background:var(--glass-3);color:var(--text);">0 </span>
                 </div>
                 <div class="overflow-auto flex-1 custom-scrollbar">
                     <table class="w-full text-[10px] md:text-xs text-left whitespace-nowrap">
@@ -1086,11 +1086,11 @@ function lihatDetail(scoringId) {
     var html = '<div class="detail-scroll-hidden" style="text-align:left;max-height:50vh;overflow-y:auto;padding-right:4px;">';
 
     html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;">';
-    html += '<span style="font-size:11px;color:var(--text-low);">Tank</span>';
+    html += '<span style="font-size:13px;color:#FFFFFF;">Tank</span>';
     html += '<span style="font-size:15px;font-weight:800;color:#FFFFFF;">' + (s.ikan ? s.ikan.nomor_tank : '-') + '</span>';
     html += '</div>';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;margin-bottom:6px;">';
-    html += '<span style="font-size:11px;color:var(--text-low);">Kelas</span>';
+    html += '<span style="font-size:13px;color:#FFFFFF;">Kelas</span>';
     html += '<span style="font-size:15px;font-weight:800;color:var(--cyan-300);">' + (s.kelas || '-') + '</span>';
     html += '</div>';
     html += '<div style="height:1px;background:var(--bd-2);margin:2px 0 8px;"></div>';
@@ -1144,7 +1144,7 @@ function lihatDetail(scoringId) {
                 else valColor = '#FCA5A5';
             }
             html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0 2px 8px;">';
-            html += '<span style="font-size:11px;color:var(--text-low);">' + item.label + '</span>';
+            html += '<span style="font-size:13px;color:#FFFFFF;">' + item.label + '</span>';
             html += '<span style="font-size:14px;font-weight:700;color:' + valColor + ';font-family:\'JetBrains Mono\',monospace;">' + item.val + '</span>';
             html += '</div>';
         });
