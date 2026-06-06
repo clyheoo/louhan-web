@@ -765,19 +765,23 @@ class GrandJuriController extends Controller
             ->whereHas('scorings', function ($q) {
             })
             ->where('kategori', $kategori)
-            ->with(['peserta', 'scorings' => function ($q) {
-                $q->where('submitted_to_grand', true)->latest()->limit(1);
-            }, 'scorings.juri'])
+            ->with(['scorings.juri'])
             ->orderBy('nomor_tank')
             ->get();
 
         $data = [];
         foreach ($ikans as $ikan) {
+            $juriNames = $ikan->scorings
+                ->map(function ($s) { return $s->juri ? $s->juri->name : null; })
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+
             $data[] = [
                 'nama_peserta' => $ikan->nama_peserta ?? 'Unknown',
                 'nomor_tank'   => $ikan->nomor_tank,
-                'juri_nama'    => $ikan->scorings->first()?->juri?->name ?? '—',
-                'total_nilai'  => $ikan->scorings->first()?->total_nilai ?? 0,
+                'juri_nama'    => count($juriNames) > 0 ? implode(', ', $juriNames) : '—',
             ];
         }
 
