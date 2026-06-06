@@ -22,17 +22,44 @@ class DashboardController extends Controller
         if ($user->role === 'juri') return view('dashboard.juri', ['user' => $user]);
 
         $pesertaSaya = Peserta::where('user_id', $user->id)->first();
-        // Ambil semua ikan milik peserta ini
         $ikansSaya = $pesertaSaya ? $pesertaSaya->ikans()->orderBy('created_at', 'desc')->get() : collect();
 
-        // ★ Cek status mesin undian (default true/buka jika belum ada setting)
         $undianOpen = (bool)(\DB::table('settings')->where('key', 'undian_registration_open')->value('value') ?? true);
 
+        // ★ DAFTAR KOTA & TEAM PER-USER (TIDAK lintas user)
+        $daftarKota = collect();
+        $daftarTeam = collect();
+
+        if ($pesertaSaya) {
+            $snapshots = Ikan::where('peserta_id', $pesertaSaya->id)
+                ->whereNotNull('detail_anggota')
+                ->where('detail_anggota', '!=', '')
+                ->select('detail_anggota', 'jenis_keanggotaan')
+                ->distinct()
+                ->get();
+
+            $daftarKota = $snapshots->where('jenis_keanggotaan', 'perorangan')->pluck('detail_anggota');
+            $daftarTeam = $snapshots->where('jenis_keanggotaan', 'team')->pluck('detail_anggota');
+
+            if (!empty($pesertaSaya->detail_anggota)) {
+                if ($pesertaSaya->jenis_keanggotaan === 'perorangan') {
+                    $daftarKota = $daftarKota->push($pesertaSaya->detail_anggota);
+                } elseif ($pesertaSaya->jenis_keanggotaan === 'team') {
+                    $daftarTeam = $daftarTeam->push($pesertaSaya->detail_anggota);
+                }
+            }
+
+            $daftarKota = $daftarKota->unique()->sort()->values();
+            $daftarTeam = $daftarTeam->unique()->sort()->values();
+        }
+
         return view('dashboard.user', [
-            'user' => $user, 
-            'pesertaSaya' => $pesertaSaya,
-            'ikansSaya' => $ikansSaya,
-            'undianOpen' => $undianOpen,
+            'user'         => $user, 
+            'pesertaSaya'  => $pesertaSaya,
+            'ikansSaya'    => $ikansSaya,
+            'undianOpen'   => $undianOpen,
+            'daftarKota'   => $daftarKota,
+            'daftarTeam'   => $daftarTeam,
         ]);
     }
 

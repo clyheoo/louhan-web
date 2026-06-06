@@ -522,6 +522,89 @@
             cursor: not-allowed;
         }
 
+        /* ====================================================
+        CUSTOM COMBOBOX (Kota / Team dropdown)
+        Tampilan konsisten dengan .form-select
+        ==================================================== */
+        .combo-wrapper { position: relative; }
+        .combo-wrapper .form-input {
+            padding-right: 40px; /* ruang untuk chevron */
+            cursor: text;
+        }
+        .combo-chevron {
+            position: absolute;
+            right: 8px; top: 50%; transform: translateY(-50%);
+            width: 28px; height: 28px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-mid);
+            cursor: pointer;
+            display: grid; place-items: center;
+            transition: transform 0.25s ease, background 0.2s, color 0.2s;
+            z-index: 2;
+            font-size: 11px;
+            font-family: inherit;
+        }
+        .combo-chevron:hover { background: var(--glass-3); color: var(--cyan-300); }
+        .combo-wrapper.open .combo-chevron { transform: translateY(-50%) rotate(180deg); color: var(--cyan-400); }
+
+        .combo-panel {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0; right: 0;
+            background: #111E36;
+            border: 1px solid var(--bd-3);
+            border-radius: 12px;
+            max-height: 240px;
+            overflow-y: auto;
+            z-index: 50;
+            box-shadow: 0 18px 38px -10px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02) inset;
+            padding: 5px;
+            opacity: 0;
+            transform: translateY(-4px);
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+        .combo-wrapper.open .combo-panel {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+        .combo-panel::-webkit-scrollbar { width: 6px; }
+        .combo-panel::-webkit-scrollbar-track { background: transparent; }
+        .combo-panel::-webkit-scrollbar-thumb { background: var(--glass-strong); border-radius: 10px; }
+
+        .combo-option {
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: #F8FAFC;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            display: flex; align-items: center; gap: 8px;
+            user-select: none;
+        }
+        .combo-option i.opt-icon { color: var(--text-low); font-size: 11px; }
+        .combo-option:hover,
+        .combo-option.is-active {
+            background: #1F3358;
+            color: #67E8F9;
+        }
+        .combo-option:hover i.opt-icon,
+        .combo-option.is-active i.opt-icon { color: var(--cyan-400); }
+
+        .combo-option.empty {
+            color: var(--text-low);
+            cursor: default;
+            font-style: italic;
+            text-align: center;
+            padding: 14px 12px;
+            font-size: 12px;
+        }
+        .combo-option.empty:hover { background: transparent; color: var(--text-low); }
+
         .toggle-group {
             display: flex;
             background: var(--glass-2);
@@ -1494,14 +1577,22 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label" id="labelDetail">{{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'Nama Team / Club' : 'Kota Asal' }}</label>
-                                    <div class="input-wrapper">
-                                        <input type="text" name="detail_anggota" id="inputDetail" class="form-input" placeholder="Contoh: Jakarta" value="{{ $pesertaSaya->detail_anggota ?? '' }}" required>
-                                        <i class="fas {{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'fa-shield-halved' : 'fa-city' }} input-icon" id="iconDetail"></i>
+                                    <div class="form-group">
+                                        <label class="form-label" id="labelDetail">{{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'Nama Team / Club' : 'Kota Asal' }}</label>
+                                        <div class="input-wrapper combo-wrapper" id="detailCombobox">
+                                            <input type="text" name="detail_anggota" id="inputDetail" class="form-input"
+                                                placeholder="Contoh: Jakarta"
+                                                value="{{ $pesertaSaya->detail_anggota ?? '' }}"
+                                                autocomplete="off"
+                                                required>
+                                            <i class="fas {{ $pesertaSaya && $pesertaSaya->jenis_keanggotaan == 'team' ? 'fa-shield-halved' : 'fa-city' }} input-icon" id="iconDetail"></i>
+                                            <button type="button" class="combo-chevron" id="comboChevron" aria-label="Lihat daftar">
+                                                <i class="fas fa-chevron-down"></i>
+                                            </button>
+                                            <div class="combo-panel" id="comboPanel" role="listbox"></div>
+                                        </div>
+                                        <div class="input-error-msg" id="errDetail"></div>
                                     </div>
-                                    <div class="input-error-msg" id="errDetail"></div>
-                                </div>
 
                                 <!-- FORM TAMBAH IKAN (GABUNG) -->
                                 <div id="inlineFormIkan" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--bd-2);">
@@ -1778,9 +1869,113 @@
                 inputDetail.placeholder = 'Contoh: Jakarta';
                 iconDetail.classList.replace('fa-shield-halved', 'fa-city');
             }
+            // ★ Re-render panel kalau lagi terbuka (combobox tahu sumber data dari getCurrentList())
+            if (typeof renderComboPanel === 'function' && comboWrapper && comboWrapper.classList.contains('open')) {
+                renderComboPanel(inputDetail.value);
+            }
         }
         radioPerorangan.addEventListener('change', updateToggleUI);
         radioTeam.addEventListener('change', updateToggleUI);
+
+                /* ============================================================
+        CUSTOM COMBOBOX — Dropdown bergaya untuk Kota/Team
+        Data hanya dari user ini sendiri (dikirim dari controller).
+        ============================================================ */
+        var DAFTAR_KOTA = @json($daftarKota);
+        var DAFTAR_TEAM = @json($daftarTeam);
+
+        var comboWrapper = document.getElementById('detailCombobox');
+        var comboPanel   = document.getElementById('comboPanel');
+        var comboChevron = document.getElementById('comboChevron');
+
+        function getCurrentList() {
+            return radioTeam.checked ? DAFTAR_TEAM : DAFTAR_KOTA;
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function renderComboPanel(filter) {
+            var list = getCurrentList() || [];
+            var q = (filter || '').toLowerCase().trim();
+            var filtered = q
+                ? list.filter(function(item){ return String(item).toLowerCase().indexOf(q) !== -1; })
+                : list;
+
+            var iconClass = radioTeam.checked ? 'fa-shield-halved' : 'fa-city';
+
+            if (filtered.length === 0) {
+                var msg = list.length === 0
+                    ? 'Belum ada riwayat — ketik untuk tambah baru'
+                    : 'Tidak ada hasil — ketik untuk tambah baru';
+                comboPanel.innerHTML = '<div class="combo-option empty">' + msg + '</div>';
+                return;
+            }
+
+            comboPanel.innerHTML = filtered.map(function(item){
+                var safe = escapeHtml(item);
+                return '<div class="combo-option" data-value="' + safe + '">'
+                    + '<i class="fas ' + iconClass + ' opt-icon"></i>'
+                    + '<span>' + safe + '</span>'
+                    + '</div>';
+            }).join('');
+        }
+
+        function openCombo() {
+            renderComboPanel(inputDetail.value);
+            comboWrapper.classList.add('open');
+        }
+        function closeCombo() {
+            comboWrapper.classList.remove('open');
+        }
+
+        // Buka saat input fokus / klik
+        inputDetail.addEventListener('focus', openCombo);
+        inputDetail.addEventListener('click', openCombo);
+
+        // Filter saat user mengetik
+        inputDetail.addEventListener('input', function() {
+            if (!comboWrapper.classList.contains('open')) comboWrapper.classList.add('open');
+            renderComboPanel(this.value);
+        });
+
+        // Tombol chevron — toggle
+        comboChevron.addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            if (comboWrapper.classList.contains('open')) {
+                closeCombo();
+            } else {
+                inputDetail.focus();
+                openCombo();
+            }
+        });
+
+        // Pilih option
+        comboPanel.addEventListener('mousedown', function(e) {
+            // mousedown supaya tidak kehilangan fokus duluan
+            var opt = e.target.closest('.combo-option');
+            if (!opt || opt.classList.contains('empty')) return;
+            e.preventDefault();
+            inputDetail.value = opt.getAttribute('data-value') || '';
+            closeCombo();
+        });
+
+        // Tutup saat klik di luar
+        document.addEventListener('click', function(e) {
+            if (!comboWrapper.contains(e.target)) closeCombo();
+        });
+
+        // Tutup saat tekan Escape
+        inputDetail.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { closeCombo(); inputDetail.blur(); }
+        });
 
         function lockProfilForm() {
             document.querySelectorAll('input[name="jenis_keanggotaan"]').forEach(function(r) { r.disabled = true; });
@@ -1794,18 +1989,12 @@
 
 
 
-        // ★ HELPER: Reset hanya field ikan (profil tetap terisi untuk tambah ikan berikutnya)
+        // ★ HELPER: Reset HANYA field ikan (profil TETAP terisi untuk tambah ikan berikutnya)
         function resetIkanFields() {
-            // Reset Profil
-            var namaEl = document.getElementById('namaPeserta');
-            if (namaEl) namaEl.value = '';
-            var peroranganRadio = document.getElementById('perorangan');
-            if (peroranganRadio) peroranganRadio.checked = true;
-            updateToggleUI();
-            var detailEl = document.getElementById('inputDetail');
-            if (detailEl) detailEl.value = '';
+            // Profil TIDAK direset — biarkan nama_peserta, jenis_keanggotaan, dan detail_anggota tetap terisi
+            // agar user bisa langsung tambah ikan berikutnya tanpa isi ulang profil.
 
-            // Reset Ikan
+            // Reset HANYA field Ikan
             if (ikanKategoriSelect) ikanKategoriSelect.value = '';
             if (ikanKelasSelectEl) ikanKelasSelectEl.value = '';
             resetIkanFormState();
