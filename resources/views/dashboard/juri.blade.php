@@ -483,6 +483,9 @@
         #form-thead th, #form-tbody td { padding: 6px 4px !important; font-size: 11px !important; }
         #live-body td { padding: 6px 4px !important; }
     }
+        /* ── DETAIL POPUP HIDDEN SCROLLBAR ── */
+    .detail-scroll-hidden::-webkit-scrollbar { display: none; }
+    .detail-scroll-hidden { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
 <script>
 
@@ -1080,15 +1083,15 @@ function lihatDetail(scoringId) {
 
     function v(obj, key) { return (obj && obj[key]) || '-'; }
 
-    var html = '<div style="text-align:left;max-height:50vh;overflow-y:auto;padding-right:4px;" class="custom-scrollbar">';
+    var html = '<div class="detail-scroll-hidden" style="text-align:left;max-height:50vh;overflow-y:auto;padding-right:4px;">';
 
     html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;">';
     html += '<span style="font-size:11px;color:var(--text-low);">Tank</span>';
-    html += '<span style="font-size:13px;font-weight:800;color:var(--text-hi);">' + (s.ikan ? s.ikan.nomor_tank : '-') + '</span>';
+    html += '<span style="font-size:15px;font-weight:800;color:#FFFFFF;">' + (s.ikan ? s.ikan.nomor_tank : '-') + '</span>';
     html += '</div>';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;margin-bottom:6px;">';
     html += '<span style="font-size:11px;color:var(--text-low);">Kelas</span>';
-    html += '<span style="font-size:13px;font-weight:800;color:var(--cyan-300);">' + (s.kelas || '-') + '</span>';
+    html += '<span style="font-size:15px;font-weight:800;color:var(--cyan-300);">' + (s.kelas || '-') + '</span>';
     html += '</div>';
     html += '<div style="height:1px;background:var(--bd-2);margin:2px 0 8px;"></div>';
 
@@ -1132,9 +1135,9 @@ function lihatDetail(scoringId) {
     ];
 
     groups.forEach(function(group) {
-        html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.14em;color:var(--cyan-400);margin-top:8px;margin-bottom:2px;padding:3px 0 2px;border-bottom:1px solid rgba(34,211,238,0.10);">' + group.title + '</div>';
+        html += '<div style="font-size:10px;font-weight:800;letter-spacing:0.14em;color:var(--cyan-300);margin-top:8px;margin-bottom:2px;padding:3px 0 2px;border-bottom:1px solid rgba(34,211,238,0.12);">' + group.title + '</div>';
         group.items.forEach(function(item) {
-            var valColor = 'var(--text-hi)';
+            var valColor = '#FFFFFF';
             if (item.isDef) {
                 if (item.val === 'Aman') valColor = 'var(--success)';
                 else if (item.val === '-') valColor = 'var(--text-faint)';
@@ -1142,7 +1145,7 @@ function lihatDetail(scoringId) {
             }
             html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0 2px 8px;">';
             html += '<span style="font-size:11px;color:var(--text-low);">' + item.label + '</span>';
-            html += '<span style="font-size:12px;font-weight:700;color:' + valColor + ';font-family:\'JetBrains Mono\',monospace;">' + item.val + '</span>';
+            html += '<span style="font-size:14px;font-weight:700;color:' + valColor + ';font-family:\'JetBrains Mono\',monospace;">' + item.val + '</span>';
             html += '</div>';
         });
     });
