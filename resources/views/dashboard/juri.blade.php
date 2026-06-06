@@ -1067,19 +1067,86 @@ async function batchSubmit() {
 function lihatDetail(scoringId) {
     var s = appData.my_scores.find(function(x) { return x.id === scoringId; }); if (!s) return;
     var nd = s.nilai_detail || {};
-    var html = '<div style="text-align:left;font-size:12px;line-height:2;color:var(--text-mid);">';
-    html += '<div style="display:flex;justify-content:space-between;"><b style="color:var(--text-hi);">Tank:</b> ' + (s.ikan ? s.ikan.nomor_tank : '-') + '</div>';
-    html += '<div style="display:flex;justify-content:space-between;"><b style="color:var(--text-hi);">Kelas:</b> ' + (s.kelas || '-') + '</div>';
-    html += '<div style="display:flex;justify-content:space-between;"><b style="color:var(--text-hi);">Total:</b> <span style="color:var(--cyan-300);font-weight:700;">' + (s.total_nilai || 0) + '</span></div>';
-    html += '<div style="height:1px;background:var(--bd-2);margin:6px 0;"></div>';
-    html += '<div style="display:flex;justify-content:space-between;"><b style="color:var(--text-hi);">Overall:</b> ' + (nd.overall ? nd.overall.impression || '-' : '-') + '</div>';
-    html += '<div style="display:flex;justify-content:space-between;"><b style="color:var(--text-hi);">Head:</b> ' + (nd.head ? (nd.head.size||'-') + ' / ' + (nd.head.bentuk||'-') : '-') + '</div>';
-    html += '<div style="display:flex;justify-content:space-between;"><b style="color:var(--text-hi);">Face:</b> ' + (nd.face ? nd.face.face || '-' : '-') + '</div>';
-    html += '<div style="display:flex;justify-content:space-between;"><b style="color:var(--text-hi);">Body:</b> ' + (nd.body ? (nd.body.bentuk||'-') + ' / ' + (nd.body.proporsi||'-') + ' / ' + (nd.body.pangkal||'-') : '-') + '</div>';
-    html += '<div style="display:flex;justify-content:space-between;"><b style="color:var(--text-hi);">Marking:</b> ' + (nd.marking ? (nd.marking.fullness||'-') + ' / ' + (nd.marking.contrast||'-') + ' / ' + (nd.marking.bentuk||'-') : '-') + '</div>';
-    html += '<div style="display:flex;justify-content:space-between;"><b style="color:var(--text-hi);">Pearl:</b> ' + (nd.pearl ? (nd.pearl.shinning||'-') + ' / ' + (nd.pearl.fullness||'-') + ' / ' + (nd.pearl.bentuk||'-') : '-') + '</div>';
-    html += '<div style="display:flex;justify-content:space-between;"><b style="color:var(--text-hi);">Color:</b> ' + (nd.color ? (nd.color.komposisi||'-') + ' / ' + (nd.color.kecerahan||'-') + ' / ' + (nd.color.fullness||'-') : '-') + '</div>';
-    html += '<div style="display:flex;justify-content:space-between;"><b style="color:var(--text-hi);">Finnage:</b> ' + (nd.finnage ? (nd.finnage.bentuk||'-') + ' / ' + (nd.finnage.kecerahan||'-') : '-') + '</div>';
+
+    function defectText(partKey) {
+        var raw = s['raw_' + partKey + '_penalty'];
+        if (raw && Array.isArray(raw) && raw.length > 0) {
+            if (raw.length === 1 && raw[0] === '0') return 'Aman';
+            var filtered = raw.filter(function(d) { return d !== '0'; });
+            return filtered.length > 0 ? filtered.join(', ') : '-';
+        }
+        return '-';
+    }
+
+    function v(obj, key) { return (obj && obj[key]) || '-'; }
+
+    var html = '<div style="text-align:left;max-height:50vh;overflow-y:auto;padding-right:4px;" class="custom-scrollbar">';
+
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;">';
+    html += '<span style="font-size:11px;color:var(--text-low);">Tank</span>';
+    html += '<span style="font-size:13px;font-weight:800;color:var(--text-hi);">' + (s.ikan ? s.ikan.nomor_tank : '-') + '</span>';
+    html += '</div>';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;margin-bottom:6px;">';
+    html += '<span style="font-size:11px;color:var(--text-low);">Kelas</span>';
+    html += '<span style="font-size:13px;font-weight:800;color:var(--cyan-300);">' + (s.kelas || '-') + '</span>';
+    html += '</div>';
+    html += '<div style="height:1px;background:var(--bd-2);margin:2px 0 8px;"></div>';
+
+    var groups = [
+        { title:'OVERALL', items:[{label:'Impression', val:v(nd.overall,'impression'), isDef:false}] },
+        { title:'HEAD', items:[
+            {label:'Size', val:v(nd.head,'size'), isDef:false},
+            {label:'Bentuk', val:v(nd.head,'bentuk'), isDef:false},
+            {label:'Defect', val:defectText('head'), isDef:true}
+        ]},
+        { title:'FACE', items:[
+            {label:'Face', val:v(nd.face,'face'), isDef:false},
+            {label:'Defect', val:defectText('face'), isDef:true}
+        ]},
+        { title:'BODY', items:[
+            {label:'Bentuk', val:v(nd.body,'bentuk'), isDef:false},
+            {label:'Proporsi', val:v(nd.body,'proporsi'), isDef:false},
+            {label:'Pangkal', val:v(nd.body,'pangkal'), isDef:false},
+            {label:'Defect', val:defectText('body'), isDef:true}
+        ]},
+        { title:'MARKING', items:[
+            {label:'Fullness', val:v(nd.marking,'fullness'), isDef:false},
+            {label:'Kontras', val:v(nd.marking,'contrast'), isDef:false},
+            {label:'Bentuk', val:v(nd.marking,'bentuk'), isDef:false}
+        ]},
+        { title:'PEARL', items:[
+            {label:'Shinning', val:v(nd.pearl,'shinning'), isDef:false},
+            {label:'Fullness', val:v(nd.pearl,'fullness'), isDef:false},
+            {label:'Bentuk', val:v(nd.pearl,'bentuk'), isDef:false}
+        ]},
+        { title:'COLOR', items:[
+            {label:'Komposisi', val:v(nd.color,'komposisi'), isDef:false},
+            {label:'Kecerahan', val:v(nd.color,'kecerahan'), isDef:false},
+            {label:'Fullness', val:v(nd.color,'fullness'), isDef:false}
+        ]},
+        { title:'FINNAGE', items:[
+            {label:'Bentuk', val:v(nd.finnage,'bentuk'), isDef:false},
+            {label:'Kecerahan', val:v(nd.finnage,'kecerahan'), isDef:false},
+            {label:'Defect', val:defectText('finnage'), isDef:true}
+        ]}
+    ];
+
+    groups.forEach(function(group) {
+        html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.14em;color:var(--cyan-400);margin-top:8px;margin-bottom:2px;padding:3px 0 2px;border-bottom:1px solid rgba(34,211,238,0.10);">' + group.title + '</div>';
+        group.items.forEach(function(item) {
+            var valColor = 'var(--text-hi)';
+            if (item.isDef) {
+                if (item.val === 'Aman') valColor = 'var(--success)';
+                else if (item.val === '-') valColor = 'var(--text-faint)';
+                else valColor = '#FCA5A5';
+            }
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0 2px 8px;">';
+            html += '<span style="font-size:11px;color:var(--text-low);">' + item.label + '</span>';
+            html += '<span style="font-size:12px;font-weight:700;color:' + valColor + ';font-family:\'JetBrains Mono\',monospace;">' + item.val + '</span>';
+            html += '</div>';
+        });
+    });
+
     html += '</div>';
     showSuccessPopup('Detail Nilai Tank ' + (s.ikan ? s.ikan.nomor_tank : '-'), html);
 }
