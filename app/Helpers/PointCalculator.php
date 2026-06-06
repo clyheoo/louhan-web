@@ -311,19 +311,31 @@ class PointCalculator
 
     public static function hitungRankPoints(array $items, string $key = 'total_point'): array
     {
-        // Sort DESC by $key (default: 'total_point' — RAW point dari nilai)
+        // ★ STEP 1: Sort DESC by total_point (raw) → tentukan rank base dari posisi
         usort($items, function ($a, $b) use ($key) {
             $va = $a[$key] ?? 0; $vb = $b[$key] ?? 0;
             return $va === $vb ? 0 : ($va < $vb ? 1 : -1);
         });
-
         foreach ($items as $i => &$item) {
-            $position  = $i + 1;
-            $rankPoint = self::RANK_POINT_MAPPING[$position] ?? 0; // posisi 11+ → 0
-            $bonus     = (int) ($item['total_bonus'] ?? 0);
-            $item['rank_point']       = $rankPoint;                 // dari posisi
-            $item['final_rank_point'] = $rankPoint + $bonus;        // rank + bonus
+            $rankBase = self::RANK_POINT_MAPPING[$i + 1] ?? 0; // posisi 11+ → 0
+            $bonus    = (int) ($item['total_bonus'] ?? 0);
+            $item['rank_point']       = $rankBase;            // base dari posisi total_point
+            $item['final_rank_point'] = $rankBase + $bonus;   // base + bonus
         }
+        unset($item);
+
+        // ★ STEP 2: RE-SORT by final_rank_point → bonus bisa ubah urutan juara
+        //   Contoh: AER rank base 60 + bonus 100 = 160 → naik jadi Juara 1
+        usort($items, function ($a, $b) {
+            $va = $a['final_rank_point'] ?? 0; $vb = $b['final_rank_point'] ?? 0;
+            return $va === $vb ? 0 : ($va < $vb ? 1 : -1);
+        });
+
+        // ★ STEP 3: Assign posisi final (post-bonus) ke setiap item
+        foreach ($items as $i => &$item) {
+            $item['position'] = $i + 1;
+        }
+        unset($item);
 
         return $items;
     }

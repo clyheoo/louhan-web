@@ -1037,10 +1037,8 @@ public function syncMvp()
             $headerText = $prefix . ' - ' . $detailAnggota;
 
             $rows = [];
-            $sumRankOnly    = 0;
             $sumFinalRank   = 0;
             $bonusDescParts = [];
-            $juaraDescParts = [];
             $no = 1;
 
             $sorted = $items->sortBy(function ($ikan) {
@@ -1056,20 +1054,26 @@ public function syncMvp()
                 $bonus = (int) $ikan->bonusPoints->sum('points');
                 $final = $rankPt + $bonus;
 
-                $sumRankOnly  += $rankPt;
                 $sumFinalRank += $final;
 
-                $kelasDisp = in_array($ikan->kategori, ['Bonsai', 'Jumbo']) ? '' : ($ikan->kelas ?? '');
+                $kelasDisp    = in_array($ikan->kategori, ['Bonsai', 'Jumbo']) ? '' : ($ikan->kelas ?? '');
                 $katKelasDisp = strtoupper($ikan->kategori ?? '') . ($kelasDisp ? ' ' . $kelasDisp : '');
+
+                // ★ NO TANK cell multi-line: tank di baris 1, "Juara N" di baris 2 (kalau menang)
+                $tankCell = (string) ($ikan->nomor_tank ?? '');
+                if ($position >= 1 && $position <= 10 && $final > 0) {
+                    $tankCell .= "\nJuara " . $position;
+                }
 
                 $rows[] = [
                     $no,
                     $ikan->nama_peserta ?? '—',
                     $katKelasDisp,
-                    $ikan->nomor_tank ?? '',
+                    $tankCell,   // ★ tank + juara label dalam 1 cell
                     $final,
                 ];
 
+                // ★ Bonus description tetap dipakai untuk row KETERANGAN BONUS
                 $bonusTypes = $ikan->bonusPoints->pluck('bonus_type')->toArray();
                 if (!empty($bonusTypes)) {
                     $labels = array_map(function ($t) use ($bonusLabels) {
@@ -1078,23 +1082,17 @@ public function syncMvp()
                     $bonusDescParts[] = '[Tank ' . ($ikan->nomor_tank ?? '?') . '] ' . implode(', ', $labels) . ' (+' . $bonus . ')';
                 }
 
-                if ($rankPt > 0 && $position >= 1 && $position <= 10) {
-                    $juaraDescParts[] = 'Juara ' . $position . ' ' . $katKelasDisp . ' (Tank ' . ($ikan->nomor_tank ?? '?') . ')';
-                }
-
                 $no++;
             }
 
-            // tableHeight = 2 (header + sub-header) + n data rows + 1 (TOTAL) + 3 (new rows)
-            $tableHeight = 2 + count($rows) + 1 + 3;
+            // tableHeight = 2 (header + sub-header) + n data rows + 1 (TOTAL) + 1 (KETERANGAN)
+            $tableHeight = 2 + count($rows) + 1 + 1;
 
             $teamData[] = [
                 'header'       => $headerText,
                 'rows'         => $rows,
-                'sumRankOnly'  => $sumRankOnly,
                 'sumFinalRank' => $sumFinalRank,
                 'bonusDesc'    => empty($bonusDescParts) ? '—' : implode(' | ', $bonusDescParts),
-                'juaraDesc'    => empty($juaraDescParts) ? '—' : implode(' | ', $juaraDescParts),
                 'height'       => $tableHeight,
             ];
         }
@@ -1165,7 +1163,7 @@ public function syncMvp()
                     $dataRow++;
                 }
 
-                // Baris TOTAL (★ sekarang dari sum FINAL rank point)
+                // Baris TOTAL (sum final rank point — rank + bonus)
                 $totalRow = $dataRow;
                 $batch[] = [
                     'sheet' => $sheetName,
@@ -1179,20 +1177,7 @@ public function syncMvp()
                 ];
                 $dataRow++;
 
-                // ★ NEW ROW 1: RANK POINT (tanpa bonus)
-                $batch[] = [
-                    'sheet' => $sheetName,
-                    'cell'  => $this->sheets->colToLetter($cs + 1) . $dataRow,
-                    'value' => 'RANK POINT',
-                ];
-                $batch[] = [
-                    'sheet' => $sheetName,
-                    'cell'  => $this->sheets->colToLetter($cs + 5) . $dataRow,
-                    'value' => (int) $data['sumRankOnly'],
-                ];
-                $dataRow++;
-
-                // ★ NEW ROW 2: KETERANGAN BONUS POINT
+                // ★ KETERANGAN BONUS (satu-satunya summary row tersisa)
                 $batch[] = [
                     'sheet' => $sheetName,
                     'cell'  => $this->sheets->colToLetter($cs + 1) . $dataRow,
@@ -1202,19 +1187,6 @@ public function syncMvp()
                     'sheet' => $sheetName,
                     'cell'  => $this->sheets->colToLetter($cs + 2) . $dataRow,
                     'value' => $data['bonusDesc'],
-                ];
-                $dataRow++;
-
-                // ★ NEW ROW 3: JUARA PER KAT+KELAS
-                $batch[] = [
-                    'sheet' => $sheetName,
-                    'cell'  => $this->sheets->colToLetter($cs + 1) . $dataRow,
-                    'value' => 'JUARA',
-                ];
-                $batch[] = [
-                    'sheet' => $sheetName,
-                    'cell'  => $this->sheets->colToLetter($cs + 2) . $dataRow,
-                    'value' => $data['juaraDesc'],
                 ];
 
                 // Format sub-header
@@ -1238,13 +1210,13 @@ public function syncMvp()
                         ],
                     ];
 
-                    // ★ Format TOTAL + 3 NEW rows (bold)
+                    // ★ Format TOTAL + KETERANGAN row (bold)
                     $formatRequests[] = [
                         'repeatCell' => [
                             'range' => [
                                 'sheetId'          => $sheetId,
                                 'startRowIndex'    => $totalRow - 1,
-                                'endRowIndex'      => $totalRow + 3, // TOTAL + 3 new rows
+                                'endRowIndex'      => $totalRow + 1, // TOTAL + KETERANGAN (2 baris)
                                 'startColumnIndex' => $cs,
                                 'endColumnIndex'   => $cs + $COLS_PER_TABLE,
                             ],
@@ -1254,6 +1226,28 @@ public function syncMvp()
                                 ],
                             ],
                             'fields' => 'userEnteredFormat(textFormat)',
+                        ],
+                    ];
+
+                    // ★ Wrap text + align center untuk kolom NO TANK (supaya "tank\nJuara N" terlihat)
+                    $tankColStart = $cs + 3; // kolom NO TANK = index ke-3 dari cs (0-based)
+                    $formatRequests[] = [
+                        'repeatCell' => [
+                            'range' => [
+                                'sheetId'          => $sheetId,
+                                'startRowIndex'    => $subRow,                         // baris pertama data
+                                'endRowIndex'      => $subRow + count($data['rows']),  // s/d baris terakhir data
+                                'startColumnIndex' => $tankColStart,
+                                'endColumnIndex'   => $tankColStart + 1,
+                            ],
+                            'cell' => [
+                                'userEnteredFormat' => [
+                                    'wrapStrategy'        => 'WRAP',
+                                    'horizontalAlignment' => 'CENTER',
+                                    'verticalAlignment'   => 'MIDDLE',
+                                ],
+                            ],
+                            'fields' => 'userEnteredFormat(wrapStrategy,horizontalAlignment,verticalAlignment)',
                         ],
                     ];
                 }

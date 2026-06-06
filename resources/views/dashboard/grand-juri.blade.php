@@ -1303,11 +1303,11 @@ function openMvpDetail(idx){
         var finalRank=ikan.final_rank_point||0;
         var pos=ikan.position||0;
         var rankHtml;
-        if(rankPt>0){
+        if(finalRank>0 && pos>=1 && pos<=10){
             var rkBg,rkColor;
-            if(rankPt===100){rkBg='rgba(16,185,129,.14)';rkColor='#34D399';}
-            else if(rankPt>=60){rkBg='var(--warning-lt)';rkColor='var(--gold-300)';}
-            else if(rankPt>=30){rkBg='rgba(34,211,238,.08)';rkColor='var(--cyan-300)';}
+            if(pos===1){rkBg='rgba(16,185,129,.14)';rkColor='#34D399';}
+            else if(pos<=3){rkBg='var(--warning-lt)';rkColor='var(--gold-300)';}
+            else if(pos<=6){rkBg='rgba(34,211,238,.08)';rkColor='var(--cyan-300)';}
             else{rkBg='var(--purple-light)';rkColor='var(--purple)';}
             rankHtml='<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:800;background:'+rkBg+';color:'+rkColor+';">'+finalRank+'</span>';
             rankHtml+='<div style="font-size:9px;color:var(--text-muted);font-weight:700;margin-top:2px;">Juara '+pos+(ikan.total_bonus>0?' • '+rankPt+'+'+ikan.total_bonus:'')+'</div>';
@@ -1367,16 +1367,17 @@ function loadPointRanking(){
             html+='<thead><tr><th style="width:40px;text-align:center;">#</th><th>PESERTA</th>'+(isGlobal?'<th>KATEGORI</th>':'')+'<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:80px;text-align:center;">POINT</th><th style="width:100px;text-align:center;">RANK POINT</th></tr></thead><tbody>';
             g.data.forEach(function(d,i){
                 var rankPt=d.rank_point??0;var frp=d.final_rank_point??rankPt;var basePt=d.total_point??0;var bonus=d.total_bonus||0;var posisi=i+1;
+                // ★ Warna & medal pakai POSISI (post-bonus), bukan rank base, supaya AER (160) bisa dapat warna Juara 1
                 var rankBg,rankColor,rankBorder;
-                if(rankPt===100){rankBg='rgba(16,185,129,.14)';rankColor='#34D399';rankBorder='rgba(16,185,129,.35)';}
-                else if(rankPt>=60){rankBg='var(--warning-lt)';rankColor='var(--gold-300)';rankBorder='rgba(245,158,11,.30)';}
-                else if(rankPt>=30){rankBg='rgba(34,211,238,.08)';rankColor='var(--cyan-300)';rankBorder='rgba(34,211,238,.25)';}
-                else if(rankPt>=10){rankBg='var(--purple-light)';rankColor='var(--purple)';rankBorder='rgba(124,58,237,.25)';}
+                if(posisi===1){rankBg='rgba(16,185,129,.14)';rankColor='#34D399';rankBorder='rgba(16,185,129,.35)';}
+                else if(posisi<=3){rankBg='var(--warning-lt)';rankColor='var(--gold-300)';rankBorder='rgba(245,158,11,.30)';}
+                else if(posisi<=6){rankBg='rgba(34,211,238,.08)';rankColor='var(--cyan-300)';rankBorder='rgba(34,211,238,.25)';}
+                else if(posisi<=10){rankBg='var(--purple-light)';rankColor='var(--purple)';rankBorder='rgba(124,58,237,.25)';}
                 else{rankBg='var(--glass-2)';rankColor='var(--text-faint)';rankBorder='var(--bd-2)';}
                 var medalHtml='';
-                if(rankPt===100)medalHtml='<i class="fas fa-medal" style="color:var(--gold-500);font-size:12px;margin-right:4px;" title="Juara 1"></i>';
-                else if(rankPt===80)medalHtml='<i class="fas fa-medal" style="color:#C0C0C0;font-size:12px;margin-right:4px;" title="Juara 2"></i>';
-                else if(rankPt===60)medalHtml='<i class="fas fa-medal" style="color:#CD7F32;font-size:12px;margin-right:4px;" title="Juara 3"></i>';
+                if(posisi===1)medalHtml='<i class="fas fa-medal" style="color:var(--gold-500);font-size:12px;margin-right:4px;" title="Juara 1"></i>';
+                else if(posisi===2)medalHtml='<i class="fas fa-medal" style="color:#C0C0C0;font-size:12px;margin-right:4px;" title="Juara 2"></i>';
+                else if(posisi===3)medalHtml='<i class="fas fa-medal" style="color:#CD7F32;font-size:12px;margin-right:4px;" title="Juara 3"></i>';
                 html+='<tr><td style="text-align:center;font-weight:800;color:var(--text-muted);">'+posisi+'</td><td style="font-weight:700;">'+medalHtml+esc(d.nama_peserta)+'</td>';
                 if(isGlobal)html+='<td style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">'+esc(d.kategori)+'</td>';
                 html+='<td style="font-weight:700;color:var(--purple);text-align:center;">'+(d.nomor_tank||'—')+'</td><td style="text-align:center;">'+esc(d.kelas)+'</td><td style="font-size:11px;color:var(--text-muted);">'+esc(d.detail_anggota)+'</td>';
