@@ -550,11 +550,10 @@ class AdminDashboardController extends Controller
             case 'sudah_dinilai':
                 $sudahIds = $latestRows->filter(fn($r) => !$r->edited_by_grand_juri)->keys()->toArray();
                 $stats = Scoring::whereIn('ikan_id', $sudahIds)
-                    ->where('submitted_to_grand', true)
                     ->selectRaw('ikan_id, COUNT(DISTINCT juri_id) as jml, COALESCE(SUM(total_nilai),0) as total')
                     ->groupBy('ikan_id')->get()->keyBy('ikan_id');
                 $rows = Ikan::whereIn('id', $sudahIds)->with('peserta')->orderBy('nomor_tank')->get()->map(function ($i, $idx) use ($stats) {
-                    $s = $stats[$i->id];
+                    $s = $stats[$i->id] ?? null;
                     return [$idx + 1, $i->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—', $s ? $s->jml : 0, $s ? $s->total : 0];
                 })->toArray();
                 return response()->json(['title' => 'Sudah Dinilai Juri', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS', 'JURI', 'TOTAL NILAI'], 'rows' => $rows]);
@@ -591,7 +590,6 @@ class AdminDashboardController extends Controller
                 $rows = \DB::table('scorings')
                     ->join('users', 'scorings.juri_id', '=', 'users.id')
                     ->whereNotNull('scorings.juri_id')
-                    ->where('scorings.submitted_to_grand', true)
                     ->selectRaw('scorings.juri_id, users.name, users.role, COUNT(DISTINCT scorings.ikan_id) as total')
                     ->groupBy('scorings.juri_id', 'users.name', 'users.role')
                     ->orderByDesc('total')
