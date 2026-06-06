@@ -1764,7 +1764,7 @@ function openStatPopup(type, title){
             if(['JURI','TOTAL NILAI','JUMLAH IKAN','PESERTA DINILAI'].indexOf(c)!==-1)numCols[i]=true;
         });
         var valColor={};
-        if(type==='sudah_dinilai')valColor={5:'success',6:'primary'};
+        if(type==='sudah_dinilai')valColor={5:'success'};
         else if(type==='grand_edit')valColor={5:'purple',6:'primary'};
         else if(type==='belum_dinilai')valColor={};
         else if(type==='juri_aktif')valColor={2:'purple',3:'amber'};

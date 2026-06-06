@@ -548,15 +548,15 @@ class AdminDashboardController extends Controller
                 return response()->json(['title' => 'Total Peserta', 'columns' => ['#', 'PESERTA', 'JUMLAH IKAN'], 'rows' => $rows]);
 
             case 'sudah_dinilai':
-                $sudahIds = $latestRows->filter(fn($r) => !$r->edited_by_grand_juri)->keys()->toArray();
+                $sudahIds = $latestRows->keys()->toArray();
                 $stats = Scoring::whereIn('ikan_id', $sudahIds)
-                    ->selectRaw('ikan_id, COUNT(DISTINCT juri_id) as jml, COALESCE(SUM(total_nilai),0) as total')
+                    ->selectRaw('ikan_id, COUNT(DISTINCT juri_id) as jml')
                     ->groupBy('ikan_id')->get()->keyBy('ikan_id');
                 $rows = Ikan::whereIn('id', $sudahIds)->with('peserta')->orderBy('nomor_tank')->get()->map(function ($i, $idx) use ($stats) {
                     $s = $stats[$i->id] ?? null;
-                    return [$idx + 1, $i->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—', $s ? $s->jml : 0, $s ? $s->total : 0];
+                    return [$idx + 1, $i->nama_peserta ?? 'Unknown', $i->nomor_tank, $i->kategori ?? '—', $i->kelas ?? '—', $s ? $s->jml : 0];
                 })->toArray();
-                return response()->json(['title' => 'Sudah Dinilai Juri', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS', 'JURI', 'TOTAL NILAI'], 'rows' => $rows]);
+                return response()->json(['title' => 'Sudah Dinilai Juri', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS', 'JURI'], 'rows' => $rows]);
 
             case 'grand_edit':
                 $grandIds = $latestRows->filter(fn($r) => $r->edited_by_grand_juri)->keys()->toArray();
