@@ -1008,14 +1008,18 @@ public function syncPlotingTank()
             $maxHeight = 0;
 
             for ($i = 0; $i < $TABLES_PER_ROW && $teamIndex < $totalTeam; $i++) {
-                $rowTeams[] = [
-                    'data'     => $teamData[$teamIndex],
-                    'colStart' => $tableColStarts[$i],
-                    'index'    => $teamIndex,
-                ];
-                $teamRowMap[$teamIndex] = $currentRow; // ★ catat row header
-                $maxHeight = max($maxHeight, $teamData[$teamIndex]['height']);
-                $teamIndex++;
+            $rowTeams[] = [
+                        'data'     => $teamData[$teamIndex],
+                        'colStart' => $tableColStarts[$i],
+                        'index'    => $teamIndex,
+                    ];
+                    // ★ Simpan ROW & COL secara eksplisit untuk dipakai di Phase 4/5/6
+                    $teamRowMap[$teamIndex] = [
+                        'row' => $currentRow,
+                        'cs'  => $tableColStarts[$i],
+                    ];
+                    $maxHeight = max($maxHeight, $teamData[$teamIndex]['height']);
+                    $teamIndex++;
             }
 
             foreach ($rowTeams as $rt) {
@@ -1068,24 +1072,23 @@ public function syncPlotingTank()
                 // ── Format: sub-header (background abu, bold)
                 if ($sheetId !== null) {
                     $formatRequests[] = [
-                        'repeatCell' => [
-                            'range' => [
-                                'sheetId'          => $sheetId,
-                                'startRowIndex'    => $subRow - 1,
-                                'endRowIndex'      => $subRow,
-                                'startColumnIndex' => $cs,
-                                'endColumnIndex'   => $cs + $COLS_PER_TABLE,
-                            ],
-                            'cell' => [
-                                'userEnteredFormat' => [
-                                    'horizontalAlignment' => 'CENTER',
-                                    'backgroundColor'     => ['red' => 0.95, 'green' => 0.95, 'blue' => 0.95],
-                                    'textFormat' => ['bold' => true, 'fontSize' => 10],
-                                ],
-                            ],
-                            'fields' => 'userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)',
+                    'repeatCell' => [
+                        'range' => [
+                            'sheetId'          => $sheetId,
+                            'startRowIndex'    => $subRow - 1,
+                            'endRowIndex'      => $subRow,
+                            'startColumnIndex' => $cs,
+                            'endColumnIndex'   => $cs + $COLS_PER_TABLE,
                         ],
-                    ];
+                        'cell' => [
+                            'userEnteredFormat' => [
+                                'horizontalAlignment' => 'CENTER',
+                                'textFormat' => ['bold' => true, 'fontSize' => 10],
+                            ],
+                        ],
+                        'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)',
+                    ],
+                ];
 
                     // ── Format: TOTAL row (background krem, bold)
                     $formatRequests[] = [
@@ -1099,17 +1102,16 @@ public function syncPlotingTank()
                             ],
                             'cell' => [
                                 'userEnteredFormat' => [
-                                    'backgroundColor' => ['red' => 0.95, 'green' => 0.92, 'blue' => 0.85],
                                     'textFormat' => ['bold' => true],
                                 ],
                             ],
-                            'fields' => 'userEnteredFormat(backgroundColor,textFormat)',
+                            'fields' => 'userEnteredFormat(textFormat)',
                         ],
                     ];
                 }
             }
 
-            $currentRow += $maxHeight + 1;
+            $currentRow += $maxHeight + 2;
         }
 
         // ─── PHASE 2: Eksekusi batch (tulis data) ───
@@ -1130,81 +1132,116 @@ public function syncPlotingTank()
             }
         }
 
-        // ─── PHASE 4: MERGE HEADER per team (pakai teamRowMap yg benar) ───
+    // ─── PHASE 4: MERGE HEADER per team — individual API call agar 1 gagal tidak menggagalkan yg lain ───
         if ($sheetId !== null) {
             foreach ($teamData as $idx => $data) {
-                $headerRow = $teamRowMap[$idx];
-                $cs = $tableColStarts[$idx % $TABLES_PER_ROW];
+                $headerRow = $teamRowMap[$idx]['row'];
+                $cs        = $teamRowMap[$idx]['cs'];
 
-                $mergeRequests[] = [
-                    'mergeCells' => [
-                        'range' => [
-                            'sheetId'          => $sheetId,
-                            'startRowIndex'    => $headerRow - 1,
-                            'endRowIndex'      => $headerRow,
-                            'startColumnIndex' => $cs,
-                            'endColumnIndex'   => $cs + $COLS_PER_TABLE,
-                        ],
-                        'mergeType' => 'MERGE_ALL',
-                    ],
-                ];
-            }
-
-            if (!empty($mergeRequests)) {
                 try {
-                    foreach (array_chunk($mergeRequests, 50) as $chunk) {
-                        $this->sheets->formatCells($chunk);
-                    }
+                    $this->sheets->formatCells([[
+                        'mergeCells' => [
+                            'range' => [
+                                'sheetId'          => $sheetId,
+                                'startRowIndex'    => $headerRow - 1,
+                                'endRowIndex'      => $headerRow,
+                                'startColumnIndex' => $cs,
+                                'endColumnIndex'   => $cs + $COLS_PER_TABLE,
+                            ],
+                            'mergeType' => 'MERGE_ALL',
+                        ],
+                    ]]);
                 } catch (\Exception $e) {
-                    Log::warning('Merge header MVP gagal (tidak kritis): ' . $e->getMessage());
+                    Log::warning("Merge MVP header team idx={$idx} gagal: " . $e->getMessage());
                 }
             }
         }
 
-        // ─── PHASE 5: APPLY CENTER ALIGNMENT KE HEADER (SETELAH merge) ───
-        // ★ Crucial: format diapply SETELAH merge supaya merged cell punya center alignment
-        if ($sheetId !== null) {
-            $headerFormatRequests = [];
-            foreach ($teamData as $idx => $data) {
-                $headerRow = $teamRowMap[$idx];
-                $cs = $tableColStarts[$idx % $TABLES_PER_ROW];
+        // ─── PHASE 5: CENTER + BOLD HEADER (SETELAH merge, tanpa background) ───
+            if ($sheetId !== null) {
+                $headerFormatRequests = [];
+                foreach ($teamData as $idx => $data) {
+                    $headerRow = $teamRowMap[$idx]['row'];
+                    $cs        = $teamRowMap[$idx]['cs'];
 
-                $headerFormatRequests[] = [
-                    'repeatCell' => [
-                        'range' => [
-                            'sheetId'          => $sheetId,
-                            'startRowIndex'    => $headerRow - 1,
-                            'endRowIndex'      => $headerRow,
-                            'startColumnIndex' => $cs,
-                            'endColumnIndex'   => $cs + $COLS_PER_TABLE,
-                        ],
-                        'cell' => [
-                            'userEnteredFormat' => [
-                                'horizontalAlignment' => 'CENTER',
-                                'verticalAlignment'   => 'MIDDLE',
-                                'backgroundColor'     => ['red' => 0.85, 'green' => 0.92, 'blue' => 1.0],
-                                'textFormat' => [
-                                    'bold'     => true,
-                                    'fontSize' => 11,
+                    $headerFormatRequests[] = [
+                        'repeatCell' => [
+                            'range' => [
+                                'sheetId'          => $sheetId,
+                                'startRowIndex'    => $headerRow - 1,
+                                'endRowIndex'      => $headerRow,
+                                'startColumnIndex' => $cs,
+                                'endColumnIndex'   => $cs + $COLS_PER_TABLE,
+                            ],
+                            'cell' => [
+                                'userEnteredFormat' => [
+                                    'horizontalAlignment' => 'CENTER',
+                                    'verticalAlignment'   => 'MIDDLE',
+                                    'textFormat' => [
+                                        'bold'     => true,
+                                        'fontSize' => 11,
+                                    ],
                                 ],
                             ],
+                            'fields' => 'userEnteredFormat(horizontalAlignment,verticalAlignment,textFormat)',
                         ],
-                        'fields' => 'userEnteredFormat(horizontalAlignment,verticalAlignment,backgroundColor,textFormat)',
-                    ],
-                ];
-            }
+                    ];
+                }
 
-            if (!empty($headerFormatRequests)) {
-                try {
-                    foreach (array_chunk($headerFormatRequests, 50) as $chunk) {
-                        $this->sheets->formatCells($chunk);
+                if (!empty($headerFormatRequests)) {
+                    try {
+                        foreach (array_chunk($headerFormatRequests, 50) as $chunk) {
+                            $this->sheets->formatCells($chunk);
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning('Format header MVP gagal (tidak kritis): ' . $e->getMessage());
                     }
-                } catch (\Exception $e) {
-                    Log::warning('Format header MVP gagal (tidak kritis): ' . $e->getMessage());
                 }
             }
-        }
 
+            // ─── PHASE 6: BORDER mengelilingi setiap tabel (outer + inner grid) ───
+            if ($sheetId !== null) {
+                $borderRequests = [];
+                $borderStyle = [
+                    'style' => 'SOLID',
+                    'color' => ['red' => 0, 'green' => 0, 'blue' => 0],
+                ];
+
+                foreach ($teamData as $idx => $data) {
+                    $headerRow = $teamRowMap[$idx]['row'];
+                    $cs        = $teamRowMap[$idx]['cs'];
+                    // height = 2 (header + sub-header) + n rows + 1 (TOTAL row)
+                    $tableEndRow = $headerRow - 1 + $data['height']; // 0-based exclusive
+
+                    $borderRequests[] = [
+                        'updateBorders' => [
+                            'range' => [
+                                'sheetId'          => $sheetId,
+                                'startRowIndex'    => $headerRow - 1,
+                                'endRowIndex'      => $tableEndRow,
+                                'startColumnIndex' => $cs,
+                                'endColumnIndex'   => $cs + $COLS_PER_TABLE,
+                            ],
+                            'top'             => $borderStyle,
+                            'bottom'          => $borderStyle,
+                            'left'            => $borderStyle,
+                            'right'           => $borderStyle,
+                            'innerHorizontal' => $borderStyle,
+                            'innerVertical'   => $borderStyle,
+                        ],
+                    ];
+                }
+
+                if (!empty($borderRequests)) {
+                    foreach (array_chunk($borderRequests, 50) as $chunk) {
+                        try {
+                            $this->sheets->formatCells($chunk);
+                        } catch (\Exception $e) {
+                            Log::warning('Border MVP gagal (tidak kritis): ' . $e->getMessage());
+                        }
+                    }
+                }
+            }
         return $ikans->count();
     }
 
