@@ -543,7 +543,7 @@ class AdminDashboardController extends Controller
                     ->orderByDesc('jml')
                     ->get()
                     ->map(function ($i, $idx) {
-                        return [$idx + 1, $i->nama_peserta ?? 'Unknown', $i->jml];
+                        return [$idx + 1, $i->peserta ? $i->peserta->nama_peserta : ($i->nama_peserta ?? 'Unknown'), $i->jml];
                     })->toArray();
                 return response()->json(['title' => 'Total Peserta', 'columns' => ['#', 'PESERTA', 'JUMLAH IKAN'], 'rows' => $rows]);
 
