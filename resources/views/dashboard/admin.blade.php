@@ -786,7 +786,10 @@
                 <div class="glass-card">
                     <div class="card-head">
                         <h3><span class="ti"><i class="fas fa-users-gear"></i></span>Kelola User</h3>
-                        <button class="btn-xs blue" onclick="openModal('modalCreate')"><i class="fas fa-plus"></i> Tambah User</button>
+                        <div style="display:flex;gap:6px;">
+                            <button class="btn-xs gold" onclick="openModal('modalImport')"><i class="fas fa-file-excel"></i> Import Excel</button>
+                            <button class="btn-xs blue" onclick="openModal('modalCreate')"><i class="fas fa-plus"></i> Tambah User</button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="user-panel-head">
@@ -1189,6 +1192,51 @@
         </div>
         <div class="modal-foot">
             <button class="btn-cancel" onclick="closeModal('modalUserDetail')">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ MODAL: IMPORT EXCEL ═══════════ -->
+<div class="modal-bg" id="modalImport" style="--mw:600px;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-file-excel" style="color:var(--gold-400);"></i> Import Data dari Excel</h3>
+            <button class="modal-close" onclick="closeModal('modalImport')"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" id="importModalBody">
+            <div style="background:rgba(245,158,11,.08);border:1px solid var(--bd-gold);border-radius:11px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:var(--gold-300);line-height:1.6;">
+                <div style="font-weight:800;margin-bottom:6px;"><i class="fas fa-circle-info"></i> Format Excel</div>
+                <div>Header wajib: <b>Email, Nama Peserta, Jenis Keanggotaan, Detail Anggota, Kategori, Kelas</b></div>
+                <div style="margin-top:4px;">Kategori valid: Cencu, Chingwa, Freemarking, Goldenbase, Klasik, Bonsai, Jumbo</div>
+                <div>Kelas: A–E (kosongkan untuk Bonsai/Jumbo)</div>
+                <div style="margin-top:6px;"><a href="/api/admin/import-template" style="color:var(--cyan-300);font-weight:700;text-decoration:underline;" onclick="event.stopPropagation();"><i class="fas fa-download"></i> Download Template</a></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">File Excel (.xlsx / .xls / .csv)</label>
+                <div id="importDropZone" style="border:2px dashed var(--bd-2);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;background:var(--glass-1);" onclick="document.getElementById('importFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--cyan-400)';this.style.background='rgba(34,211,238,.06)'" ondragleave="this.style.borderColor='var(--bd-2)';this.style.background='var(--glass-1)'" ondrop="event.preventDefault();handleImportDrop(event)">
+                    <i class="fas fa-cloud-arrow-up" style="font-size:28px;color:var(--text-low);display:block;margin-bottom:8px;"></i>
+                    <div style="font-size:12px;color:var(--text-mid);font-weight:600;" id="importFileLabel">Klik atau seret file ke sini</div>
+                    <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleImportFileSelect(this)">
+                </div>
+            </div>
+            <div class="form-group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text);font-weight:600;">
+                    <input type="checkbox" id="importAutoCreate" onchange="toggleImportAutoCreate()" style="accent-color:var(--cyan-400);width:16px;height:16px;cursor:pointer;">
+                    Buat akun user baru jika email belum terdaftar
+                </label>
+            </div>
+            <div class="form-group" id="importPasswordWrap" style="display:none;">
+                <label class="form-label">Password Default untuk User Baru</label>
+                <input type="text" id="importDefaultPassword" class="form-control" value="LCI_2024!" placeholder="Min. 8 karakter">
+                <div style="font-size:10px;color:var(--text-low);margin-top:4px;">Wajib: huruf besar, kecil, angka, simbol</div>
+            </div>
+            <div id="importResultBox" style="display:none;"></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-cancel" onclick="closeModal('modalImport')">Tutup</button>
+            <button class="btn-primary" id="btnSubmitImport" onclick="submitImport()" style="background:linear-gradient(135deg,var(--gold-600),var(--gold-700));box-shadow:0 6px 16px -6px rgba(245,158,11,.5),inset 0 1px 0 rgba(255,255,255,.18);">
+                <i class="fas fa-upload"></i> Mulai Import
+            </button>
         </div>
     </div>
 </div>

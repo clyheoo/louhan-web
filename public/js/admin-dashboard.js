@@ -38,6 +38,21 @@ function openModal(id){
     var el = document.getElementById(id);
     if(!el) return;
     el.classList.add('show');
+        if(id === 'modalImport'){
+        importSelectedFile = null;
+        var fi = document.getElementById('importFileInput');
+        if(fi) fi.value = '';
+        var fl = document.getElementById('importFileLabel');
+        if(fl) fl.innerHTML = 'Klik atau seret file ke sini';
+        var dz = document.getElementById('importDropZone');
+        if(dz){ dz.style.borderColor='var(--bd-2)'; dz.style.background='var(--glass-1)'; }
+        var ac = document.getElementById('importAutoCreate');
+        if(ac) ac.checked = false;
+        var pw = document.getElementById('importPasswordWrap');
+        if(pw) pw.style.display = 'none';
+        var rb = document.getElementById('importResultBox');
+        if(rb) rb.style.display = 'none';
+    }
     if(id === 'modalCreate'){
         var form = document.getElementById('formCreateUser');
         if(form) form.reset();
@@ -2610,6 +2625,113 @@ if(regKategoriSelect && regKelasWrap){
         } else {
             regKelasWrap.style.display = '';
         }
+    });
+}
+
+/* ═══════════════════════════════════════════════
+   IMPORT EXCEL
+   ═══════════════════════════════════════════════ */
+var importSelectedFile = null;
+
+function handleImportFileSelect(input) {
+    if (input.files && input.files[0]) {
+        importSelectedFile = input.files[0];
+        var sizeKB = (importSelectedFile.size / 1024).toFixed(1);
+        document.getElementById('importFileLabel').innerHTML = '<i class="fas fa-file-excel" style="color:var(--gold-400);margin-right:4px;"></i>' + esc(importSelectedFile.name) + ' <span style="color:var(--text-low);font-size:10px;">(' + sizeKB + ' KB)</span>';
+        var dz = document.getElementById('importDropZone');
+        dz.style.borderColor = 'rgba(245,158,11,.45)';
+        dz.style.background = 'rgba(245,158,11,.06)';
+    }
+}
+
+function handleImportDrop(e) {
+    var files = e.dataTransfer.files;
+    if (files.length) {
+        importSelectedFile = files[0];
+        document.getElementById('importFileInput').files = files;
+        handleImportFileSelect(document.getElementById('importFileInput'));
+    }
+}
+
+function toggleImportAutoCreate() {
+    var wrap = document.getElementById('importPasswordWrap');
+    wrap.style.display = document.getElementById('importAutoCreate').checked ? 'block' : 'none';
+}
+
+function submitImport() {
+    if (!importSelectedFile) {
+        popupError('File Belum Dipilih', 'Silakan pilih file Excel terlebih dahulu.');
+        return;
+    }
+
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('file', importSelectedFile);
+    fd.append('auto_create_user', document.getElementById('importAutoCreate').checked ? '1' : '0');
+    fd.append('default_password', document.getElementById('importDefaultPassword').value);
+
+    var btn = document.getElementById('btnSubmitImport');
+    var origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengimpor...';
+    document.getElementById('importResultBox').style.display = 'none';
+
+    fetch('/api/admin/import-excel', {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'},
+        body: fd
+    })
+    .then(function(r) {
+        if (!r.ok) {
+            return r.text().then(function(text) {
+                try {
+                    var d = JSON.parse(text);
+                    throw d;
+                } catch(err) {
+                    // Jika bukan JSON (halaman HTML error dari Laravel), tampilkan pesan generik
+                    throw { message: 'Server error (500). Cek file <b>storage/logs/laravel.log</b> untuk detail error.' };
+                }
+            });
+        }
+        return r.json();
+    })
+    .then(function(d) {
+        if (d.success) {
+            var html = '<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:11px;padding:14px 16px;margin-bottom:10px;">';
+            html += '<div style="font-size:13px;font-weight:800;color:#6EE7B7;margin-bottom:6px;"><i class="fas fa-check-circle"></i> Import Berhasil</div>';
+            html += '<div style="font-size:12px;color:var(--text);line-height:1.6;">' + d.message + '</div>';
+            html += '</div>';
+
+            if (d.errors && d.errors.length > 0) {
+                html += '<div style="background:rgba(245,158,11,.08);border:1px solid var(--bd-gold);border-radius:11px;padding:14px 16px;max-height:200px;overflow-y:auto;">';
+                html += '<div style="font-size:11px;font-weight:800;color:var(--gold-300);margin-bottom:6px;"><i class="fas fa-triangle-exclamation"></i> Baris Dilewati (' + d.errors.length + ')</div>';
+                html += '<div style="font-size:11px;color:var(--text-mid);line-height:1.7;">';
+                var showMax = Math.min(d.errors.length, 30);
+                for (var i = 0; i < showMax; i++) {
+                    html += '<div>• ' + esc(d.errors[i]) + '</div>';
+                }
+                if (d.errors.length > 30) {
+                    html += '<div style="color:var(--text-low);font-style:italic;">... dan ' + (d.errors.length - 30) + ' lainnya</div>';
+                }
+                html += '</div></div>';
+            }
+
+            document.getElementById('importResultBox').innerHTML = html;
+            document.getElementById('importResultBox').style.display = 'block';
+            loadUsers();
+            loadDashboard();
+            loadScoringData();
+        } else {
+            popupError('Import Gagal', d.message || 'Terjadi kesalahan.');
+        }
+    })
+    .catch(function(e) {
+        if (e && e.message) popupError('Import Gagal', esc(e.message));
+        else popupError('Kesalahan Jaringan', 'Gagal menghubungi server.');
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
     });
 }
 

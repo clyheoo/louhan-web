@@ -11,7 +11,9 @@ use App\Helpers\PointCalculator;
 use App\Models\ScoringPointConfig;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AdminExport;
-use App\Services\SheetsSyncService;
+use App\Imports\GenericImport;
+use App\Exports\ArrayExport;
+use App\Services\SheetsSyncService; 
 
 class AdminDashboardController extends Controller
 {
@@ -1303,5 +1305,337 @@ class AdminDashboardController extends Controller
         $fileName = 'LCI_Admin_' . $label . '_' . now()->format('Y-m-d_His') . '.xlsx';
 
         return Excel::download(new AdminExport($sheets), $fileName);
+    }
+
+        /* ═══════════════════════════════════════════
+       IMPORT EXCEL — PESERTA & IKAN MASSAL
+       ═══════════════════════════════════════════ */
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        $autoCreateUser = $request->boolean('auto_create_user', false);
+        $defaultPassword = $request->input('default_password', 'LCI_2024!');
+
+        if ($autoCreateUser) {
+            $pw = $defaultPassword;
+            if (strlen($pw) < 8
+                || !preg_match('/[a-z]/', $pw)
+                || !preg_match('/[A-Z]/', $pw)
+                || !preg_match('/[0-9]/', $pw)
+                || !preg_match('/[^A-Za-z0-9]/', $pw)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Password default tidak memenuhi syarat: min 8 karakter, huruf besar, huruf kecil, angka, dan simbol.'
+                ], 422);
+            }
+        }
+
+        try {
+            $import = new GenericImport();
+            \Excel::import($import, $request->file('file'));
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membaca file Excel: ' . $e->getMessage()
+            ], 422);
+        }
+
+        $rows = $import->data;
+
+        if (!$rows || $rows->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File Excel kosong atau tidak memiliki data.'
+            ], 422);
+        }
+
+        // ★ NORMALISASI HEADER: mapping berbagai format header ke key yang diharapkan
+        $headerAliases = [
+            'email'              => ['email', 'e_mail', 'e-mail'],
+            'nama_peserta'       => ['nama_peserta', 'namapeserta', 'nama peserta', 'nama', 'name'],
+            'jenis_keanggotaan'  => ['jenis_keanggotaan', 'jeniskeanggotaan', 'jeniskeangotaan', 'jenis keanggotaan', 'jenis', 'keanggotaan', 'tipe'],
+            'detail_anggota'     => ['detail_anggota', 'detailanggota', 'detail anggota', 'asal', 'kota', 'team', 'club'],
+            'kategori'           => ['kategori', 'category', 'kat'],
+            'kelas'              => ['kelas', 'class', 'kls'],
+        ];
+
+        $rows = $rows->map(function ($row) use ($headerAliases) {
+            $normalized = [];
+            foreach ($row as $key => $value) {
+                $found = false;
+                foreach ($headerAliases as $target => $aliases) {
+                    $cleanKey = strtolower(preg_replace('/[^a-z0-9]/', '', (string) $key));
+                    foreach ($aliases as $alias) {
+                        $cleanAlias = strtolower(preg_replace('/[^a-z0-9]/', '', $alias));
+                        if ($cleanKey === $cleanAlias) {
+                            $normalized[$target] = $value;
+                            $found = true;
+                            break 2;
+                        }
+                    }
+                }
+                if (!$found) {
+                    $normalized[$key] = $value;
+                }
+            }
+            return collect($normalized);
+        });
+
+        // Validasi header wajib
+        $firstRow = $rows->first();
+        $requiredHeaders = ['email', 'nama_peserta', 'jenis_keanggotaan', 'detail_anggota', 'kategori'];
+        $missing = [];
+        foreach ($requiredHeaders as $h) {
+            if (!collect($firstRow)->has($h)) {
+                $missing[] = $h;
+            }
+        }
+        if (!empty($missing)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Header wajib tidak ditemukan: <b>' . implode(', ', $missing) . '</b>. Dibutuhkan: Email, Nama Peserta, Jenis Keanggotaan, Detail Anggota, Kategori, Kelas'
+            ], 422);
+        }
+
+        // Batas aman
+        if ($rows->count() > 5000) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File terlalu besar. Maksimal 5.000 baris per import. File Anda: ' . $rows->count() . ' baris.'
+            ], 422);
+        }
+
+        $noKelasKategori = ['Bonsai', 'Jumbo'];
+        $validKategori = ['Cencu', 'Chingwa', 'Freemarking', 'Goldenbase', 'Klasik', 'Bonsai', 'Jumbo'];
+        $validKelas = ['A', 'B', 'C', 'D', 'E'];
+
+        $imported = 0;
+        $skipped = 0;
+        $createdUsers = 0;
+        $errors = [];
+
+        // Pre-load users untuk performa
+        $allEmails = $rows->map(function ($r) { return strtolower(trim((string) $r->get('email', ''))); })
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+        $userMap = User::whereIn(\DB::raw('LOWER(email)'), $allEmails)
+            ->get()
+            ->keyBy(function ($u) { return strtolower($u->email); });
+
+        \DB::beginTransaction();
+        try {
+            foreach ($rows as $rowIndex => $row) {
+                $rowNum = $rowIndex + 2;
+
+                $email = strtolower(trim((string) $row->get('email', '')));
+                $namaPeserta = trim((string) $row->get('nama_peserta', ''));
+                $jenisKeanggotaan = strtolower(trim((string) $row->get('jenis_keanggotaan', 'perorangan')));
+                $detailAnggota = trim((string) $row->get('detail_anggota', '-'));
+                $kategori = trim((string) $row->get('kategori', ''));
+                $kelas = trim((string) $row->get('kelas', ''));
+
+                // Skip baris kosong total
+                if (!$email && !$namaPeserta && !$kategori) continue;
+
+                // ── Validasi ──
+                if (!$email) { $errors[] = "Baris {$rowNum}: Email kosong."; $skipped++; continue; }
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) { $errors[] = "Baris {$rowNum}: Email tidak valid ({$email})."; $skipped++; continue; }
+                if (!$namaPeserta) { $errors[] = "Baris {$rowNum}: Nama peserta kosong."; $skipped++; continue; }
+                if (!$kategori) { $errors[] = "Baris {$rowNum}: Kategori kosong."; $skipped++; continue; }
+                if (!in_array($kategori, $validKategori)) { $errors[] = "Baris {$rowNum}: Kategori '{$kategori}' tidak valid."; $skipped++; continue; }
+
+                if (!in_array($jenisKeanggotaan, ['perorangan', 'team'])) {
+                    $jenisKeanggotaan = 'perorangan';
+                }
+                if (!$detailAnggota) $detailAnggota = '-';
+
+                if (in_array($kategori, $noKelasKategori)) {
+                    $kelas = null;
+                } else {
+                    if (!$kelas || !in_array(strtoupper($kelas), $validKelas)) {
+                        $errors[] = "Baris {$rowNum}: Kelas wajib (A-E) untuk kategori {$kategori}."; $skipped++; continue;
+                    }
+                    $kelas = strtoupper($kelas);
+                }
+
+                // ── Cari user ──
+                $user = $userMap->get($email);
+
+                if (!$user) {
+                    if ($autoCreateUser) {
+                        $user = User::create([
+                            'name'           => $namaPeserta,
+                            'email'          => $email,
+                            'password'       => bcrypt($defaultPassword),
+                            'plain_password' => $defaultPassword,
+                            'role'           => 'user',
+                        ]);
+                        $userMap[$email] = $user;
+                        $createdUsers++;
+                    } else {
+                        $errors[] = "Baris {$rowNum}: Email '{$email}' belum terdaftar sebagai user.";
+                        $skipped++;
+                        continue;
+                    }
+                }
+
+                // ── Create / update Peserta ──
+                $peserta = Peserta::firstOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'nama_peserta'      => $namaPeserta,
+                        'jenis_keanggotaan' => $jenisKeanggotaan,
+                        'detail_anggota'    => $detailAnggota,
+                    ]
+                );
+
+                if (!$peserta->wasRecentlyCreated) {
+                    $peserta->nama_peserta      = $namaPeserta;
+                    $peserta->jenis_keanggotaan = $jenisKeanggotaan;
+                    $peserta->detail_anggota    = $detailAnggota;
+                    $peserta->save();
+                }
+
+                // ── Create Ikan ──
+                Ikan::create([
+                    'peserta_id'        => $peserta->id,
+                    'nama_peserta'      => $peserta->nama_peserta,
+                    'detail_anggota'    => $peserta->detail_anggota,
+                    'jenis_keanggotaan' => $peserta->jenis_keanggotaan,
+                    'kategori'          => $kategori,
+                    'kelas'             => $kelas,
+                    'dibuat_oleh'       => 'admin_import',
+                ]);
+
+                $imported++;
+            }
+
+            \DB::commit();
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses import (baris ~' . ($rowNum ?? '?') . '): ' . $e->getMessage()
+            ], 500);
+        }
+
+        // Defer Google Sheets sync
+        if ($imported > 0) {
+            $sheetsSync = $this->sheetsSync;
+            app()->terminating(function () use ($sheetsSync) {
+                try {
+                    if ($sheetsSync->isReady()) {
+                        $sheetsSync->syncSemuaPeserta();
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Sheets sync gagal saat import Excel: ' . $e->getMessage());
+                }
+            });
+        }
+
+        $summary = "Berhasil import <b>{$imported}</b> data ikan.";
+        if ($createdUsers > 0) $summary .= " <b>{$createdUsers}</b> user baru dibuat.";
+        if ($skipped > 0) $summary .= " <b>{$skipped}</b> baris dilewati.";
+
+        return response()->json([
+            'success'       => true,
+            'message'       => $summary,
+            'imported'      => $imported,
+            'skipped'       => $skipped,
+            'created_users' => $createdUsers,
+            'errors'        => $errors,
+        ]);
+    }
+
+    public function downloadImportTemplate()
+    {
+        $data = [
+            ['Email', 'Nama Peserta', 'Jenis Keanggotaan', 'Detail Anggota', 'Kategori', 'Kelas'],
+            ['contoh@email.com', 'John Doe', 'perorangan', 'Jakarta', 'Cencu', 'A'],
+            ['team@email.com', 'Louhan Club', 'team', 'Louhan Fanatic Jakarta', 'Chingwa', 'B'],
+            ['bonsai@email.com', 'Bonsai Lover', 'perorangan', 'Surabaya', 'Bonsai', ''],
+        ];
+
+        return Excel::download(new ArrayExport($data), 'Template_Import_Peserta_Ikan.xlsx');
+    }
+
+        /* ═══════════════════════════════════════════
+       DEBUG: Cek data ikan per user (tanpa login sbg user)
+       ═══════════════════════════════════════════ */
+    public function debugUserIkans(Request $request)
+    {
+        $email = $request->query('email');
+        if (!$email) {
+            return response()->json(['error' => 'Parameter ?email= wajib diisi']);
+        }
+
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            return response()->json(['error' => 'User tidak ditemukan', 'email' => $email]);
+        }
+
+        $peserta = Peserta::where('user_id', $user->id)->first();
+
+        $result = [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
+            'peserta' => $peserta ? [
+                'id' => $peserta->id,
+                'user_id' => $peserta->user_id,
+                'nama_peserta' => $peserta->nama_peserta,
+                'jenis_keanggotaan' => $peserta->jenis_keanggotaan,
+                'detail_anggota' => $peserta->detail_anggota,
+            ] : null,
+            'ikan_count' => 0,
+            'ikans' => [],
+        ];
+
+        if ($peserta) {
+            $ikans = $peserta->ikans()->orderBy('created_at', 'desc')->get();
+            $result['ikan_count'] = $ikans->count();
+            $result['ikans'] = $ikans->map(function ($ikan) {
+                return [
+                    'id' => $ikan->id,
+                    'peserta_id' => $ikan->peserta_id,
+                    'nama_peserta' => $ikan->nama_peserta,
+                    'kategori' => $ikan->kategori,
+                    'kelas' => $ikan->kelas,
+                    'nomor_tank' => $ikan->nomor_tank,
+                    'dibuat_oleh' => $ikan->dibuat_oleh,
+                ];
+            })->toArray();
+        }
+
+        // Also check what getMyIkans would return
+        $myIkansResponse = [];
+        if ($peserta) {
+            $myIkansResponse = $peserta->ikans()->orderBy('created_at', 'desc')->get()->map(function($ikan) {
+                return [
+                    'id' => $ikan->id,
+                    'nama_peserta' => $ikan->nama_peserta,
+                    'kategori' => $ikan->kategori,
+                    'kelas' => $ikan->kelas,
+                    'nomor_tank' => $ikan->nomor_tank,
+                    'is_mvp' => $ikan->is_mvp ?? false,
+                    'dibuat_oleh' => $ikan->dibuat_oleh ?? 'user',
+                ];
+            })->toArray();
+        }
+
+        $result['getMyIkans_would_return'] = [
+            'ikans_count' => count($myIkansResponse),
+            'ikans' => $myIkansResponse,
+        ];
+
+        return response()->json($result, 200, [], JSON_PRETTY_PRINT);
     }
 }
