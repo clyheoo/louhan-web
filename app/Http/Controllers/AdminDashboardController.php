@@ -139,7 +139,7 @@ class AdminDashboardController extends Controller
             ->pluck('latest_id');
         $latestScoringList = Scoring::whereIn('id', $latestScorings)->get();
 
-        $sudahDinilai = $latestScoringList->where('edited_by_grand_juri', false)->count();
+        $sudahDinilai = $latestScoringList->count();
         $grandEdited  = $latestScoringList->where('edited_by_grand_juri', true)->count();
         $belumDinilai = max(0, $totalIkan - $latestScoringList->count());
 
