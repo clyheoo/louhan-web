@@ -605,7 +605,7 @@ function openBonusModal(idx){
             html+='<button class="btn-xs red" onclick="removeBonus(\''+bt.key+'\')" style="padding:5px 10px;"><i class="fas fa-times"></i> Hapus</button>';
             html+='</div>';
         } else {
-            html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:all .2s;" onclick="addBonus(\''+bt.key+'\',this)" onmouseover="this.style.borderColor=\'#fde68a\';this.style.background=\'#fffbeb\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'white\'">';
+            html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:all .2s;" onclick="addBonus(\''+bt.key+'\',this)" onmouseover="this.style.borderColor=\'rgba(245,158,11,.30)\';this.style.background=\'rgba(245,158,11,.06)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'transparent\'">';
             html+='<div style="display:flex;align-items:center;gap:10px;">';
             html+='<i class="fas '+bt.icon+'" style="color:var(--light);font-size:15px;"></i>';
             html+='<div><div style="font-size:12px;font-weight:700;color:var(--text);">'+bt.label+'</div><div style="font-size:10px;color:var(--light);">+100 point</div></div></div>';
