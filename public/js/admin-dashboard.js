@@ -1092,14 +1092,14 @@ function renderDetailView(p){
 
     /* ★ Ringkasan Nilai & Point */
     if(p.detail_list_per_juri&&p.detail_list_per_juri.length>0){
-        html+='<div style="margin-top:16px;border:2px solid #bfdbfe;border-radius:12px;overflow:hidden;">';
-        html+='<div style="padding:12px 16px;background:linear-gradient(135deg,var(--primary-lt),#dbeafe);border-bottom:2px solid #bfdbfe;display:flex;justify-content:space-between;align-items:center;">';
-        html+='<span style="font-size:13px;font-weight:800;color:var(--primary-dk);"><i class="fas fa-calculator" style="margin-right:6px;"></i>Ringkasan Nilai & Point</span>';
-        html+='<span style="font-size:11px;color:var(--primary);font-weight:700;">'+p.jumlah_juri+' juri</span>';
+        html+='<div style="margin-top:16px;border:2px solid rgba(124,58,237,.25);border-radius:12px;overflow:hidden;">';
+        html+='<div style="padding:12px 16px;background:linear-gradient(135deg,rgba(124,58,237,.10),rgba(124,58,237,.04));border-bottom:2px solid rgba(124,58,237,.25);display:flex;justify-content:space-between;align-items:center;">';
+        html+='<span style="font-size:13px;font-weight:800;color:#FFFFFF;"><i class="fas fa-calculator" style="margin-right:6px;color:var(--purple);"></i>Ringkasan Nilai & Point</span>';
+        html+='<span style="font-size:11px;color:var(--purple);font-weight:700;">'+p.jumlah_juri+' juri</span>';
         html+='</div>';
 
         html+='<table style="width:100%;border-collapse:collapse;font-size:12px;">';
-        html+='<thead><tr style="background:var(--primary-lt);"><th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #bfdbfe;">JURI</th><th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #bfdbfe;">TOTAL NILAI</th></tr></thead>';
+        html+='<thead><tr style="background:rgba(124,58,237,.08);"><th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(124,58,237,.20);">JURI</th><th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(124,58,237,.20);">TOTAL NILAI</th></tr></thead>';
         html+='<tbody>';
         var grandTotal=0;
         var rowNum=0;
@@ -1107,26 +1107,26 @@ function renderDetailView(p){
             if(!j.is_grand){
                 rowNum++;
                 grandTotal+=j.total_nilai;
-                var rowBg=rowNum%2===0?'#ffffff':'#ffffff';
-                html+='<tr style="background:'+rowBg+';"><td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #f1f5f9;">'+esc(j.juri_name)+'</td><td style="padding:10px 16px;font-weight:800;text-align:right;border-bottom:1px solid #f1f5f9;">'+j.total_nilai+'</td></tr>';
+                var rowBg=rowNum%2===0?'rgba(255,255,255,0.02)':'transparent';
+                html+='<tr style="background:'+rowBg+';"><td style="padding:10px 16px;font-weight:600;border-bottom:1px solid var(--bd-1);color:var(--text-hi);">'+esc(j.juri_name)+'</td><td style="padding:10px 16px;font-weight:800;text-align:right;border-bottom:1px solid var(--bd-1);color:var(--text-hi);">'+j.total_nilai+'</td></tr>';
             }
         });
-        html+='<tr style="background:#dbeafe;border-top:2px solid #bfdbfe;"><td style="padding:12px 16px;font-weight:800;color:var(--primary-dk);font-size:11px;text-transform:uppercase;letter-spacing:.3px;">Total Semua Juri</td>';
-        html+='<td style="padding:12px 16px;font-weight:900;text-align:right;color:var(--primary-dk);font-size:16px;">'+grandTotal+'</td></tr>';
+        html+='<tr style="background:rgba(124,58,237,.08);border-top:2px solid rgba(124,58,237,.25);"><td style="padding:12px 16px;font-weight:800;color:var(--purple);font-size:11px;text-transform:uppercase;letter-spacing:.3px;">Total Semua Juri</td>';
+        html+='<td style="padding:12px 16px;font-weight:900;text-align:right;color:var(--purple);font-size:16px;">'+grandTotal+'</td></tr>';
         html+='</tbody></table>';
 
-        html+='<div style="display:grid;grid-template-columns:1fr auto;border-top:2px solid #bfdbfe;">';
-        html+='<div style="padding:14px 16px;background:#f8fafc;display:flex;flex-direction:column;justify-content:center;gap:2px;">';
-        html+='<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Total Point</div>';
-        html+='<div style="font-size:10px;color:var(--light);">Dihitung dari '+p.jumlah_juri+' juri</div>';
+        html+='<div style="display:grid;grid-template-columns:1fr auto;border-top:2px solid rgba(124,58,237,.25);">';
+        html+='<div style="padding:14px 16px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;justify-content:center;gap:2px;">';
+        html+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Total Point</div>';
+        html+='<div style="font-size:10px;color:var(--text-muted);">Dihitung dari '+p.jumlah_juri+' juri</div>';
         html+='</div>';
-        html+='<div style="padding:14px 20px;background:#f8fafc;display:flex;align-items:center;justify-content:flex-end;min-width:160px;">';
+        html+='<div style="padding:14px 20px;background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:flex-end;min-width:160px;">';
         var finalPt=p.final_point??p.total_point??0;
         var basePt=p.total_point??0;
         var bonusPt=p.total_bonus??0;
         html+='<div style="text-align:right;">';
-        html+='<div style="font-size:22px;font-weight:900;color:#d97706;line-height:1;">'+finalPt+'</div>';
-        if(bonusPt>0) html+='<div style="font-size:9px;color:#16a34a;font-weight:700;margin-top:3px;">Dasar '+basePt+' + Bonus +'+bonusPt+'</div>';
+        html+='<div style="font-size:22px;font-weight:900;color:var(--gold-300);line-height:1;">'+finalPt+'</div>';
+        if(bonusPt>0) html+='<div style="font-size:9px;color:#34D399;font-weight:700;margin-top:3px;">Dasar '+basePt+' + Bonus +'+bonusPt+'</div>';
         html+='</div></div></div>';
 
         html+='</div>';
@@ -1135,24 +1135,24 @@ function renderDetailView(p){
     /* Point Breakdown */
     if(p.point_breakdown){
         var pb=p.point_breakdown;
-        html+='<div style="margin-top:16px;border:2px solid #fde68a;border-radius:12px;overflow:hidden;">';
-        html+='<div style="padding:10px 16px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border-bottom:1px solid #fde68a;display:flex;justify-content:space-between;align-items:center;">';
-        html+='<span style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;"><i class="fas fa-trophy" style="margin-right:6px;color:#f59e0b;"></i>SISTEM POINT</span>';
-        html+='<span style="font-size:11px;font-weight:700;color:#92400e;">Total: <b>'+pb.total+'</b> / 100</span>';
+        html+='<div style="margin-top:16px;border:2px solid rgba(245,158,11,.25);border-radius:12px;overflow:hidden;">';
+        html+='<div style="padding:10px 16px;background:linear-gradient(135deg,rgba(245,158,11,.10),rgba(245,158,11,.04));border-bottom:1px solid rgba(245,158,11,.20);display:flex;justify-content:space-between;align-items:center;">';
+        html+='<span style="font-size:11px;font-weight:800;color:#FFFFFF;text-transform:uppercase;"><i class="fas fa-trophy" style="margin-right:6px;color:var(--gold-400);"></i>SISTEM POINT</span>';
+        html+='<span style="font-size:11px;font-weight:700;color:var(--gold-300);">Total: <b>'+pb.total+'</b> / 100</span>';
         html+='</div><div style="padding:0;">';
         var katLabels={'overall':'Overall','head':'Head','face':'Face','body':'Body Shape','marking':'Marking','pearl':'Pearl','color':'Color','finnage':'Finnage'};
         for(var ki in katLabels){
             if(!pb[ki])continue;
             var kd=pb[ki];
-            html+='<div style="display:grid;grid-template-columns:120px 1fr 80px;align-items:center;padding:8px 14px;border-bottom:1px solid #fef3c7;font-size:11px;">';
-            html+='<span style="font-weight:700;color:#92400e;">'+katLabels[ki]+'</span>';
-            html+='<span style="color:var(--muted);font-size:10px;">'+kd.parts.join(' + ')+'</span>';
-            html+='<span style="text-align:right;font-weight:900;color:#d97706;">'+kd.point+'</span>';
+            html+='<div style="display:grid;grid-template-columns:120px 1fr 80px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--bd-1);font-size:11px;">';
+            html+='<span style="font-weight:700;color:#FFFFFF;">'+katLabels[ki]+'</span>';
+            html+='<span style="color:var(--text-mid);font-size:10px;">'+kd.parts.join(' + ')+'</span>';
+            html+='<span style="text-align:right;font-weight:900;color:var(--gold-300);">'+kd.point+'</span>';
             html+='</div>';
         }
-        html+='<div style="display:grid;grid-template-columns:1fr 80px;align-items:center;padding:10px 14px;font-size:12px;background:#fef9c3;">';
-        html+='<span style="font-weight:800;color:#92400e;">TOTAL POINT</span>';
-        html+='<span style="text-align:right;font-weight:900;font-size:16px;color:#d97706;">'+pb.total+'</span>';
+        html+='<div style="display:grid;grid-template-columns:1fr 80px;align-items:center;padding:10px 14px;font-size:12px;background:rgba(245,158,11,.08);">';
+        html+='<span style="font-weight:800;color:#FFFFFF;">TOTAL POINT</span>';
+        html+='<span style="text-align:right;font-weight:900;font-size:16px;color:var(--gold-300);">'+pb.total+'</span>';
         html+='</div></div></div>';
     }
 
