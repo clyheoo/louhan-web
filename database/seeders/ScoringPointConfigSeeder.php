@@ -23,7 +23,7 @@ class ScoringPointConfigSeeder extends Seeder
 
         $configs = [
             ['kategori' => 'Cencu',       'o' => 2.5,  'h' => 17.5, 'f' => 2.5,  'b' => 15,   'm' => 12.5, 'p' => 17.5, 'c' => 17.5, 'fn' => 15],
-            ['kategori' => 'Chginwa',     'o' => 2.5,  'h' => 20,   'f' => 2.5,  'b' => 20,   'm' => 12.5, 'p' => 12.5, 'c' => 15,   'fn' => 15],
+            ['kategori' => 'Chingwa',     'o' => 2.5,  'h' => 20,   'f' => 2.5,  'b' => 20,   'm' => 12.5, 'p' => 12.5, 'c' => 15,   'fn' => 15],
             ['kategori' => 'Freemarking', 'o' => 2.5,  'h' => 17.5, 'f' => 2.5,  'b' => 17.5, 'm' => 0,    'p' => 25,   'c' => 17.5, 'fn' => 17.5],
             ['kategori' => 'Goldenbase',  'o' => 2.5,  'h' => 20,   'f' => 2.5,  'b' => 17.5, 'm' => 0,    'p' => 15,   'c' => 25,   'fn' => 17.5],
             ['kategori' => 'Klasik',      'o' => 2.5,  'h' => 22.5, 'f' => 2.5,  'b' => 22.5, 'm' => 10,   'p' => 0,    'c' => 22.5, 'fn' => 17.5],

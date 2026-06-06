@@ -422,7 +422,23 @@ class GrandJuriController extends Controller
                 }
             }
 
-            $totalPointSemua = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+            // ★ Ambil defect data: prioritas Grand Juri edit, fallback ke scoring terbaru
+            $mergedDefect = [
+                'raw_head_penalty'    => ['0'],
+                'raw_face_penalty'    => ['0'],
+                'raw_body_penalty'    => ['0'],
+                'raw_finnage_penalty' => ['0'],
+            ];
+            $grandEdited = $scorings->first(function ($s) { return $s->edited_by_grand_juri; });
+            $defectSource = $grandEdited ?: $scorings->sortByDesc('updated_at')->first();
+            if ($defectSource) {
+                $mergedDefect['raw_head_penalty']    = $defectSource->raw_head_penalty    ?: ['0'];
+                $mergedDefect['raw_face_penalty']    = $defectSource->raw_face_penalty    ?: ['0'];
+                $mergedDefect['raw_body_penalty']    = $defectSource->raw_body_penalty    ?: ['0'];
+                $mergedDefect['raw_finnage_penalty'] = $defectSource->raw_finnage_penalty ?: ['0'];
+            }
+
+            $totalPointSemua = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail, $mergedDefect);
 
             return [
                 'id'                    => $ikan->id,
@@ -836,32 +852,47 @@ class GrandJuriController extends Controller
     public function getMvpIkan()
     {
         $ikans = Ikan::where('is_mvp', true)
-            ->whereHas('peserta', function($q) {
+            ->whereHas('peserta', function ($q) {
                 $q->where('is_mvp_submitted', true);
             })
-            ->with('peserta')
-            ->get()
-            ->groupBy('peserta_id');
+            ->with(['peserta', 'bonusPoints'])
+            ->get();
+
+        // ★ GROUP BY detail_anggota (Kota / Team)
+        $grouped = $ikans->groupBy(function ($ikan) {
+            $key = trim($ikan->detail_anggota ?? '');
+            return $key === '' ? '(Tanpa Kota/Team)' : $key;
+        });
 
         $data = [];
-        foreach ($ikans as $pesertaId => $ikanList) {
-            $peserta = $ikanList->first()->peserta;
-            $ikanDetails = $ikanList->map(function($ikan) {
+        foreach ($grouped as $detailAnggota => $ikanList) {
+            $ikanDetails = $ikanList->map(function ($ikan) {
                 return [
-                    'kategori' => $ikan->kategori,
-                    'kelas' => $ikan->kelas,
-                    'nomor_tank' => $ikan->nomor_tank ?? '-',
+                    'ikan_id'        => $ikan->id,
+                    'nama_peserta'   => $ikan->nama_peserta ?? '—',
+                    'kategori'       => $ikan->kategori,
+                    'kelas'          => $ikan->kelas,
+                    'nomor_tank'     => $ikan->nomor_tank ?? '-',
+                    'bonus_list'     => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                    'total_bonus'   => (int) $ikan->bonusPoints->sum('points'),
                 ];
             })->values()->toArray();
 
+            // Jumlah peserta unik dalam kota/team ini
+            $jumlahPeserta = $ikanList->pluck('peserta_id')->unique()->count();
+
             $data[] = [
-                'peserta_id' => $pesertaId,
-                'nama_peserta' => $ikanList->first()->nama_peserta ?? ($peserta->nama_peserta ?? '-'),
-                'detail_anggota' => $ikanList->first()->detail_anggota ?? '-',
-                'total_mvp' => $ikanList->count(),
-                'ikans' => $ikanDetails
+                'detail_anggota' => $detailAnggota,
+                'total_mvp'      => $ikanList->count(),
+                'jumlah_peserta' => $jumlahPeserta,
+                'ikans'          => $ikanDetails,
             ];
         }
+
+        // Urutkan abjad biar rapi
+        usort($data, function ($a, $b) {
+            return strcmp($a['detail_anggota'], $b['detail_anggota']);
+        });
 
         return response()->json($data);
     }
@@ -925,7 +956,16 @@ class GrandJuriController extends Controller
                     }
                 }
 
-                $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail);
+                // ★ Ambil defect terbaru
+                $defectSource = $scorings->first(function ($s) { return $s->edited_by_grand_juri; }) 
+                            ?? $scorings->sortByDesc('updated_at')->first();
+                $mergedDefect = [
+                    'raw_head_penalty'    => $defectSource ? ($defectSource->raw_head_penalty    ?: ['0']) : ['0'],
+                    'raw_face_penalty'    => $defectSource ? ($defectSource->raw_face_penalty    ?: ['0']) : ['0'],
+                    'raw_body_penalty'    => $defectSource ? ($defectSource->raw_body_penalty    ?: ['0']) : ['0'],
+                    'raw_finnage_penalty' => $defectSource ? ($defectSource->raw_finnage_penalty ?: ['0']) : ['0'],
+                ];
+                $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail, $mergedDefect);
                 $totalBonus = (int) $ikan->bonusPoints->sum('points');
                 $finalPoint = $totalPoint + $totalBonus;
 

@@ -755,7 +755,7 @@
                         <div class="table-wrap">
                             <table class="result-table">
                                 <thead>
-                                    <tr><th>PESERTA</th><th>ASAL / TEAM</th><th>JUMLAH IKAN MVP</th><th>STATUS</th><th>AKSI</th></tr>
+                                    <tr><th>KOTA / TEAM / CLUB</th><th>JUMLAH PESERTA</th><th>JUMLAH IKAN MVP</th><th>STATUS</th><th>AKSI</th></tr>
                                 </thead>
                                 <tbody id="tbodyMvp"></tbody>
                             </table>
@@ -1103,7 +1103,7 @@ function addBonusGj(type, el){
     var fd=new FormData();fd.append('_token',getCsrf());fd.append('ikan_id',currentBonusIkanId);fd.append('bonus_type',type);
     fetch('/api/grand-juri/add-bonus',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
     .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
-    .then(function(d){if(d.success){loadPointRanking();loadPeserta(document.getElementById('searchInput').value);document.getElementById('popupSuccessDesc').innerHTML='<b>'+esc(bonusTypes.find(function(b){return b.key===type;}).label)+'</b> (+100) berhasil ditambahkan.<br><span style="font-size:11px;color:var(--text-muted);">Ranking sudah diperbarui otomatis.</span>';showPopup('popupSuccess');closeModal('modalBonus');}else{document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';showPopup('popupError');}})
+    .then(function(d){if(d.success){loadPointRanking();loadPeserta(document.getElementById('searchInput').value);loadMvpGj();document.getElementById('popupSuccessDesc').innerHTML='<b>'+esc(bonusTypes.find(function(b){return b.key===type;}).label)+'</b> (+100) berhasil ditambahkan.<br><span style="font-size:11px;color:var(--text-muted);">Ranking sudah diperbarui otomatis.</span>';showPopup('popupSuccess');closeModal('modalBonus');}else{document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';showPopup('popupError');}})
     .catch(function(e){var msg=(e&&e.message)?e.message:'Kesalahan jaringan.';document.getElementById('popupErrorDesc').textContent=msg;showPopup('popupError');});
 }
 
@@ -1113,7 +1113,7 @@ function removeBonusGj(type){
         var fd=new FormData();fd.append('_token',getCsrf());fd.append('ikan_id',currentBonusIkanId);fd.append('bonus_type',type);
         fetch('/api/grand-juri/remove-bonus',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
         .then(function(r){return r.json();})
-        .then(function(d){if(d.success){loadPointRanking();loadPeserta(document.getElementById('searchInput').value);document.getElementById('popupSuccessDesc').textContent='Bonus berhasil dihapus. Ranking sudah diperbarui otomatis.';showPopup('popupSuccess');closeModal('modalBonus');}else{document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';showPopup('popupError');}})
+        .then(function(d){if(d.success){loadPointRanking();loadPeserta(document.getElementById('searchInput').value);loadMvpGj();document.getElementById('popupSuccessDesc').textContent='Bonus berhasil dihapus. Ranking sudah diperbarui otomatis.';showPopup('popupSuccess');closeModal('modalBonus');}else{document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';showPopup('popupError');}})
         .catch(function(){document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan.';showPopup('popupError');});
     });
 }
@@ -1178,7 +1178,7 @@ function loadPeserta(search){
             var td6=document.createElement('td');var totalHtml=p.total_nilai_semua>0?'<span class="total-cell">'+p.total_nilai_semua+'</span>':'<span class="total-cell zero">—</span>';if(p.jumlah_juri_yang_nilai>1)totalHtml+='<div style="font-size:9px;color:var(--text-muted);font-weight:600;"><i class="fas fa-users" style="font-size:8px;margin-right:2px;"></i>'+p.jumlah_juri_yang_nilai+' juri</div>';td6.innerHTML=totalHtml;tr.appendChild(td6);
             var td6b=document.createElement('td');var finalPt=p.final_point||p.total_point||0;var bonusPt=p.total_bonus||0;if(finalPt>0){var ptHtml='<div style="font-family:\'Fraunces\',serif;font-size:16px;font-weight:500;color:'+(bonusPt>0?'#34D399':'var(--primary)')+';letter-spacing:-.02em;">'+finalPt+'</div>';if(bonusPt>0)ptHtml+='<div style="font-size:9px;color:#34D399;font-weight:800;"><i class="fas fa-trophy" style="font-size:7px;"></i> +'+bonusPt+' bonus</div>';td6b.innerHTML=ptHtml;}else{td6b.innerHTML='<span style="font-size:12px;color:var(--text-muted);">—</span>';}tr.appendChild(td6b);
             var td7=document.createElement('td');if(p.is_locked){td7.innerHTML='<span class="badge badge-success"><i class="fas fa-lock" style="margin-right:3px;font-size:9px;"></i>NILAI FINAL</span>';}else if(p.grand_juri_nama){td7.innerHTML='<span class="badge badge-purple"><i class="fas fa-crown" style="margin-right:3px;font-size:9px;"></i>GRAND EDITED</span>';}else{td7.innerHTML='<span class="badge '+(p.status_class||'badge-success')+'">'+(p.status||'—').toUpperCase()+'</span>';}tr.appendChild(td7);
-            var td8=document.createElement('td');if(p.is_locked){td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm" style="background:var(--primary-light);color:var(--primary);border:1px solid rgba(34,211,238,.20);min-width:auto;" onclick="openBonusModalGj('+p.id+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i></button><button class="btn-sm btn-lock" style="background:var(--primary-light);color:var(--primary);border-color:rgba(34,211,238,.20);" onclick="kunciNilai('+p.id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></div>';}else{var canLock=p.submitted_juri_count>=p.total_juri_all;var lockHtml=canLock?'<button class="btn-sm btn-lock" onclick="kunciNilai('+p.id+')" title="Semua juri sudah kirim — siap dikunci"><i class="fas fa-lock-open"></i> Kunci</button>':'<button class="btn-sm btn-lock" style="opacity:.35;cursor:not-allowed;" disabled title="Masih ada juri yang belum mengirim"><i class="fas fa-lock-open"></i> Kunci</button>';td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm btn-edit" onclick="openEdit('+p.id+')"><i class="fas fa-pen-to-square"></i> Edit</button><button class="btn-sm" style="background:var(--warning-lt);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);min-width:auto;" onclick="openBonusModalGj('+p.id+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i></button>'+lockHtml+'</div>';}tr.appendChild(td8);tbody.appendChild(tr);
+            var td8=document.createElement('td');if(p.is_locked){td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm btn-lock" style="background:var(--primary-light);color:var(--primary);border-color:rgba(34,211,238,.20);" onclick="kunciNilai('+p.id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></div>';}else{var canLock=p.submitted_juri_count>=p.total_juri_all;var lockHtml=canLock?'<button class="btn-sm btn-lock" onclick="kunciNilai('+p.id+')" title="Semua juri sudah kirim — siap dikunci"><i class="fas fa-lock-open"></i> Kunci</button>':'<button class="btn-sm btn-lock" style="opacity:.35;cursor:not-allowed;" disabled title="Masih ada juri yang belum mengirim"><i class="fas fa-lock-open"></i> Kunci</button>';td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm btn-edit" onclick="openEdit('+p.id+')"><i class="fas fa-pen-to-square"></i> Edit</button>'+lockHtml+'</div>';}tr.appendChild(td8);tbody.appendChild(tr);
         });
     }).catch(function(){document.getElementById('tbodyPeserta').innerHTML='<tr><td colspan="9"><div class="empty-state">Gagal memuat data.</div></td></tr>';});
 }
@@ -1256,10 +1256,59 @@ function loadMvpGj(){
     fetch('/api/grand-juri/mvp-ikan',{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(data){
         var tb=document.getElementById('tbodyMvp');
         if(!data||data.length===0){tb.innerHTML='<tr><td colspan="5"><div class="empty-state"><i class="fas fa-star" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Belum ada peserta yang mengirimkan data MVP.</div></td></tr>';return;}
-        tb.innerHTML='';data.forEach(function(p,idx){var tr=document.createElement('tr');tr.innerHTML='<td style="font-weight:700;">'+esc(p.nama_peserta)+'</td><td style="font-size:12px;color:var(--text-muted);">'+esc(p.detail_anggota)+'</td><td><span class="badge badge-purple"><i class="fas fa-star" style="margin-right:3px;font-size:9px;color:var(--gold-500);"></i>'+p.total_mvp+' Ikan MVP</span></td><td><span class="badge badge-success"><i class="fas fa-paper-plane" style="margin-right:3px;font-size:9px;"></i>TERKIRIM</span></td><td><button class="btn-sm btn-detail" onclick="openMvpDetail('+idx+')"><i class="fas fa-eye"></i> Lihat Ikan</button></td>';tb.appendChild(tr);});window._mvpData=data;
-    }).catch(function(){document.getElementById('tbodyMvp').innerHTML='<tr><td colspan="5"><div class="empty-state">Gagal memuat data MVP.</div></td></tr>';});}
+        tb.innerHTML='';data.forEach(function(p,idx){
+            var tr=document.createElement('tr');
+            tr.innerHTML='<td style="font-weight:700;"><i class="fas fa-city" style="color:var(--purple);margin-right:6px;font-size:11px;"></i>'+esc(p.detail_anggota)+'</td>'
+                + '<td><span class="badge badge-purple"><i class="fas fa-users" style="margin-right:3px;font-size:9px;"></i>'+p.jumlah_peserta+' Peserta</span></td>'
+                + '<td><span class="badge badge-purple"><i class="fas fa-star" style="margin-right:3px;font-size:9px;color:var(--gold-500);"></i>'+p.total_mvp+' Ikan MVP</span></td>'
+                + '<td><span class="badge badge-success"><i class="fas fa-paper-plane" style="margin-right:3px;font-size:9px;"></i>TERKIRIM</span></td>'
+                + '<td><button class="btn-sm btn-detail" onclick="openMvpDetail('+idx+')"><i class="fas fa-eye"></i> Lihat Ikan</button></td>';
+            tb.appendChild(tr);
+        });
+        window._mvpData=data;
+        // ★ Catat ikan ke allIkanDataGJ supaya openBonusModalGj() bisa pakai
+        data.forEach(function(grp){
+            grp.ikans.forEach(function(ikan){
+                allIkanDataGJ[ikan.ikan_id]={
+                    id: ikan.ikan_id,
+                    nama_peserta: ikan.nama_peserta,
+                    kategori: ikan.kategori,
+                    kelas: ikan.kelas,
+                    nomor_tank: ikan.nomor_tank,
+                    total_point: 0,
+                    total_bonus: ikan.total_bonus||0,
+                    final_point: ikan.total_bonus||0,
+                    bonus_list: ikan.bonus_list||[]
+                };
+            });
+        });
+    }).catch(function(){document.getElementById('tbodyMvp').innerHTML='<tr><td colspan="5"><div class="empty-state">Gagal memuat data MVP.</div></td></tr>';});
+}
 
-function openMvpDetail(idx){var p=window._mvpData[idx];if(!p)return;var html='<div class="detail-note purple-note"><i class="fas fa-circle-info"></i><span>Peserta <strong>'+esc(p.nama_peserta)+'</strong> ('+esc(p.detail_anggota)+') mendaftarkan <strong>'+p.total_mvp+'</strong> ikan MVP.</span></div>';html+='<table class="gen-table"><thead><tr><th>NO</th><th>KATEGORI</th><th>KELAS</th><th>NO. TANK</th></tr></thead><tbody>';p.ikans.forEach(function(ikan,i){html+='<tr><td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td><td style="font-weight:600;">'+esc(ikan.kategori)+'</td><td>'+esc(ikan.kelas)+'</td><td style="font-weight:700;color:var(--purple);">'+(ikan.nomor_tank?'Tank '+ikan.nomor_tank:'—')+'</td></tr>';});html+='</tbody></table>';document.getElementById('genericTitle').innerHTML='<i class="fas fa-star" style="color:var(--gold-500);"></i> Detail Ikan MVP - '+esc(p.nama_peserta);document.getElementById('genericContent').innerHTML=html;document.getElementById('modalGeneric').classList.add('show');}
+function openMvpDetail(idx){
+    var p=window._mvpData[idx];if(!p)return;
+    var html='<div class="detail-note purple-note"><i class="fas fa-circle-info"></i><span>Kota/Team <strong>'+esc(p.detail_anggota)+'</strong> mendaftarkan <strong>'+p.total_mvp+'</strong> ikan MVP dari <strong>'+p.jumlah_peserta+'</strong> peserta. Klik tombol <i class="fas fa-trophy" style="color:var(--gold-500);"></i> untuk kelola bonus per ikan.</span></div>';
+    html+='<table class="gen-table"><thead><tr><th>NO</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>NO. TANK</th><th>BONUS</th><th>AKSI</th></tr></thead><tbody>';
+    p.ikans.forEach(function(ikan,i){
+        var bonusCount=(ikan.bonus_list||[]).length;
+        var bonusHtml=bonusCount>0
+            ? '<span class="badge badge-success"><i class="fas fa-trophy" style="margin-right:3px;font-size:9px;color:var(--gold-500);"></i>+'+ikan.total_bonus+' ('+bonusCount+')</span>'
+            : '<span style="font-size:11px;color:var(--text-muted);">—</span>';
+        html+='<tr>'
+            +'<td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td>'
+            +'<td style="font-weight:700;">'+esc(ikan.nama_peserta)+'</td>'
+            +'<td style="font-weight:600;">'+esc(ikan.kategori)+'</td>'
+            +'<td>'+esc(ikan.kelas||'-')+'</td>'
+            +'<td style="font-weight:700;color:var(--purple);">'+(ikan.nomor_tank?'Tank '+ikan.nomor_tank:'—')+'</td>'
+            +'<td>'+bonusHtml+'</td>'
+            +'<td><button class="btn-sm" style="background:var(--warning-lt);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);" onclick="openBonusModalGj('+ikan.ikan_id+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i> Bonus</button></td>'
+            +'</tr>';
+    });
+    html+='</tbody></table>';
+    document.getElementById('genericTitle').innerHTML='<i class="fas fa-star" style="color:var(--gold-500);"></i> Detail Ikan MVP - '+esc(p.detail_anggota);
+    document.getElementById('genericContent').innerHTML=html;
+    document.getElementById('modalGeneric').classList.add('show');
+}
 
 /* ================================================================ POINT RANKING ================================================================ */
 var pointScope='per_kategori_kelas';
