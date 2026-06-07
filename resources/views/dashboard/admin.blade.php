@@ -593,6 +593,25 @@
         scrollbar-width:thin;
         scrollbar-color:var(--glass-strong) transparent;
     }
+    /* ===== FIX: Alignment JUMLAH PESERTA di MVP Peserta Table ===== */
+    #mvpPesertaBody td.jp-cell {
+        text-align: center;
+        vertical-align: middle;
+    }
+    #mvpPesertaBody .jp-num {
+        font-size: 16px;
+        font-weight: 900;
+        color: var(--cyan-300);
+        line-height: 1;
+    }
+    #mvpPesertaBody .jp-label {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--text-mid);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-top: 3px;
+    }
     </style>
 </head>
 
@@ -1009,7 +1028,7 @@
                     <div class="card-body" style="padding:0;">
                         <div class="table-wrap" style="max-height:260px;border:none;border-radius:0;">
                             <table class="data-table" style="min-width:auto;">
-                                <thead><tr><th style="width:30px;">#</th><th>PESERTA</th><th>ASAL / TEAM</th><th style="text-align:center;">IKAN MVP</th><th style="text-align:center;">AKSI</th></tr></thead>
+                                <thead><tr><th style="width:30px;">#</th><th>ASAL / TEAM</th><th style="text-align:center;width:130px;">JUMLAH PESERTA</th><th style="text-align:center;">IKAN MVP</th><th style="text-align:center;">AKSI</th></tr></thead>
                                 <tbody id="mvpPesertaBody"><tr><td colspan="5"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div></td></tr></tbody>
                             </table>
                         </div>

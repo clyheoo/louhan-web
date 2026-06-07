@@ -2639,7 +2639,6 @@ function updateMvpToggleUI(isOpen) {
     }
 }
 
-/* ═══ LOAD & UNLOCK PESERTA MVP ═══ */
 function loadMvpPeserta() {
     fetch('/api/admin/mvp-submitted-peserta', {headers:{'Accept':'application/json'}})
     .then(function(r){ return r.json(); })
@@ -2651,20 +2650,24 @@ function loadMvpPeserta() {
             countEl.textContent = '0 peserta';
             return;
         }
-        countEl.textContent = data.length + ' peserta';
+        var uniqueNames = [];
+        for(var u = 0; u < data.length; u++){
+            if(uniqueNames.indexOf(data[u].nama_peserta) === -1) uniqueNames.push(data[u].nama_peserta);
+        }
+        countEl.textContent = uniqueNames.length + ' peserta';
         tb.innerHTML = '';
         for(var i = 0; i < data.length; i++) {
             (function(d, idx) {
                 var safeName = esc(d.nama_peserta).replace(/'/g, "\\'");
                 var tr = document.createElement('tr');
                 tr.innerHTML =
-                    '<td style="font-weight:600;color:var(--light);font-size:11px;">' + (idx + 1) + '</td>' +
-                    '<td style="font-weight:700;">' + esc(d.nama_peserta) + '</td>' +
-                    '<td style="font-size:11px;color:var(--muted);">' + esc(d.detail_anggota) + '</td>' +
-                    '<td style="text-align:center;"><span style="font-weight:800;color:#f59e0b;font-size:13px;">' + d.jumlah_mvp + '</span><span style="font-size:10px;color:var(--light);"> ikan</span></td>' +
-                    '<td style="text-align:center;">' +
-                        '<button class="btn-xs green" onclick="unlockMvpPeserta(' + d.peserta_id + ',\'' + safeName + '\')" title="Buka kunci agar peserta bisa ubah pilihan MVP"><i class="fas fa-lock-open"></i> Buka</button>' +
-                    '</td>';
+                    '<td style="font-weight:600;color:var(--light);font-size:11px;">' + (idx + 1) + '</td>'
+                    + '<td style="font-weight:700;"><i class="fas fa-city" style="color:#D8B4FE;margin-right:6px;font-size:11px;"></i>' + esc(d.detail_anggota) + '</td>'
+                    + '<td style="text-align:center;"><span class="role-badge role-grand"><i class="fas fa-users" style="margin-right:3px;font-size:9px;"></i>' + uniqueNames.length + ' Peserta</span></td>'
+                    + '<td style="text-align:center;"><span style="font-weight:800;color:#f59e0b;font-size:13px;">' + d.jumlah_mvp + '</span><span style="font-size:10px;color:var(--light);"> ikan</span></td>'
+                    + '<td style="text-align:center;">'
+                        + '<button class="btn-xs green" onclick="unlockMvpPeserta(' + d.peserta_id + ',\'' + safeName + '\')" title="Buka kunci agar peserta bisa ubah pilihan MVP"><i class="fas fa-lock-open"></i> Buka</button>'
+                    + '</td>';
                 tb.appendChild(tr);
             })(data[i], i);
         }

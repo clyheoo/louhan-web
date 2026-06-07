@@ -1285,7 +1285,7 @@ class AdminDashboardController extends Controller
                 ];
             })->values()->toArray();
 
-            $jumlahPeserta = $ikanList->pluck('peserta_id')->unique()->count();
+            $jumlahPeserta = $ikanList->pluck('nama_peserta')->unique()->count();
 
             $data[] = [
                 'detail_anggota'        => $detailAnggota,

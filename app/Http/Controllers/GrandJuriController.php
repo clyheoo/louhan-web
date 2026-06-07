@@ -968,7 +968,7 @@ public function getMvpIkan()
                 ];
             })->values()->toArray();
 
-            $jumlahPeserta = $ikanList->pluck('peserta_id')->unique()->count();
+            $jumlahPeserta = $ikanList->pluck('nama_peserta')->unique()->count();
 
             $data[] = [
                 'detail_anggota'        => $detailAnggota,
