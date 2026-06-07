@@ -728,12 +728,10 @@ public function syncPlotingTank()
         return count($rows);
     }
 
-        /* ═══════════════════════════════════════════
-       SHEET: NOMINASI FIX (FORMAT VERTIKAL)
-       A=No Urut, B=Kategori, C=Kelas, 
-       D=No Tank, E=Keterangan
+/* ═══════════════════════════════════════════
+       SHEET: NOMINASI FIX (LAYOUT HORIZONTAL — 3 TABEL PER BARIS)
+       Tanpa latar cyan, dibungkus border, gap 2 kolom & 2 baris
        ═══════════════════════════════════════════ */
-
     public function syncNominasiFix()
     {
         $sheetName = $this->sheetNames['nominasi_fix'];
@@ -743,146 +741,272 @@ public function syncPlotingTank()
             ->get()
             ->unique('ikan_id');
 
-        $this->sheets->clear($sheetName, 'A3:E500');
+        $sheetId = $this->sheets->getSheetId($sheetName);
+
+        // Clear area kerja (mulai row 3 ke bawah, jangan sentuh row 1-2)
+        $this->sheets->clear($sheetName, 'A3:Z2000');
+
+        // Unmerge area kerja
+        if ($sheetId !== null) {
+            try {
+                $this->sheets->formatCells([[
+                    'unmergeCells' => [
+                        'range' => [
+                            'sheetId'          => $sheetId,
+                            'startRowIndex'    => 2,    // row 3 (0-based: 2)
+                            'endRowIndex'      => 2000,
+                            'startColumnIndex' => 0,
+                            'endColumnIndex'   => 26,
+                        ]
+                    ]
+                ]]);
+            } catch (\Exception $e) {
+                Log::warning('Unmerge NOMINASI FIX gagal (non-kritis): ' . $e->getMessage());
+            }
+        }
 
         if ($nominasis->isEmpty()) return 0;
 
+        // ── Group berdasarkan kategori-kelas ──
         $groups = [];
         foreach ($nominasis as $n) {
             $ikan = $n->ikan;
-            // ★ Hanya skip jika ikan benar-benar tidak ada
             if (!$ikan) continue;
 
-            $kat = strtoupper($ikan->kategori ?? '');
+            $kat   = strtoupper($ikan->kategori ?? '');
             $kelas = $this->formatKelasNominasi($ikan->kategori, $ikan->kelas);
 
-            if ($kat === 'BONSAI') {
-                $groupKey = 'BONSAI';
-            } elseif ($kat === 'JUMBO') {
-                $groupKey = 'JUMBO';
-            } else {
-                $groupKey = $kat . ' ' . $kelas;
-            }
+            if ($kat === 'BONSAI')      $groupKey = 'BONSAI';
+            elseif ($kat === 'JUMBO')   $groupKey = 'JUMBO';
+            else                        $groupKey = $kat . ' ' . $kelas;
 
             $groups[$groupKey][] = [
-                'kategori'  => $kat,
-                'kelas'     => $kelas,
-                'no_tank'   => $ikan->nomor_tank ?? '',
+                'kategori' => $kat,
+                'kelas'    => $kelas,
+                'no_tank'  => $ikan->nomor_tank ?? '',
             ];
         }
-
         ksort($groups);
 
-        $batch = [];
-        $formatRequests = [];
-        $sheetId = $this->sheets->getSheetId($sheetName);
+        // ── Konfigurasi Layout Horizontal ──
+        $COLS_PER_TABLE = 5;     // NO URUT, KATEGORI, KELAS, NO TANK, KETERANGAN
+        $COL_GAP        = 2;     // 2 kolom gap antar tabel
+        $ROW_GAP        = 2;     // 2 baris gap antar baris tabel
+        $TABLES_PER_ROW = 3;     // 3 tabel per baris (5+2+5+2+5 = 19 kolom, A-S)
+        $START_ROW      = 3;
 
-        $cyanBg = [
-            'red'   => 0.0,
-            'green' => 1.0,
-            'blue'  => 1.0,
-            'alpha' => 1.0
-        ];
+        // Hitung kolom awal tiap tabel dalam baris
+        $tableColStarts = [];
+        $col = 0;
+        for ($i = 0; $i < $TABLES_PER_ROW; $i++) {
+            $tableColStarts[] = $col;
+            $col += $COLS_PER_TABLE + $COL_GAP;
+        }
 
-        $row = 3;
-
-        $formatRequests[] = [
-            'unmergeCells' => [
-                'range' => [
-                    'sheetId' => $sheetId,
-                    'startRowIndex' => 2,
-                    'endRowIndex' => 500,
-                    'startColumnIndex' => 0,
-                    'endColumnIndex' => 5
-                ]
-            ]
-        ];
-
+        // ── Build payload per grup ──
+        $tableData = [];
         foreach ($groups as $groupName => $items) {
-            // 1. Header Grup
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => $groupName];
-
-            $formatRequests[] = [
-                'mergeCells' => [
-                    'range' => [
-                        'sheetId' => $sheetId,
-                        'startRowIndex' => $row - 1, 'endRowIndex' => $row,
-                        'startColumnIndex' => 0, 'endColumnIndex' => 5
-                    ],
-                    'mergeType' => 'MERGE_ALL'
-                ]
-            ];
-            $formatRequests[] = [
-                'repeatCell' => [
-                    'range' => [
-                        'sheetId' => $sheetId,
-                        'startRowIndex' => $row - 1, 'endRowIndex' => $row,
-                        'startColumnIndex' => 0, 'endColumnIndex' => 5
-                    ],
-                    'cell' => [
-                        'userEnteredFormat' => [
-                            'horizontalAlignment' => 'CENTER',
-                            'backgroundColor'   => $cyanBg,
-                            'textFormat' => [
-                                'bold'     => true,
-                                'fontSize' => 17
-                            ]
-                        ]
-                    ],
-                    'fields' => 'userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)'
-                ]
-            ];
-            $row++;
-
-            // 2. Sub-header
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => 'NO URUT'];
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $row, 'value' => 'KATEGORI'];
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $row, 'value' => 'KELAS'];
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $row, 'value' => 'NO TANK'];
-            $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => 'KETERANGAN'];
-
-            $formatRequests[] = [
-                'repeatCell' => [
-                    'range' => [
-                        'sheetId' => $sheetId,
-                        'startRowIndex' => $row - 1, 'endRowIndex' => $row,
-                        'startColumnIndex' => 0, 'endColumnIndex' => 5
-                    ],
-                    'cell' => [
-                        'userEnteredFormat' => [
-                            'backgroundColor' => $cyanBg,
-                            'textFormat' => [
-                                'bold'     => false,
-                                'fontSize' => 10
-                            ]
-                        ]
-                    ],
-                    'fields' => 'userEnteredFormat(backgroundColor,textFormat)'
-                ]
-            ];
-            $row++;
-
-            // 3. Data Rows
             usort($items, fn($a, $b) => $a['no_tank'] <=> $b['no_tank']);
 
-            foreach ($items as $idx => $item) {
-                $batch[] = ['sheet' => $sheetName, 'cell' => 'A' . $row, 'value' => $idx + 1];
-                $batch[] = ['sheet' => $sheetName, 'cell' => 'B' . $row, 'value' => $item['kategori']];
-                $batch[] = ['sheet' => $sheetName, 'cell' => 'C' . $row, 'value' => $item['kelas']];
-                $batch[] = ['sheet' => $sheetName, 'cell' => 'D' . $row, 'value' => $item['no_tank']];
-                $batch[] = ['sheet' => $sheetName, 'cell' => 'E' . $row, 'value' => ''];
-                $row++;
+            // tinggi tabel = 1 (header grup) + 1 (sub-header) + jumlah data
+            $tableHeight = 2 + count($items);
+
+            $tableData[] = [
+                'header' => $groupName,
+                'items'  => $items,
+                'height' => $tableHeight,
+            ];
+        }
+
+        // ── PHASE 1: Build batch + format requests ──
+        $batch          = [];
+        $formatRequests = [];
+        $tableRowMap    = [];   // index → ['row' => row, 'cs' => colStart, 'h' => height]
+
+        $currentRow = $START_ROW;
+        $tableIdx   = 0;
+        $totalTable = count($tableData);
+
+        while ($tableIdx < $totalTable) {
+            $rowTables = [];
+            $maxHeight = 0;
+
+            // Susun N tabel per baris
+            for ($i = 0; $i < $TABLES_PER_ROW && $tableIdx < $totalTable; $i++) {
+                $tableRowMap[$tableIdx] = [
+                    'row' => $currentRow,
+                    'cs'  => $tableColStarts[$i],
+                    'h'   => $tableData[$tableIdx]['height'],
+                ];
+                $rowTables[] = ['data' => $tableData[$tableIdx], 'cs' => $tableColStarts[$i], 'idx' => $tableIdx];
+                $maxHeight   = max($maxHeight, $tableData[$tableIdx]['height']);
+                $tableIdx++;
             }
 
-            $row += 2;
+            // Tulis setiap tabel di baris ini
+            foreach ($rowTables as $rt) {
+                $data = $rt['data'];
+                $cs   = $rt['cs'];
+
+                // Baris 1 (header grup) — MERGED 5 kolom, bold, center, NO background
+                $batch[] = [
+                    'sheet' => $sheetName,
+                    'cell'  => $this->sheets->colToLetter($cs + 1) . $currentRow,
+                    'value' => $data['header'],
+                ];
+
+                // Baris 2 (sub-header) — bold, center
+                $subRow = $currentRow + 1;
+                $subHeaders = ['NO URUT', 'KATEGORI', 'KELAS', 'NO TANK', 'KETERANGAN'];
+                foreach ($subHeaders as $ci => $val) {
+                    $batch[] = [
+                        'sheet' => $sheetName,
+                        'cell'  => $this->sheets->colToLetter($cs + $ci + 1) . $subRow,
+                        'value' => $val,
+                    ];
+                }
+
+                // Baris 3+ (data)
+                $dataRow = $subRow + 1;
+                foreach ($data['items'] as $idx => $item) {
+                    $batch[] = ['sheet' => $sheetName, 'cell' => $this->sheets->colToLetter($cs + 1) . $dataRow, 'value' => $idx + 1];
+                    $batch[] = ['sheet' => $sheetName, 'cell' => $this->sheets->colToLetter($cs + 2) . $dataRow, 'value' => $item['kategori']];
+                    $batch[] = ['sheet' => $sheetName, 'cell' => $this->sheets->colToLetter($cs + 3) . $dataRow, 'value' => $item['kelas']];
+                    $batch[] = ['sheet' => $sheetName, 'cell' => $this->sheets->colToLetter($cs + 4) . $dataRow, 'value' => $item['no_tank']];
+                    $batch[] = ['sheet' => $sheetName, 'cell' => $this->sheets->colToLetter($cs + 5) . $dataRow, 'value' => ''];
+                    $dataRow++;
+                }
+
+                if ($sheetId !== null) {
+                    // Merge header grup
+                    $formatRequests[] = [
+                        'mergeCells' => [
+                            'range' => [
+                                'sheetId'          => $sheetId,
+                                'startRowIndex'    => $currentRow - 1,
+                                'endRowIndex'      => $currentRow,
+                                'startColumnIndex' => $cs,
+                                'endColumnIndex'   => $cs + $COLS_PER_TABLE,
+                            ],
+                            'mergeType' => 'MERGE_ALL',
+                        ],
+                    ];
+                    // Format header grup (bold besar, center, NO background)
+                    $formatRequests[] = [
+                        'repeatCell' => [
+                            'range' => [
+                                'sheetId'          => $sheetId,
+                                'startRowIndex'    => $currentRow - 1,
+                                'endRowIndex'      => $currentRow,
+                                'startColumnIndex' => $cs,
+                                'endColumnIndex'   => $cs + $COLS_PER_TABLE,
+                            ],
+                            'cell' => [
+                                'userEnteredFormat' => [
+                                    'horizontalAlignment' => 'CENTER',
+                                    'verticalAlignment'   => 'MIDDLE',
+                                    'textFormat'          => ['bold' => true, 'fontSize' => 13],
+                                ],
+                            ],
+                            'fields' => 'userEnteredFormat(horizontalAlignment,verticalAlignment,textFormat)',
+                        ],
+                    ];
+                    // Format sub-header (bold center)
+                    $formatRequests[] = [
+                        'repeatCell' => [
+                            'range' => [
+                                'sheetId'          => $sheetId,
+                                'startRowIndex'    => $subRow - 1,
+                                'endRowIndex'      => $subRow,
+                                'startColumnIndex' => $cs,
+                                'endColumnIndex'   => $cs + $COLS_PER_TABLE,
+                            ],
+                            'cell' => [
+                                'userEnteredFormat' => [
+                                    'horizontalAlignment' => 'CENTER',
+                                    'textFormat'          => ['bold' => true, 'fontSize' => 10],
+                                ],
+                            ],
+                            'fields' => 'userEnteredFormat(horizontalAlignment,textFormat)',
+                        ],
+                    ];
+                    // Center data rows
+                    $formatRequests[] = [
+                        'repeatCell' => [
+                            'range' => [
+                                'sheetId'          => $sheetId,
+                                'startRowIndex'    => $subRow,
+                                'endRowIndex'      => $subRow + count($data['items']),
+                                'startColumnIndex' => $cs,
+                                'endColumnIndex'   => $cs + $COLS_PER_TABLE,
+                            ],
+                            'cell' => [
+                                'userEnteredFormat' => [
+                                    'horizontalAlignment' => 'CENTER',
+                                ],
+                            ],
+                            'fields' => 'userEnteredFormat(horizontalAlignment)',
+                        ],
+                    ];
+                }
+            }
+
+            $currentRow += $maxHeight + $ROW_GAP;
         }
 
+        // ── PHASE 2: Tulis batch ──
         if (!empty($batch)) {
-            $this->sheets->batchUpdate($batch);
+            foreach (array_chunk($batch, 500) as $chunk) {
+                $this->sheets->batchUpdate($chunk);
+            }
         }
 
-        if (!empty($formatRequests)) {
-            $this->sheets->formatCells($formatRequests);
+        // ── PHASE 3: Apply format requests ──
+        if (!empty($formatRequests) && $sheetId !== null) {
+            foreach (array_chunk($formatRequests, 50) as $chunk) {
+                try {
+                    $this->sheets->formatCells($chunk);
+                } catch (\Exception $e) {
+                    Log::warning('Format NOMINASI FIX gagal (non-kritis): ' . $e->getMessage());
+                }
+            }
+        }
+
+        // ── PHASE 4: BORDER per tabel ──
+        if ($sheetId !== null) {
+            $borderStyle = [
+                'style' => 'SOLID',
+                'color' => ['red' => 0, 'green' => 0, 'blue' => 0],
+            ];
+            $borderRequests = [];
+            foreach ($tableRowMap as $idx => $info) {
+                $borderRequests[] = [
+                    'updateBorders' => [
+                        'range' => [
+                            'sheetId'          => $sheetId,
+                            'startRowIndex'    => $info['row'] - 1,
+                            'endRowIndex'      => $info['row'] - 1 + $info['h'],
+                            'startColumnIndex' => $info['cs'],
+                            'endColumnIndex'   => $info['cs'] + $COLS_PER_TABLE,
+                        ],
+                        'top'             => $borderStyle,
+                        'bottom'          => $borderStyle,
+                        'left'            => $borderStyle,
+                        'right'           => $borderStyle,
+                        'innerHorizontal' => $borderStyle,
+                        'innerVertical'   => $borderStyle,
+                    ],
+                ];
+            }
+            if (!empty($borderRequests)) {
+                foreach (array_chunk($borderRequests, 50) as $chunk) {
+                    try {
+                        $this->sheets->formatCells($chunk);
+                    } catch (\Exception $e) {
+                        Log::warning('Border NOMINASI FIX gagal: ' . $e->getMessage());
+                    }
+                }
+            }
         }
 
         return $nominasis->count();

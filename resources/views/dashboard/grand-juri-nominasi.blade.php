@@ -319,6 +319,29 @@
         </div>
     </div>
 
+    {{-- ★ MODUL LATE IKAN (Peserta Terlambat Daftar) --}}
+    <div id="late-section" class="g-card" style="margin-top:24px;display:none;">
+        <div class="g-card-head">
+            <div class="g-card-head-left">
+                <div class="g-card-head-icon gold"><i class="fas fa-clock"></i></div>
+                <div>
+                    <h3>Ikan Terlambat Daftar</h3>
+                    <p class="sub" id="late-sub">Menunggu keputusan Grand Juri</p>
+                </div>
+            </div>
+            <span id="late-count-badge" style="font-size:11px;font-weight:800;padding:5px 12px;border-radius:999px;background:var(--warning-lt);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);">0 tank</span>
+        </div>
+        <div id="late-body" class="g-card-body">
+            <div class="nom-group-body" id="late-grid" style="padding:0;"></div>
+        </div>
+    </div>
+    <div id="late-disabled-info" class="g-card" style="margin-top:24px;display:none;">
+        <div class="empty-state" style="padding:24px 20px;">
+            <i class="fas fa-lock" style="color:var(--text-faint);"></i>
+            <p style="margin-top:6px;" id="late-disabled-text">Modul ikan terlambat akan aktif setelah semua juri selesai nominasi.</p>
+        </div>
+    </div>
+
     {{-- Riwayat Review --}}
     <div class="g-card" style="margin-top:24px;">
         <div class="hist-head">
@@ -600,6 +623,7 @@ async function loadNominasi(silent) {
             } catch(e1) { /* skip group */ }
         }
         list.innerHTML = html;
+        loadLateIkan(); // ★ refresh late-ikan module setiap refresh nominasi
     } catch(e) {
         if (!silent) showWarningModal([{ msg: 'Gagal memuat data nominasi.' }]);
     }
@@ -661,9 +685,131 @@ async function loadHistory() {
     }
 }
 
+/* ═══ LATE IKAN MODULE ═══ */
+async function loadLateIkan() {
+    try {
+        var res = await apiFetch('/api/grand-juri/late-ikan');
+        if (!res || res.error) return;
+
+        var section = document.getElementById('late-section');
+        var disabled = document.getElementById('late-disabled-info');
+
+        if (!res.enabled) {
+            section.style.display = 'none';
+            // Tampilkan info saja kalau ada peserta yang belum selesai
+            if (res.juri_done < res.total_juri && res.total_juri > 0) {
+                document.getElementById('late-disabled-text').textContent =
+                    'Modul ikan terlambat aktif setelah semua juri selesai nominasi (' +
+                    res.juri_done + '/' + res.total_juri + ' juri sudah selesai).';
+                disabled.style.display = '';
+            } else {
+                disabled.style.display = 'none';
+            }
+            return;
+        }
+
+        disabled.style.display = 'none';
+
+        if (!res.ikans || res.ikans.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = '';
+        document.getElementById('late-count-badge').textContent = res.ikans.length + ' tank';
+        document.getElementById('late-sub').textContent = 'Semua juri sudah selesai — review ikan yang baru saja didaftarkan';
+
+        var html = '';
+        res.ikans.forEach(function(ikan) {
+            var kelasHtml = '';
+            if (ikan.kelas && !isNoKelasGJ(ikan.kategori)) {
+                kelasHtml = '<div class="tank-badge kelas">Kelas ' + escH(ikan.kelas) + '</div>';
+            }
+            html += '<div id="late-card-' + ikan.ikan_id + '" class="tank-card">';
+            html += '<div class="tank-num" style="background:linear-gradient(135deg,var(--gold-600),var(--gold-500));box-shadow:0 4px 12px -3px rgba(245,158,11,.4);">' + (ikan.nomor_tank || '?') + '</div>';
+            html += '<div class="tank-badges"><div class="tank-badge kat">' + escH(ikan.kategori || '-') + '</div>' + kelasHtml + '</div>';
+            html += '<div class="tank-name">' + escH(ikan.nama_peserta || 'Unknown') + '</div>';
+            html += '<div class="tank-actions">';
+            html += '<button onclick="approveLateIkan(this, ' + ikan.ikan_id + ')" class="tank-btn acc"><i class="fas fa-check"></i> ACC</button>';
+            html += '<button onclick="rejectLateIkan(' + ikan.ikan_id + ', ' + (ikan.nomor_tank || 0) + ')" class="tank-btn rej"><i class="fas fa-times"></i> Tolak</button>';
+            html += '</div></div>';
+        });
+        document.getElementById('late-grid').innerHTML = html;
+    } catch(e) { /* silent */ }
+}
+
+async function approveLateIkan(btn, ikanId) {
+    btn.disabled = true;
+    btn.innerHTML = '<div style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;"></div>';
+    try {
+        var res = await apiFetch('/api/grand-juri/late-ikan-review', {
+            method: 'POST',
+            body: JSON.stringify({ ikan_id: ikanId, action: 'approve' })
+        });
+        if (res.success) {
+            var card = document.getElementById('late-card-' + ikanId);
+            if (card) {
+                card.style.transition = 'all .3s ease';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(.92)';
+                setTimeout(function(){ card.remove(); loadLateIkan(); }, 300);
+            }
+            showSuccessPopup('Disetujui', res.message);
+            loadHistory();
+        } else {
+            showWarningModal([{ msg: res.message }]);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> ACC';
+        }
+    } catch(e) {
+        showWarningModal([{ msg: 'Gagal memproses. Periksa koneksi.' }]);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> ACC';
+    }
+}
+
+var pendingLateRejectId = null;
+function rejectLateIkan(ikanId, nomorTank) {
+    pendingLateRejectId = ikanId;
+    document.getElementById('confirmMessage').textContent = 'Tolak ikan terlambat Tank ' + nomorTank + '?';
+    document.getElementById('rejectReason').value = '';
+    // Override tombol konfirmasi
+    var okBtn = document.getElementById('confirmOkBtn');
+    okBtn.setAttribute('onclick', 'executeLateReject()');
+    document.getElementById('confirmModal').classList.add('show');
+}
+
+async function executeLateReject() {
+    if (!pendingLateRejectId) return;
+    var catatan = document.getElementById('rejectReason').value.trim();
+    document.getElementById('confirmModal').classList.remove('show');
+    var targetId = pendingLateRejectId;
+    pendingLateRejectId = null;
+    // Restore tombol untuk regular reject lagi
+    document.getElementById('confirmOkBtn').setAttribute('onclick', 'executeReject()');
+
+    try {
+        var res = await apiFetch('/api/grand-juri/late-ikan-review', {
+            method: 'POST',
+            body: JSON.stringify({ ikan_id: targetId, action: 'reject', catatan: catatan })
+        });
+        if (res.success) {
+            var card = document.getElementById('late-card-' + targetId);
+            if (card) {
+                card.style.transition = 'all .3s ease';
+                card.style.opacity = '0';
+                setTimeout(function(){ card.remove(); loadLateIkan(); }, 300);
+            }
+            showSuccessPopup('Ditolak', res.message);
+            loadHistory();
+        } else { showWarningModal([{ msg: res.message }]); }
+    } catch(e) { showWarningModal([{ msg: 'Gagal memproses.' }]); }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     loadNominasi();
     loadHistory();
+    loadLateIkan();
 });
 
 window.addEventListener('unhandledrejection', function(e) { e.preventDefault(); });

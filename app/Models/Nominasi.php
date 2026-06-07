@@ -16,10 +16,12 @@ class Nominasi extends Model
         'reviewed_by',
         'reviewed_at',
         'catatan',
+        'is_late_addition',
     ];
 
     protected $casts = [
-        'reviewed_at' => 'datetime',
+        'reviewed_at'      => 'datetime',
+        'is_late_addition' => 'boolean',
     ];
 
     public function juri()

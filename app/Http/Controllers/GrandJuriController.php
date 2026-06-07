@@ -116,6 +116,7 @@ class GrandJuriController extends Controller
     {
         try {
             $nominations = Nominasi::where('status', 'pending')
+                ->where('is_late_addition', false)
                 ->with(['juri', 'ikan.peserta'])
                 ->orderByDesc('created_at')
                 ->get();
@@ -281,6 +282,144 @@ class GrandJuriController extends Controller
             'rejected'       => $rejected,
             'total_approved' => $nominations->where('status', 'approved')->count(),
             'total_rejected' => $nominations->where('status', 'rejected')->count(),
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       LATE IKAN — DAFTAR IKAN YANG TERLAMBAT DAFTAR
+       Hanya aktif setelah SEMUA juri sudah punya ≥1 nominasi approved.
+       ═══════════════════════════════════════════ */
+    public function getLateIkan()
+    {
+        try {
+            $totalJuri = \App\Models\User::where('role', 'juri')->count();
+
+            // Juri yang sudah punya minimal 1 nominasi approved (regular, bukan late_addition)
+            $juriDoneIds = Nominasi::where('status', 'approved')
+                ->where('is_late_addition', false)
+                ->whereHas('juri', function ($q) {
+                    $q->where('role', 'juri');
+                })
+                ->distinct('juri_id')
+                ->pluck('juri_id')
+                ->toArray();
+
+            $allDone = $totalJuri > 0 && count($juriDoneIds) >= $totalJuri;
+
+            if (!$allDone) {
+                return response()->json([
+                    'enabled'       => false,
+                    'total_juri'    => $totalJuri,
+                    'juri_done'     => count($juriDoneIds),
+                    'ikans'         => [],
+                    'message'       => 'Modul aktif setelah semua juri selesai nominasi (' 
+                                       . count($juriDoneIds) . '/' . $totalJuri . ').',
+                ]);
+            }
+
+            // Ikan yang belum pernah masuk Nominasi APAPUN (pending/approved/rejected)
+            $ikanIdsInNominasi = Nominasi::distinct('ikan_id')->pluck('ikan_id')->toArray();
+
+            $lateIkans = Ikan::whereNotNull('nomor_tank')
+                ->whereNotIn('id', $ikanIdsInNominasi)
+                ->with('peserta')
+                ->orderBy('nomor_tank')
+                ->get()
+                ->map(function ($ikan) {
+                    return [
+                        'ikan_id'        => $ikan->id,
+                        'nomor_tank'     => $ikan->nomor_tank,
+                        'kategori'       => $ikan->kategori,
+                        'kelas'          => $ikan->kelas,
+                        'nama_peserta'   => $ikan->nama_peserta ?? 'Unknown',
+                        'detail_anggota' => $ikan->detail_anggota ?? '—',
+                        'created_at'     => $ikan->created_at ? $ikan->created_at->toISOString() : null,
+                    ];
+                });
+
+            return response()->json([
+                'enabled'    => true,
+                'total_juri' => $totalJuri,
+                'juri_done'  => count($juriDoneIds),
+                'ikans'      => $lateIkans,
+                'total'      => $lateIkans->count(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'enabled' => false,
+                'ikans'   => [],
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /* ═══════════════════════════════════════════
+       LATE IKAN — REVIEW (ACC / TOLAK)
+       ═══════════════════════════════════════════ */
+    public function reviewLateIkan(Request $request)
+    {
+        $ikanId  = $request->json('ikan_id');
+        $action  = $request->json('action');
+        $catatan = $request->json('catatan', '');
+
+        if (!$ikanId || !in_array($action, ['approve', 'reject'])) {
+            return response()->json(['success' => false, 'message' => 'Data tidak valid.'], 422);
+        }
+
+        $ikan = Ikan::find($ikanId);
+        if (!$ikan || !$ikan->nomor_tank) {
+            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan.'], 404);
+        }
+
+        // Cegah duplikasi: jika sudah ada Nominasi apapun untuk ikan ini, bukan late lagi
+        $alreadyExists = Nominasi::where('ikan_id', $ikanId)->exists();
+        if ($alreadyExists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ikan ini sudah pernah masuk Nominasi.',
+            ], 409);
+        }
+
+        $nominasi = Nominasi::create([
+            'juri_id'          => auth()->id(), // Grand Juri sebagai juri_id penanda
+            'ikan_id'          => $ikanId,
+            'status'           => $action === 'approve' ? 'approved' : 'rejected',
+            'reviewed_by'      => auth()->id(),
+            'reviewed_at'      => now(),
+            'catatan'          => $catatan ?: 'Ditambahkan langsung oleh Grand Juri (peserta terlambat daftar)',
+            'is_late_addition' => true,
+        ]);
+
+        $nomorTank = $ikan->nomor_tank;
+
+        // Auto-sync ke 4 sheet kalau approve
+        if ($action === 'approve') {
+            try {
+                if ($this->sheetsSync->isReady()) {
+                    $this->sheetsSync->syncSemuaNominasi();
+                    $this->sheetsSync->syncSemuaPilNom();
+                    $this->sheetsSync->syncHasilNominasi();
+                    $this->sheetsSync->syncNominasiFix();
+                }
+            } catch (\Exception $e) {
+                \Log::error('Auto-sync late-ikan gagal: ' . $e->getMessage());
+            }
+        } else {
+            // Reject: tetap sync HASIL NOMINASI saja (history)
+            try {
+                if ($this->sheetsSync->isReady()) {
+                    $this->sheetsSync->syncHasilNominasi();
+                }
+            } catch (\Exception $e) {
+                \Log::error('Auto-sync late-ikan reject gagal: ' . $e->getMessage());
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $action === 'approve'
+                ? 'Tank ' . $nomorTank . ' (terlambat) DISETUJUI.'
+                : 'Tank ' . $nomorTank . ' (terlambat) DITOLAK.',
         ]);
     }
 
