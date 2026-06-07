@@ -22,7 +22,17 @@ class DaftarIkanSheet implements FromArray, WithTitle, WithStyles, ShouldAutoSiz
         $rows = [['NO', 'NAMA PESERTA', 'KATEGORI', 'KELAS', 'NO TANK', 'JENIS KEANGGOTAAN', 'DETAIL ANGGOTA (TEAM)', 'STATUS NILAI']];
         $no = 1;
         foreach ($ikans as $ikan) {
-            $rows[] = [$no++, $ikan->peserta->nama_peserta ?? '—', strtoupper($ikan->kategori), $ikan->kelas ?? '—', $ikan->nomor_tank ?? '—', $ikan->peserta->jenis_keanggotaan ?? '—', $ikan->peserta->detail_anggota ?? '—', $ikan->is_locked ? 'TERKUNCI (FINAL)' : 'Belum Dikunci'];
+            $p = $ikan->peserta;
+            $rows[] = [
+                $no++,
+                $ikan->nama_peserta      ?? $p?->nama_peserta      ?? '—',
+                strtoupper($ikan->kategori),
+                $ikan->kelas ?? '—',
+                $ikan->nomor_tank ?? '—',
+                $ikan->jenis_keanggotaan ?? $p?->jenis_keanggotaan ?? '—',
+                $ikan->detail_anggota    ?? $p?->detail_anggota    ?? '—',
+                $ikan->is_locked ? 'TERKUNCI (FINAL)' : 'Belum Dikunci',
+            ];
         }
         return $rows;
     }

@@ -216,11 +216,12 @@ class NilaiMurniJuriSheet implements WithTitle, WithEvents
                     $tankStr = $scoring->ikan->nomor_tank ?? '-';
                     $sheet->setCellValue("C{$row}", $tankStr);
 
-                    // Kolom D: PESERTA / TEAM
-                    $pesertaName = $scoring->ikan->peserta->nama_peserta ?? '-';
-                    $team = $scoring->ikan->peserta->detail_anggota ?? '-';
-                    $kat = strtoupper($scoring->ikan->kategori ?? '-');
-                    $kelas = $scoring->ikan->kelas ?? '-';
+                    // Kolom D: PESERTA / TEAM (pakai snapshot ikan, bukan data Peserta terkini)
+                    $ikanRef     = $scoring->ikan;
+                    $pesertaName = $ikanRef->nama_peserta   ?? $ikanRef?->peserta?->nama_peserta   ?? '-';
+                    $team        = $ikanRef->detail_anggota ?? $ikanRef?->peserta?->detail_anggota ?? '-';
+                    $kat         = strtoupper($ikanRef->kategori ?? '-');
+                    $kelas       = $ikanRef->kelas ?? '-';
                     $sheet->setCellValue("D{$row}", "{$pesertaName} ({$kat}-{$kelas})\n{$team}");
 
                     // Nilai per komponen

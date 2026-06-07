@@ -282,7 +282,8 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                             $isLocked = $ikan ? ($ikan->is_locked ?? false) : false;
 
                             $sheet->setCellValue("A{$row}", $no++);
-                            $sheet->setCellValue("B{$row}", $peserta->nama_peserta ?? '-');
+                            // ★ snapshot ikan, bukan Peserta terkini
+                            $sheet->setCellValue("B{$row}", $ikan?->nama_peserta ?? $peserta?->nama_peserta ?? '-');
                             $sheet->setCellValue("C{$row}", $ikan->kategori ?? '-');
                             $sheet->setCellValue("D{$row}", $s->kelas ?? ($ikan->kelas ?? '-'));
                             $sheet->setCellValue("E{$row}", $ikan->nomor_tank ? 'Tank ' . $ikan->nomor_tank : '-');
@@ -342,7 +343,7 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                     $row++;
 
                     $edits = GrandJuriEdit::where('grand_juri_id', $gj->id)
-                        ->with('peserta')
+                        ->with(['peserta', 'scoring.ikan'])  // ★ load ikan via scoring untuk snapshot
                         ->orderBy('created_at', 'desc')
                         ->get();
 
@@ -379,7 +380,11 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                             }
 
                             $sheet->setCellValue("A{$row}", $no++);
-                            $sheet->setCellValue("B{$row}", $e->peserta->nama_peserta ?? '-');
+                            // ★ Snapshot ikan saat diedit; fallback ke Peserta terkini bila tidak ada
+                            $snapshotName = $e->scoring?->ikan?->nama_peserta
+                                         ?? $e->peserta?->nama_peserta
+                                         ?? '-';
+                            $sheet->setCellValue("B{$row}", $snapshotName);
                             $sheet->setCellValue("C{$row}", $e->total_sebelum ?? 0);
                             $sheet->setCellValue("D{$row}", $e->total_sesudah ?? 0);
                             $sheet->setCellValue("E{$row}", $selisihStr);

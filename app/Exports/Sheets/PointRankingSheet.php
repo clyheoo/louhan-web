@@ -208,11 +208,11 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
         $totalDeductionPercent = $defectDetails['total_deduction_percent'] ?? 0;
 
         return [
-            'nama_peserta' => $ikan->peserta->nama_peserta ?? '—',
+            'nama_peserta' => $ikan->nama_peserta   ?? $ikan->peserta?->nama_peserta   ?? '—',
             'kategori' => $ikan->kategori, 
             'kelas' => $ikan->kelas ?? '—',
             'nomor_tank' => $ikan->nomor_tank, 
-            'asal' => $ikan->peserta->detail_anggota ?? '—',
+            'asal' => $ikan->detail_anggota         ?? $ikan->peserta?->detail_anggota ?? '—',
             'jml_juri' => $scorings->count(), 
             'comp_points' => $compPoints,
             'cat_subs' => $catSubs, 

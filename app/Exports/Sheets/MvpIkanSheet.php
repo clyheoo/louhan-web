@@ -123,14 +123,18 @@ class MvpIkanSheet implements WithTitle, WithEvents
                     $p = $ikan->peserta;
                     $m = $this->calculateMetrics($ikan);
 
-                    // Logika: Jika peserta sama dengan baris sebelumnya, kosongkan Nama & Detail
+                    // ★ Snapshot per ikan (1 email bisa pakai >1 identitas)
+                    // Kunci grouping = kombinasi snapshot, supaya identitas yang berbeda
+                    // tetap tampil berurutan tanpa di-merge jadi 1.
+                    $snapshotKey = ($ikan->nama_peserta ?? '-') . '|' . ($ikan->detail_anggota ?? '-');
+
                     $namaPeserta = '';
                     $detailAnggota = '';
 
-                    if ($ikan->peserta_id !== $lastPesertaId) {
-                        $namaPeserta = $p->nama_peserta ?? '-';
-                        $detailAnggota = $p->detail_anggota ?? '-';
-                        $lastPesertaId = $ikan->peserta_id;
+                    if ($snapshotKey !== ($lastPesertaId ?? null)) {
+                        $namaPeserta   = $ikan->nama_peserta   ?? $p?->nama_peserta   ?? '-';
+                        $detailAnggota = $ikan->detail_anggota ?? $p?->detail_anggota ?? '-';
+                        $lastPesertaId = $snapshotKey; // reuse variable name tetap, tapi isinya snapshot key
                     }
 
                     $rowData = [
@@ -175,14 +179,17 @@ class MvpIkanSheet implements WithTitle, WithEvents
                     $startDataRow = $row;
 
                     foreach ($groupedPeserta as $list) {
-                        $p = $list->first()->peserta;
+                        $firstIkan = $list->first();
+                        $p         = $firstIkan->peserta;
                         
                         $totalPoint = 0;
                         foreach($list as $i) { $totalPoint += $this->calculateMetrics($i)['total']; }
 
+                        // ★ Pakai snapshot dari ikan pertama di grup (1 peserta bisa pakai >1 identitas;
+                        //   detail beda per ikan tetap kelihatan jelas di Tabel 1)
                         $sheet->setCellValue("A{$row}", $no++);
-                        $sheet->setCellValue("B{$row}", $p->nama_peserta ?? '-');
-                        $sheet->setCellValue("C{$row}", $p->detail_anggota ?? '-');
+                        $sheet->setCellValue("B{$row}", $firstIkan->nama_peserta   ?? $p?->nama_peserta   ?? '-');
+                        $sheet->setCellValue("C{$row}", $firstIkan->detail_anggota ?? $p?->detail_anggota ?? '-');
                         $sheet->setCellValue("D{$row}", $list->count());
                         $sheet->setCellValue("E{$row}", $totalPoint);
                         $row++;
@@ -215,14 +222,17 @@ class MvpIkanSheet implements WithTitle, WithEvents
                     $startDataRow = $row;
 
                     foreach ($groupedPeserta as $list) {
-                        $p = $list->first()->peserta;
+                        $firstIkan = $list->first();
+                        $p         = $firstIkan->peserta;
                         
                         $totalPoint = 0;
                         foreach($list as $i) { $totalPoint += $this->calculateMetrics($i)['total']; }
 
+                        // ★ Pakai snapshot dari ikan pertama di grup (1 peserta bisa pakai >1 identitas;
+                        //   detail beda per ikan tetap kelihatan jelas di Tabel 1)
                         $sheet->setCellValue("A{$row}", $no++);
-                        $sheet->setCellValue("B{$row}", $p->nama_peserta ?? '-');
-                        $sheet->setCellValue("C{$row}", $p->detail_anggota ?? '-');
+                        $sheet->setCellValue("B{$row}", $firstIkan->nama_peserta   ?? $p?->nama_peserta   ?? '-');
+                        $sheet->setCellValue("C{$row}", $firstIkan->detail_anggota ?? $p?->detail_anggota ?? '-');
                         $sheet->setCellValue("D{$row}", $list->count());
                         $sheet->setCellValue("E{$row}", $totalPoint);
                         $row++;

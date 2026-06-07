@@ -81,10 +81,16 @@ class NominasiSheet implements WithTitle, WithEvents
                     ->orderBy('created_at')
                     ->get();
 
-                // Group by peserta
+                // ★ Group by SNAPSHOT (nama_peserta + detail_anggota dari tabel ikans),
+                //   bukan peserta_id. Tujuannya: kalau 1 user pakai >1 identitas saat
+                //   daftar ikan, masing-masing identitas tampil sebagai group sendiri
+                //   dengan nama yang konsisten — bukan menumpuk jadi "nama terakhir".
                 $groupedByPeserta = $nominations->groupBy(function ($n) {
-                    $pesertaId = optional($n->ikan)->peserta_id;
-                    return $pesertaId ?? 'unknown_' . $n->id;
+                    $ikan = $n->ikan;
+                    if (!$ikan) return 'unknown_' . $n->id;
+                    $nama   = $ikan->nama_peserta   ?? $ikan->peserta?->nama_peserta   ?? '(tanpa nama)';
+                    $detail = $ikan->detail_anggota ?? $ikan->peserta?->detail_anggota ?? '(tanpa team)';
+                    return $nama . ' || ' . $detail;
                 })->sortKeys();
 
                 // Separate for summary
@@ -97,11 +103,11 @@ class NominasiSheet implements WithTitle, WithEvents
                 // ═══════════════════════════════════════════
                 // 3. TABEL PER PESERTA
                 // ═══════════════════════════════════════════
-                foreach ($groupedByPeserta as $pesertaId => $items) {
-                    $firstItem = $items->first();
-                    $peserta = optional($firstItem->ikan)->peserta;
-                    $pesertaName = $peserta ? $peserta->nama_peserta : 'Unknown';
-                    $detailAnggota = $peserta ? ($peserta->detail_anggota ?? '-') : '-';
+                foreach ($groupedByPeserta as $snapshotKey => $items) {
+                    $firstItem      = $items->first();
+                    $firstIkan      = $firstItem->ikan;
+                    $pesertaName    = $firstIkan?->nama_peserta   ?? $firstIkan?->peserta?->nama_peserta   ?? 'Unknown';
+                    $detailAnggota  = $firstIkan?->detail_anggota ?? $firstIkan?->peserta?->detail_anggota ?? '-';
 
                     // Hitung jumlah diterima & ditolak untuk peserta ini
                     $jmlApproved = $items->where('status', 'approved')->count();
@@ -179,12 +185,12 @@ class NominasiSheet implements WithTitle, WithEvents
                 $startDataRow = $row;
 
                 foreach ($approvedList as $n) {
-                    $ikan = $n->ikan;
-                    $peserta = $ikan ? $ikan->peserta : null;
+                    $ikan    = $n->ikan;
+                    $peserta = $ikan?->peserta;
 
                     $sheet->setCellValue("A{$row}", $no++);
-                    $sheet->setCellValue("B{$row}", $peserta ? $peserta->nama_peserta : '-');
-                    $sheet->setCellValue("C{$row}", $peserta ? ($peserta->detail_anggota ?? '-') : '-');
+                    $sheet->setCellValue("B{$row}", $ikan?->nama_peserta   ?? $peserta?->nama_peserta   ?? '-');
+                    $sheet->setCellValue("C{$row}", $ikan?->detail_anggota ?? $peserta?->detail_anggota ?? '-');
                     $sheet->setCellValue("D{$row}", $ikan ? ('Tank ' . ($ikan->nomor_tank ?? '-')) : '-');
                     $sheet->setCellValue("E{$row}", $ikan->kategori ?? '-');
                     $sheet->setCellValue("F{$row}", $ikan->kelas ?? '-');

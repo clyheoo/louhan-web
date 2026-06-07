@@ -88,7 +88,7 @@ class UserDetailSheet implements WithTitle, WithEvents
                             $peserta = $ikan->peserta ?? null;
 
                             $sheet->setCellValue("A{$row}", $no++);
-                            $sheet->setCellValue("B{$row}", $peserta->nama_peserta ?? '-');
+                            $sheet->setCellValue("B{$row}", $ikan?->nama_peserta ?? $peserta?->nama_peserta ?? '-');
                             $sheet->setCellValue("C{$row}", $ikan->kategori ?? '-');
                             $sheet->setCellValue("D{$row}", $ikan->kelas ?? '-');
                             $sheet->setCellValue("E{$row}", $ikan->nomor_tank ? 'Tank ' . $ikan->nomor_tank : '-');

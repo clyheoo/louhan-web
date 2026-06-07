@@ -103,12 +103,12 @@ class AdminDaftarIkanSheet implements FromArray, WithTitle, WithStyles, ShouldAu
 
             $rows[] = [
                 $no++,
-                $peserta->nama_peserta ?? '—',
+                $ikan->nama_peserta      ?? $peserta?->nama_peserta      ?? '—',
                 strtoupper($ikan->kategori),
                 $latestScoring ? ($latestScoring->kelas ?? $ikan->kelas) : ($ikan->kelas ?? '—'),
                 $ikan->nomor_tank ?? '—',
-                $peserta->jenis_keanggotaan ?? '—',
-                $peserta->detail_anggota ?? '—',
+                $ikan->jenis_keanggotaan ?? $peserta?->jenis_keanggotaan ?? '—',
+                $ikan->detail_anggota    ?? $peserta?->detail_anggota    ?? '—',
                 $jumlahJuri,
                 $totalNilaiSemua,
                 (float) $totalPoint,
