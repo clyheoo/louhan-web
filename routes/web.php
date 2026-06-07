@@ -128,6 +128,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/stat-detail', [AdminDashboardController::class, 'getStatDetail']);
     Route::get('/api/admin/debug-user-ikans', [AdminDashboardController::class, 'debugUserIkans']);
     Route::get('/api/admin/point-ranking', [AdminDashboardController::class, 'getPointRanking']);
+    Route::post('/api/admin/submit-nominasi', [AdminDashboardController::class, 'submitAdminNominasi']);
+    Route::get('/api/admin/tanks-nominasi-tersedia', [AdminDashboardController::class, 'getTanksTersediaUntukNominasi']);
 });
 
 /* ═══════════════════════════════════════════

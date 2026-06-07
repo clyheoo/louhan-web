@@ -637,6 +637,7 @@
             <div class="sb-section-label" style="margin-top:8px;">Manajemen</div>
             <a class="sidebar-item" data-page="users"><i class="fas fa-users-gear"></i> Kelola User</a>
             <a class="sidebar-item" data-page="registrasi"><i class="fas fa-database"></i> Registrasi & Undian</a>
+            <a class="sidebar-item" data-page="nominasi"><i class="fas fa-award"></i> Nominasi</a>
             <a class="sidebar-item" data-page="mvp"><i class="fas fa-star"></i> Kelola MVP</a>
             <a class="sidebar-item" data-page="ranking"><i class="fas fa-trophy"></i> Point Ranking</a>
             <a class="sidebar-item" data-page="undian"><i class="fas fa-dice"></i> Kelola Mesin Undian</a>
@@ -1114,9 +1115,90 @@
                 </div>
             </section>
 
-            <!-- ═══════════ PAGE: MESIN UNDIAN ═══════════ -->
-            <section class="page-section" data-page="undian" style="display:none;">
+            <!-- ═══════════ PAGE: NOMINASI ═══════════ -->
+            <section class="page-section" data-page="nominasi" style="display:none;">
 
+                {{-- Section A: Pilih Tank --}}
+                <div class="glass-card" style="margin-bottom:16px;">
+                    <div class="card-head">
+                        <h3><span class="ti"><i class="fas fa-hand-pointer"></i></span>Pilih Tank untuk Dinominasikan</h3>
+                        <button class="btn-xs blue" onclick="loadAdminNomTanks()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="filter-bar">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="adminNomSearch" placeholder="Cari no tank / kategori...">
+                            </div>
+                            <select class="filter-select" id="adminNomFilterKat" onchange="renderAdminNomGrid()">
+                                <option value="">Semua Kategori</option>
+                                <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
+                                <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                            </select>
+                            <select class="filter-select" id="adminNomFilterKelas" onchange="renderAdminNomGrid()" style="min-width:120px;">
+                                <option value="">Semua Kelas</option>
+                                <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+                            <span style="font-size:11px;color:var(--text-mid);font-weight:600;" id="adminNomCounter">0 tank tersedia</span>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span style="font-size:11px;font-weight:700;color:var(--cyan-300);">Terpilih: <span id="adminNomSelectedCount" style="font-weight:900;">0</span></span>
+                                <button class="btn-primary" id="adminNomSubmitBtn" onclick="adminNomSubmit()" disabled style="padding:9px 18px;font-size:11.5px;opacity:.5;cursor:not-allowed;">
+                                    <i class="fas fa-paper-plane"></i> Submit Nominasi
+                                </button>
+                            </div>
+                        </div>
+                        <div id="adminNomGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;max-height:380px;overflow-y:auto;padding:4px;">
+                            <div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i><p>Memuat tank...</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Section B: Pending Review --}}
+                <div class="glass-card" style="margin-bottom:16px;">
+                    <div class="card-head">
+                        <h3><span class="ti" style="background:rgba(245,158,11,.12);border-color:var(--bd-gold);color:var(--gold-400);"><i class="fas fa-hourglass-half"></i></span>Review Nominasi Pending</h3>
+                        <span style="font-size:10px;font-weight:700;color:var(--gold-300);" id="adminPendingCount">0 pending</span>
+                    </div>
+                    <div class="card-body" id="adminPendingBody">
+                        <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
+                    </div>
+                </div>
+
+                {{-- Section C: Late Ikan --}}
+                <div class="glass-card" style="margin-bottom:16px;" id="adminLateSection">
+                    <div class="card-head">
+                        <h3><span class="ti" style="background:rgba(245,158,11,.12);border-color:var(--bd-gold);color:var(--gold-400);"><i class="fas fa-clock"></i></span>Ikan Terlambat Daftar</h3>
+                        <span style="font-size:10px;font-weight:700;color:var(--gold-300);" id="adminLateCount">—</span>
+                    </div>
+                    <div class="card-body" id="adminLateBody">
+                        <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
+                    </div>
+                </div>
+
+                {{-- Section D: History --}}
+                <div class="glass-card">
+                    <div class="card-head">
+                        <h3><span class="ti"><i class="fas fa-clock-rotate-left"></i></span>Riwayat Review</h3>
+                        <div style="display:flex;gap:5px;background:var(--glass-2);padding:3px;border-radius:9px;border:1px solid var(--bd-2);">
+                            <button onclick="adminSwitchHistTab('approved')" id="adminHistTabApp" class="btn-xs" style="padding:6px 12px;background:rgba(16,185,129,.20);color:#6EE7B7;border:none;">
+                                <i class="fas fa-check-circle"></i> Diterima (<span id="adminHistAppCount">0</span>)
+                            </button>
+                            <button onclick="adminSwitchHistTab('rejected')" id="adminHistTabRej" class="btn-xs" style="padding:6px 12px;background:transparent;color:var(--text-mid);border:none;">
+                                <i class="fas fa-times-circle"></i> Ditolak (<span id="adminHistRejCount">0</span>)
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" id="adminHistBody">
+                        <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ═══════════ PAGE: UNDIAN ═══════════ -->
+            <section class="page-section" data-page="undian" style="display:none;">
                 <div class="glass-card">
                     <div class="card-head">
                         <h3><span class="ti"><i class="fas fa-dice"></i></span>Status Mesin Undian Tank</h3>
@@ -1130,7 +1212,6 @@
                         </div>
                     </div>
                 </div>
-
             </section>
 
         </div>

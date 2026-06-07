@@ -207,17 +207,20 @@ class GrandJuriController extends Controller
                 ]);
         }
 
-        if ($action === 'approve') {
-            try {
-                if ($this->sheetsSync->isReady()) {
-                    $this->sheetsSync->syncSemuaNominasi();
-                    $this->sheetsSync->syncSemuaPilNom();
-                    $this->sheetsSync->syncHasilNominasi();
-                    $this->sheetsSync->syncNominasiFix();
-                }
-            } catch (\Exception $e) {
-                \Log::error('Auto-sync nominasi gagal: ' . $e->getMessage());
+        // ★ Sync untuk APPROVE & REJECT (termasuk cascade reject):
+        //   - Sheet NOMINASI / PIL NOM / NOMINASI FIX hanya menampilkan status=approved,
+        //     jadi pada reject yang membatalkan record yang sebelumnya approved,
+        //     ketiga sheet itu WAJIB di-refresh agar record hantu hilang.
+        //   - HASIL NOMINASI menampilkan approved+rejected → wajib sync di kedua action.
+        try {
+            if ($this->sheetsSync->isReady()) {
+                $this->sheetsSync->syncSemuaNominasi();
+                $this->sheetsSync->syncSemuaPilNom();
+                $this->sheetsSync->syncHasilNominasi();
+                $this->sheetsSync->syncNominasiFix();
             }
+        } catch (\Exception $e) {
+            \Log::error('Auto-sync nominasi gagal (' . $action . '): ' . $e->getMessage());
         }
 
         return response()->json([

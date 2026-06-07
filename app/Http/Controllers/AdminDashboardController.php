@@ -7,6 +7,7 @@ use App\Models\Scoring;
 use App\Models\Peserta;
 use App\Models\Ikan;
 use App\Models\User;
+use App\Models\Nominasi;
 use App\Helpers\PointCalculator;
 use App\Models\ScoringPointConfig;
 use Maatwebsite\Excel\Facades\Excel;
@@ -784,6 +785,131 @@ class AdminDashboardController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" berhasil dihapus.',
+        ]);
+    }
+
+        /* ═══════════════════════════════════════════
+        NOMINASI — ADMIN SUBMIT
+        Admin bisa nominasi tank kapan saja, tanpa restriction "1 batch" milik juri.
+        ═══════════════════════════════════════════ */
+        public function submitAdminNominasi(Request $request)
+        {
+            $ikanIds = $request->json('ikan_ids');
+
+            if (!is_array($ikanIds) || count($ikanIds) === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pilih minimal 1 tank untuk dinominasikan.',
+                ], 422);
+            }
+
+            $ikans = Ikan::whereIn('id', $ikanIds)
+                ->whereNotNull('nomor_tank')
+                ->get();
+
+            if ($ikans->count() !== count($ikanIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Beberapa tank tidak ditemukan atau belum memiliki nomor tank.',
+                ], 422);
+            }
+
+            $created = 0;
+            $skipped = [];
+
+            foreach ($ikanIds as $ikanId) {
+                // Skip jika admin SUDAH punya record pending/approved untuk ikan ini (bukan late_addition)
+                $exists = Nominasi::where('juri_id', auth()->id())
+                    ->where('ikan_id', $ikanId)
+                    ->whereIn('status', ['pending', 'approved'])
+                    ->where('is_late_addition', false)
+                    ->exists();
+
+                if ($exists) {
+                    $skipped[] = $ikanId;
+                    continue;
+                }
+
+                // Hapus record rejected lama dari admin yang sama agar bisa resubmit
+                Nominasi::where('juri_id', auth()->id())
+                    ->where('ikan_id', $ikanId)
+                    ->where('status', 'rejected')
+                    ->where('is_late_addition', false)
+                    ->delete();
+
+                Nominasi::create([
+                    'juri_id'          => auth()->id(),
+                    'ikan_id'          => $ikanId,
+                    'status'           => 'pending',
+                    'is_late_addition' => false,
+                ]);
+                $created++;
+            }
+
+            // ★ Sync HASIL NOMINASI: di loop di atas, record rejected lama dihapus
+            //   untuk memungkinkan resubmit. Sheet HASIL NOMINASI menampilkan
+            //   rejected, jadi tanpa sync di sini data rejected lama akan
+            //   muncul sebagai "hantu" di spreadsheet sampai trigger berikutnya.
+            if ($created > 0) {
+                try {
+                    if ($this->sheetsSync->isReady()) {
+                        $this->sheetsSync->syncHasilNominasi();
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Auto-sync HASIL NOMINASI gagal (admin submit nominasi): ' . $e->getMessage());
+                }
+            }
+
+            $msg = $created . ' nominasi terkirim.';
+            if (count($skipped) > 0) {
+                $msg .= ' (' . count($skipped) . ' sudah ada di nominasi aktif, dilewati.)';
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $msg,
+                'count'   => $created,
+                'skipped' => count($skipped),
+            ]);
+        }
+
+        /* ═══════════════════════════════════════════
+    ADMIN NOMINASI — TANK YANG BELUM PERNAH DINOMINASIKAN
+    Mengembalikan tank yang:
+    - Sudah punya nomor_tank
+    - BELUM PERNAH masuk tabel nominasis (status apa pun:
+        pending / approved / rejected) oleh siapa pun
+    ═══════════════════════════════════════════ */
+    public function getTanksTersediaUntukNominasi()
+    {
+        // Kumpulkan semua ikan_id yang pernah muncul di nominasis (status apa pun)
+        $ikanIdsTerpakai = \App\Models\Nominasi::distinct()
+            ->pluck('ikan_id')
+            ->toArray();
+
+        $tanks = \App\Models\Ikan::whereNotNull('nomor_tank')
+            ->whereNotIn('id', $ikanIdsTerpakai)
+            ->with('peserta')
+            ->orderBy('nomor_tank')
+            ->get()
+            ->map(function ($ikan) {
+                return [
+                    'id'             => $ikan->id,
+                    'nomor_tank'     => $ikan->nomor_tank,
+                    'kategori'       => $ikan->kategori,
+                    'kelas'          => $ikan->kelas,
+                    'nama_peserta'   => $ikan->nama_peserta ?? 'Unknown',
+                    'detail_anggota' => $ikan->peserta->detail_anggota ?? '—',
+                ];
+            });
+
+        $kategoris = $tanks->pluck('kategori')->unique()->sort()->values();
+        $kelass    = $tanks->pluck('kelas')->filter()->unique()->sort()->values();
+
+        return response()->json([
+            'tanks'     => $tanks,
+            'kategoris' => $kategoris,
+            'kelass'    => $kelass,
         ]);
     }
 

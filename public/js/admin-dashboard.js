@@ -3184,6 +3184,7 @@ loadUsers();
         penilaian:    { title:'Data Penilaian',                  sub:'Semua input nilai dari Juri & Grand Juri', icon:'fa-table-list' },
         users:        { title:'Kelola User',                     sub:'Manajemen akun pengguna sistem', icon:'fa-users-gear' },
         registrasi:   { title:'Registrasi & Undian Tank',        sub:'Pendaftaran peserta, undian, dan rentang nomor', icon:'fa-database' },
+        nominasi:     { title:'Nominasi',                        sub:'Pilih tank & review nominasi (admin = juri + grand juri)', icon:'fa-award' },
         mvp:          { title:'Kelola MVP',                      sub:'Manajemen pendaftaran ikan MVP', icon:'fa-star' },
         ranking:      { title:'Point Ranking',                   sub:'Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)', icon:'fa-trophy' },
         undian:       { title:'Kelola Mesin Undian',             sub:'Membuka dan mengunci mesin undian tank untuk peserta', icon:'fa-dice' }
@@ -3213,11 +3214,13 @@ loadUsers();
             if(pageId === 'penilaian'){ loadScoringData(); }
             if(pageId === 'users'){ /* loadUsers sudah jalan di init */ }
             if(pageId === 'registrasi'){ loadPesertaOld(); loadTankRange(); loadGlobalRangeDisplay(); }
+            if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
             if(pageId === 'mvp'){ loadMvpData(); loadMvpStatus(); loadMvpPeserta(); loadMvpIkanData(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
             if(pageId === 'undian'){ loadUndianStatus(); }
         } else {
             // Refresh ringan saat dibuka ulang (opsional)
+            if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
             if(pageId === 'mvp'){ loadMvpStatus(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
         }
@@ -3281,4 +3284,448 @@ loadUsers();
             return __origLoadDash.apply(this, arguments);
         };
     }
+
+    /* ═══════════════════════════════════════════════
+   ADMIN NOMINASI — STATE + FUNCTIONS
+   ═══════════════════════════════════════════════ */
+var adminNomState = {
+    tanks: [],
+    selected: new Set(),
+    histTab: 'approved',
+    histData: { approved: [], rejected: [] }
+};
+
+function loadAdminNominasiAll(){
+    loadAdminNomTanks();
+    loadAdminPendingReview();
+    loadAdminLateIkan();
+    loadAdminNomHistory();
+}
+
+/* ── (A) PILIH TANK ── */
+function loadAdminNomTanks(){
+    var grid = document.getElementById('adminNomGrid');
+    if(grid) grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i><p>Memuat tank...</p></div>';
+
+    fetch('/api/admin/tanks-nominasi-tersedia', { headers:{'Accept':'application/json'} })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        adminNomState.tanks = d.tanks || [];
+        adminNomState.selected.clear();
+        renderAdminNomGrid();
+        updateAdminNomCount();
+    })
+    .catch(function(){
+        if(grid) grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat tank.</p></div>';
+    });
+}
+
+function adminNomGetFiltered(){
+    var q = (document.getElementById('adminNomSearch').value || '').toLowerCase().trim();
+    var fK = document.getElementById('adminNomFilterKat').value;
+    var fKl = document.getElementById('adminNomFilterKelas').value;
+    return adminNomState.tanks.filter(function(t){
+        if(fK && t.kategori !== fK) return false;
+        if(fKl && t.kelas !== fKl) return false;
+        if(q){
+            var hay = (String(t.nomor_tank) + ' ' + (t.kategori||'') + ' ' + (t.kelas||'') + ' ' + (t.nama_peserta||'')).toLowerCase();
+            if(hay.indexOf(q) === -1) return false;
+        }
+        return true;
+    });
+}
+
+function renderAdminNomGrid(){
+    var grid = document.getElementById('adminNomGrid');
+    if(!grid) return;
+    var filtered = adminNomGetFiltered();
+    document.getElementById('adminNomCounter').textContent = filtered.length + ' tank tersedia';
+    if(filtered.length === 0){
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-inbox"></i><p>Tidak ada tank yang cocok filter.</p></div>';
+        return;
+    }
+    var html = '';
+    filtered.forEach(function(t){
+        var sel = adminNomState.selected.has(t.id);
+        var bg = sel ? 'linear-gradient(135deg,rgba(34,211,238,.18),rgba(34,211,238,.05))' : 'var(--glass-2)';
+        var border = sel ? 'var(--cyan-400)' : 'var(--bd-2)';
+        var shadow = sel ? '0 0 0 1px var(--cyan-400),0 8px 20px -8px rgba(6,182,212,.4)' : 'none';
+        var kelasBadge = (t.kelas && ['Bonsai','Jumbo'].indexOf(t.kategori) === -1)
+            ? '<div style="font-size:9px;font-weight:700;padding:3px 7px;border-radius:6px;background:rgba(16,185,129,.10);color:#6EE7B7;border:1px solid rgba(16,185,129,.20);margin-top:4px;text-align:center;">Kelas '+esc(t.kelas)+'</div>' : '';
+        html += '<div onclick="adminNomToggleTank('+t.id+')" style="padding:10px;border-radius:12px;border:1px solid '+border+';background:'+bg+';box-shadow:'+shadow+';cursor:pointer;transition:all .25s;">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">';
+        html += '<div style="width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;background:linear-gradient(135deg,'+(sel?'var(--royal-600),var(--cyan-500)':'var(--ocean-700),var(--ocean-600)')+');">'+(t.nomor_tank||'?')+'</div>';
+        html += '<i class="fas '+(sel?'fa-star':'fa-star')+'" style="color:'+(sel?'var(--gold-400)':'var(--text-faint)')+';font-size:14px;"></i>';
+        html += '</div>';
+        html += '<div style="font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;background:rgba(34,211,238,.08);color:var(--cyan-300);border:1px solid rgba(34,211,238,.18);text-align:center;">'+esc(t.kategori||'-')+'</div>';
+        html += kelasBadge;
+        html += '<div style="font-size:10px;color:var(--text-mid);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;">'+esc(t.nama_peserta||'-')+'</div>';
+        html += '</div>';
+    });
+    grid.innerHTML = html;
+}
+
+function adminNomToggleTank(id){
+    if(adminNomState.selected.has(id)) adminNomState.selected.delete(id);
+    else adminNomState.selected.add(id);
+    renderAdminNomGrid();
+    updateAdminNomCount();
+}
+
+function updateAdminNomCount(){
+    var c = adminNomState.selected.size;
+    document.getElementById('adminNomSelectedCount').textContent = c;
+    var btn = document.getElementById('adminNomSubmitBtn');
+    if(c > 0){
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+    } else {
+        btn.disabled = true;
+        btn.style.opacity = '.5';
+        btn.style.cursor = 'not-allowed';
+    }
+}
+
+function adminNomSubmit(){
+    if(adminNomState.selected.size === 0) return;
+    var ids = Array.from(adminNomState.selected);
+    popupConfirm(
+        'Submit Nominasi',
+        'Yakin ingin submit <strong>'+ids.length+' tank</strong> sebagai nominasi admin?<br><span style="font-size:11px;color:var(--text-mid);">Tank akan masuk ke daftar pending review dan bisa di-ACC/Tolak oleh admin atau grand juri.</span>',
+        'Ya, Submit',
+        function(){
+            var btn = document.getElementById('adminNomSubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
+            fetch('/api/admin/submit-nominasi', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json','X-CSRF-TOKEN':getCsrf(),'Accept':'application/json'},
+                body: JSON.stringify({ ikan_ids: ids })
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if(d.success){
+                    popupSuccess('Nominasi Terkirim', d.message);
+                    adminNomState.selected.clear();
+                    loadAdminNomTanks();
+                    loadAdminPendingReview();
+                } else {
+                    popupError('Gagal', d.message || 'Terjadi kesalahan.');
+                }
+            })
+            .catch(function(){ popupError('Error', 'Gagal menghubungi server.'); })
+            .finally(function(){
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Nominasi';
+                updateAdminNomCount();
+            });
+        }
+    );
+}
+
+document.addEventListener('input', function(e){
+    if(e.target && e.target.id === 'adminNomSearch') renderAdminNomGrid();
+});
+
+/* ── (B) PENDING REVIEW ── */
+function loadAdminPendingReview(){
+    var body = document.getElementById('adminPendingBody');
+    if(!body) return;
+    body.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat pending...</p></div>';
+    fetch('/api/grand-juri/nominasi', { headers:{'Accept':'application/json'} })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        document.getElementById('adminPendingCount').textContent = (d.total_pending || 0) + ' pending';
+        if(!d.grouped || d.grouped.length === 0){
+            body.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada nominasi pending untuk direview.</p></div>';
+            return;
+        }
+        var html = '';
+        d.grouped.forEach(function(g){
+            var tankIds = (g.tanks || []).map(function(t){ return t.nominasi_id; });
+            html += '<div style="margin-bottom:14px;border:1px solid var(--bd-2);border-radius:14px;overflow:hidden;background:var(--glass-1);">';
+            html += '<div style="padding:11px 14px;background:var(--glass-2);border-bottom:1px solid var(--bd-1);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">';
+            html += '<div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:10px;background:rgba(34,211,238,.12);color:var(--cyan-300);display:grid;place-items:center;"><i class="fas fa-user-pen"></i></div>';
+            html += '<div><div style="font-size:13px;font-weight:800;color:var(--text-hi);">'+esc(g.juri_name||'Unknown')+'</div><div style="font-size:10px;color:var(--text-mid);font-weight:600;">'+g.tanks.length+' tank dinominasikan</div></div></div>';
+            html += '<button class="btn-xs green" onclick="adminApproveAllInGroup(this,'+JSON.stringify(tankIds).replace(/"/g,'&quot;')+')" style="padding:6px 12px;"><i class="fas fa-check-double"></i> ACC Semua</button>';
+            html += '</div>';
+            html += '<div style="padding:12px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;">';
+            g.tanks.forEach(function(t){
+                var kelasH = (t.kelas && ['Bonsai','Jumbo'].indexOf(t.kategori) === -1)
+                    ? '<div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(16,185,129,.10);color:#6EE7B7;border:1px solid rgba(16,185,129,.20);margin-top:3px;text-align:center;">Kelas '+esc(t.kelas)+'</div>' : '';
+                html += '<div id="admPendCard-'+t.nominasi_id+'" style="padding:10px;border-radius:10px;border:1px solid var(--bd-2);background:var(--glass-2);">';
+                html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:#fff;display:grid;place-items:center;font-weight:800;">'+(t.nomor_tank||'?')+'</div></div>';
+                html += '<div style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(34,211,238,.08);color:var(--cyan-300);border:1px solid rgba(34,211,238,.18);text-align:center;">'+esc(t.kategori||'-')+'</div>';
+                html += kelasH;
+                html += '<div style="font-size:9px;color:var(--text-mid);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;">'+esc(t.nama_peserta||'-')+'</div>';
+                html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;">';
+                html += '<button class="btn-xs green" onclick="adminApprovePending(this,'+t.nominasi_id+')" style="padding:5px;font-size:9px;"><i class="fas fa-check"></i> ACC</button>';
+                html += '<button class="btn-xs red" onclick="adminRejectPending('+t.nominasi_id+','+(t.nomor_tank||0)+')" style="padding:5px;font-size:9px;"><i class="fas fa-times"></i> Tolak</button>';
+                html += '</div></div>';
+            });
+            html += '</div></div>';
+        });
+        body.innerHTML = html;
+    })
+    .catch(function(){
+        body.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat pending.</p></div>';
+    });
+}
+
+function adminApprovePending(btn, nominasiId){
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch('/api/grand-juri/nominasi-review', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRF-TOKEN':getCsrf(),'Accept':'application/json'},
+        body: JSON.stringify({ nominasi_id: nominasiId, action:'approve' })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d.success){
+            popupSuccess('Disetujui', d.message);
+            loadAdminPendingReview();
+            loadAdminNomHistory();
+            loadAdminLateIkan();
+        } else {
+            popupError('Gagal', d.message || 'Error.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> ACC';
+        }
+    })
+    .catch(function(){
+        popupError('Error', 'Gagal menghubungi server.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> ACC';
+    });
+}
+
+function adminRejectPending(nominasiId, nomorTank){
+    popupConfirm(
+        'Tolak Nominasi?',
+        'Yakin ingin menolak Tank <strong>'+nomorTank+'</strong>?<br><span style="font-size:11px;color:var(--text-mid);">Juri akan diminta resubmit nominasi.</span>',
+        'Ya, Tolak',
+        function(){
+            fetch('/api/grand-juri/nominasi-review', {
+                method:'POST',
+                headers:{'Content-Type':'application/json','X-CSRF-TOKEN':getCsrf(),'Accept':'application/json'},
+                body: JSON.stringify({ nominasi_id: nominasiId, action:'reject', catatan:'' })
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if(d.success){
+                    popupSuccess('Ditolak', d.message);
+                    loadAdminPendingReview();
+                    loadAdminNomHistory();
+                } else popupError('Gagal', d.message || 'Error.');
+            })
+            .catch(function(){ popupError('Error', 'Gagal menghubungi server.'); });
+        }
+    );
+}
+
+function adminApproveAllInGroup(btn, idsJson){
+    var ids;
+    try { ids = (typeof idsJson === 'string') ? JSON.parse(idsJson.replace(/&quot;/g,'"')) : idsJson; }
+    catch(e){ ids = []; }
+    if(!ids.length) return;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    var success = 0, fail = 0;
+    var promises = ids.map(function(id){
+        return fetch('/api/grand-juri/nominasi-review', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-CSRF-TOKEN':getCsrf(),'Accept':'application/json'},
+            body: JSON.stringify({ nominasi_id: id, action:'approve' })
+        }).then(function(r){ return r.json(); })
+        .then(function(d){ if(d.success) success++; else fail++; })
+        .catch(function(){ fail++; });
+    });
+    Promise.all(promises).then(function(){
+        if(fail === 0) popupSuccess('Berhasil', 'Semua '+success+' nominasi disetujui.');
+        else popupError('Sebagian Gagal', success+' berhasil, '+fail+' gagal.');
+        loadAdminPendingReview();
+        loadAdminNomHistory();
+        loadAdminLateIkan();
+    });
+}
+
+/* ── (C) LATE IKAN ── */
+function loadAdminLateIkan(){
+    var body = document.getElementById('adminLateBody');
+    if(!body) return;
+    body.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
+    fetch('/api/grand-juri/late-ikan', { headers:{'Accept':'application/json'} })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        var countEl = document.getElementById('adminLateCount');
+        if(!d.enabled){
+            countEl.textContent = (d.juri_done||0)+'/'+(d.total_juri||0)+' juri selesai';
+            body.innerHTML = '<div class="empty-state"><i class="fas fa-lock" style="color:var(--text-faint);"></i><p>Modul aktif setelah <strong>semua juri</strong> selesai nominasi ('+(d.juri_done||0)+'/'+(d.total_juri||0)+' juri sudah selesai).</p></div>';
+            return;
+        }
+        countEl.textContent = (d.ikans||[]).length + ' tank terlambat';
+        if(!d.ikans || d.ikans.length === 0){
+            body.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle" style="color:#6EE7B7;"></i><p>Tidak ada ikan terlambat yang menunggu review.</p></div>';
+            return;
+        }
+        var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">';
+        d.ikans.forEach(function(ikan){
+            var kelasH = (ikan.kelas && ['Bonsai','Jumbo'].indexOf(ikan.kategori) === -1)
+                ? '<div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(16,185,129,.10);color:#6EE7B7;border:1px solid rgba(16,185,129,.20);margin-top:3px;text-align:center;">Kelas '+esc(ikan.kelas)+'</div>' : '';
+            html += '<div id="admLateCard-'+ikan.ikan_id+'" style="padding:11px;border-radius:11px;border:1px solid var(--bd-gold);background:rgba(245,158,11,.04);">';
+            html += '<div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--gold-600),var(--gold-500));color:#fff;display:grid;place-items:center;font-weight:800;margin-bottom:8px;">'+(ikan.nomor_tank||'?')+'</div>';
+            html += '<div style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(34,211,238,.08);color:var(--cyan-300);border:1px solid rgba(34,211,238,.18);text-align:center;">'+esc(ikan.kategori||'-')+'</div>';
+            html += kelasH;
+            html += '<div style="font-size:9px;color:var(--text-mid);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;">'+esc(ikan.nama_peserta||'-')+'</div>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;">';
+            html += '<button class="btn-xs green" onclick="adminApproveLate(this,'+ikan.ikan_id+')" style="padding:5px;font-size:9px;"><i class="fas fa-check"></i> ACC</button>';
+            html += '<button class="btn-xs red" onclick="adminRejectLate('+ikan.ikan_id+','+(ikan.nomor_tank||0)+')" style="padding:5px;font-size:9px;"><i class="fas fa-times"></i> Tolak</button>';
+            html += '</div></div>';
+        });
+        html += '</div>';
+        body.innerHTML = html;
+    })
+    .catch(function(){
+        body.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat data.</p></div>';
+    });
+}
+
+function adminApproveLate(btn, ikanId){
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch('/api/grand-juri/late-ikan-review', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRF-TOKEN':getCsrf(),'Accept':'application/json'},
+        body: JSON.stringify({ ikan_id: ikanId, action:'approve' })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d.success){
+            popupSuccess('Disetujui', d.message);
+            loadAdminLateIkan();
+            loadAdminNomHistory();
+        } else {
+            popupError('Gagal', d.message || 'Error.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> ACC';
+        }
+    })
+    .catch(function(){
+        popupError('Error', 'Gagal menghubungi server.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> ACC';
+    });
+}
+
+function adminRejectLate(ikanId, nomorTank){
+    popupConfirm(
+        'Tolak Ikan Terlambat?',
+        'Tolak ikan terlambat Tank <strong>'+nomorTank+'</strong>?',
+        'Ya, Tolak',
+        function(){
+            fetch('/api/grand-juri/late-ikan-review', {
+                method:'POST',
+                headers:{'Content-Type':'application/json','X-CSRF-TOKEN':getCsrf(),'Accept':'application/json'},
+                body: JSON.stringify({ ikan_id: ikanId, action:'reject', catatan:'' })
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if(d.success){
+                    popupSuccess('Ditolak', d.message);
+                    loadAdminLateIkan();
+                    loadAdminNomHistory();
+                } else popupError('Gagal', d.message || 'Error.');
+            })
+            .catch(function(){ popupError('Error', 'Gagal menghubungi server.'); });
+        }
+    );
+}
+
+/* ── (D) HISTORY ── */
+function loadAdminNomHistory(){
+    fetch('/api/grand-juri/nominasi-history', { headers:{'Accept':'application/json'} })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        adminNomState.histData.approved = d.approved || [];
+        adminNomState.histData.rejected = d.rejected || [];
+        document.getElementById('adminHistAppCount').textContent = d.total_approved || 0;
+        document.getElementById('adminHistRejCount').textContent = d.total_rejected || 0;
+        renderAdminHistory();
+    })
+    .catch(function(){
+        var body = document.getElementById('adminHistBody');
+        if(body) body.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat riwayat.</p></div>';
+    });
+}
+
+function adminSwitchHistTab(tab){
+    adminNomState.histTab = tab;
+    var btnApp = document.getElementById('adminHistTabApp');
+    var btnRej = document.getElementById('adminHistTabRej');
+    if(tab === 'approved'){
+        btnApp.style.cssText = 'padding:6px 12px;background:rgba(16,185,129,.20);color:#6EE7B7;border:none;';
+        btnRej.style.cssText = 'padding:6px 12px;background:transparent;color:var(--text-mid);border:none;';
+    } else {
+        btnApp.style.cssText = 'padding:6px 12px;background:transparent;color:var(--text-mid);border:none;';
+        btnRej.style.cssText = 'padding:6px 12px;background:rgba(239,68,68,.20);color:#FCA5A5;border:none;';
+    }
+    renderAdminHistory();
+}
+
+function renderAdminHistory(){
+    var body = document.getElementById('adminHistBody');
+    if(!body) return;
+    var groups = adminNomState.histData[adminNomState.histTab];
+    var isApp = adminNomState.histTab === 'approved';
+    if(!groups || groups.length === 0){
+        body.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada data '+(isApp?'yang diterima':'yang ditolak')+'.</p></div>';
+        return;
+    }
+    var html = '';
+    groups.forEach(function(g){
+        var color = isApp ? '#6EE7B7' : '#FCA5A5';
+        var bgC = isApp ? 'rgba(16,185,129,.08)' : 'rgba(239,68,68,.08)';
+        var bdC = isApp ? 'rgba(16,185,129,.25)' : 'rgba(239,68,68,.25)';
+        html += '<div style="margin-bottom:12px;border:1px solid '+bdC+';border-radius:12px;background:'+bgC+';overflow:hidden;">';
+        html += '<div style="padding:10px 14px;display:flex;align-items:center;gap:10px;">';
+        html += '<div style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.05);color:'+color+';display:grid;place-items:center;"><i class="fas fa-'+(isApp?'check':'times')+'"></i></div>';
+        html += '<div><div style="font-size:13px;font-weight:800;color:var(--text-hi);">'+esc(g.juri_name)+'</div><div style="font-size:10px;color:var(--text-mid);font-weight:600;">'+g.tanks.length+' tank</div></div></div>';
+        html += '<div style="padding:8px 14px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;">';
+        g.tanks.forEach(function(t){
+            var kelasH = (t.kelas && ['Bonsai','Jumbo'].indexOf(t.kategori) === -1)
+                ? '<div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(16,185,129,.10);color:#6EE7B7;border:1px solid rgba(16,185,129,.20);margin-top:3px;text-align:center;">Kelas '+esc(t.kelas)+'</div>' : '';
+            html += '<div style="padding:9px;border-radius:9px;border:1px solid '+bdC+';background:rgba(255,255,255,.02);">';
+            html += '<div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:#fff;display:grid;place-items:center;font-weight:800;margin-bottom:6px;font-size:13px;">'+(t.nomor_tank||'?')+'</div>';
+            html += '<div style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(34,211,238,.08);color:var(--cyan-300);border:1px solid rgba(34,211,238,.18);text-align:center;">'+esc(t.kategori||'-')+'</div>';
+            html += kelasH;
+            if(!isApp && t.catatan) html += '<div style="font-size:9px;color:'+color+';margin-top:5px;line-height:1.4;"><i class="fas fa-comment-dots"></i> '+esc(t.catatan)+'</div>';
+            html += '<div style="font-size:9px;color:var(--text-low);margin-top:5px;font-weight:600;">'+esc(t.reviewed_at||'')+'</div>';
+            html += '</div>';
+        });
+        html += '</div></div>';
+    });
+    body.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════
+   EXPOSE FUNGSI NOMINASI KE WINDOW
+   (agar bisa diakses dari onclick HTML & dari window.activatePage)
+   ═══════════════════════════════════════════════ */
+window.loadAdminNominasiAll   = loadAdminNominasiAll;
+window.loadAdminNomTanks      = loadAdminNomTanks;
+window.renderAdminNomGrid     = renderAdminNomGrid;
+window.adminNomToggleTank     = adminNomToggleTank;
+window.adminNomSubmit         = adminNomSubmit;
+window.loadAdminPendingReview = loadAdminPendingReview;
+window.adminApprovePending    = adminApprovePending;
+window.adminRejectPending     = adminRejectPending;
+window.adminApproveAllInGroup = adminApproveAllInGroup;
+window.loadAdminLateIkan      = loadAdminLateIkan;
+window.adminApproveLate       = adminApproveLate;
+window.adminRejectLate        = adminRejectLate;
+window.loadAdminNomHistory    = loadAdminNomHistory;
+window.adminSwitchHistTab     = adminSwitchHistTab;
+window.renderAdminHistory     = renderAdminHistory;
 })();
