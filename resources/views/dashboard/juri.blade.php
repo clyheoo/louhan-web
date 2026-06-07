@@ -228,7 +228,7 @@
                         <thead class="sticky top-0 z-20 shadow-sm" style="background:rgba(255,255,255,0.10);color:var(--text);font-weight:bold;border-bottom:1px solid var(--bd-1);">
                             <tr>
                                 <th class="px-2 py-2.5 sticky left-0 z-30 w-12 text-center" style="background:#15293D !important;border-right:1px solid var(--bd-1);">Tank</th>
-                                <th class="px-2 py-2.5 w-16" style="border-right:1px solid var(--bd-1);">Kelas</th>
+                                <th class="px-2 py-2.5 w-16" style="border-right:1px solid var(--bd-1);">Kat/Kelas</th>
                                 <th class="px-2 py-2.5 text-center" style="border-right:1px solid var(--bd-1);">Overall</th>
                                 <th class="px-2 py-2.5 text-center" style="border-right:1px solid var(--bd-1);">Head</th>
                                 <th class="px-2 py-2.5 text-center" style="border-right:1px solid var(--bd-1);">Face</th>
