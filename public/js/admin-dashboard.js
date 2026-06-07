@@ -704,14 +704,17 @@ var formFieldsLegacy={
 /* ═══════════════════════════════════════════════
    EDIT NILAI & KUNCI NILAI (ADMIN)
    ═══════════════════════════════════════════════ */
-var ADMIN_MINOR_DEFECTS=['Kutil','Bibir Miring','Katarak','Abses / Luka','Fintail Bleaching','Pangkal Ekor Naik/Trn','Dayung Tdk Seimbang'];
-var ADMIN_MAYOR_DEFECTS=['Bagian Bibir Hilang','Mulut Terbuka Terus','Muka Miring','Pangkal Bengkok/Patah','Fin/Tulang Hilang 1 Ruas'];
+var ADMIN_MINOR_DEFECTS=['Kutil','Bibir Miring','Bibir Miring (kasat mata)','Katarak','Abses / Luka','Fintail Bleaching','Fintail Bleaching / Transparan','Pangkal Ekor Naik/Trn','Pangkal Ekor Naik atau Turun','Dayung Tdk Seimbang','Sirip Dayung Tidak Seimbang'];
+var ADMIN_MAYOR_DEFECTS=['Bagian Bibir Hilang','Mulut Terbuka Terus','Bibir Tidak Menutup Sempurna & Selaput Bergerak','Muka Miring','Pangkal Bengkok/Patah','Pangkal Bengkok / Melintir','Fin/Tulang Hilang 1 Ruas'];
 var ADMIN_DEFECT_OPTIONS={
     raw_head_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'}]}],
-    raw_face_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Bibir Miring',label:'Bibir Miring'},{value:'Katarak',label:'Katarak'}]},{label:'--- MAYOR ---',options:[{value:'Bagian Bibir Hilang',label:'Bagian Bibir Hilang'},{value:'Mulut Terbuka Terus',label:'Mulut Terbuka Terus'},{value:'Muka Miring',label:'Muka Miring'}]}],
-    raw_body_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Abses / Luka',label:'Abses / Luka'}]},{label:'--- MAYOR ---',options:[{value:'Pangkal Bengkok/Patah',label:'Pangkal Bengkok/Patah'}]}],
-    raw_finnage_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Fintail Bleaching',label:'Fintail Bleaching'},{value:'Pangkal Ekor Naik/Trn',label:'Pangkal Ekor Naik/Trn'},{value:'Dayung Tdk Seimbang',label:'Dayung Tdk Seimbang'}]},{label:'--- MAYOR ---',options:[{value:'Fin/Tulang Hilang 1 Ruas',label:'Fin/Tulang Hilang 1 Ruas'}]}]
+    raw_face_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Bibir Miring (kasat mata)',label:'Bibir Miring (kasat mata)'},{value:'Katarak',label:'Katarak'}]},{label:'--- MAYOR ---',options:[{value:'Bagian Bibir Hilang',label:'Bagian Bibir Hilang'},{value:'Bibir Tidak Menutup Sempurna & Selaput Bergerak',label:'Bibir Tidak Menutup Sempurna & Selaput Bergerak'},{value:'Muka Miring',label:'Muka Miring'}]}],
+    raw_body_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Abses / Luka',label:'Abses / Luka'}]},{label:'--- MAYOR ---',options:[{value:'Pangkal Bengkok / Melintir',label:'Pangkal Bengkok / Melintir'}]}],
+    raw_finnage_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Fintail Bleaching / Transparan',label:'Fintail Bleaching / Transparan'},{value:'Pangkal Ekor Naik atau Turun',label:'Pangkal Ekor Naik atau Turun'},{value:'Sirip Dayung Tidak Seimbang',label:'Sirip Dayung Tidak Seimbang'}]},{label:'--- MAYOR ---',options:[{value:'Fin/Tulang Hilang 1 Ruas',label:'Fin/Tulang Hilang 1 Ruas'}]}]
 };
+
+var ADMIN_DEFECT_LEGACY_MAP={'Bibir Miring':'Bibir Miring (kasat mata)','Fintail Bleaching':'Fintail Bleaching / Transparan','Pangkal Ekor Naik/Trn':'Pangkal Ekor Naik atau Turun','Dayung Tdk Seimbang':'Sirip Dayung Tidak Seimbang','Mulut Terbuka Terus':'Bibir Tidak Menutup Sempurna & Selaput Bergerak','Pangkal Bengkok/Patah':'Pangkal Bengkok / Melintir'};
+function adminNormalizeDefectLegacy(arr){return arr.map(function(v){return ADMIN_DEFECT_LEGACY_MAP[v]||v;});}
 
 var adminEditDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};
 var adminOrigDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};
@@ -726,7 +729,7 @@ function adminNormDefArr(v){if(!v)return['0'];if(typeof v==='string')return[v];i
 function adminGetScoreOptions(){var o=[];for(var i=90;i>=10;i-=5)o.push({value:i.toString(),label:i.toString()});return o;}
 function adminFreshMemory(){var m={};Object.keys(formFields).forEach(function(k){m[k]={};});return m;}
 function adminCloneValues(src){var m={};Object.keys(formFields).forEach(function(k){m[k]={};formFields[k].forEach(function(f){if(f.type==='defect')return;var v=(src&&src[k]&&src[k][f.id]);if(v===undefined&&f.id==='shining'&&src&&src[k]&&src[k].shinning!==undefined)v=src[k].shinning;m[k][f.id]=(v!==undefined&&v!==null&&v!=='')?String(v):'';});});return m;}
-function adminEvaluateDefects(){var parts=['head','face','body','finnage'];var partStatus={};parts.forEach(function(p){partStatus[p]={minor:false,mayor:false,items:[]};});var minorCount=0;parts.forEach(function(p){var defs=adminNormDefArr(adminEditDefectData['raw_'+p+'_penalty']);defs.forEach(function(d){if(d&&d!=='0'){partStatus[p].items.push(d);if(ADMIN_MINOR_DEFECTS.indexOf(d)!==-1){minorCount++;partStatus[p].minor=true;}if(ADMIN_MAYOR_DEFECTS.indexOf(d)!==-1)partStatus[p].mayor=true;}});});var isGlobalMayor=minorCount>=3;var results={};parts.forEach(function(p){if(partStatus[p].items.length>0){var isM=partStatus[p].mayor||(partStatus[p].minor&&isGlobalMayor);results[p+'_penalty']=isM?'30%':'10%';}else{results[p+'_penalty']='';}});return results;}
+function adminEvaluateDefects(){var parts=['head','face','body','finnage'];var partStatus={};parts.forEach(function(p){partStatus[p]={minor:false,mayor:false,items:[]};});parts.forEach(function(p){var defs=adminNormDefArr(adminEditDefectData['raw_'+p+'_penalty']);defs.forEach(function(d){if(d&&d!=='0'){partStatus[p].items.push(d);if(ADMIN_MINOR_DEFECTS.indexOf(d)!==-1)partStatus[p].minor=true;if(ADMIN_MAYOR_DEFECTS.indexOf(d)!==-1)partStatus[p].mayor=true;}});});var componentsWithMinor=0;parts.forEach(function(p){if(partStatus[p].minor)componentsWithMinor++;});var isGlobalMayor=componentsWithMinor>=3;var results={};parts.forEach(function(p){if(partStatus[p].items.length>0){var isM=partStatus[p].mayor||(partStatus[p].minor&&isGlobalMayor);results[p+'_penalty']=isM?'30%':'10%';}else{results[p+'_penalty']='';}});return results;}
 
 function openDefectModalAdmin(defectKey){
     adminActiveDefectKey=defectKey;
@@ -760,10 +763,10 @@ function openEditAdmin(idx){
     if(p.all_scorings&&p.all_scorings.length>0){
         var targetSc=p.all_scorings.find(function(s){return s.edited_by_grand;})||p.all_scorings[0];
         if(targetSc){
-            adminEditDefectData.raw_head_penalty=adminNormDefArr(targetSc.raw_head_penalty);
-            adminEditDefectData.raw_face_penalty=adminNormDefArr(targetSc.raw_face_penalty);
-            adminEditDefectData.raw_body_penalty=adminNormDefArr(targetSc.raw_body_penalty);
-            adminEditDefectData.raw_finnage_penalty=adminNormDefArr(targetSc.raw_finnage_penalty);
+            adminEditDefectData.raw_head_penalty=adminNormalizeDefectLegacy(adminNormDefArr(targetSc.raw_head_penalty));
+            adminEditDefectData.raw_face_penalty=adminNormalizeDefectLegacy(adminNormDefArr(targetSc.raw_face_penalty));
+            adminEditDefectData.raw_body_penalty=adminNormalizeDefectLegacy(adminNormDefArr(targetSc.raw_body_penalty));
+            adminEditDefectData.raw_finnage_penalty=adminNormalizeDefectLegacy(adminNormDefArr(targetSc.raw_finnage_penalty));
         }
     }
     adminOrigDefectData=JSON.parse(JSON.stringify(adminEditDefectData));
