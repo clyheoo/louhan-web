@@ -208,6 +208,7 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
         $totalDeductionPercent = $defectDetails['total_deduction_percent'] ?? 0;
 
         return [
+            'ikan_id' => $ikan->id,
             'nama_peserta' => $ikan->nama_peserta   ?? $ikan->peserta?->nama_peserta   ?? '—',
             'kategori' => $ikan->kategori, 
             'kelas' => $ikan->kelas ?? '—',
@@ -220,7 +221,6 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
             'total_deduction' => round($totalDeduction, 2),
             'total_deduction_percent' => $totalDeductionPercent,
             'total_bonus' => $totalBonus, 
-            'final_point' => $totalPoint + $totalBonus,
             'defects' => $defectStrings,
         ];
     }
@@ -283,7 +283,7 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
         }
         
         // Kolom Fixed di akhir
-        foreach (['TOTAL POINT', 'DEFECT DEDUCTION', 'BONUS', 'FINAL POINT', 'RANK POINT'] as $h) {
+        foreach (['TOTAL POINT', 'DEFECT DEDUCTION', 'BONUS', 'RANK POINT', 'JUARA'] as $h) {
             $catRow[] = $h;
         }
         $colCount = count($catRow);
@@ -312,15 +312,35 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
         // DATA ROWS: Grouped & Ranked
         // ═══════════════════════════════════════════════════════════
         foreach ($groups as $groupName => $items) {
-            // Sort by final_point descending
-            usort($items, fn($a, $b) => $b['final_point'] <=> $a['final_point']);
-            
-            // Assign rank point
-            $ranked = [];
-            foreach ($items as $i => $it) { 
-                $it['rank_point'] = max(1, 100 - $i); 
-                $ranked[] = $it; 
+            // ★ Gunakan PointCalculator::hitungRankPoints() — SAMA PERSIS dengan website
+            $rankInput = [];
+            foreach ($items as $it) {
+                $rankInput[] = [
+                    'ikan_id'     => $it['ikan_id'],
+                    'total_point' => $it['total_point'],
+                    'total_bonus' => $it['total_bonus'],
+                ];
             }
+            $rankedItems = PointCalculator::hitungRankPoints($rankInput, 'total_point');
+
+            // Build lookup by ikan_id
+            $rankLookup = [];
+            foreach ($rankedItems as $ri) {
+                $rankLookup[$ri['ikan_id']] = $ri;
+            }
+
+            // Merge rank data back into items
+            $ranked = [];
+            foreach ($items as $it) {
+                $ri = $rankLookup[$it['ikan_id']] ?? null;
+                $it['rank_point'] = $ri['rank_point'] ?? 0;
+                $it['final_rank_point'] = $ri['final_rank_point'] ?? 0;
+                $it['position'] = $ri['position'] ?? 0;
+                $ranked[] = $it;
+            }
+
+            // Sort by final_rank_point descending (sama seperti website: post-bonus re-sort)
+            usort($ranked, fn($a, $b) => ($b['final_rank_point'] ?? 0) <=> ($a['final_rank_point'] ?? 0));
 
             // Separator Row
             $sep = array_fill(0, $colCount, '');
@@ -356,13 +376,46 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                 
                 // Kolom Fixed
                 $row[] = $d['total_point'];
-                // ★ DEFECT DEDUCTION: Tampilkan persen total pengurangan
+                // DEFECT DEDUCTION: persen total pengurangan
                 $row[] = $d['total_deduction_percent'] > 0 ? $d['total_deduction_percent'] . '%' : '-';
                 $row[] = $d['total_bonus'];
-                $row[] = $d['final_point'];
-                $row[] = $d['rank_point'];
+                // ★ RANK POINT: final_rank_point (rank base + bonus) — sama seperti website
+                $row[] = $d['final_rank_point'] ?? 0;
+                // ★ JUARA column
+                $pos = $d['position'] ?? 0;
+                if ($pos === 1) {
+                    $row[] = '🥇 JUARA 1';
+                } elseif ($pos === 2) {
+                    $row[] = '🥈 JUARA 2';
+                } elseif ($pos === 3) {
+                    $row[] = '🥉 JUARA 3';
+                } elseif ($pos >= 4 && $pos <= 10) {
+                    $row[] = 'Top 10 (#' . $pos . ')';
+                } else {
+                    $row[] = '-';
+                }
                 
                 $rows[] = $row;
+            }
+
+            // ★ CHAMPION SUMMARY ROW — tampilkan Juara 1 per group
+            $champion = null;
+            foreach ($ranked as $r) {
+                if (($r['position'] ?? 0) === 1) {
+                    $champion = $r;
+                    break;
+                }
+            }
+            if ($champion) {
+                $champRow = array_fill(0, $colCount, '');
+                $bonusText = ($champion['total_bonus'] ?? 0) > 0 
+                    ? ' (Base ' . ($champion['rank_point'] ?? 0) . ' + Bonus ' . $champion['total_bonus'] . ')' 
+                    : '';
+                $champRow[0] = '🏆 JUARA 1: ' . $champion['nama_peserta'] 
+                    . ' | Tank ' . $champion['nomor_tank'] 
+                    . ' | ' . strtoupper($champion['kategori']) . ' ' . $champion['kelas']
+                    . ' | Rank Point: ' . ($champion['final_rank_point'] ?? 0) . $bonusText;
+                $rows[] = $champRow;
             }
             
             // Empty row after group
@@ -453,6 +506,7 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
             $separatorCols = array_slice($this->catStartCols, 1);
             $totalPointCol = $lastColIdx - 4;
             $separatorCols[] = $totalPointCol;
+            $separatorCols[] = $lastColIdx - 1; // ★ RANK POINT column separator
 
             $thickBorder = [
                 'left' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '4C1D95']],
@@ -506,6 +560,15 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F5F3FF']],
                     ]);
                 } 
+                // ★ Champion Row (Juara 1 Summary)
+                elseif ($val && str_starts_with($val, '🏆')) {
+                    $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+                    $sheet->getStyle("A{$r}:{$lastCol}{$r}")->applyFromArray([
+                        'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '92400E']],
+                        'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF3C7']],
+                        'alignment' => ['horizontal' => 'left', 'vertical' => 'center'],
+                    ]);
+                }
                 // Data Row
                 elseif ($val !== '') {
                     $sheet->getStyle("A{$r}:{$lastCol}{$r}")->applyFromArray([
@@ -553,6 +616,45 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                             'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => 'DC2626']],
                         ]);
                     }
+
+                    // ★ Style khusus kolom JUARA (kolom terakhir)
+                    $juaraColLetter = Coordinate::stringFromColumnIndex($lastColIdx);
+                    $juaraValue = $sheet->getCell("{$juaraColLetter}{$r}")->getValue();
+                    if ($juaraValue && $juaraValue !== '-') {
+                        if (str_contains($juaraValue, 'JUARA 1')) {
+                            $sheet->getStyle("{$juaraColLetter}{$r}")->applyFromArray([
+                                'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '92400E']],
+                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF3C7']],
+                                'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+                            ]);
+                        } elseif (str_contains($juaraValue, 'JUARA 2')) {
+                            $sheet->getStyle("{$juaraColLetter}{$r}")->applyFromArray([
+                                'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '57534E']],
+                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'E7E5E4']],
+                                'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+                            ]);
+                        } elseif (str_contains($juaraValue, 'JUARA 3')) {
+                            $sheet->getStyle("{$juaraColLetter}{$r}")->applyFromArray([
+                                'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '9A3412']],
+                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FED7AA']],
+                                'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+                            ]);
+                        } else {
+                            $sheet->getStyle("{$juaraColLetter}{$r}")->applyFromArray([
+                                'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '6D28D9']],
+                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F5F3FF']],
+                                'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+                            ]);
+                        }
+                    }
+
+                    // ★ Style khusus kolom RANK POINT (bold + background emas)
+                    $rankPointColLetter = Coordinate::stringFromColumnIndex($lastColIdx - 1);
+                    $sheet->getStyle("{$rankPointColLetter}{$r}")->applyFromArray([
+                        'font' => ['bold' => true, 'size' => 11],
+                        'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF9C3']],
+                        'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+                    ]);
                 }
             }
 
@@ -587,6 +689,16 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                         ->getNumberFormat()->setFormatCode('0.00');
                 }
             }
+
+            // ★ Number format untuk kolom TOTAL POINT (2 desimal)
+            $totalPointColLetter = Coordinate::stringFromColumnIndex($lastColIdx - 4);
+            $sheet->getStyle("{$totalPointColLetter}3:{$totalPointColLetter}{$lastRow}")
+                ->getNumberFormat()->setFormatCode('0.00');
+
+            // ★ Number format untuk kolom RANK POINT (integer)
+            $rankPointColLetter = Coordinate::stringFromColumnIndex($lastColIdx - 1);
+            $sheet->getStyle("{$rankPointColLetter}3:{$rankPointColLetter}{$lastRow}")
+                ->getNumberFormat()->setFormatCode('0');
 
             // ═══════════════════════════════════════════════════════════
             // FREEZE PANES & ROW HEIGHT
