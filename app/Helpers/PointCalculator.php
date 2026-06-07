@@ -135,8 +135,6 @@ class PointCalculator
             'body'    => ['minor' => false, 'mayor' => false, 'items' => []],
             'finnage' => ['minor' => false, 'mayor' => false, 'items' => []],
         ];
-        $minorCount = 0;
-        
         foreach ($parts as $p) {
             $key = "raw_{$p}_penalty";
             $defs = $defectData[$key] ?? ['0'];
@@ -145,13 +143,18 @@ class PointCalculator
             foreach ($defs as $d) {
                 if ($d && $d !== '0') {
                     $partStatus[$p]['items'][] = $d;
-                    if (in_array($d, self::MINOR_DEFECTS)) { $minorCount++; $partStatus[$p]['minor'] = true; }
+                    if (in_array($d, self::MINOR_DEFECTS)) { $partStatus[$p]['minor'] = true; }
                     if (in_array($d, self::MAYOR_DEFECTS)) { $partStatus[$p]['mayor'] = true; }
                 }
             }
         }
-        
-        $isGlobalMayor = $minorCount >= 3;
+
+        // ★ FIX: hitung JUMLAH KOMPONEN yang punya minor, bukan total minor defect
+        $componentsWithMinor = 0;
+        foreach ($parts as $p) {
+            if ($partStatus[$p]['minor']) $componentsWithMinor++;
+        }
+        $isGlobalMayor = $componentsWithMinor >= 3;
         $results = []; $globalNotes = [];
         
         foreach ($parts as $p) {
@@ -349,8 +352,6 @@ class PointCalculator
             'body'    => ['minor' => false, 'mayor' => false, 'items' => [], 'minorItems' => [], 'mayorItems' => []],
             'finnage' => ['minor' => false, 'mayor' => false, 'items' => [], 'minorItems' => [], 'mayorItems' => []],
         ];
-        $minorCount = 0;
-        
         foreach ($parts as $p) {
             $key = "raw_{$p}_penalty";
             $defs = $defectData[$key] ?? ['0'];
@@ -360,7 +361,6 @@ class PointCalculator
                 if ($d && $d !== '0') {
                     $partStatus[$p]['items'][] = $d;
                     if (in_array($d, self::MINOR_DEFECTS)) { 
-                        $minorCount++; 
                         $partStatus[$p]['minor'] = true;
                         $partStatus[$p]['minorItems'][] = $d;
                     }
@@ -371,9 +371,14 @@ class PointCalculator
                 }
             }
         }
-        
-        // ★ LOGIC: 3 Minor di seluruh tubuh = otomatis MAYOR
-        $isGlobalMayor = $minorCount >= 3;
+
+        // ★ FIX: 3 KOMPONEN berbeda punya minor = naik MAYOR (bukan 3 minor di satu komponen)
+        $componentsWithMinor = 0;
+        foreach ($parts as $p) {
+            if ($partStatus[$p]['minor']) $componentsWithMinor++;
+        }
+        $isGlobalMayor = $componentsWithMinor >= 3;
+        $minorCount = $componentsWithMinor; // ★ untuk kompatibilitas dgn baris return di bawah
         $results = [];
         $totalDeductionPercent = 0;
         

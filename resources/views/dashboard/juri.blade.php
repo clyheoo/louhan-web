@@ -830,21 +830,28 @@ function buildSelectHtml(currentVal, type) {
 function evalDefects(ts) {
     const parts = ['head','face','body','finnage'];
     const status = {};
-    parts.forEach(p => { status[p] = {minorCount:0, mayor:false, items:[]}; });
+    parts.forEach(p => { status[p] = {hasMinor:false, mayor:false, items:[]}; });
     parts.forEach(p => {
         const defs = ts.defects['raw_'+p+'_penalty'] || ['0'];
         defs.forEach(d => {
             if (d && d !== '0') {
                 status[p].items.push(d);
-                if (MINOR_DEFECTS.includes(d)) { status[p].minorCount++; }
+                if (MINOR_DEFECTS.includes(d)) { status[p].hasMinor = true; }
                 if (MAYOR_DEFECTS.includes(d)) { status[p].mayor = true; }
             }
         });
     });
+
+    // ★ FIX: hitung jumlah KOMPONEN yang punya minor (bukan total minor)
+    let componentsWithMinor = 0;
+    parts.forEach(p => { if (status[p].hasMinor) componentsWithMinor++; });
+    const isGlobalMayor = componentsWithMinor >= 3;
+
     const results = {};
     parts.forEach(p => {
         if (status[p].items.length > 0) {
-            const isMayor = status[p].mayor || (status[p].minorCount >= 2);
+            // Mayor jika: ada defect mayor langsung, ATAU punya minor tapi ≥3 komponen global punya minor
+            const isMayor = status[p].mayor || (status[p].hasMinor && isGlobalMayor);
             results[p] = isMayor ? '30%' : '10%';
         } else { results[p] = ''; }
     });
