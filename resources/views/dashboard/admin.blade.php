@@ -791,7 +791,7 @@
                                         <th style="width:34px;text-align:center;padding-right:6px;">
                                             <input type="checkbox" id="checkAllRows" onchange="toggleAllRows(this)" style="cursor:pointer;width:15px;height:15px;accent-color:var(--cyan-400);vertical-align:middle;">
                                         </th>
-                                        <th>#</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>TANK</th><th>ASAL / TEAM</th>
+                                        <th>NO</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>TANK</th><th>ASAL / TEAM</th>
                                         <th>DINILAI OLEH</th><th>TOTAL NILAI</th><th>POINT</th><th>STATUS</th><th>AKSI</th>
                                     </tr>
                                 </thead>
