@@ -64,11 +64,30 @@ class JuriController extends Controller
             ->pluck('total_juri', 'ikan_id')
             ->toArray();
 
+        // ★ Ambil defect yang dipilih saat nominasi (untuk pre-fill form scoring).
+        //    Query langsung approved noms milik juri ini, TANPA filter $approvedIkanIds —
+        //    karena filter itu bisa membuang ikan yang pernah ditolak lalu re-nominasi.
+        //    Frontend hanya akan apply pre-fill untuk tank yang ada di tankScores
+        //    (yaitu available_tanks), jadi data ekstra di nomination_defects aman.
+        $nominationDefects = Nominasi::where('juri_id', auth()->id())
+            ->where('status', 'approved')
+            ->get(['ikan_id', 'raw_head_penalty', 'raw_face_penalty', 'raw_body_penalty', 'raw_finnage_penalty'])
+            ->keyBy('ikan_id')
+            ->map(function ($n) {
+                return [
+                    'raw_head_penalty'    => $n->raw_head_penalty    ?? ['0'],
+                    'raw_face_penalty'    => $n->raw_face_penalty    ?? ['0'],
+                    'raw_body_penalty'    => $n->raw_body_penalty    ?? ['0'],
+                    'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
+                ];
+            });
+
         return response()->json([
-            'available_tanks' => $availableTanks,
-            'my_scores'       => $myScores,
-            'all_scored'      => $allScored,
-            'scored_counts'   => $scoredCounts,
+            'available_tanks'    => $availableTanks,
+            'my_scores'          => $myScores,
+            'all_scored'         => $allScored,
+            'scored_counts'      => $scoredCounts,
+            'nomination_defects' => $nominationDefects,
         ]);
     }
 
@@ -318,16 +337,30 @@ class JuriController extends Controller
             ], 422);
         }
 
+        // ★ Defect per ikan_id (opsional): { "12": {raw_head_penalty:[...], ...}, ... }
+        $defects = $request->json('defects') ?? [];
+
         foreach ($ikanIds as $ikanId) {
             Nominasi::where('juri_id', auth()->id())
                 ->where('ikan_id', $ikanId)
                 ->delete();
 
-            Nominasi::create([
+            $payload = [
                 'juri_id' => auth()->id(),
                 'ikan_id' => $ikanId,
                 'status'  => 'pending',
-            ]);
+            ];
+
+            // Defect dikirim bisa keyed by int atau string → cek dua-duanya
+            $d = $defects[$ikanId] ?? $defects[(string) $ikanId] ?? null;
+            if (is_array($d)) {
+                $payload['raw_head_penalty']    = $d['raw_head_penalty']    ?? ['0'];
+                $payload['raw_face_penalty']    = $d['raw_face_penalty']    ?? ['0'];
+                $payload['raw_body_penalty']    = $d['raw_body_penalty']    ?? ['0'];
+                $payload['raw_finnage_penalty'] = $d['raw_finnage_penalty'] ?? ['0'];
+            }
+
+            Nominasi::create($payload);
         }
 
         return response()->json([

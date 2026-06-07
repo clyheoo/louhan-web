@@ -6,24 +6,30 @@ use App\Models\ScoringPointConfig;
 
 class PointCalculator
 {
-    // ★ DAFTAR DEFECT MINOR
+    // ★ DAFTAR DEFECT MINOR (gabungan label LAMA + BARU untuk backward-compat data lama)
     const MINOR_DEFECTS = [
-        'Kutil', 
-        'Bibir Miring', 
-        'Katarak', 
-        'Abses / Luka', 
-        'Fintail Bleaching', 
-        'Pangkal Ekor Naik/Trn', 
-        'Dayung Tdk Seimbang'
+        'Kutil',
+        'Bibir Miring',                      // legacy
+        'Bibir Miring (kasat mata)',         // baru
+        'Katarak',
+        'Abses / Luka',
+        'Fintail Bleaching',                 // legacy
+        'Fintail Bleaching / Transparan',    // baru
+        'Pangkal Ekor Naik/Trn',             // legacy
+        'Pangkal Ekor Naik atau Turun',      // baru
+        'Dayung Tdk Seimbang',               // legacy
+        'Sirip Dayung Tidak Seimbang',       // baru
     ];
 
-    // ★ DAFTAR DEFECT MAYOR
+    // ★ DAFTAR DEFECT MAYOR (gabungan label LAMA + BARU untuk backward-compat data lama)
     const MAYOR_DEFECTS = [
-        'Bagian Bibir Hilang', 
-        'Mulut Terbuka Terus', 
-        'Muka Miring', 
-        'Pangkal Bengkok/Patah', 
-        'Fin/Tulang Hilang 1 Ruas'
+        'Bagian Bibir Hilang',
+        'Mulut Terbuka Terus',                                       // legacy
+        'Bibir Tidak Menutup Sempurna & Selaput Bergerak',           // baru
+        'Muka Miring',
+        'Pangkal Bengkok/Patah',                                     // legacy
+        'Pangkal Bengkok / Melintir',                                // baru
+        'Fin/Tulang Hilang 1 Ruas',
     ];
 
     public static function hitungPoint(string $kategori, array $nd, array $defectData = []): float

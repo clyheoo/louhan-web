@@ -9,7 +9,7 @@ class Nominasi extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+protected $fillable = [
         'juri_id',
         'ikan_id',
         'status',
@@ -17,11 +17,19 @@ class Nominasi extends Model
         'reviewed_at',
         'catatan',
         'is_late_addition',
+        'raw_head_penalty',
+        'raw_face_penalty',
+        'raw_body_penalty',
+        'raw_finnage_penalty',
     ];
 
     protected $casts = [
-        'reviewed_at'      => 'datetime',
-        'is_late_addition' => 'boolean',
+        'reviewed_at'         => 'datetime',
+        'is_late_addition'    => 'boolean',
+        'raw_head_penalty'    => 'array',
+        'raw_face_penalty'    => 'array',
+        'raw_body_penalty'    => 'array',
+        'raw_finnage_penalty' => 'array',
     ];
 
     public function juri()

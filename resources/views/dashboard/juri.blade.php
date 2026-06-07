@@ -280,6 +280,34 @@
     </div>
 </div>
 
+{{-- MODAL DEFECT ALL-IN-ONE (UNTUK NOMINASI) --}}
+<div id="modal-nom-defect-all" class="hidden fixed inset-0 z-[260] flex items-center justify-center p-3 md:p-4" style="background:rgba(2,6,14,0.88);backdrop-filter:blur(8px);">
+    <div class="rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col fade-in" style="background:linear-gradient(180deg,var(--ocean-800),var(--ocean-900));border:1px solid var(--bd-2);max-height:92vh;">
+        <div class="px-5 py-4 flex items-start justify-between gap-3" style="border-bottom:1px solid var(--bd-1);background:rgba(255,255,255,0.03);">
+            <div class="min-w-0">
+                <h3 class="text-base md:text-lg font-bold flex items-center gap-2" style="color:var(--text-hi);">
+                    <i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i> Tandai Defect
+                </h3>
+                <p class="text-[11px] md:text-xs mt-1" style="color:var(--text-mid);">
+                    Tank <span id="nom-defect-all-tank" style="color:var(--cyan-300);font-weight:800;">-</span> — pilih defect untuk seluruh komponen
+                </p>
+            </div>
+            <button onclick="closeNomDefectAll()" class="w-9 h-9 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style="background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </div>
+        <div id="nom-defect-all-body" class="px-4 md:px-5 py-4 overflow-y-auto flex-1 custom-scrollbar"></div>
+        <div class="px-4 md:px-5 py-4 grid grid-cols-2 gap-3" style="border-top:1px solid var(--bd-1);background:rgba(255,255,255,0.03);">
+            <button onclick="resetNomDefectAll()" class="py-3 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-1.5" style="color:var(--text-mid);background:var(--glass-2);border:1px solid var(--bd-2);">
+                <i class="fas fa-eraser"></i> Reset Semua
+            </button>
+            <button onclick="saveNomDefectAll()" class="py-3 rounded-xl font-bold text-xs text-white flex items-center justify-center gap-2" style="background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));box-shadow:0 6px 16px -6px rgba(6,182,212,0.5),inset 0 1px 0 rgba(255,255,255,0.18);">
+                <i class="fas fa-check"></i> Selesai
+            </button>
+        </div>
+    </div>
+</div>
+
 {{-- MODAL DEFECT --}}
 <div id="modal-defect" class="hidden fixed inset-0 z-[260] flex items-center justify-center p-4" style="background:rgba(2,6,14,0.88);backdrop-filter:blur(8px);">
     <div class="rounded-2xl shadow-2xl p-6 w-full max-w-sm max-h-[85vh] flex flex-col fade-in" style="background:linear-gradient(180deg,var(--ocean-800),var(--ocean-900));border:1px solid var(--bd-2);">
@@ -355,8 +383,159 @@
         background: transparent; border: none; cursor: pointer; font-size: 14px;
         color: var(--text-faint);
     }
-    #nom-grid .star-btn:hover { color: var(--gold-400); background: rgba(245,158,11,0.10); }
-    #nom-grid .selected-card .star-btn { color: var(--gold-400); background: rgba(245,158,11,0.12); }
+    /* ── TOMBOL "TANDAI DEFECT" DI CARD NOMINASI ── */
+    #nom-grid .nom-defect-btn {
+        width: 100%;
+        margin-top: 10px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1px solid var(--bd-2);
+        line-height: 1.3;
+        font-family: inherit;
+    }
+    #nom-grid .nom-defect-empty {
+        background: rgba(239,68,68,0.06);
+        color: #FCA5A5;
+        border-color: rgba(239,68,68,0.30);
+        border-style: dashed;
+    }
+    #nom-grid .nom-defect-empty:hover {
+        background: rgba(239,68,68,0.12);
+        border-style: solid;
+        border-color: rgba(239,68,68,0.50);
+    }
+    #nom-grid .nom-defect-minor {
+        background: rgba(249,115,22,0.18);
+        color: #FDBA74;
+        border-color: rgba(249,115,22,0.40);
+    }
+    #nom-grid .nom-defect-minor:hover { background: rgba(249,115,22,0.26); }
+    #nom-grid .nom-defect-mayor {
+        background: rgba(239,68,68,0.20);
+        color: #FCA5A5;
+        border-color: rgba(239,68,68,0.45);
+        box-shadow: 0 0 0 1px rgba(239,68,68,0.18);
+    }
+    #nom-grid .nom-defect-mayor:hover { background: rgba(239,68,68,0.30); }
+
+    /* ── MODAL ALL-IN-ONE DEFECT (NOMINASI) ── */
+    .nom-defect-all-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+    }
+    @media (max-width: 720px) {
+        .nom-defect-all-grid { grid-template-columns: 1fr; gap: 12px; }
+    }
+    .nom-da-part {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--bd-1);
+        border-radius: 14px;
+        padding: 12px 14px;
+    }
+    .nom-da-part-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px dashed var(--bd-1);
+    }
+    .nom-da-part-head h4 {
+        font-size: 12.5px;
+        font-weight: 800;
+        color: var(--cyan-300);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin: 0;
+    }
+    .nom-da-tag {
+        font-size: 9px;
+        font-weight: 800;
+        padding: 3px 8px;
+        border-radius: 999px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+    .nom-da-tag-aman {
+        background: rgba(16,185,129,0.10);
+        color: #6EE7B7;
+        border: 1px solid rgba(16,185,129,0.30);
+    }
+    .nom-da-tag-minor {
+        background: rgba(249,115,22,0.15);
+        color: #FDBA74;
+        border: 1px solid rgba(249,115,22,0.40);
+    }
+    .nom-da-tag-mayor {
+        background: rgba(239,68,68,0.18);
+        color: #FCA5A5;
+        border: 1px solid rgba(239,68,68,0.45);
+    }
+    .nom-da-section { margin-top: 10px; }
+    .nom-da-section:first-of-type { margin-top: 0; }
+    .nom-da-section-title {
+        font-size: 9.5px;
+        font-weight: 800;
+        color: var(--text-faint);
+        letter-spacing: 0.12em;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+    }
+    .nom-da-opts {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .nom-da-opt {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        padding: 8px 10px;
+        border-radius: 9px;
+        cursor: pointer;
+        transition: all 0.15s;
+        border: 1px solid transparent;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.35;
+    }
+    .nom-da-opt:hover { background: var(--glass-3); }
+    .nom-da-opt.checked {
+        background: rgba(34,211,238,0.08);
+        border-color: rgba(34,211,238,0.22);
+        color: var(--text-hi);
+    }
+    .nom-da-opt input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        margin-top: 1px;
+        flex-shrink: 0;
+        accent-color: var(--cyan-500);
+        cursor: pointer;
+    }
+    .nom-da-opt span { flex: 1; }
+
+    /* ── MOBILE TWEAKS ── */
+    @media (max-width: 640px) {
+        #nom-grid .nom-defect-btn { font-size: 10px; padding: 7px 8px; }
+        .nom-da-part { padding: 10px 11px; border-radius: 12px; }
+        .nom-da-part-head h4 { font-size: 11.5px; }
+        .nom-da-opt { font-size: 11.5px; padding: 7px 9px; }
+        .nom-da-tag { font-size: 8.5px; padding: 2px 6px; }
+    }
 
     /* ── WAITING LIST ITEMS ── */
     #nom-waiting-list > div > div {
@@ -504,6 +683,7 @@ function kelasDisplay(kategori, kelas) {
 let nomState = {
     tanks: [],
     selected: new Set(),
+    defects: {},
     kategoris: [],
     kelass: [],
     filterKat: '',
@@ -561,7 +741,6 @@ function nomShowWaiting(nominations) {
         '<div class="flex items-center gap-3">' +
         '<div class="wait-tank-num">' + n.nomor_tank + '</div>' +
         '<div style="flex:1;min-width:0;">' +
-        '<div style="font-size:12px;font-weight:700;color:var(--text-hi);">' + n.nama_peserta + '</div>' +
         '<div style="font-size:10px;color:var(--text-mid);">' + n.kategori + (n.kelas ? ' — Kelas ' + n.kelas : '') + '</div></div>' +
         '<span class="wait-pending">Pending</span></div>'
     ).join('');
@@ -636,6 +815,25 @@ function nomGetFiltered() {
     });
 }
 
+// ★ Rangkum status defect untuk satu tank (untuk styling tombol Defect di card)
+function nomDefectSummary(tankId) {
+    const d = nomState.defects[tankId];
+    if (!d) return { count: 0, level: 'none' };
+
+    let count = 0;
+    const ts = { defects: {} };
+    ['head','face','body','finnage'].forEach(function(p) {
+        const vals = d['raw_'+p+'_penalty'] || ['0'];
+        ts.defects['raw_'+p+'_penalty'] = vals;
+        vals.forEach(function(v) { if (v && v !== '0') count++; });
+    });
+    if (count === 0) return { count: 0, level: 'none' };
+
+    const ev = evalDefects(ts);
+    const anyMayor = ['head','face','body','finnage'].some(function(p) { return ev[p] === '30%'; });
+    return { count: count, level: anyMayor ? 'mayor' : 'minor' };
+}
+
 function nomRenderGrid() {
     const filtered = nomGetFiltered();
     const grid = document.getElementById('nom-grid');
@@ -645,6 +843,25 @@ function nomRenderGrid() {
 
     grid.innerHTML = filtered.map(function(t) {
         const sel = nomState.selected.has(t.id);
+
+        // ★ Satu tombol "Defect" — muncul hanya kalau card sudah dipilih (bintang aktif)
+        let defectBtn = '';
+        if (sel) {
+            const sum = nomDefectSummary(t.id);
+            let klass = 'nom-defect-btn nom-defect-empty';
+            let label = '<i class="fas fa-circle-exclamation"></i> Tandai Defect';
+            if (sum.level === 'minor') {
+                klass = 'nom-defect-btn nom-defect-minor';
+                label = '<i class="fas fa-circle-exclamation"></i> Defect Minor (' + sum.count + ')';
+            } else if (sum.level === 'mayor') {
+                klass = 'nom-defect-btn nom-defect-mayor';
+                label = '<i class="fas fa-triangle-exclamation"></i> Defect Mayor (' + sum.count + ')';
+            }
+            defectBtn = '<button type="button" class="' + klass + '" '
+                + 'onclick="event.stopPropagation();openNomDefectAll(' + t.id + ')">'
+                + label + '</button>';
+        }
+
         return '<div class="p-3 cursor-pointer ' + (sel ? 'selected-card' : '') + '" onclick="nomToggle(' + t.id + ')">' +
             '<div class="flex justify-between items-start mb-3">' +
             '<div class="tank-num-badge">' + t.nomor_tank + '</div>' +
@@ -653,8 +870,135 @@ function nomRenderGrid() {
             '<div class="flex flex-col gap-1">' +
             '<div class="cat-badge">' + t.kategori + '</div>' +
             kelasDisplay(t.kategori, t.kelas) +
-            '</div></div>';
+            '</div>' + defectBtn + '</div>';
     }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NOM DEFECT ALL-IN-ONE MODAL
+// ═══════════════════════════════════════════════════════════════
+let nomDefectAllCtx = null; // { tankId, working: { raw_*_penalty: [...] } }
+
+function openNomDefectAll(tankId) {
+    const existing = nomState.defects[tankId] || {};
+    nomDefectAllCtx = {
+        tankId: tankId,
+        working: {
+            raw_head_penalty:    [...(existing.raw_head_penalty    || ['0'])],
+            raw_face_penalty:    [...(existing.raw_face_penalty    || ['0'])],
+            raw_body_penalty:    [...(existing.raw_body_penalty    || ['0'])],
+            raw_finnage_penalty: [...(existing.raw_finnage_penalty || ['0'])],
+        },
+    };
+    const tank = nomState.tanks.find(function(x) { return x.id === tankId; });
+    document.getElementById('nom-defect-all-tank').textContent = tank ? 'No ' + tank.nomor_tank : '#' + tankId;
+    renderNomDefectAllBody();
+    document.getElementById('modal-nom-defect-all').classList.remove('hidden');
+}
+
+function renderNomDefectAllBody() {
+    if (!nomDefectAllCtx) return;
+    const body = document.getElementById('nom-defect-all-body');
+    const parts = ['head','face','body','finnage'];
+
+    // Eval status saat ini (untuk badge Minor/Mayor di header tiap komponen)
+    const ts = { defects: {} };
+    parts.forEach(function(p) {
+        ts.defects['raw_'+p+'_penalty'] = nomDefectAllCtx.working['raw_'+p+'_penalty'] || ['0'];
+    });
+    const ev = evalDefects(ts);
+
+    body.innerHTML = '<div class="nom-defect-all-grid">' + parts.map(function(p) {
+        const partKey = 'raw_'+p+'_penalty';
+        const currentVals = nomDefectAllCtx.working[partKey] || ['0'];
+        const groups = defectOpts(p);
+        const partLabel = DEFECT_MAP[p].label;
+
+        let headerTag = '';
+        if (ev[p] === '30%')      headerTag = '<span class="nom-da-tag nom-da-tag-mayor">Mayor −30%</span>';
+        else if (ev[p] === '10%') headerTag = '<span class="nom-da-tag nom-da-tag-minor">Minor −10%</span>';
+        else                      headerTag = '<span class="nom-da-tag nom-da-tag-aman">Aman</span>';
+
+        const sections = groups.map(function(g) {
+            const opts = g.options.map(function(o) {
+                const checked = currentVals.includes(o.v);
+                const safeVal = String(o.v).replace(/'/g, "\\'");
+                return '<label class="nom-da-opt' + (checked ? ' checked' : '') + '">' +
+                    '<input type="checkbox" value="' + o.v + '"' + (checked ? ' checked' : '') + ' '
+                    + 'onchange="onNomDefectAllCheck(\'' + p + '\', this)"><span>' + o.l + '</span></label>';
+            }).join('');
+            return '<div class="nom-da-section">' +
+                '<div class="nom-da-section-title">' + g.label + '</div>' +
+                '<div class="nom-da-opts">' + opts + '</div>' +
+            '</div>';
+        }).join('');
+
+        return '<div class="nom-da-part">' +
+            '<div class="nom-da-part-head">' +
+                '<h4>' + partLabel + '</h4>' +
+                headerTag +
+            '</div>' +
+            sections +
+        '</div>';
+    }).join('') + '</div>';
+}
+
+function onNomDefectAllCheck(partKey, cb) {
+    if (!nomDefectAllCtx) return;
+    const k = 'raw_'+partKey+'_penalty';
+    let vals = [...(nomDefectAllCtx.working[k] || ['0'])];
+    if (cb.value === '0') {
+        vals = ['0'];
+    } else {
+        vals = vals.filter(function(v) { return v !== '0'; });
+        if (vals.includes(cb.value)) {
+            vals = vals.filter(function(v) { return v !== cb.value; });
+        } else {
+            vals.push(cb.value);
+        }
+    }
+    if (vals.length === 0) vals = ['0'];
+    nomDefectAllCtx.working[k] = vals;
+    renderNomDefectAllBody(); // re-render supaya tag Minor/Mayor & checked state ter-update
+}
+
+function resetNomDefectAll() {
+    if (!nomDefectAllCtx) return;
+    nomDefectAllCtx.working = {
+        raw_head_penalty:    ['0'],
+        raw_face_penalty:    ['0'],
+        raw_body_penalty:    ['0'],
+        raw_finnage_penalty: ['0'],
+    };
+    renderNomDefectAllBody();
+}
+
+function saveNomDefectAll() {
+    if (!nomDefectAllCtx) return;
+    const tankId = nomDefectAllCtx.tankId;
+    const w = nomDefectAllCtx.working;
+    const hasAny = ['head','face','body','finnage'].some(function(p) {
+        const v = w['raw_'+p+'_penalty'] || ['0'];
+        return v.some(function(x) { return x && x !== '0'; });
+    });
+    if (hasAny) {
+        nomState.defects[tankId] = {
+            raw_head_penalty:    w.raw_head_penalty,
+            raw_face_penalty:    w.raw_face_penalty,
+            raw_body_penalty:    w.raw_body_penalty,
+            raw_finnage_penalty: w.raw_finnage_penalty,
+        };
+    } else {
+        delete nomState.defects[tankId];
+    }
+    nomDefectAllCtx = null;
+    document.getElementById('modal-nom-defect-all').classList.add('hidden');
+    nomRenderGrid();
+}
+
+function closeNomDefectAll() {
+    nomDefectAllCtx = null;
+    document.getElementById('modal-nom-defect-all').classList.add('hidden');
 }
 
 function nomUpdateFilterInfo() {
@@ -714,9 +1058,18 @@ async function nomConfirmSubmit() {
     btn.disabled = true;
     btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Mengirim...';
     try {
+        // ★ Bangun payload defect hanya untuk tank yang dipilih
+        const defectsPayload = {};
+        nomState.selected.forEach(function(id) {
+            const d = nomState.defects[id];
+            if (d) defectsPayload[id] = d;
+        });
         const res = await apiFetch('/api/juri/submit-nominasi', {
             method: 'POST',
-            body: JSON.stringify({ ikan_ids: Array.from(nomState.selected) })
+            body: JSON.stringify({
+                ikan_ids: Array.from(nomState.selected),
+                defects:  defectsPayload
+            })
         });
         if (res.success) {
             nomClosePreview();
@@ -735,17 +1088,43 @@ document.getElementById('nom-preview-modal')?.addEventListener('click', function
     if (e.target === this) nomClosePreview();
 });
 
+document.getElementById('modal-nom-defect-all')?.addEventListener('click', function(e) {
+    if (e.target === this) closeNomDefectAll();
+});
+
 // ═══════════════════════════════════════════════════════════════
 // KONSTANTA
 // ═══════════════════════════════════════════════════════════════
-const MINOR_DEFECTS = ["Kutil","Bibir Miring","Katarak","Abses / Luka","Fintail Bleaching","Pangkal Ekor Naik/Trn","Dayung Tdk Seimbang"];
-const MAYOR_DEFECTS = ["Bagian Bibir Hilang","Mulut Terbuka Terus","Muka Miring","Pangkal Bengkok/Patah","Fin/Tulang Hilang 1 Ruas"];
+// KODE BARU
+const MINOR_DEFECTS = [
+    "Kutil",
+    "Bibir Miring",                      // legacy
+    "Bibir Miring (kasat mata)",
+    "Katarak",
+    "Abses / Luka",
+    "Fintail Bleaching",                 // legacy
+    "Fintail Bleaching / Transparan",
+    "Pangkal Ekor Naik/Trn",             // legacy
+    "Pangkal Ekor Naik atau Turun",
+    "Dayung Tdk Seimbang",               // legacy
+    "Sirip Dayung Tidak Seimbang"
+];
+const MAYOR_DEFECTS = [
+    "Bagian Bibir Hilang",
+    "Mulut Terbuka Terus",                                  // legacy
+    "Bibir Tidak Menutup Sempurna & Selaput Bergerak",
+    "Muka Miring",
+    "Pangkal Bengkok/Patah",                                // legacy
+    "Pangkal Bengkok / Melintir",
+    "Fin/Tulang Hilang 1 Ruas"
+];
 
+// ★ Hanya label BARU yang dimunculkan ke juri saat memilih defect
 const DEFECT_MAP = {
-    head:    { label:'Head',    minor:['Kutil'], mayor:['Bagian Bibir Hilang','Mulut Terbuka Terus','Muka Miring'] },
-    face:    { label:'Face',    minor:['Bibir Miring','Katarak'], mayor:['Bagian Bibir Hilang','Mulut Terbuka Terus','Muka Miring'] },
-    body:    { label:'Body',    minor:['Abses / Luka','Kutil'], mayor:['Pangkal Bengkok/Patah','Fin/Tulang Hilang 1 Ruas'] },
-    finnage: { label:'Finnage', minor:['Fintail Bleaching','Pangkal Ekor Naik/Trn','Dayung Tdk Seimbang'], mayor:['Fin/Tulang Hilang 1 Ruas'] },
+    head:    { label:'Head',    minor:['Kutil'], mayor:[] },
+    face:    { label:'Face',    minor:['Bibir Miring (kasat mata)','Katarak'], mayor:['Bagian Bibir Hilang','Bibir Tidak Menutup Sempurna & Selaput Bergerak','Muka Miring'] },
+    body:    { label:'Body',    minor:['Kutil','Abses / Luka'], mayor:[] },
+    finnage: { label:'Finnage', minor:['Kutil','Fintail Bleaching / Transparan','Pangkal Ekor Naik atau Turun','Sirip Dayung Tidak Seimbang'], mayor:['Fin/Tulang Hilang 1 Ruas','Pangkal Bengkok / Melintir'] },
 };
 
 const SCORING_GROUPS = [
@@ -1001,9 +1380,16 @@ function toggleConfirm() {
 // ═══════════════════════════════════════════════════════════════
 // DEFECT MODAL
 // ═══════════════════════════════════════════════════════════════
-function openDefect(tankId, partKey) {
-    const vals = tankScores[tankId]?.defects?.['raw_'+partKey+'_penalty'] || ['0'];
-    defectModal = { tankId, partKey, values: [...vals] };
+function openDefect(tankId, partKey, context) {
+    context = context || 'scoring';
+    let vals;
+    if (context === 'nomination') {
+        const d = nomState.defects[tankId] || {};
+        vals = d['raw_'+partKey+'_penalty'] || ['0'];
+    } else {
+        vals = tankScores[tankId]?.defects?.['raw_'+partKey+'_penalty'] || ['0'];
+    }
+    defectModal = { tankId, partKey, values: [...vals], context };
     document.getElementById('defect-part-label').textContent = partKey.toUpperCase();
     const groups = defectOpts(partKey);
     document.getElementById('defect-modal-body').innerHTML = groups.map(g => '<div><div class="defect-group-title">'+g.label+'</div><div class="space-y-1">'+g.options.map(o => {
@@ -1024,8 +1410,29 @@ function onDefectCheck(cb) {
 }
 function saveDefect() {
     if (!defectModal) return;
-    const { tankId, partKey, values } = defectModal;
-    if (!tankScores[tankId]) return;
+    const { tankId, partKey, values, context } = defectModal;
+
+    if (context === 'nomination') {
+        if (!nomState.defects[tankId]) {
+            nomState.defects[tankId] = {
+                raw_head_penalty:    ['0'],
+                raw_face_penalty:    ['0'],
+                raw_body_penalty:    ['0'],
+                raw_finnage_penalty: ['0'],
+            };
+        }
+        nomState.defects[tankId]['raw_'+partKey+'_penalty'] = values;
+        defectModal = null;
+        document.getElementById('modal-defect').classList.add('hidden');
+        nomRenderGrid();
+        return;
+    }
+
+    if (!tankScores[tankId]) {
+        defectModal = null;
+        document.getElementById('modal-defect').classList.add('hidden');
+        return;
+    }
     tankScores[tankId].defects['raw_'+partKey+'_penalty'] = values;
     defectModal = null;
     document.getElementById('modal-defect').classList.add('hidden');
@@ -1161,18 +1568,56 @@ function lihatDetail(scoringId) {
     showSuccessPopup('Detail Nilai Tank ' + (s.ikan ? s.ikan.nomor_tank : '-'), html);
 }
 
-// ═══════════════════════════════════════════════════════════════
-// LOAD DATA
-// ═══════════════════════════════════════════════════════════════
 async function loadJuriData() {
     try {
         const res = await apiFetch('/api/juri/data');
-        appData.available_tanks = res.available_tanks || [];
-        appData.my_scores = res.my_scores || [];
-        appData.all_scored = res.all_scored || {};
-        appData.scored_counts = res.scored_counts || {};
+        appData.available_tanks    = res.available_tanks || [];
+        appData.my_scores          = res.my_scores || [];
+        appData.all_scored         = res.all_scored || {};
+        appData.scored_counts      = res.scored_counts || {};
+        appData.nomination_defects = res.nomination_defects || {};
+
         initTankScores(appData.available_tanks);
-        loadDraft(); populateFilter(); renderFormTable(); renderLiveTable();
+
+        // ★ Restore draft DULU agar pre-fill di bawah ini bisa diputuskan
+        //    berdasarkan state final tankScores (draft + default).
+        loadDraft();
+
+        // ★ Pre-fill defect dari nominasi yang sudah approved.
+        //    Aturan: hanya menimpa kalau current value masih default ['0']/kosong,
+        //    dan nominasi punya defect nyata (selain '0'). Edit manual juri TIDAK hilang.
+        Object.keys(appData.nomination_defects).forEach(function(ikanId) {
+            const nd = appData.nomination_defects[ikanId];
+            if (!nd || !tankScores[ikanId]) return;
+
+            // Defensive: kalau draft lama tidak punya struktur defects, init dulu.
+            if (!tankScores[ikanId].defects) {
+                tankScores[ikanId].defects = {
+                    raw_head_penalty:    ['0'],
+                    raw_face_penalty:    ['0'],
+                    raw_body_penalty:    ['0'],
+                    raw_finnage_penalty: ['0']
+                };
+            }
+
+            ['head','face','body','finnage'].forEach(function(p) {
+                const k = 'raw_'+p+'_penalty';
+                const cur = tankScores[ikanId].defects[k];
+                const isCurDefault =
+                    !cur ||
+                    cur.length === 0 ||
+                    (cur.length === 1 && cur[0] === '0');
+                const ndArr = nd[k];
+                const hasReal = Array.isArray(ndArr) && ndArr.some(function(v) {
+                    return v && v !== '0';
+                });
+                if (isCurDefault && hasReal) {
+                    tankScores[ikanId].defects[k] = ndArr.slice();
+                }
+            });
+        });
+
+        populateFilter(); renderFormTable(); renderLiveTable();
     } catch(e) { showWarningModal([{type:'select',msg:'Gagal memuat data dari server. Periksa koneksi internet Anda.'}]); }
 }
 
