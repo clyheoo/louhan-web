@@ -138,10 +138,6 @@
         .juri-submit-chip.ok { color: #34D399 !important; background: var(--success-lt) !important; }
         .juri-submit-chip.not-ok { color: var(--gold-300) !important; background: var(--warning-lt) !important; }
 
-        /* Bonus modal text */
-        .mvp-list-item { color: var(--gold-300) !important; }
-        .mvp-badge { color: var(--gold-300) !important; }
-
         /* Rincian card */
         .rincian-cat { color: var(--text-hi) !important; }
         .rincian-ekor { color: var(--text-hi) !important; }
@@ -527,12 +523,6 @@
         .err-item span{color:var(--text);font-weight:600;line-height:1.4;}
         .popup-btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
 
-        /* Bonus modal */
-        .mvp-badge{font-size:10px;font-weight:700;background:var(--warning-lt);color:var(--gold-300);padding:3px 8px;border-radius:6px;letter-spacing:.04em;}
-        .mvp-list-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--warning-lt);border:1px solid rgba(245,158,11,.20);border-radius:10px;margin-bottom:7px;font-size:12.5px;color:var(--gold-300);font-weight:600;}
-        .mvp-list-item .mvp-remove{background:var(--danger-lt);border:1px solid rgba(239,68,68,.25);color:#fca5a5;cursor:pointer;font-size:11px;padding:5px 8px;border-radius:8px;transition:all .2s;}
-        .mvp-list-item .mvp-remove:hover{background:rgba(239,68,68,.20);color:var(--danger);}
-
         /* Status actions */
         .status-actions{margin-top:8px;}
 
@@ -611,9 +601,6 @@
             </a>
 
             <div class="sidebar-section-label">Penilaian</div>
-            <a class="sidebar-link" href="#sectionMvp" data-section="sectionMvp">
-                <i class="fas fa-star" style="color:var(--gold-500);"></i> Data Ikan MVP
-            </a>
             <a class="sidebar-link" href="#sectionRanking" data-section="sectionRanking">
                 <i class="fas fa-trophy" style="color:var(--gold-500);"></i> Point Ranking
             </a>
@@ -671,7 +658,6 @@
                         <div class="export-dd-item" onclick="doExport('all')"><i class="fas fa-layer-group" style="color:var(--purple);"></i> Export Semua Data</div>
                         <div class="export-dd-sep"></div>
                         <div class="export-dd-item" onclick="doExport('daftar')"><i class="fas fa-list" style="color:var(--primary);"></i> Daftar Ikan</div>
-                        <div class="export-dd-item" onclick="doExport('mvp')"><i class="fas fa-star" style="color:var(--gold-500);"></i> Data Ikan MVP</div>
                         <div class="export-dd-sep"></div>
                         <div class="export-dd-item" onclick="doExport('ranking_kk')"><i class="fas fa-layer-group" style="color:var(--success);"></i> Ranking: Per Kat + Kelas</div>
                         <div class="export-dd-item" onclick="doExport('ranking_k')"><i class="fas fa-tags" style="color:var(--warning);"></i> Ranking: Per Kategori</div>
@@ -742,28 +728,6 @@
                 </div>
             </div>
 
-            <!-- ═══ DATA MVP ═══ -->
-            <div id="sectionMvp">
-                <div class="card">
-                    <div class="card-header">
-                        <div>
-                            <div class="card-title"><i class="fas fa-star" style="color:var(--gold-500);"></i> Data Ikan MVP</div>
-                            <div class="card-subtitle">Daftar peserta yang sudah mengirimkan ikan untuk penilaian MVP</div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-wrap">
-                            <table class="result-table">
-                                <thead>
-                                    <tr><th>KOTA / TEAM / CLUB</th><th>JUMLAH PESERTA</th><th>JUMLAH IKAN MVP</th><th>STATUS</th><th>AKSI</th></tr>
-                                </thead>
-                                <tbody id="tbodyMvp"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- ═══ SISTEM POINT RANKING ═══ -->
             <div id="sectionRanking">
                 <div class="card">
@@ -826,7 +790,7 @@
                         <div class="table-wrap">
                             <table class="result-table">
                                 <thead>
-                                    <tr><th>PESERTA</th><th>KATEGORI - KELAS</th><th>NO. TANK</th><th>ASAL/TEAM</th><th>DINILAI OLEH</th><th>TOTAL NILAI</th><th>POINT</th><th>STATUS</th><th>AKSI</th></tr>
+                                    <tr><th>KATEGORI - KELAS</th><th>NO. TANK</th><th>ASAL/TEAM</th><th>DINILAI OLEH</th><th>TOTAL NILAI</th><th>POINT</th><th>STATUS</th><th>AKSI</th></tr>
                                 </thead>
                                 <tbody id="tbodyPeserta"></tbody>
                             </table>
@@ -887,17 +851,6 @@
         <div class="modal-footer">
             <button class="btn-cancel" onclick="closeModal('modalGeneric')"><i class="fas fa-xmark"></i> Tutup</button>
         </div>
-    </div>
-</div>
-
-<!-- ═══════ MODAL: BONUS POINT ═══════ -->
-<div class="modal-bg" id="modalBonus">
-    <div class="modal-box" style="max-width:520px;">
-        <div class="modal-head" style="background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.03));">
-            <h3><i class="fas fa-trophy" style="color:var(--gold-500);"></i> Kelola Bonus Point</h3>
-            <button class="modal-close" onclick="closeModal('modalBonus')"><i class="fas fa-xmark"></i></button>
-        </div>
-        <div class="modal-body" id="bonusModalBody"></div>
     </div>
 </div>
 
@@ -1050,75 +1003,6 @@ function openDefectModalGJ(defectKey){activeDefectKeyGJ=defectKey;var partName=d
 function closeDefectModalGJ(){closeModal('modalDefectGJ');activeDefectKeyGJ=null;renderEditInputs(currentEditKat);}
 function toggleDefectGJ(defectKey,value){var current=editDefectData[defectKey]||['0'];if(value==='0'){editDefectData[defectKey]=['0'];}else{current=current.filter(function(v){return v!=='0';});if(current.indexOf(value)!==-1){current=current.filter(function(v){return v!==value;});}else{current.push(value);}if(current.length===0)current=['0'];editDefectData[defectKey]=current;}openDefectModalGJ(defectKey);}
 
-var currentBonusIkanId = null;
-var bonusTypes = [
-    {key:'best_of_the_best', label:'BEST OF THE BEST', icon:'fa-gem'},
-    {key:'best_of_show',     label:'BEST OF SHOW',     icon:'fa-star'},
-    {key:'grand_champion',   label:'GRAND CHAMPION',   icon:'fa-crown'},
-    {key:'young_champion',   label:'YOUNG CHAMPION',   icon:'fa-medal'},
-    {key:'junior',           label:'JUNIOR',           icon:'fa-award'},
-    {key:'baby_champion',    label:'BABY CHAMPION',    icon:'fa-baby'},
-    {key:'mini_champion',    label:'MINI CHAMPION',    icon:'fa-seedling'},
-];
-
-function openBonusModalGj(id){
-    currentBonusIkanId=id;
-    var p=allIkanDataGJ[id];
-    if(!p){document.getElementById('popupErrorDesc').textContent='Data ikan tidak ditemukan. Muat ulang halaman.';showPopup('popupError');return;}
-    var html='';
-    html+='<div style="background:linear-gradient(135deg,rgba(245,158,11,.10),rgba(245,158,11,.04));border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">';
-    html+='<div><h4 style="font-size:14px;font-weight:800;color:var(--text-hi);">'+esc(p.nama_peserta)+'</h4>';
-    html+='<div style="font-size:11px;color:var(--gold-300);margin-top:3px;display:flex;gap:12px;"><span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - '+esc(p.kelas)+'</span><span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span></div></div>';
-    html+='<div style="text-align:center;flex-shrink:0;">';
-    html+='<div style="font-size:9px;color:var(--gold-300);font-weight:800;letter-spacing:.5px;">RANK POINT</div>';
-    html+='<div style="font-family:\'Fraunces\',serif;font-size:22px;font-weight:500;color:var(--gold-300);letter-spacing:-.02em;">'+(p.rank_point||0)+'</div>';
-    if(p.total_bonus>0){html+='<div style="font-size:9px;color:#34D399;font-weight:800;margin-top:2px;">+ '+p.total_bonus+' BONUS</div>';html+='<div style="font-family:\'Fraunces\',serif;font-size:26px;font-weight:500;color:#34D399;letter-spacing:-.02em;">'+(p.final_rank_point||p.rank_point||0)+'</div>';}
-    if((p.rank_point||0)===0 && (p.total_bonus||0)===0){html+='<div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-top:4px;">(Tidak masuk Top 10)</div>';}
-    html+='</div></div>';
-    html+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Pilih Bonus Point (+100 per jenis)</div>';
-    var blist=p.bonus_list||[];
-    bonusTypes.forEach(function(bt){
-        var applied=blist.indexOf(bt.key)!==-1;
-        if(applied){
-            html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid rgba(16,185,129,.25);border-radius:10px;margin-bottom:5px;background:rgba(16,185,129,.06);">';
-            html+='<div style="display:flex;align-items:center;gap:10px;">';
-            html+='<i class="fas fa-check-circle" style="color:#34D399;font-size:15px;"></i>';
-            html+='<div><div style="font-size:12px;font-weight:800;color:#34D399;">'+bt.label+'</div><div style="font-size:10px;color:#059669;">+100 point</div></div></div>';
-            html+='<button style="padding:5px 10px;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;background:var(--danger-lt);color:#fca5a5;" onclick="removeBonusGj(\''+bt.key+'\')"><i class="fas fa-times"></i> Hapus</button>';
-            html+='</div>';
-        } else {
-            html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--bd-2);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:all .2s;" onclick="addBonusGj(\''+bt.key+'\',this)" onmouseover="this.style.borderColor=\'rgba(245,158,11,.30)\';this.style.background=\'rgba(245,158,11,.06)\'" onmouseout="this.style.borderColor=\'var(--bd-2)\';this.style.background=\'transparent\'">';
-            html+='<div style="display:flex;align-items:center;gap:10px;">';
-            html+='<i class="fas '+bt.icon+'" style="color:var(--text-faint);font-size:15px;"></i>';
-            html+='<div><div style="font-size:12px;font-weight:700;color:var(--text-hi);">'+bt.label+'</div><div style="font-size:10px;color:var(--text-muted);">+100 point</div></div></div>';
-            html+='<i class="fas fa-plus-circle" style="color:var(--text-faint);font-size:17px;"></i>';
-            html+='</div>';
-        }
-    });
-    document.getElementById('bonusModalBody').innerHTML=html;
-    openModal('modalBonus');
-}
-
-function addBonusGj(type, el){
-    if(!currentBonusIkanId)return;
-    var fd=new FormData();fd.append('_token',getCsrf());fd.append('ikan_id',currentBonusIkanId);fd.append('bonus_type',type);
-    fetch('/api/grand-juri/add-bonus',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-    .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
-    .then(function(d){if(d.success){loadPointRanking();loadPeserta(document.getElementById('searchInput').value);loadMvpGj();document.getElementById('popupSuccessDesc').innerHTML='<b>'+esc(bonusTypes.find(function(b){return b.key===type;}).label)+'</b> (+100 ke <b>RANK POINT</b>) berhasil ditambahkan.<br><span style="font-size:11px;color:var(--text-muted);">Total team di MVP & ranking sudah diperbarui otomatis.</span>';showPopup('popupSuccess');closeModal('modalBonus');}else{document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';showPopup('popupError');}})
-    .catch(function(e){var msg=(e&&e.message)?e.message:'Kesalahan jaringan.';document.getElementById('popupErrorDesc').textContent=msg;showPopup('popupError');});
-}
-
-function removeBonusGj(type){
-    if(!currentBonusIkanId)return;
-    popupConfirm('Hapus Bonus','Yakin ingin menghapus bonus ini? Point yang sudah ditambahkan akan dikurangi kembali dan ranking akan otomatis berubah.','Ya, Hapus',function(){
-        var fd=new FormData();fd.append('_token',getCsrf());fd.append('ikan_id',currentBonusIkanId);fd.append('bonus_type',type);
-        fetch('/api/grand-juri/remove-bonus',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-        .then(function(r){return r.json();})
-        .then(function(d){if(d.success){loadPointRanking();loadPeserta(document.getElementById('searchInput').value);loadMvpGj();document.getElementById('popupSuccessDesc').textContent='Bonus berhasil dihapus. Ranking sudah diperbarui otomatis.';showPopup('popupSuccess');closeModal('modalBonus');}else{document.getElementById('popupErrorDesc').textContent=d.message||'Terjadi kesalahan.';showPopup('popupError');}})
-        .catch(function(){document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan.';showPopup('popupError');});
-    });
-}
-
 /* ================================================================ STATE ================================================================ */
 var currentId=null;var currentPData=null;var editMemory={};var originalValues={};var currentEditKat='overall';var allIkanDataGJ={};var _confirmCallback=null;
 function popupConfirm(title,desc,btnText,callback){document.getElementById('popupConfirmTitle').textContent=title||'Konfirmasi';document.getElementById('popupConfirmDesc').innerHTML=desc||'';document.getElementById('popupConfirmBtn').innerHTML='<i class="fas fa-check"></i> '+(btnText||'Ya, Lanjutkan');_confirmCallback=callback;showPopup('popupConfirm');}
@@ -1132,7 +1016,7 @@ function closeModal(id){document.getElementById(id).classList.remove('show');}
 function getCsrf(){return document.querySelector('meta[name="csrf-token"]').getAttribute('content');}
 function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function openModal(id){document.getElementById(id).classList.add('show');}
-['modalDetail','modalEdit','modalGeneric','modalBonus'].forEach(function(id){document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});});
+['modalDetail','modalEdit','modalGeneric'].forEach(function(id){document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});});
 document.getElementById('modalDefectGJ').addEventListener('click',function(e){if(e.target===this)closeDefectModalGJ();});
 function freshMemory(){var m={};Object.keys(formFields).forEach(function(k){m[k]={};});return m;}
 function cloneValues(source){var m={};Object.keys(formFields).forEach(function(k){m[k]={};formFields[k].forEach(function(f){if(f.type==='defect')return;var v=(source&&source[k]&&source[k][f.id]);if(v===undefined&&f.id==='shining'&&source&&source[k]&&source[k].shinning!==undefined)v=source[k].shinning;m[k][f.id]=(v!==undefined&&v!==null&&v!=='')?String(v):'';});});return m;}
@@ -1167,10 +1051,9 @@ function loadPeserta(search){
     search=search||'';var url='/api/grand-juri/peserta'+(search?'?search='+encodeURIComponent(search):'');
     fetch(url,{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(data){
         var tbody=document.getElementById('tbodyPeserta');tbody.innerHTML='';
-        if(!data||data.length===0){tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Tidak ada data ditemukan.</div></td></tr>';return;}
+        if(!data||data.length===0){tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Tidak ada data ditemukan.</div></td></tr>';return;}
         data.forEach(function(p){
             allIkanDataGJ[p.id]=p;var tr=document.createElement('tr');
-            var td1=document.createElement('td');td1.style.fontWeight='700';td1.innerText=p.nama_peserta||'—';tr.appendChild(td1);
             var td2=document.createElement('td');td2.style.cssText='font-size:12px;font-weight:600;color:var(--text-muted);';td2.innerText=(p.kategori||'—')+' - '+(p.kelas||'—');tr.appendChild(td2);
             var td3=document.createElement('td');td3.style.cssText='font-weight:700;color:var(--purple);';td3.innerText=p.nomor_tank?'Tank '+p.nomor_tank:'—';tr.appendChild(td3);
             var td4=document.createElement('td');td4.style.cssText='font-size:12px;color:var(--text-muted);';td4.innerText=p.detail_anggota||'—';tr.appendChild(td4);
@@ -1181,7 +1064,7 @@ function loadPeserta(search){
             var td7=document.createElement('td');if(p.is_locked){td7.innerHTML='<span class="badge badge-success"><i class="fas fa-lock" style="margin-right:3px;font-size:9px;"></i>NILAI FINAL</span>';}else if(p.grand_juri_nama){td7.innerHTML='<span class="badge badge-purple"><i class="fas fa-crown" style="margin-right:3px;font-size:9px;"></i>GRAND EDITED</span>';}else{td7.innerHTML='<span class="badge '+(p.status_class||'badge-success')+'">'+(p.status||'—').toUpperCase()+'</span>';}tr.appendChild(td7);
             var td8=document.createElement('td');if(p.is_locked){td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm btn-lock" style="background:var(--primary-light);color:var(--primary);border-color:rgba(34,211,238,.20);" onclick="kunciNilai('+p.id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></div>';}else{var canLock=p.submitted_juri_count>=p.total_juri_all;var lockHtml=canLock?'<button class="btn-sm btn-lock" onclick="kunciNilai('+p.id+')" title="Semua juri sudah kirim — siap dikunci"><i class="fas fa-lock-open"></i> Kunci</button>':'<button class="btn-sm btn-lock" style="opacity:.35;cursor:not-allowed;" disabled title="Masih ada juri yang belum mengirim"><i class="fas fa-lock-open"></i> Kunci</button>';td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm btn-edit" onclick="openEdit('+p.id+')"><i class="fas fa-pen-to-square"></i> Edit</button>'+lockHtml+'</div>';}tr.appendChild(td8);tbody.appendChild(tr);
         });
-    }).catch(function(){document.getElementById('tbodyPeserta').innerHTML='<tr><td colspan="9"><div class="empty-state">Gagal memuat data.</div></td></tr>';});
+    }).catch(function(){document.getElementById('tbodyPeserta').innerHTML='<tr><td colspan="8"><div class="empty-state">Gagal memuat data.</div></td></tr>';});
 }
 var searchT;document.getElementById('searchInput').addEventListener('input',function(){var q=this.value;clearTimeout(searchT);searchT=setTimeout(function(){loadPeserta(q);},300);});
 
@@ -1191,16 +1074,16 @@ function fetchSingle(id,cb){fetch('/api/grand-juri/peserta?id='+id,{headers:{'Ac
 /* ================================================================ MODAL DETAIL ================================================================ */
 function openDetail(id){currentId=id;document.getElementById('detailContent').innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:20px;display:block;margin-bottom:8px;"></i>Memuat...</div>';document.getElementById('modalDetail').classList.add('show');fetchSingle(id,function(p){if(!p){document.getElementById('detailContent').innerHTML='<div class="empty-state">Data tidak ditemukan.</div>';return;}currentPData=p;var editBtn=document.getElementById('btnToEdit');if(p.is_locked){editBtn.style.display='none';}else{editBtn.style.display='';editBtn.onclick=function(){closeModal('modalDetail');openEdit(id);};}renderDetail(p);});}
 
-function renderDetail(p){var html='';html+='<div class="detail-info-banner"><div><h4>'+esc(p.nama_peserta)+'</h4><div class="detail-meta">';html+='<span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span>';html+='<span><i class="fas fa-tag"></i> '+(p.kategori||'—')+' - '+(p.kelas||'—')+'</span>';if(p.detail_anggota&&p.detail_anggota!=='—')html+='<span><i class="fas fa-users"></i> '+esc(p.detail_anggota)+'</span>';html+='</div></div>';var allIn=p.submitted_juri_count>=p.total_juri_all;html+='<span class="juri-submit-chip '+(allIn?'ok':'not-ok')+'"><i class="fas '+(allIn?'fa-check-circle':'fa-clock')+'"></i> '+p.submitted_juri_count+' dari '+p.total_juri_all+' juri kirim</span></div>';
+function renderDetail(p){var html='';html+='<div class="detail-info-banner"><div><div class="detail-meta">';html+='<span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span>';html+='<span><i class="fas fa-tag"></i> '+(p.kategori||'—')+' - '+(p.kelas||'—')+'</span>';if(p.detail_anggota&&p.detail_anggota!=='—')html+='<span><i class="fas fa-users"></i> '+esc(p.detail_anggota)+'</span>';html+='</div></div>';var allIn=p.submitted_juri_count>=p.total_juri_all;html+='<span class="juri-submit-chip '+(allIn?'ok':'not-ok')+'"><i class="fas '+(allIn?'fa-check-circle':'fa-clock')+'"></i> '+p.submitted_juri_count+' dari '+p.total_juri_all+' juri kirim</span></div>';
 if(p.is_locked){html+='<div class="detail-note purple-note"><i class="fas fa-lock"></i><span>Nilai ini sudah <strong>TERKUNCI (FINAL)</strong> dan tidak dapat diubah.</span></div>';}else if(!allIn){html+='<div class="detail-note"><i class="fas fa-info-circle"></i><span>Masih ada <strong>'+(p.total_juri_all-p.submitted_juri_count)+'</strong> juri yang belum mengirim. Tombol <strong>Kunci</strong> aktif setelah semua juri mengirim.</span></div>';}
 if(!p.all_scorings||p.all_scorings.length===0){html+='<div class="empty-state" style="padding:40px;"><i class="fas fa-clipboard-list" style="font-size:36px;display:block;margin-bottom:10px;color:var(--text-faint);"></i>Belum ada nilai yang dikirim juri.</div>';document.getElementById('detailContent').innerHTML=html;return;}
 p.all_scorings.forEach(function(sc,idx){var uid='dj-'+idx;var iconCls='fas fa-user-pen';var label='Juri: '+esc(sc.juri_name);if(sc.edited_by_grand&&sc.grand_juri_name){label+=' <span style="color:var(--purple);font-size:11px;font-weight:600;"><i class="fas fa-pen-to-square" style="font-size:9px;"></i> diedit: '+esc(sc.grand_juri_name)+'</span>';}html+='<div class="detail-juri-accordion"><div class="detail-juri-toggle" id="'+uid+'-toggle" onclick="toggleJuriDetail(\''+uid+'\')"><span class="dj-name"><i class="'+iconCls+'" style="font-size:11px;"></i> '+label+'</span><span style="display:flex;align-items:center;gap:10px;"><span class="dj-total">'+sc.total_nilai+'</span><i class="fas fa-chevron-down dj-arrow"></i></span></div><div class="detail-juri-scores" id="'+uid+'-scores">';var nd=sc.nilai_detail;if(!nd||typeof nd!=='object'){html+='<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada data nilai.</div>';}else{Object.keys(formFields).forEach(function(kat){var fields=formFields[kat];if(kat==='face'&&nd.face){if(nd.face.face===undefined&&(nd.face.pipi!==undefined||nd.face.mata!==undefined))fields=formFieldsLegacy.face;}html+='<div style="margin-bottom:10px;border:1px solid var(--bd-2);border-radius:10px;overflow:hidden;">';var katNilai=nd[kat]||{};var sub=0;fields.forEach(function(f){if(f.type==='defect')return;var fv=katNilai[f.id];if(fv===undefined&&f.id==='shining'&&katNilai.shinning!==undefined)fv=katNilai.shinning;if(fv!==undefined&&fv!==null)sub+=parseInt(fv)||0;});var defectEval=sc.defect_eval||{};var penaltyKey=kat+'_penalty';var penaltyStr=defectEval[penaltyKey]||'';var defectPersen=0;var hasDefect=false;var defectNames=[];if(penaltyStr&&penaltyStr!==''){hasDefect=true;defectPersen=parseInt(penaltyStr)||0;var rawKey='raw_'+kat+'_penalty';var rawDefs=sc[rawKey];if(rawDefs){if(!Array.isArray(rawDefs))rawDefs=[rawDefs];defectNames=rawDefs.filter(function(v){return v&&v!=='0';});}}var displaySub=sub;if(hasDefect&&defectPersen>0)displaySub=Math.round(sub*(1-defectPersen/100)*10)/10;if(hasDefect&&defectPersen>0){html+='<div class="detail-kat-mini"><span>'+kat.toUpperCase()+'</span><span>Subtotal: <s style="color:var(--text-faint);font-size:10px;">'+sub+'</s> → <strong style="color:var(--purple);">'+displaySub+'</strong> <span style="color:#fca5a5;font-weight:700;">(-'+defectPersen+'%)</span></span></div>';}else{html+='<div class="detail-kat-mini"><span>'+kat.toUpperCase()+'</span><span>Subtotal: '+sub+'</span></div>';}var hasDefectField=fields.some(function(f){return f.type==='defect';});fields.forEach(function(f){if(f.type==='defect')return;var val=katNilai[f.id];if(val===undefined&&f.id==='shining'&&katNilai.shinning!==undefined)val=katNilai.shinning;var has=(val!==undefined&&val!==null&&val!=='');html+='<div class="detail-field-row"><div class="detail-field-left"><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';});if(hasDefectField){if(hasDefect&&defectPersen>0&&defectNames.length>0){var isMayor=defectPersen>=30;html+='<div class="detail-field-row" style="background:'+(isMayor?'var(--danger-lt)':'var(--warning-lt)')+';"><div class="detail-field-left"><div class="detail-field-name" style="color:'+(isMayor?'#fca5a5':'var(--gold-300)')+';"><i class="fas fa-exclamation-triangle" style="margin-right:4px;font-size:10px;"></i>Defect '+(isMayor?'(MAYOR)':'(MINOR)')+'</div><div class="detail-field-meta" style="color:'+(isMayor?'#fca5a5':'var(--gold-300)')+';font-weight:600;">'+defectNames.join(', ')+'</div></div><span class="score-chip" style="background:'+(isMayor?'var(--danger-lt)':'var(--warning-lt)')+';color:'+(isMayor?'#fca5a5':'var(--gold-300)')+';font-weight:800;">-'+defectPersen+'%</span></div>';}else{html+='<div class="detail-field-row" style="background:var(--success-lt);"><div class="detail-field-left"><div class="detail-field-name" style="color:#34D399;"><i class="fas fa-check-circle" style="margin-right:4px;font-size:10px;"></i>Defect</div><div class="detail-field-meta" style="color:#059669;font-weight:600;">Tidak ada defect</div></div><span class="score-chip" style="background:var(--success-lt);color:#34D399;font-weight:800;">AMAN</span></div>';}}html+='</div>';});}html+='</div></div>';});
-if(p.detail_list_per_juri&&p.detail_list_per_juri.length>0){html+='<div style="margin-top:16px;border:2px solid rgba(124,58,237,.25);border-radius:14px;overflow:hidden;">';html+='<div style="padding:12px 16px;background:linear-gradient(135deg,rgba(124,58,237,.10),rgba(124,58,237,.05));border-bottom:2px solid rgba(124,58,237,.25);display:flex;justify-content:space-between;align-items:center;">';html+='<span style="font-size:13px;font-weight:800;color:var(--text-hi);"><i class="fas fa-calculator" style="margin-right:6px;color:var(--purple);"></i>Ringkasan Nilai & Point</span>';html+='<span style="font-size:11px;color:var(--purple);font-weight:700;">'+p.jumlah_juri_yang_nilai+' juri</span></div>';html+='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:rgba(124,58,237,.06);"><th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(124,58,237,.20);">JURI</th><th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(124,58,237,.20);">TOTAL NILAI</th></tr></thead><tbody>';var grandTotalNilai=0;p.detail_list_per_juri.forEach(function(j){if(!j.is_grand){grandTotalNilai+=j.total_nilai;html+='<tr style="background:transparent;"><td style="padding:10px 16px;font-weight:600;border-bottom:1px solid var(--bd-1);color:var(--text);">'+esc(j.juri_name)+'</td><td style="padding:10px 16px;font-weight:800;text-align:right;border-bottom:1px solid var(--bd-1);">'+j.total_nilai+'</td></tr>';}});html+='<tr style="background:rgba(124,58,237,.08);border-top:2px solid rgba(124,58,237,.25);"><td style="padding:12px 16px;font-weight:800;color:var(--purple);font-size:11px;text-transform:uppercase;letter-spacing:.3px;">Total Semua Juri</td><td style="padding:12px 16px;font-family:\'Fraunces\',serif;font-weight:500;text-align:right;color:var(--purple);font-size:16px;letter-spacing:-.02em;">'+grandTotalNilai+'</td></tr></tbody></table>';var basePoint=p.total_point??0;var bonusTotal=p.total_bonus||0;var finalPoint=p.final_point||basePoint;html+='<div style="display:grid;grid-template-columns:1fr auto;border-top:2px solid rgba(124,58,237,.25);"><div style="padding:14px 16px;background:transparent;display:flex;flex-direction:column;justify-content:center;gap:2px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Total Point</div><div style="font-size:10px;color:var(--text-muted);">Dihitung dari rata-rata '+p.jumlah_juri_yang_nilai+' juri</div></div><div style="padding:14px 20px;background:transparent;display:flex;align-items:center;justify-content:flex-end;min-width:160px;"><div style="text-align:right;"><div style="font-family:\'Fraunces\',serif;font-size:22px;font-weight:500;color:'+(bonusTotal>0?'#34D399':'var(--gold-300)')+';line-height:1;letter-spacing:-.02em;">'+finalPoint+'</div>';if(bonusTotal>0)html+='<div style="font-size:9px;color:#34D399;font-weight:700;margin-top:3px;">Dasar '+basePoint+' + Bonus +'+bonusTotal+'</div>';html+='</div></div></div></div>';if(p.bonus_list&&p.bonus_list.length>0){html+='<div style="margin-top:10px;background:var(--success-lt);border:1px solid rgba(16,185,129,.25);border-radius:12px;padding:12px 16px;">';html+='<div style="font-size:11px;font-weight:800;color:#059669;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="fas fa-trophy" style="color:var(--gold-500);margin-right:4px;"></i>Bonus Point Diberikan</div>';p.bonus_list.forEach(function(btKey){var btInfo=bonusTypes.find(function(b){return b.key===btKey;});if(btInfo){html+='<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(16,185,129,.10);border-radius:8px;margin:0 6px 6px 0;font-size:11px;font-weight:700;color:#34D399;"><i class="fas '+btInfo.icon+'" style="font-size:10px;"></i> '+btInfo.label+' (+100)</div>';}});html+='</div>';}}document.getElementById('detailContent').innerHTML=html;}
+if(p.detail_list_per_juri&&p.detail_list_per_juri.length>0){html+='<div style="margin-top:16px;border:2px solid rgba(124,58,237,.25);border-radius:14px;overflow:hidden;">';html+='<div style="padding:12px 16px;background:linear-gradient(135deg,rgba(124,58,237,.10),rgba(124,58,237,.05));border-bottom:2px solid rgba(124,58,237,.25);display:flex;justify-content:space-between;align-items:center;">';html+='<span style="font-size:13px;font-weight:800;color:var(--text-hi);"><i class="fas fa-calculator" style="margin-right:6px;color:var(--purple);"></i>Ringkasan Nilai & Point</span>';html+='<span style="font-size:11px;color:var(--purple);font-weight:700;">'+p.jumlah_juri_yang_nilai+' juri</span></div>';html+='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:rgba(124,58,237,.06);"><th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(124,58,237,.20);">JURI</th><th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(124,58,237,.20);">TOTAL NILAI</th></tr></thead><tbody>';var grandTotalNilai=0;p.detail_list_per_juri.forEach(function(j){if(!j.is_grand){grandTotalNilai+=j.total_nilai;html+='<tr style="background:transparent;"><td style="padding:10px 16px;font-weight:600;border-bottom:1px solid var(--bd-1);color:var(--text);">'+esc(j.juri_name)+'</td><td style="padding:10px 16px;font-weight:800;text-align:right;border-bottom:1px solid var(--bd-1);">'+j.total_nilai+'</td></tr>';}});html+='<tr style="background:rgba(124,58,237,.08);border-top:2px solid rgba(124,58,237,.25);"><td style="padding:12px 16px;font-weight:800;color:var(--purple);font-size:11px;text-transform:uppercase;letter-spacing:.3px;">Total Semua Juri</td><td style="padding:12px 16px;font-family:\'Fraunces\',serif;font-weight:500;text-align:right;color:var(--purple);font-size:16px;letter-spacing:-.02em;">'+grandTotalNilai+'</td></tr></tbody></table>';var basePoint=p.total_point??0;var bonusTotal=p.total_bonus||0;var finalPoint=p.final_point||basePoint;html+='<div style="display:grid;grid-template-columns:1fr auto;border-top:2px solid rgba(124,58,237,.25);"><div style="padding:14px 16px;background:transparent;display:flex;flex-direction:column;justify-content:center;gap:2px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Total Point</div><div style="font-size:10px;color:var(--text-muted);">Dihitung dari rata-rata '+p.jumlah_juri_yang_nilai+' juri</div></div><div style="padding:14px 20px;background:transparent;display:flex;align-items:center;justify-content:flex-end;min-width:160px;"><div style="text-align:right;"><div style="font-family:\'Fraunces\',serif;font-size:22px;font-weight:500;color:'+(bonusTotal>0?'#34D399':'var(--gold-300)')+';line-height:1;letter-spacing:-.02em;">'+finalPoint+'</div>';if(bonusTotal>0)html+='<div style="font-size:9px;color:#34D399;font-weight:700;margin-top:3px;">Dasar '+basePoint+' + Bonus +'+bonusTotal+'</div>';html+='</div></div></div></div>';}document.getElementById('detailContent').innerHTML=html;}
 
 function toggleJuriDetail(uid){var t=document.getElementById(uid+'-toggle');var s=document.getElementById(uid+'-scores');if(t.classList.contains('open')){t.classList.remove('open');s.classList.remove('open');}else{t.classList.add('open');s.classList.add('open');}}
 
 /* ================================================================ MODAL EDIT ================================================================ */
-function openEdit(id){currentId=id;currentEditKat='overall';fetchSingle(id,function(p){if(!p){document.getElementById('popupErrorDesc').textContent='Data peserta tidak ditemukan.';showPopup('popupError');return;}if(p.is_locked){document.getElementById('popupErrorDesc').innerHTML='Nilai ini sudah <b>TERKUNCI (FINAL)</b> dan tidak dapat diubah.';showPopup('popupError');return;}currentPData=p;if(p.nilai_detail&&typeof p.nilai_detail==='object'){editMemory=cloneValues(p.nilai_detail);}else{editMemory=freshMemory();}originalValues=cloneValues(editMemory);editDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};if(p.all_scorings&&p.all_scorings.length>0){var targetSc=p.all_scorings.find(function(s){return s.is_grand;})||p.all_scorings[0];if(targetSc){editDefectData.raw_head_penalty=normDefArr(targetSc.raw_head_penalty);editDefectData.raw_face_penalty=normDefArr(targetSc.raw_face_penalty);editDefectData.raw_body_penalty=normDefArr(targetSc.raw_body_penalty);editDefectData.raw_finnage_penalty=normDefArr(targetSc.raw_finnage_penalty);}}originalDefectData=JSON.parse(JSON.stringify(editDefectData));var info='<b>'+esc(p.nama_peserta)+'</b> — Tank '+(p.nomor_tank||'—');info+='<br><span style="font-size:11px;color:var(--purple);">'+esc(p.kategori)+' - '+(p.kelas||'—')+' | '+esc(p.detail_anggota||'—')+'</span>';if(p.juri_nama&&p.juri_nama!=='—'){info+='<br><span style="font-size:11px;"><i class="fas fa-user-pen" style="margin-right:3px;"></i> Nilai asli dari: <b>'+esc(p.juri_nama)+'</b></span>';}else{info+='<br><span style="font-size:11px;color:var(--warning);"><i class="fas fa-info-circle" style="margin-right:3px;"></i> Belum ada nilai dari juri — Grand Juri menginput baru</span>';}if(p.grand_juri_nama){info+='<br><span style="font-size:11px;color:var(--purple);"><i class="fas fa-crown" style="margin-right:3px;"></i> Terakhir diedit oleh: <b>'+esc(p.grand_juri_nama)+'</b></span>';}document.getElementById('editInfo').innerHTML=info;renderEditList();renderEditInputs('overall');document.getElementById('modalEdit').classList.add('show');});}
+function openEdit(id){currentId=id;currentEditKat='overall';fetchSingle(id,function(p){if(!p){document.getElementById('popupErrorDesc').textContent='Data peserta tidak ditemukan.';showPopup('popupError');return;}if(p.is_locked){document.getElementById('popupErrorDesc').innerHTML='Nilai ini sudah <b>TERKUNCI (FINAL)</b> dan tidak dapat diubah.';showPopup('popupError');return;}currentPData=p;if(p.nilai_detail&&typeof p.nilai_detail==='object'){editMemory=cloneValues(p.nilai_detail);}else{editMemory=freshMemory();}originalValues=cloneValues(editMemory);editDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};if(p.all_scorings&&p.all_scorings.length>0){var targetSc=p.all_scorings.find(function(s){return s.is_grand;})||p.all_scorings[0];if(targetSc){editDefectData.raw_head_penalty=normDefArr(targetSc.raw_head_penalty);editDefectData.raw_face_penalty=normDefArr(targetSc.raw_face_penalty);editDefectData.raw_body_penalty=normDefArr(targetSc.raw_body_penalty);editDefectData.raw_finnage_penalty=normDefArr(targetSc.raw_finnage_penalty);}}originalDefectData=JSON.parse(JSON.stringify(editDefectData));var info='Tank '+(p.nomor_tank||'—');info+='<br><span style="font-size:11px;color:var(--purple);">'+esc(p.kategori)+' - '+(p.kelas||'—')+' | '+esc(p.detail_anggota||'—')+'</span>';if(p.juri_nama&&p.juri_nama!=='—'){info+='<br><span style="font-size:11px;"><i class="fas fa-user-pen" style="margin-right:3px;"></i> Nilai asli dari: <b>'+esc(p.juri_nama)+'</b></span>';}else{info+='<br><span style="font-size:11px;color:var(--warning);"><i class="fas fa-info-circle" style="margin-right:3px;"></i> Belum ada nilai dari juri — Grand Juri menginput baru</span>';}if(p.grand_juri_nama){info+='<br><span style="font-size:11px;color:var(--purple);"><i class="fas fa-crown" style="margin-right:3px;"></i> Terakhir diedit oleh: <b>'+esc(p.grand_juri_nama)+'</b></span>';}document.getElementById('editInfo').innerHTML=info;renderEditList();renderEditInputs('overall');document.getElementById('modalEdit').classList.add('show');});}
 
 function renderEditList(){var c=document.getElementById('editKatList');c.innerHTML='';Object.keys(formFields).forEach(function(kat){var changes=countChanges(kat);var btn=document.createElement('button');btn.className='kat-btn'+(kat===currentEditKat?' active':'');btn.innerHTML='<span>'+kat.charAt(0).toUpperCase()+kat.slice(1)+'</span><span class="kat-badge'+(changes>0?' has-changes':'')+'">'+(changes>0?changes:'—')+'</span>';btn.onclick=function(){switchEditKat(kat);};c.appendChild(btn);});}
 function countChanges(kat){if(!editMemory[kat]||!originalValues[kat])return 0;var n=0;formFields[kat].forEach(function(f){var cur=String(editMemory[kat][f.id]||'');var ori=String(originalValues[kat][f.id]||'');if(cur!==''&&cur!==ori)n++;});return n;}
@@ -1219,8 +1102,8 @@ function submitEdit(){saveCurrentTab();var payload={};var totalChanged=0;Object.
 /* ================================================================ GENERIC MODAL — JURI PESERTA ================================================================ */
 function openJuriPeserta(juriId,juriName,role){var isGrand=role==='grand_juri';document.getElementById('genericTitle').innerHTML='<i class="fas '+(isGrand?'fa-crown':'fa-user-pen')+'"></i> Peserta yang Dinilai — '+esc(juriName);var content=document.getElementById('genericContent');content.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin" style="display:block;margin-bottom:8px;"></i>Memuat data...</div>';document.getElementById('modalGeneric').classList.add('show');fetch('/api/grand-juri/juri-peserta?juri_id='+juriId+'&role='+role,{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(data){if(!data||data.length===0){content.innerHTML='<div class="empty-state"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></>Tidak ada data ditemukan.</div>';return;}
         var html='<div class="detail-note purple-note"><i class="fas fa-circle-info"></i><span>'+(isGrand?'Grand Juri':'Juri')+' <strong>'+esc(juriName)+'</strong> menilai <strong>'+data.length+'</strong> peserta.</span></div>';
-        html+='<div class="table-wrap"><table class="gen-table"><thead><tr><th>NO</th><th>PESERTA</th><th>NO. TANK</th><th>KATEGORI</th></tr></thead><tbody>';
-        data.forEach(function(item,i){html+='<tr><td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td><td style="font-weight:700;">'+esc(item.nama_peserta)+'</td><td class="g-tank">'+esc(item.nomor_tank)+'</td><td style="font-size:12px;color:var(--text-muted);">'+esc(item.kategori)+'</td></tr>';});
+        html+='<div class="table-wrap"><table class="gen-table"><thead><tr><th>NO</th><th>NO. TANK</th><th>KATEGORI</th></tr></thead><tbody>';
+        data.forEach(function(item,i){html+='<tr><td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td><td class="g-tank">'+esc(item.nomor_tank)+'</td><td style="font-size:12px;color:var(--text-muted);">'+esc(item.kategori)+'</td></tr>';});
         html+='</tbody></table></div>';content.innerHTML=html;
     }).catch(function(){content.innerHTML='<div class="empty-state">Gagal memuat data.</div>';});}
 
@@ -1231,8 +1114,8 @@ function openRincianDetail(kategori){
     fetch('/api/grand-juri/rincian-detail?kategori='+encodeURIComponent(kategori),{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(data){
         if(!data){content.innerHTML='<div class="empty-state">Data tidak ditemukan.</div>';return;}
         var html='<div class="detail-note purple-note"><i class="fas fa-circle-info"></i><span>Kategori <strong>'+esc(kategori)+'</strong> — Total <strong>'+data.total_ekor+'</strong> ekor sudah dinilai.</span></div>';
-        html+='<div class="table-wrap"><table class="gen-table"><thead><tr><th>NO</th><th>PESERTA</th><th>NO. TANK</th><th>DINILAI OLEH</th></tr></thead><tbody>';
-        if(!data.data||data.data.length===0){html+='<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Tidak ada data ditemukan.</td></tr>';}else{data.data.forEach(function(item,i){html+='<tr><td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td><td style="font-weight:700;">'+esc(item.nama_peserta)+'</td><td class="g-tank">'+esc(item.nomor_tank)+'</td><td class="g-juri">'+esc(item.juri_nama)+'</td></tr>';});}
+        html+='<div class="table-wrap"><table class="gen-table"><thead><tr><th>NO</th><th>NO. TANK</th><th>DINILAI OLEH</th></tr></thead><tbody>';
+        if(!data.data||data.data.length===0){html+='<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Tidak ada data ditemukan.</td></tr>';}else{data.data.forEach(function(item,i){html+='<tr><td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td><td class="g-tank">'+esc(item.nomor_tank)+'</td><td class="g-juri">'+esc(item.juri_nama)+'</td></tr>';});}
         html+='</tbody></table></div>';content.innerHTML=html;
     }).catch(function(){content.innerHTML='<div class="empty-state">Gagal memuat data.</div>';});}
 
@@ -1244,94 +1127,13 @@ function openPlotStatus(status){
     fetch('/api/grand-juri/plot-status?status='+status,{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(data){
         if(!data||data.length===0){content.innerHTML='<div class="empty-state"><i class="fas '+(isSudah?'fa-check-double':'fa-inbox')+'" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>'+(isSudah?'Belum ada peserta yang sudah di-plot.':'Tidak ada peserta yang belum di-plot — semua sudah!')+'</div>';return;}
         var html='<div class="detail-note purple-note"><i class="fas '+(isSudah?'fa-check-circle':'fa-info-circle')+'"></i><span>Menampilkan <strong>'+data.length+'</strong> peserta yang <strong>'+label.toLowerCase()+'</strong>.</span></div>';
-        html+='<div class="table-wrap"><table class="gen-table"><thead><tr><th>NO</th><th>PESERTA</th><th>NO. TANK</th><th>KATEGORI</th><th>KELAS</th><th>ASAL</th>';
+        html+='<div class="table-wrap"><table class="gen-table"><thead><tr><th>NO</th><th>NO. TANK</th><th>KATEGORI</th><th>KELAS</th><th>ASAL</th>';
         if(isSudah)html+='<th>DINILAI OLEH</th><th>TOTAL</th>';
         html+='</tr></thead><tbody>';
-        data.forEach(function(item,i){html+='<tr><td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td><td style="font-weight:700;">'+esc(item.nama_peserta)+'</td><td class="g-tank">'+esc(item.nomor_tank)+'</td><td style="font-size:12px;color:var(--text-muted);">'+esc(item.kategori)+'</td><td style="font-size:12px;">'+esc(item.kelas)+'</td><td style="font-size:11px;color:var(--text-muted);">'+esc(item.detail_anggota)+'</td>';
+        data.forEach(function(item,i){html+='<tr><td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td><td class="g-tank">'+esc(item.nomor_tank)+'</td><td style="font-size:12px;color:var(--text-muted);">'+esc(item.kategori)+'</td><td style="font-size:12px;">'+esc(item.kelas)+'</td><td style="font-size:11px;color:var(--text-muted);">'+esc(item.detail_anggota)+'</td>';
         if(isSudah){html+='<td class="g-juri">'+esc(item.juri_nama)+'</td><td class="g-total">'+item.total_nilai+'</td>';}html+='</tr>';});
         html+='</tbody></table></div>';content.innerHTML=html;
     }).catch(function(){content.innerHTML='<div class="empty-state">Gagal memuat data.</div>';});}
-
-/* ================================================================ LOAD MVP ================================================================ */
-function loadMvpGj(){
-    fetch('/api/grand-juri/mvp-ikan',{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(data){
-        var tb=document.getElementById('tbodyMvp');
-        if(!data||data.length===0){tb.innerHTML='<tr><td colspan="5"><div class="empty-state"><i class="fas fa-star" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Belum ada peserta yang mengirimkan data MVP.</div></td></tr>';return;}
-        tb.innerHTML='';data.forEach(function(p,idx){
-            var tr=document.createElement('tr');
-            tr.innerHTML='<td style="font-weight:700;"><i class="fas fa-city" style="color:var(--purple);margin-right:6px;font-size:11px;"></i>'+esc(p.detail_anggota)+'</td>'
-                + '<td><span class="badge badge-purple"><i class="fas fa-users" style="margin-right:3px;font-size:9px;"></i>'+p.jumlah_peserta+' Peserta</span></td>'
-                + '<td><span class="badge badge-purple"><i class="fas fa-star" style="margin-right:3px;font-size:9px;color:var(--gold-500);"></i>'+p.total_mvp+' Ikan MVP</span></td>'
-                + '<td><span class="badge badge-success"><i class="fas fa-paper-plane" style="margin-right:3px;font-size:9px;"></i>TERKIRIM</span></td>'
-                + '<td><button class="btn-sm btn-detail" onclick="openMvpDetail('+idx+')"><i class="fas fa-eye"></i> Lihat Ikan</button></td>';
-            tb.appendChild(tr);
-        });
-        window._mvpData=data;
-        // ★ Catat ikan ke allIkanDataGJ supaya openBonusModalGj() bisa pakai
-        data.forEach(function(grp){
-            grp.ikans.forEach(function(ikan){
-                allIkanDataGJ[ikan.ikan_id]={
-                    id: ikan.ikan_id,
-                    nama_peserta: ikan.nama_peserta,
-                    kategori: ikan.kategori,
-                    kelas: ikan.kelas,
-                    nomor_tank: ikan.nomor_tank,
-                    total_point: 0,
-                    total_bonus: ikan.total_bonus||0,
-                    final_point: 0,
-                    rank_point: ikan.rank_point||0,             // ★ NEW
-                    final_rank_point: ikan.final_rank_point||0, // ★ NEW
-                    position: ikan.position||0,                 // ★ NEW
-                    bonus_list: ikan.bonus_list||[]
-                };
-            });
-        });
-    }).catch(function(){document.getElementById('tbodyMvp').innerHTML='<tr><td colspan="5"><div class="empty-state">Gagal memuat data MVP.</div></td></tr>';});
-}
-
-function openMvpDetail(idx){
-    var p=window._mvpData[idx];if(!p)return;
-    var totalNote = (p.total_team_rank_point!==undefined) ? ' Total Rank Point Team: <strong>'+p.total_team_rank_point+'</strong> (rank '+p.total_rank_only+' + bonus '+(p.total_team_rank_point-p.total_rank_only)+').' : '';
-    var html='<div class="detail-note purple-note"><i class="fas fa-circle-info"></i><span>Kota/Team <strong>'+esc(p.detail_anggota)+'</strong> mendaftarkan <strong>'+p.total_mvp+'</strong> ikan MVP dari <strong>'+p.jumlah_peserta+'</strong> peserta.'+totalNote+' Rank Point dihitung dari posisi <strong>Top 10 per Kategori+Kelas</strong>.</span></div>';
-    html+='<table class="gen-table"><thead><tr><th>NO</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>NO. TANK</th><th style="text-align:center;">RANK POINT</th><th>BONUS</th><th>AKSI</th></tr></thead><tbody>';
-    p.ikans.forEach(function(ikan,i){
-        var bonusCount=(ikan.bonus_list||[]).length;
-        var bonusHtml=bonusCount>0
-            ? '<span class="badge badge-success"><i class="fas fa-trophy" style="margin-right:3px;font-size:9px;color:var(--gold-500);"></i>+'+ikan.total_bonus+' ('+bonusCount+')</span>'
-            : '<span style="font-size:11px;color:var(--text-muted);">—</span>';
-        var rankPt=ikan.rank_point||0;
-        var finalRank=ikan.final_rank_point||0;
-        var pos=ikan.position||0;
-        var rankHtml;
-        if(finalRank>0 && pos>=1 && pos<=10){
-            var rkBg,rkColor;
-            if(pos===1){rkBg='rgba(16,185,129,.14)';rkColor='#34D399';}
-            else if(pos<=3){rkBg='var(--warning-lt)';rkColor='var(--gold-300)';}
-            else if(pos<=6){rkBg='rgba(34,211,238,.08)';rkColor='var(--cyan-300)';}
-            else{rkBg='var(--purple-light)';rkColor='var(--purple)';}
-            rankHtml='<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:800;background:'+rkBg+';color:'+rkColor+';">'+finalRank+'</span>';
-            rankHtml+='<div style="font-size:9px;color:var(--text-muted);font-weight:700;margin-top:2px;">Juara '+pos+(ikan.total_bonus>0?' • '+rankPt+'+'+ikan.total_bonus:'')+'</div>';
-        } else {
-            rankHtml=ikan.total_bonus>0
-                ? '<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:800;background:var(--success-lt);color:#34D399;">'+ikan.total_bonus+'</span><div style="font-size:9px;color:var(--text-muted);font-weight:700;margin-top:2px;">bonus saja</div>'
-                : '<span style="font-size:11px;color:var(--text-muted);">—</span>';
-        }
-        html+='<tr>'
-            +'<td style="color:var(--text-muted);font-weight:700;">'+(i+1)+'</td>'
-            +'<td style="font-weight:700;">'+esc(ikan.nama_peserta)+'</td>'
-            +'<td style="font-weight:600;">'+esc(ikan.kategori)+'</td>'
-            +'<td>'+esc(ikan.kelas||'-')+'</td>'
-            +'<td style="font-weight:700;color:var(--purple);">'+(ikan.nomor_tank?'Tank '+ikan.nomor_tank:'—')+'</td>'
-            +'<td style="text-align:center;">'+rankHtml+'</td>'
-            +'<td>'+bonusHtml+'</td>'
-            +'<td><button class="btn-sm" style="background:var(--warning-lt);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);" onclick="openBonusModalGj('+ikan.ikan_id+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i> Bonus</button></td>'
-            +'</tr>';
-    });
-    html+='</tbody></table>';
-    document.getElementById('genericTitle').innerHTML='<i class="fas fa-star" style="color:var(--gold-500);"></i> Detail Ikan MVP - '+esc(p.detail_anggota);
-    document.getElementById('genericContent').innerHTML=html;
-    document.getElementById('modalGeneric').classList.add('show');
-}
 
 /* ================================================================ POINT RANKING ================================================================ */
 var pointScope='per_kategori_kelas';
@@ -1363,8 +1165,8 @@ function loadPointRanking(){
             html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(135deg,rgba(245,158,11,.10),rgba(245,158,11,.04));border:1px solid rgba(245,158,11,.25);border-radius:10px 10px 0 0;">';
             html+='<div class="card-title" style="font-size:13px;margin:0;"><i class="fas '+(isGlobal?'fa-globe':'fa-layer-group')+'" style="color:var(--gold-500);"></i> '+esc(g.group_name)+'</div>';
             html+='<span style="font-size:11px;color:var(--gold-300);font-weight:700;">'+g.total+' peserta</span></div>';
-            html+='<div class="table-wrap" style="border-radius:0 0 10px 10px;border:1px solid rgba(245,158,11,.20);border-top:none;"><table class="result-table" style="min-width:800px;">';
-            html+='<thead><tr><th style="width:40px;text-align:center;">#</th><th>PESERTA</th>'+(isGlobal?'<th>KATEGORI</th>':'')+'<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:80px;text-align:center;">POINT</th><th style="width:100px;text-align:center;">RANK POINT</th></tr></thead><tbody>';
+            html+='<div class="table-wrap" style="border-radius:0 0 10px 10px;border:1px solid rgba(245,158,11,.20);border-top:none;"><table class="result-table" style="min-width:760px;">';
+            html+='<thead><tr><th style="width:60px;text-align:center;">#</th>'+(isGlobal?'<th>KATEGORI</th>':'')+'<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:80px;text-align:center;">POINT</th><th style="width:100px;text-align:center;">RANK POINT</th></tr></thead><tbody>';
             g.data.forEach(function(d,i){
                 var rankPt=d.rank_point??0;var frp=d.final_rank_point??rankPt;var basePt=d.total_point??0;var bonus=d.total_bonus||0;var posisi=i+1;
                 // ★ Warna & medal pakai POSISI (post-bonus), bukan rank base, supaya AER (160) bisa dapat warna Juara 1
@@ -1378,7 +1180,7 @@ function loadPointRanking(){
                 if(posisi===1)medalHtml='<i class="fas fa-medal" style="color:var(--gold-500);font-size:12px;margin-right:4px;" title="Juara 1"></i>';
                 else if(posisi===2)medalHtml='<i class="fas fa-medal" style="color:#C0C0C0;font-size:12px;margin-right:4px;" title="Juara 2"></i>';
                 else if(posisi===3)medalHtml='<i class="fas fa-medal" style="color:#CD7F32;font-size:12px;margin-right:4px;" title="Juara 3"></i>';
-                html+='<tr><td style="text-align:center;font-weight:800;color:var(--text-muted);">'+posisi+'</td><td style="font-weight:700;">'+medalHtml+esc(d.nama_peserta)+'</td>';
+                html+='<tr><td style="text-align:center;font-weight:800;color:var(--text-muted);white-space:nowrap;">'+medalHtml+posisi+'</td>';
                 if(isGlobal)html+='<td style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">'+esc(d.kategori)+'</td>';
                 html+='<td style="font-weight:700;color:var(--purple);text-align:center;">'+(d.nomor_tank||'—')+'</td><td style="text-align:center;">'+esc(d.kelas)+'</td><td style="font-size:11px;color:var(--text-muted);">'+esc(d.detail_anggota)+'</td>';
                 html+='<td style="text-align:center;"><div style="font-weight:800;">'+(d.total_nilai_semua??0)+'</div>';if(d.jumlah_juri>0)html+='<div style="font-size:9px;color:var(--text-muted);font-weight:600;">'+d.jumlah_juri+' juri</div>';html+='</td>';
@@ -1396,7 +1198,7 @@ function doExport(sheets){document.getElementById('exportDD').classList.remove('
 document.addEventListener('click',function(e){if(!e.target.closest('.export-wrap')){document.getElementById('exportDD').classList.remove('show');}});
 
 /* ================================================================ INIT ================================================================ */
-loadStats();loadPeserta();loadJuriSummary();loadMvpGj();loadPointRanking();
+loadStats();loadPeserta();loadJuriSummary();loadPointRanking();
 
 function loadNominasiBadge(){
     fetch('/api/grand-juri/nominasi',{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(d){

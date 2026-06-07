@@ -107,7 +107,6 @@
         .tank-badge{font-size:10px;font-weight:700;padding:5px 8px;border-radius:8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
         .tank-badge.kat{background:var(--purple-light);color:var(--purple);border:1px solid rgba(124,58,237,.18);}
         .tank-badge.kelas{background:var(--success-lt);color:#34D399;border:1px solid rgba(16,185,129,.18);}
-        .tank-name{font-size:10px;font-weight:600;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:12px;}
         .tank-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
         .tank-btn{padding:8px;border-radius:8px;border:none;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-family:inherit;transition:all .15s;color:white;}
         .tank-btn.acc{background:rgba(16,185,129,.20);color:#34D399;border:1px solid rgba(16,185,129,.25);}
@@ -241,7 +240,6 @@
             .tank-num{width:38px;height:38px;font-size:16px;border-radius:10px;margin-bottom:10px;}
             .tank-badges{gap:4px;margin-bottom:8px;}
             .tank-badge{font-size:9px;padding:4px 6px;}
-            .tank-name{font-size:9px;margin-bottom:10px;}
             .tank-actions{gap:6px;}
             .tank-btn{padding:7px;font-size:9px;}
             .nom-group-head{padding:12px 14px;}
@@ -612,7 +610,6 @@ async function loadNominasi(silent) {
                         html += '<div id="tank-card-' + tank.nominasi_id + '" class="tank-card">';
                         html += '<div class="tank-num">' + (tank.nomor_tank || '?') + '</div>';
                         html += '<div class="tank-badges"><div class="tank-badge kat">' + escH(tank.kategori || '-') + '</div>' + kelasHtml + '</div>';
-                        html += '<div class="tank-name">' + escH(tank.nama_peserta || 'Unknown') + '</div>';
                         html += '<div class="tank-actions">';
                         html += '<button onclick="approveNominasi(this, ' + tank.nominasi_id + ')" class="tank-btn acc"><i class="fas fa-check"></i> ACC</button>';
                         html += '<button onclick="showRejectConfirm(' + tank.nominasi_id + ', ' + (tank.nomor_tank || 0) + ')" class="tank-btn rej"><i class="fas fa-times"></i> Tolak</button>';
@@ -728,7 +725,6 @@ async function loadLateIkan() {
             html += '<div id="late-card-' + ikan.ikan_id + '" class="tank-card">';
             html += '<div class="tank-num" style="background:linear-gradient(135deg,var(--gold-600),var(--gold-500));box-shadow:0 4px 12px -3px rgba(245,158,11,.4);">' + (ikan.nomor_tank || '?') + '</div>';
             html += '<div class="tank-badges"><div class="tank-badge kat">' + escH(ikan.kategori || '-') + '</div>' + kelasHtml + '</div>';
-            html += '<div class="tank-name">' + escH(ikan.nama_peserta || 'Unknown') + '</div>';
             html += '<div class="tank-actions">';
             html += '<button onclick="approveLateIkan(this, ' + ikan.ikan_id + ')" class="tank-btn acc"><i class="fas fa-check"></i> ACC</button>';
             html += '<button onclick="rejectLateIkan(' + ikan.ikan_id + ', ' + (ikan.nomor_tank || 0) + ')" class="tank-btn rej"><i class="fas fa-times"></i> Tolak</button>';

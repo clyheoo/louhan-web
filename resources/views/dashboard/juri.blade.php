@@ -123,6 +123,22 @@
     </div>
 
     {{-- ════════════════════════════════════════════════════════════
+         LAYER 3B: ANIMASI REJECTION
+         ════════════════════════════════════════════════════════════ --}}
+    <div id="nom-rejected-anim" class="hidden fixed inset-0 z-[9998] flex items-center justify-center" style="background:radial-gradient(ellipse 60% 40% at 50% 50%, rgba(239,68,68,0.10), transparent 70%),linear-gradient(135deg, var(--ocean-950) 0%, var(--ocean-900) 50%, var(--ocean-850) 100%);">
+        <div class="text-center fade-in">
+            <div class="w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl" style="background:linear-gradient(135deg,#EF4444,#B91C1C);box-shadow:0 0 60px rgba(239,68,68,0.45);animation:popIn 0.5s cubic-bezier(0.16,1,0.3,1) both;">
+                <svg class="w-16 h-16 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <path class="cross-line-1" d="M6 6L18 18"/>
+                    <path class="cross-line-2" d="M18 6L6 18"/>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-extrabold mb-2" style="color:var(--text-hi);animation:fadeUp 0.5s 0.4s ease both;">Nominasi Ditolak</h2>
+            <p id="nom-rejected-anim-sub" class="text-sm" style="color:var(--text-mid);animation:fadeUp 0.5s 0.6s ease both;">Mempersiapkan halaman pilih ulang...</p>
+        </div>
+    </div>
+
+    {{-- ════════════════════════════════════════════════════════════
          LAYER 4: HALAMAN PENILAIAN
          ════════════════════════════════════════════════════════════ --}}
     <div id="scoring-page" class="hidden">
@@ -327,6 +343,11 @@
     @keyframes fadeUp { from{opacity:0;transform:translateY(15px)} to{opacity:1;transform:translateY(0)} }
     .check-draw { stroke-dasharray: 50; stroke-dashoffset: 50; animation: drawCheck 0.5s 0.6s ease-out forwards; }
     @keyframes drawCheck { to { stroke-dashoffset: 0; } }
+    /* ── ANIMASI X (REJECTION) ── */
+    .cross-line-1, .cross-line-2 { stroke-dasharray: 30; stroke-dashoffset: 30; }
+    .cross-line-1 { animation: drawCross 0.35s 0.5s ease-out forwards; }
+    .cross-line-2 { animation: drawCross 0.35s 0.85s ease-out forwards; }
+    @keyframes drawCross { to { stroke-dashoffset: 0; } }
 
     /* ── FORM TABLE ROW HOVER ── */
     #form-tbody tr { transition: background 0.15s ease; border-bottom: 1px solid var(--bd-1); }
@@ -699,19 +720,32 @@ async function checkNominasiStatus() {
     try {
         const res = await apiFetch('/api/juri/nominasi-status');
         const status = res.status;
+        const wasPending = sessionStorage.getItem('nom_was_pending') === '1';
         nomHide('nom-loading');
+
         if (status === 'approved') {
-            if (sessionStorage.getItem('nom_anim_done')) {
-                nomHide('nom-loading'); nomHide('nom-page'); nomHide('nom-waiting');
-                nomShow('scoring-page'); initScoringPage();
-            } else {
-                sessionStorage.setItem('nom_anim_done', '1');
+            if (wasPending) {
+                // ★ Transisi pending → approved: tampilkan animasi
+                sessionStorage.removeItem('nom_was_pending');
                 nomShowApprovedAnim();
+            } else {
+                // Reload langsung saat sudah approved → skip animasi
+                nomHide('nom-page'); nomHide('nom-waiting');
+                nomHide('nom-approved-anim'); nomHide('nom-rejected-anim');
+                nomShow('scoring-page'); initScoringPage();
             }
         } else if (status === 'pending') {
             nomShowWaiting(res.nominations);
         } else {
-            nomShowNominasiPage(res.nominations);
+            // status === 'none'
+            const hasRejected = (res.nominations || []).some(function(n) { return n.status === 'rejected'; });
+            if (wasPending && hasRejected) {
+                // ★ Transisi pending → ditolak: tampilkan animasi rejection
+                sessionStorage.removeItem('nom_was_pending');
+                nomShowRejectedAnim(res.nominations);
+            } else {
+                nomShowNominasiPage(res.nominations);
+            }
         }
     } catch (e) {
         nomHide('nom-loading');
@@ -735,6 +769,7 @@ function nomShowNominasiPage(rejectedNoms) {
 }
 
 function nomShowWaiting(nominations) {
+    sessionStorage.setItem('nom_was_pending', '1');  // ★ tandai sudah masuk waiting
     nomHide('nom-page'); nomHide('scoring-page'); nomShow('nom-waiting');
     const list = document.getElementById('nom-waiting-list');
     list.innerHTML = nominations.map(n =>
@@ -748,10 +783,24 @@ function nomShowWaiting(nominations) {
     nomState.autoRefreshTimer = setInterval(checkNominasiStatus, 5000);
 }
 
-function nomShowApprovedAnim() {
+function nomShowRejectedAnim(nominations) {
     if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
-    nomHide('nom-page'); nomHide('nom-waiting'); nomHide('scoring-page'); nomShow('nom-approved-anim');
-    setTimeout(function() { nomHide('nom-approved-anim'); nomShow('scoring-page'); initScoringPage(); }, 3000);
+    nomHide('nom-page'); nomHide('nom-waiting'); nomHide('scoring-page'); nomHide('nom-approved-anim');
+
+    // Customize subtitle berdasarkan jumlah tank yang ditolak
+    const rejectedCount = (nominations || []).filter(function(n) { return n.status === 'rejected'; }).length;
+    const sub = document.getElementById('nom-rejected-anim-sub');
+    if (sub) {
+        sub.textContent = rejectedCount > 0
+            ? rejectedCount + ' tank ditolak — silakan pilih ulang...'
+            : 'Silakan pilih ulang tank...';
+    }
+
+    nomShow('nom-rejected-anim');
+    setTimeout(function() {
+        nomHide('nom-rejected-anim');
+        nomShowNominasiPage(nominations);
+    }, 3000);
 }
 
 async function nomLoadData() {
