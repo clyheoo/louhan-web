@@ -1776,4 +1776,196 @@ class AdminDashboardController extends Controller
 
         return response()->json($result, 200, [], JSON_PRETTY_PRINT);
     }
+    
+    public function getPointRanking(Request $request)
+    {
+        $scope = $request->query('scope', 'per_kategori_kelas');
+        $filterKategori = $request->query('kategori', '');
+        $filterKelas = $request->query('kelas', '');
+
+        if ($scope === 'global') {
+            $limit = 10;
+
+            $ikans = Ikan::where('is_locked', true)
+                ->whereNotNull('nomor_tank')
+                ->whereHas('scorings', function ($q) {})
+                ->with(['peserta', 'scorings' => function ($q) {}, 'scorings.juri', 'scorings.grandJuri', 'bonusPoints'])
+                ->get();
+
+            $allItems = [];
+            foreach ($ikans as $ikan) {
+                $scorings = $ikan->scorings;
+                if ($scorings->isEmpty()) continue;
+
+                $totalNilaiSemua = 0;
+                $jumlahJuriYangNilai = 0;
+                $avgDetail = [];
+
+                foreach ($scorings as $s) {
+                    if ($s->total_nilai) {
+                        $totalNilaiSemua += $s->total_nilai;
+                        $jumlahJuriYangNilai++;
+                    }
+                    if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                        foreach ($s->nilai_detail as $kat => $fields) {
+                            foreach ($fields as $fid => $val) {
+                                if (!isset($avgDetail[$kat][$fid])) {
+                                    $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                                }
+                                $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                                $avgDetail[$kat][$fid]['count']++;
+                            }
+                        }
+                    }
+                }
+
+                $finalAvgDetail = [];
+                if ($jumlahJuriYangNilai > 0) {
+                    foreach ($avgDetail as $kat => $fields) {
+                        $finalAvgDetail[$kat] = [];
+                        foreach ($fields as $fid => $d) {
+                            $finalAvgDetail[$kat][$fid] = $d['count'] > 0
+                                ? $d['sum'] / $d['count']
+                                : 0;
+                        }
+                    }
+                }
+
+                $defectSource = $scorings->first(function ($s) { return $s->edited_by_grand_juri; })
+                            ?? $scorings->sortByDesc('updated_at')->first();
+                $mergedDefect = [
+                    'raw_head_penalty'    => $defectSource ? ($defectSource->raw_head_penalty    ?: ['0']) : ['0'],
+                    'raw_face_penalty'    => $defectSource ? ($defectSource->raw_face_penalty    ?: ['0']) : ['0'],
+                    'raw_body_penalty'    => $defectSource ? ($defectSource->raw_body_penalty    ?: ['0']) : ['0'],
+                    'raw_finnage_penalty' => $defectSource ? ($defectSource->raw_finnage_penalty ?: ['0']) : ['0'],
+                ];
+                $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail, $mergedDefect);
+                $totalBonus = (int) $ikan->bonusPoints->sum('points');
+                $finalPoint = $totalPoint + $totalBonus;
+
+                $allItems[] = [
+                    'ikan_id'           => $ikan->id,
+                    'nama_peserta'      => $ikan->nama_peserta ?? 'Unknown',
+                    'detail_anggota'    => $ikan->detail_anggota ?? '—',
+                    'kategori'          => $ikan->kategori,
+                    'kelas'             => $ikan->kelas ?? '-',
+                    'nomor_tank'        => $ikan->nomor_tank,
+                    'total_nilai_semua' => $totalNilaiSemua,
+                    'total_point'       => (float) $totalPoint,
+                    'total_bonus'       => $totalBonus,
+                    'final_point'       => (float) $finalPoint,
+                    'jumlah_juri'       => $jumlahJuriYangNilai,
+                ];
+            }
+
+            $ranked = PointCalculator::hitungRankPoints($allItems, 'total_point');
+            $totalRanked = count($ranked);
+            $topItems = array_slice($ranked, 0, $limit);
+
+            return response()->json([[
+                'group_name' => 'Rank Global — Top ' . $limit . ' dari ' . $totalRanked,
+                'total'      => $totalRanked,
+                'data'       => $topItems,
+            ]]);
+        }
+
+        $query = Ikan::where('is_locked', true)
+            ->whereNotNull('nomor_tank')
+            ->whereHas('scorings', function ($q) {})
+            ->with(['peserta', 'scorings' => function ($q) {}, 'scorings.grandJuri', 'bonusPoints']);
+
+        if ($filterKategori) $query->where('kategori', $filterKategori);
+        if ($filterKelas) $query->where('kelas', $filterKelas);
+
+        $ikans = $query->orderBy('nomor_tank')->get();
+        $groups = [];
+
+        foreach ($ikans as $ikan) {
+            $scorings = $ikan->scorings;
+            if ($scorings->isEmpty()) continue;
+
+            $totalNilaiSemua = 0;
+            $jumlahJuriYangNilai = 0;
+            $avgDetail = [];
+
+            foreach ($scorings as $s) {
+                if ($s->total_nilai) {
+                    $totalNilaiSemua += $s->total_nilai;
+                    $jumlahJuriYangNilai++;
+                }
+                if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                    foreach ($s->nilai_detail as $kat => $fields) {
+                        foreach ($fields as $fid => $val) {
+                            if (!isset($avgDetail[$kat][$fid])) {
+                                $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                            }
+                            $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                            $avgDetail[$kat][$fid]['count']++;
+                        }
+                    }
+                }
+            }
+
+            $finalAvgDetail = [];
+            if ($jumlahJuriYangNilai > 0) {
+                foreach ($avgDetail as $kat => $fields) {
+                    $finalAvgDetail[$kat] = [];
+                    foreach ($fields as $fid => $d) {
+                        $finalAvgDetail[$kat][$fid] = $d['count'] > 0
+                            ? $d['sum'] / $d['count']
+                            : 0;
+                    }
+                }
+            }
+
+            $defectSource = $scorings->first(function ($s) { return $s->edited_by_grand_juri; })
+                        ?? $scorings->sortByDesc('updated_at')->first();
+            $mergedDefect = [
+                'raw_head_penalty'    => $defectSource ? ($defectSource->raw_head_penalty    ?: ['0']) : ['0'],
+                'raw_face_penalty'    => $defectSource ? ($defectSource->raw_face_penalty    ?: ['0']) : ['0'],
+                'raw_body_penalty'    => $defectSource ? ($defectSource->raw_body_penalty    ?: ['0']) : ['0'],
+                'raw_finnage_penalty' => $defectSource ? ($defectSource->raw_finnage_penalty ?: ['0']) : ['0'],
+            ];
+
+            $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail, $mergedDefect);
+            $totalBonus = (int) $ikan->bonusPoints->sum('points');
+            $finalPoint = $totalPoint + $totalBonus;
+            $noKelasKategori = ['Bonsai', 'Jumbo'];
+
+            if ($scope === 'per_kategori' || in_array($ikan->kategori, $noKelasKategori) || !$ikan->kelas) {
+                $key = $ikan->kategori;
+            } else {
+                $key = $ikan->kategori . ' - Kelas ' . $ikan->kelas;
+            }
+
+            $groups[$key][] = [
+                'ikan_id'           => $ikan->id,
+                'nama_peserta'      => $ikan->nama_peserta ?? 'Unknown',
+                'detail_anggota'    => $ikan->detail_anggota ?? '—',
+                'kategori'          => $ikan->kategori,
+                'kelas'             => $ikan->kelas ?? '-',
+                'nomor_tank'        => $ikan->nomor_tank,
+                'total_nilai_semua' => $totalNilaiSemua,
+                'total_point'       => (float) $totalPoint,
+                'total_bonus'       => $totalBonus,
+                'final_point'       => (float) $finalPoint,
+                'jumlah_juri'       => $jumlahJuriYangNilai,
+            ];
+        }
+
+        $result = [];
+        foreach ($groups as $name => $items) {
+            $ranked   = PointCalculator::hitungRankPoints($items, 'total_point');
+            $totalAll = count($ranked);
+            $top10    = array_slice($ranked, 0, 10);
+            $result[] = [
+                'group_name' => $name . ' — Top 10 dari ' . $totalAll,
+                'total'      => $totalAll,
+                'data'       => $top10,
+            ];
+        }
+        usort($result, function ($a, $b) { return strcmp($a['group_name'], $b['group_name']); });
+
+        return response()->json($result);
+    }
 }

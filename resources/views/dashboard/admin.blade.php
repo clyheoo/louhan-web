@@ -638,6 +638,7 @@
             <a class="sidebar-item" data-page="users"><i class="fas fa-users-gear"></i> Kelola User</a>
             <a class="sidebar-item" data-page="registrasi"><i class="fas fa-database"></i> Registrasi & Undian</a>
             <a class="sidebar-item" data-page="mvp"><i class="fas fa-star"></i> Kelola MVP</a>
+            <a class="sidebar-item" data-page="ranking"><i class="fas fa-trophy"></i> Point Ranking</a>
             <a class="sidebar-item" data-page="undian"><i class="fas fa-dice"></i> Kelola Mesin Undian</a>
         </nav>
 
@@ -1063,6 +1064,54 @@
                     </div>
                 </div>
 
+            </section>
+
+            <!-- ═══════════ PAGE: POINT RANKING ═══════════ -->
+            <section class="page-section" data-page="ranking" style="display:none;">
+                <div class="glass-card">
+                    <div class="card-head">
+                        <div>
+                            <h3><span class="ti" style="background:rgba(245,158,11,.12);border-color:var(--bd-gold);color:var(--gold-400);"><i class="fas fa-trophy"></i></span>Sistem Point Ranking</h3>
+                            <div class="card-sub">Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <button id="admBtnScopeKelas" onclick="setAdminPointScope('per_kategori_kelas')" style="font-size:11px;padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-weight:700;display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:#fff;transition:all .2s;">
+                                    <i class="fas fa-layer-group" style="font-size:10px;"></i> Per Kat + Kelas
+                                </button>
+                                <button id="admBtnScopeKat" onclick="setAdminPointScope('per_kategori')" style="font-size:11px;padding:7px 14px;border-radius:8px;border:1px solid rgba(245,158,11,.25);cursor:pointer;font-family:inherit;font-weight:700;display:inline-flex;align-items:center;gap:5px;background:var(--warning-lt);color:var(--gold-300);transition:all .2s;">
+                                    <i class="fas fa-tags" style="font-size:10px;"></i> Per Kategori
+                                </button>
+                                <button id="admBtnScopeGlobal" onclick="setAdminPointScope('global')" style="font-size:11px;padding:7px 14px;border-radius:8px;border:1px solid rgba(245,158,11,.25);cursor:pointer;font-family:inherit;font-weight:700;display:inline-flex;align-items:center;gap:5px;background:var(--warning-lt);color:var(--gold-300);transition:all .2s;">
+                                    <i class="fas fa-globe" style="font-size:10px;"></i> Rank Global
+                                </button>
+                            </div>
+                            <select class="filter-select" id="admPointFilterKategori" onchange="loadAdminPointRanking()">
+                                <option value="">Semua Kategori</option>
+                                <option value="Cencu">Cencu</option>
+                                <option value="Chingwa">Chingwa</option>
+                                <option value="Freemarking">Freemarking</option>
+                                <option value="Goldenbase">Goldenbase</option>
+                                <option value="Klasik">Klasik</option>
+                                <option value="Bonsai">Bonsai</option>
+                                <option value="Jumbo">Jumbo</option>
+                            </select>
+                            <select class="filter-select" id="admPointFilterKelas" onchange="loadAdminPointRanking()" style="min-width:120px;">
+                                <option value="">Semua Kelas</option>
+                                <option value="A">Kelas A</option>
+                                <option value="B">Kelas B</option>
+                                <option value="C">Kelas C</option>
+                                <option value="D">Kelas D</option>
+                                <option value="E">Kelas E</option>
+                            </select>
+                        </div>
+                        <div id="adminPointRankingContent">
+                            <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat ranking...</p></div>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- ═══════════ PAGE: MESIN UNDIAN ═══════════ -->

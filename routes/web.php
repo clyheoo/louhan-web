@@ -125,6 +125,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/import-template', [AdminDashboardController::class, 'downloadImportTemplate']);
     Route::get('/api/admin/stat-detail', [AdminDashboardController::class, 'getStatDetail']);
     Route::get('/api/admin/debug-user-ikans', [AdminDashboardController::class, 'debugUserIkans']);
+    Route::get('/api/admin/point-ranking', [AdminDashboardController::class, 'getPointRanking']);
 });
 
 /* ═══════════════════════════════════════════

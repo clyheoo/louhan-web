@@ -2905,6 +2905,95 @@ function submitImport() {
 }
 
 /* ═══════════════════════════════════════════════
+   POINT RANKING (SAMA SEPERTI GRAND JURI)
+   ═══════════════════════════════════════════════ */
+var adminPointScope = 'per_kategori_kelas';
+
+function setAdminPointScope(s){
+    adminPointScope = s;
+    var btnKelas = document.getElementById('admBtnScopeKelas');
+    var btnKat = document.getElementById('admBtnScopeKat');
+    var btnGlobal = document.getElementById('admBtnScopeGlobal');
+    [btnKelas, btnKat, btnGlobal].forEach(function(b){
+        b.style.background = 'var(--warning-lt)';
+        b.style.color = 'var(--gold-300)';
+        b.style.border = '1px solid rgba(245,158,11,.25)';
+    });
+    var activeBtn = s === 'per_kategori_kelas' ? btnKelas : s === 'per_kategori' ? btnKat : btnGlobal;
+    activeBtn.style.background = 'linear-gradient(135deg,var(--royal-600),var(--cyan-500))';
+    activeBtn.style.color = '#fff';
+    activeBtn.style.border = 'none';
+    document.getElementById('admPointFilterKategori').style.display = s === 'global' ? 'none' : '';
+    document.getElementById('admPointFilterKelas').style.display = s === 'global' ? 'none' : '';
+    loadAdminPointRanking();
+}
+
+function loadAdminPointRanking(){
+    var kat = document.getElementById('admPointFilterKategori').value;
+    var kelas = document.getElementById('admPointFilterKelas').value;
+    var params = '?scope=' + adminPointScope;
+    if(kat) params += '&kategori=' + encodeURIComponent(kat);
+    if(kelas) params += '&kelas=' + encodeURIComponent(kelas);
+    if(adminPointScope === 'global') params += '&limit=10';
+
+    var el = document.getElementById('adminPointRankingContent');
+    el.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat ranking...</p></div>';
+
+    fetch('/api/admin/point-ranking' + params, {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(groups){
+        if(!groups || !groups.length){
+            el.innerHTML = '<div class="empty-state"><i class="fas fa-trophy" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Belum ada data ikan yang dikunci.</div>';
+            return;
+        }
+        var isGlobal = (adminPointScope === 'global');
+        var html = '';
+        groups.forEach(function(g){
+            html += '<div style="margin-bottom:20px;">';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(135deg,rgba(245,158,11,.10),rgba(245,158,11,.04));border:1px solid rgba(245,158,11,.25);border-radius:10px 10px 0 0;">';
+            html += '<div style="font-size:13px;font-weight:800;color:var(--text-hi);display:flex;align-items:center;gap:9px;"><i class="fas '+(isGlobal?'fa-globe':'fa-layer-group')+'" style="color:var(--gold-500);"></i> '+esc(g.group_name)+'</div>';
+            html += '<span style="font-size:11px;color:var(--gold-300);font-weight:700;">'+g.total+' peserta</span></div>';
+            html += '<div style="overflow-x:auto;border-radius:0 0 10px 10px;border:1px solid rgba(245,158,11,.20);border-top:none;"><table class="data-table" style="min-width:800px;">';
+            html += '<thead><tr><th style="width:40px;text-align:center;">#</th><th>PESERTA</th>'+(isGlobal?'<th>KATEGORI</th>':'')+'<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:80px;text-align:center;">POINT</th><th style="width:100px;text-align:center;">RANK POINT</th></tr></thead><tbody>';
+            g.data.forEach(function(d,i){
+                var rankPt = d.rank_point ?? 0;
+                var frp = d.final_rank_point ?? rankPt;
+                var basePt = d.total_point ?? 0;
+                var bonus = d.total_bonus || 0;
+                var posisi = i + 1;
+                var rankBg, rankColor, rankBorder;
+                if(posisi === 1){ rankBg='rgba(16,185,129,.14)'; rankColor='#34D399'; rankBorder='rgba(16,185,129,.35)'; }
+                else if(posisi <= 3){ rankBg='var(--warning-lt)'; rankColor='var(--gold-300)'; rankBorder='rgba(245,158,11,.30)'; }
+                else if(posisi <= 6){ rankBg='rgba(34,211,238,.08)'; rankColor='var(--cyan-300)'; rankBorder='rgba(34,211,238,.25)'; }
+                else if(posisi <= 10){ rankBg='var(--purple-lt)'; rankColor='var(--purple)'; rankBorder='rgba(168,85,247,.25)'; }
+                else{ rankBg='var(--glass-2)'; rankColor='var(--text-faint)'; rankBorder='var(--bd-2)'; }
+                var medalHtml = '';
+                if(posisi === 1) medalHtml = '<i class="fas fa-medal" style="color:var(--gold-500);font-size:12px;margin-right:4px;" title="Juara 1"></i>';
+                else if(posisi === 2) medalHtml = '<i class="fas fa-medal" style="color:#C0C0C0;font-size:12px;margin-right:4px;" title="Juara 2"></i>';
+                else if(posisi === 3) medalHtml = '<i class="fas fa-medal" style="color:#CD7F32;font-size:12px;margin-right:4px;" title="Juara 3"></i>';
+                html += '<tr><td style="text-align:center;font-weight:800;color:var(--text-muted);">'+posisi+'</td><td style="font-weight:700;">'+medalHtml+esc(d.nama_peserta)+'</td>';
+                if(isGlobal) html += '<td style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">'+esc(d.kategori)+'</td>';
+                html += '<td style="font-weight:700;color:var(--primary);text-align:center;">'+(d.nomor_tank||'—')+'</td>';
+                html += '<td style="text-align:center;">'+esc(d.kelas)+'</td>';
+                html += '<td style="font-size:11px;color:var(--text-muted);">'+esc(d.detail_anggota)+'</td>';
+                html += '<td style="text-align:center;"><div style="font-weight:800;">'+(d.total_nilai_semua ?? 0)+'</div>';
+                if(d.jumlah_juri > 0) html += '<div style="font-size:9px;color:var(--text-muted);font-weight:600;">'+d.jumlah_juri+' juri</div>';
+                html += '</td>';
+                html += '<td style="text-align:center;"><div style="font-weight:900;font-size:15px;color:var(--primary);">'+basePt+'</div></td>';
+                html += '<td style="text-align:center;"><span style="display:inline-block;padding:5px 14px;border-radius:8px;font-size:14px;font-weight:900;background:'+rankBg+';color:'+rankColor+';border:1px solid '+rankBorder+';">'+frp+'</span>';
+                if(bonus > 0) html += '<div style="font-size:9px;color:#34D399;font-weight:800;margin-top:3px;"><i class="fas fa-trophy" style="font-size:7px;"></i> '+rankPt+' + '+bonus+'</div>';
+                html += '</td></tr>';
+            });
+            html += '</tbody></table></div></div>';
+        });
+        el.innerHTML = html;
+    })
+    .catch(function(){
+        el.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation" style="font-size:28px;display:block;margin-bottom:8px;"></i>Gagal memuat data ranking.</div>';
+    });
+}
+
+/* ═══════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════ */
 loadGlobalRangeDisplay();
@@ -2922,6 +3011,7 @@ loadUsers();
         users:        { title:'Kelola User',                     sub:'Manajemen akun pengguna sistem', icon:'fa-users-gear' },
         registrasi:   { title:'Registrasi & Undian Tank',        sub:'Pendaftaran peserta, undian, dan rentang nomor', icon:'fa-database' },
         mvp:          { title:'Kelola MVP',                      sub:'Manajemen pendaftaran ikan MVP', icon:'fa-star' },
+        ranking:      { title:'Point Ranking',                   sub:'Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)', icon:'fa-trophy' },
         undian:       { title:'Kelola Mesin Undian',             sub:'Membuka dan mengunci mesin undian tank untuk peserta', icon:'fa-dice' }
     };
     var loaded = { dashboard:true }; // dashboard loaded by initial loadDashboard()
@@ -2950,10 +3040,12 @@ loadUsers();
             if(pageId === 'users'){ /* loadUsers sudah jalan di init */ }
             if(pageId === 'registrasi'){ loadPesertaOld(); loadTankRange(); loadGlobalRangeDisplay(); }
             if(pageId === 'mvp'){ loadMvpData(); loadMvpStatus(); loadMvpPeserta(); loadMvpIkanData(); }
+            if(pageId === 'ranking'){ loadAdminPointRanking(); }
             if(pageId === 'undian'){ loadUndianStatus(); }
         } else {
             // Refresh ringan saat dibuka ulang (opsional)
             if(pageId === 'mvp'){ loadMvpStatus(); }
+            if(pageId === 'ranking'){ loadAdminPointRanking(); }
         }
 
         document.body.classList.remove('sidebar-open');
