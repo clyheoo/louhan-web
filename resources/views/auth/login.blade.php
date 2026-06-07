@@ -607,9 +607,9 @@
                 </button>   
             </form>
 
-            <p class="register-link">
+            <!-- <p class="register-link">
                 Belum punya akun? <a href="{{ route('register') }}">Daftar sekarang</a>
-            </p>
+            </p> 
 
             <div class="divider">
                 <div class="divider-line"></div>
@@ -631,11 +631,11 @@
                 <div class="feature-item"><i class="fas fa-bolt"></i><span>Cepat</span></div>
                 <div class="feature-item"><i class="fas fa-fingerprint"></i><span>Aman</span></div>
                 <div class="feature-item"><i class="fas fa-cloud-arrow-up"></i><span>Cloud</span></div>
-            </div>
+            </div> -->
 
             <footer class="login-footer">
                 <div class="footer-divider"></div>
-                <p class="footer-text">Powerd by <span class="brand">Leo Digital</span></p>
+                <p class="footer-text">Powerd by <span class="brand">Leo X Nandhog Digital</span></p>
             </footer>
         </div>
     </main>
