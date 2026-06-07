@@ -579,6 +579,7 @@ function executeConfirm(){hidePopup('popupConfirm');if(typeof _confirmCallback==
 function cancelConfirm(){hidePopup('popupConfirm');_confirmCallback=null;}
 
 var currentBonusIkanId = null;
+var mvpIkanDataCache = {};
 
 var bonusTypes = [
     {key:'best_of_the_best', label:'BEST OF THE BEST', icon:'fa-gem'},
@@ -646,6 +647,7 @@ function addBonus(type, el){
             popupSuccess('Bonus Ditambahkan','<b>'+esc(bonusTypes.find(function(b){return b.key===type;}).label)+'</b> (+100) berhasil ditambahkan.');
             closeModal('modalBonus');
             loadScoringData();
+            loadMvpIkanData();
         } else {
             popupError('Gagal',d.message||'Terjadi kesalahan.');
         }
@@ -674,6 +676,7 @@ function removeBonus(type){
                     popupSuccess('Bonus Dihapus','Bonus berhasil dihapus.');
                     closeModal('modalBonus');
                     loadScoringData();
+                    loadMvpIkanData();
                 } else {
                     popupError('Gagal',d.message||'Terjadi kesalahan.');
                 }
@@ -2360,6 +2363,169 @@ function loadMvpData() {
     });
 }
 
+/* ═══════════════════════════════════════════════
+   DATA IKAN MVP (SAMA LIKE GRAND JURI)
+   ═══════════════════════════════════════════════ */
+function loadMvpIkanData(){
+    var tb = document.getElementById('mvpDataBody');
+    if(!tb) return;
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat data MVP...</p></div></td></tr>';
+
+    fetch('/api/admin/mvp-ikan-data',{headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+        mvpIkanDataCache = {};
+        if(!data || data.length === 0){
+            tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-star" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Belum ada peserta yang mengirimkan data MVP.</div></td></tr>';
+            return;
+        }
+        tb.innerHTML = '';
+        data.forEach(function(p, idx){
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td style="font-weight:700;"><i class="fas fa-city" style="color:#D8B4FE;margin-right:6px;font-size:11px;"></i>'+esc(p.detail_anggota)+'</td>'
+                +'<td style="text-align:center;"><span class="role-badge role-grand"><i class="fas fa-users" style="margin-right:3px;font-size:9px;"></i>'+p.jumlah_peserta+' Peserta</span></td>'
+                +'<td style="text-align:center;"><span class="role-badge role-grand"><i class="fas fa-star" style="margin-right:3px;font-size:9px;color:var(--gold-400);"></i>'+p.total_mvp+' Ikan MVP</span></td>'
+                +'<td style="text-align:center;"><span class="status-badge s-dinilai"><i class="fas fa-paper-plane" style="margin-right:3px;font-size:9px;"></i>TERKIRIM</span></td>'
+                +'<td style="text-align:center;"><button class="btn-xs purple" onclick="openMvpDataDetail('+idx+')"><i class="fas fa-eye"></i> Lihat Ikan</button></td>';
+            tb.appendChild(tr);
+
+            // Cache data per ikan untuk bonus modal
+            if(p.ikans){
+                p.ikans.forEach(function(ikan){
+                    mvpIkanDataCache[ikan.ikan_id] = ikan;
+                });
+            }
+        });
+        window._mvpDataGrouped = data;
+    })
+    .catch(function(){
+        if(tb) tb.innerHTML = '<tr><td colspan="5"><div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i> Gagal memuat data MVP.</div></td></tr>';
+    });
+}
+
+function openMvpDataDetail(idx){
+    var p = window._mvpDataGrouped[idx];
+    if(!p) return;
+
+    var totalNote = (p.total_team_rank_point !== undefined)
+        ? ' Total Rank Point Team: <strong style="color:#D8B4FE;">'+p.total_team_rank_point+'</strong> (rank '+p.total_rank_only+' + bonus '+(p.total_team_rank_point - p.total_rank_only)+').'
+        : '';
+
+    var html = '<div class="detail-banner" style="background:linear-gradient(135deg,rgba(168,85,247,.10),rgba(168,85,247,.04));border-color:rgba(168,85,247,.30);">'
+        +'<div><h4 style="color:#D8B4FE;">'+esc(p.detail_anggota)+'</h4>'
+        +'<div class="meta"><span><i class="fas fa-star"></i> '+p.total_mvp+' ikan MVP</span><span><i class="fas fa-users"></i> '+p.jumlah_peserta+' peserta</span></div></div>'
+        +'<div class="detail-total-chip" style="background:linear-gradient(135deg,#7c3aed,var(--purple));"><i class="fas fa-trophy" style="margin-right:4px;"></i> '+p.total_team_rank_point+'</div>'
+        +'</div>'
+        +'<div style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--text);line-height:1.6;">'
+        +'<div style="font-weight:800;color:#D8B4FE;margin-bottom:4px;"><i class="fas fa-circle-info" style="margin-right:4px;"></i> Sistem Rank Point</div>'
+        +'Rank Point dihitung dari posisi <strong>Top 10 per Kategori+Kelas</strong>. Bonus (+100 per jenis) ditambahkan setelah ranking.'
+        +totalNote
+        +'</div>';
+
+    html += '<div style="overflow-x:auto;border:1px solid var(--bd-2);border-radius:12px;"><table class="data-table" style="min-width:700px;">';
+    html += '<thead><tr><th style="width:30px;">#</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>NO. TANK</th><th style="text-align:center;">RANK POINT</th><th>BONUS</th><th style="text-align:center;">AKSI</th></tr></thead><tbody>';
+
+    p.ikans.forEach(function(ikan, i){
+        var bonusCount = (ikan.bonus_list || []).length;
+        var bonusHtml = bonusCount > 0
+            ? '<span class="role-badge role-grand" style="background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.3);color:#6EE7B7;"><i class="fas fa-trophy" style="margin-right:3px;font-size:9px;color:var(--gold-400);"></i>+'+ikan.total_bonus+' ('+bonusCount+')</span>'
+            : '<span style="font-size:11px;color:var(--text-low);">—</span>';
+
+        var rankPt = ikan.rank_point || 0;
+        var finalRank = ikan.final_rank_point || 0;
+        var pos = ikan.position || 0;
+        var rankHtml;
+
+        if(finalRank > 0 && pos >= 1 && pos <= 10){
+            var rkBg, rkColor;
+            if(pos === 1){ rkBg = 'rgba(16,185,129,.14)'; rkColor = '#34D399'; }
+            else if(pos <= 3){ rkBg = 'var(--warning-lt)'; rkColor = 'var(--gold-300)'; }
+            else if(pos <= 6){ rkBg = 'rgba(34,211,238,.08)'; rkColor = 'var(--cyan-300)'; }
+            else { rkBg = 'rgba(168,85,247,.12)'; rkColor = '#D8B4FE'; }
+
+            var medal = '';
+            if(pos === 1) medal = '<i class="fas fa-medal" style="color:var(--gold-400);font-size:11px;margin-right:3px;"></i>';
+            else if(pos === 2) medal = '<i class="fas fa-medal" style="color:#C0C0C0;font-size:11px;margin-right:3px;"></i>';
+            else if(pos === 3) medal = '<i class="fas fa-medal" style="color:#CD7F32;font-size:11px;margin-right:3px;"></i>';
+
+            rankHtml = '<div style="text-align:center;">'
+                +'<span style="display:inline-block;padding:4px 12px;border-radius:8px;font-size:14px;font-weight:900;background:'+rkBg+';color:'+rkColor+';border:1px solid rgba(255,255,255,.08);">'+finalRank+'</span>'
+                +'<div style="font-size:9px;color:var(--text-low);font-weight:700;margin-top:3px;">'+medal+'Juara '+pos+(ikan.total_bonus > 0 ? ' • '+rankPt+'+'+ikan.total_bonus : '')+'</div>'
+                +'</div>';
+        } else {
+            rankHtml = ikan.total_bonus > 0
+                ? '<div style="text-align:center;"><span style="display:inline-block;padding:4px 12px;border-radius:8px;font-size:14px;font-weight:900;background:rgba(16,185,129,.12);color:#34D399;border:1px solid rgba(16,185,129,.25);">'+ikan.total_bonus+'</span><div style="font-size:9px;color:var(--text-low);font-weight:700;margin-top:3px;">bonus saja</div></div>'
+                : '<div style="text-align:center;font-size:11px;color:var(--text-low);">—</div>';
+        }
+
+        html += '<tr>'
+            +'<td style="font-weight:700;color:var(--text-low);font-size:11px;">'+(i+1)+'</td>'
+            +'<td style="font-weight:700;">'+esc(ikan.nama_peserta)+'</td>'
+            +'<td style="font-weight:600;text-transform:uppercase;color:var(--text-mid);font-size:11px;">'+esc(ikan.kategori)+'</td>'
+            +'<td>'+esc(ikan.kelas || '-')+'</td>'
+            +'<td style="font-weight:700;color:var(--cyan-300);">Tank '+(ikan.nomor_tank || '—')+'</td>'
+            +'<td>'+rankHtml+'</td>'
+            +'<td>'+bonusHtml+'</td>'
+            +'<td style="text-align:center;"><button class="btn-xs gold" onclick="openMvpDataBonus('+ikan.ikan_id+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i> Bonus</button></td>'
+            +'</tr>';
+    });
+
+    html += '</tbody></table></div>';
+
+    document.getElementById('detailBody').innerHTML = html;
+    openModal('modalDetail');
+}
+
+function openMvpDataBonus(ikanId){
+    var p = mvpIkanDataCache[ikanId];
+    if(!p){
+        popupError('Data Tidak Ditemukan','Ikan MVP tidak ditemukan dalam cache. Coba refresh halaman.');
+        return;
+    }
+    currentBonusIkanId = ikanId;
+
+    var html = '';
+    html += '<div style="background:linear-gradient(135deg,rgba(245,158,11,.10),rgba(245,158,11,.04));border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">';
+    html += '<div><h4 style="font-size:14px;font-weight:800;color:var(--text-hi);">'+esc(p.nama_peserta)+'</h4>';
+    html += '<div style="font-size:11px;color:var(--gold-300);margin-top:3px;display:flex;gap:12px;"><span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - '+esc(p.kelas)+'</span><span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank || '—')+'</span></div></div>';
+    html += '<div style="text-align:center;flex-shrink:0;">';
+    html += '<div style="font-size:9px;color:var(--gold-300);font-weight:800;letter-spacing:.5px;">RANK POINT</div>';
+    html += '<div style="font-size:22px;font-weight:900;color:var(--gold-300);line-height:1;">'+(p.rank_point || 0)+'</div>';
+    if(p.total_bonus > 0){
+        html += '<div style="font-size:9px;color:#6EE7B7;font-weight:800;margin-top:2px;">+ '+p.total_bonus+' BONUS</div>';
+        html += '<div style="font-size:26px;font-weight:900;color:#6EE7B7;">'+(p.final_rank_point || p.rank_point || 0)+'</div>';
+    }
+    if((p.rank_point || 0) === 0 && (p.total_bonus || 0) === 0){
+        html += '<div style="font-size:10px;color:var(--text-low);font-weight:600;margin-top:4px;">(Tidak masuk Top 10)</div>';
+    }
+    html += '</div></div>';
+
+    html += '<div style="font-size:10px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Pilih Bonus Point (+100 per jenis)</div>';
+
+    bonusTypes.forEach(function(bt){
+        var applied = (p.bonus_list || []).indexOf(bt.key) !== -1;
+        if(applied){
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid rgba(16,185,129,.3);border-radius:10px;margin-bottom:5px;background:rgba(16,185,129,.06);">';
+            html += '<div style="display:flex;align-items:center;gap:10px;">';
+            html += '<i class="fas fa-check-circle" style="color:#6EE7B7;font-size:15px;"></i>';
+            html += '<div><div style="font-size:12px;font-weight:800;color:#6EE7B7;">'+bt.label+'</div><div style="font-size:10px;color:#059669;">+100 point</div></div></div>';
+            html += '<button class="btn-xs red" onclick="removeBonus(\''+bt.key+'\')" style="padding:5px 10px;"><i class="fas fa-times"></i> Hapus</button>';
+            html += '</div>';
+        } else {
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--bd-2);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:all .2s;" onclick="addBonus(\''+bt.key+'\',this)" onmouseover="this.style.borderColor=\'rgba(245,158,11,.30)\';this.style.background=\'rgba(245,158,11,.06)\'" onmouseout="this.style.borderColor=\'var(--bd-2)\';this.style.background=\'transparent\'">';
+            html += '<div style="display:flex;align-items:center;gap:10px;">';
+            html += '<i class="fas '+bt.icon+'" style="color:var(--text-low);font-size:15px;"></i>';
+            html += '<div><div style="font-size:12px;font-weight:700;color:var(--text-hi);">'+bt.label+'</div><div style="font-size:10px;color:var(--text-mid);">+100 point</div></div></div>';
+            html += '<i class="fas fa-plus-circle" style="color:var(--text-low);font-size:17px;"></i>';
+            html += '</div>';
+        }
+    });
+
+    document.getElementById('bonusModalBody').innerHTML = html;
+    openModal('modalBonus');
+}
+
 /* ═══ HAPUS IKAN DARI MVP ═══ */
 function deleteMvpIkan(ikanId, nama) {
     popupConfirm(
@@ -2780,7 +2946,7 @@ loadUsers();
             if(pageId === 'penilaian'){ loadScoringData(); }
             if(pageId === 'users'){ /* loadUsers sudah jalan di init */ }
             if(pageId === 'registrasi'){ loadPesertaOld(); loadTankRange(); loadGlobalRangeDisplay(); }
-            if(pageId === 'mvp'){ loadMvpData(); loadMvpStatus(); loadMvpPeserta(); }
+            if(pageId === 'mvp'){ loadMvpData(); loadMvpStatus(); loadMvpPeserta(); loadMvpIkanData(); }
             if(pageId === 'undian'){ loadUndianStatus(); }
         } else {
             // Refresh ringan saat dibuka ulang (opsional)

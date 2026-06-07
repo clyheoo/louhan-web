@@ -1016,6 +1016,22 @@
                     </div>
                 </div>
 
+                <!-- Data Ikan MVP (Rank Point & Bonus — sama seperti Grand Juri) -->
+                <div class="glass-card" style="margin-bottom:16px;">
+                    <div class="card-head">
+                        <h3><span class="ti" style="background:rgba(168,85,247,.12);border-color:rgba(168,85,247,.3);color:#D8B4FE;"><i class="fas fa-star"></i></span>Data Ikan MVP</h3>
+                        <span style="font-size:10px;color:var(--text-low);font-weight:700;">Rank Point & Bonus per Kota/Team</span>
+                    </div>
+                    <div class="card-body" style="padding:0;">
+                        <div class="table-wrap" style="max-height:480px;border:none;border-radius:0;">
+                            <table class="data-table" style="min-width:auto;">
+                                <thead><tr><th>KOTA / TEAM / CLUB</th><th style="text-align:center;">JUMLAH PESERTA</th><th style="text-align:center;">JUMLAH IKAN MVP</th><th style="text-align:center;">STATUS</th><th style="text-align:center;">AKSI</th></tr></thead>
+                                <tbody id="mvpDataBody"><tr><td colspan="5"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div></td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="glass-card">
                     <div class="card-head"><h3><span class="ti" style="background:rgba(245,158,11,.12);border-color:var(--bd-gold);color:var(--gold-400);"><i class="fas fa-list"></i></span>Daftar Ikan Terdaftar MVP</h3></div>
                     <div class="card-body" style="padding:0;">

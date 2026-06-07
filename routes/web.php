@@ -113,6 +113,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/tank-range-global', [AdminDashboardController::class, 'getTankRangeGlobal']);
     Route::post('/api/admin/tank-range-global', [AdminDashboardController::class, 'setTankRangeGlobal']);
     Route::get('/api/admin/mvp-ikan', [AdminDashboardController::class, 'getMvpIkan']);
+    Route::get('/api/admin/mvp-ikan-data', [AdminDashboardController::class, 'getMvpIkanData']);
     Route::post('/api/admin/toggle-mvp-registration', [AdminDashboardController::class, 'toggleMvpRegistration']);
     Route::get('/api/admin/mvp-status', [AdminDashboardController::class, 'getMvpStatus']);
     Route::post('/api/admin/toggle-undian-registration', [AdminDashboardController::class, 'toggleUndianRegistration']);

@@ -1166,6 +1166,144 @@ class AdminDashboardController extends Controller
         return response()->json($ikans);
     }
 
+        public function getMvpIkanData()
+    {
+        $mvpIkans = Ikan::where('is_mvp', true)
+            ->whereHas('peserta', function ($q) {
+                $q->where('is_mvp_submitted', true);
+            })
+            ->with(['peserta', 'bonusPoints'])
+            ->get();
+
+        // ★ BUILD RANKINGS CACHE per (kategori + kelas)
+        $combos = $mvpIkans->map(function ($i) {
+            return $i->kategori . '|' . ($i->kelas ?? '-');
+        })->unique()->values();
+
+        $rankCache = [];
+        foreach ($combos as $combo) {
+            [$kat, $kls] = explode('|', $combo, 2);
+            $kls = ($kls === '-') ? null : $kls;
+
+            $q = Ikan::where('is_locked', true)
+                ->whereNotNull('nomor_tank')
+                ->where('kategori', $kat)
+                ->whereHas('scorings')
+                ->with(['scorings', 'bonusPoints']);
+            if ($kls !== null) $q->where('kelas', $kls);
+            else                $q->whereNull('kelas');
+            $pool = $q->get();
+
+            $items = [];
+            foreach ($pool as $pi) {
+                $avgDetail = [];
+                foreach ($pi->scorings as $s) {
+                    if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                        foreach ($s->nilai_detail as $kt => $fields) {
+                            if (!is_array($fields)) continue;
+                            foreach ($fields as $fid => $val) {
+                                if (!isset($avgDetail[$kt][$fid])) {
+                                    $avgDetail[$kt][$fid] = ['sum' => 0, 'count' => 0];
+                                }
+                                $avgDetail[$kt][$fid]['sum']   += (float)($val ?? 0);
+                                $avgDetail[$kt][$fid]['count']++;
+                            }
+                        }
+                    }
+                }
+                $finalAvg = [];
+                foreach ($avgDetail as $kt => $f) {
+                    foreach ($f as $fid => $d) {
+                        $finalAvg[$kt][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                    }
+                }
+                $grandEdited  = $pi->scorings->first(function ($s) { return $s->edited_by_grand_juri; });
+                $defectSource = $grandEdited ?: $pi->scorings->sortByDesc('updated_at')->first();
+                $merged = [
+                    'raw_head_penalty'    => ['0'],
+                    'raw_face_penalty'    => ['0'],
+                    'raw_body_penalty'    => ['0'],
+                    'raw_finnage_penalty' => ['0'],
+                ];
+                if ($defectSource) {
+                    $merged['raw_head_penalty']    = $defectSource->raw_head_penalty    ?: ['0'];
+                    $merged['raw_face_penalty']    = $defectSource->raw_face_penalty    ?: ['0'];
+                    $merged['raw_body_penalty']    = $defectSource->raw_body_penalty    ?: ['0'];
+                    $merged['raw_finnage_penalty'] = $defectSource->raw_finnage_penalty ?: ['0'];
+                }
+                $items[] = [
+                    'ikan_id'     => $pi->id,
+                    'total_point' => (float) PointCalculator::hitungPoint($pi->kategori, $finalAvg, $merged),
+                    'total_bonus' => (int) $pi->bonusPoints->sum('points'),
+                ];
+            }
+
+            $ranked = PointCalculator::hitungRankPoints($items, 'total_point');
+            $cache  = [];
+            foreach ($ranked as $idx => $r) {
+                $cache[$r['ikan_id']] = [
+                    'rank_point' => $r['rank_point'],
+                    'position'   => $idx + 1,
+                ];
+            }
+            $rankCache[$combo] = $cache;
+        }
+
+        // ★ GROUP BY detail_anggota
+        $grouped = $mvpIkans->groupBy(function ($ikan) {
+            $key = trim($ikan->detail_anggota ?? '');
+            return $key === '' ? '(Tanpa Kota/Team)' : $key;
+        });
+
+        $data = [];
+        foreach ($grouped as $detailAnggota => $ikanList) {
+            $totalTeamRankPoint = 0;
+            $totalRankOnly      = 0;
+
+            $ikanDetails = $ikanList->map(function ($ikan) use ($rankCache, &$totalTeamRankPoint, &$totalRankOnly) {
+                $combo    = $ikan->kategori . '|' . ($ikan->kelas ?? '-');
+                $rankInfo = $rankCache[$combo][$ikan->id] ?? ['rank_point' => 0, 'position' => 0];
+                $rankPt   = (int) $rankInfo['rank_point'];
+                $position = (int) $rankInfo['position'];
+                $bonus    = (int) $ikan->bonusPoints->sum('points');
+                $final    = $rankPt + $bonus;
+
+                $totalRankOnly      += $rankPt;
+                $totalTeamRankPoint += $final;
+
+                return [
+                    'ikan_id'          => $ikan->id,
+                    'nama_peserta'     => $ikan->nama_peserta ?? '—',
+                    'kategori'         => $ikan->kategori,
+                    'kelas'            => $ikan->kelas,
+                    'nomor_tank'       => $ikan->nomor_tank ?? '-',
+                    'bonus_list'       => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                    'total_bonus'      => $bonus,
+                    'rank_point'       => $rankPt,
+                    'final_rank_point' => $final,
+                    'position'         => $position,
+                ];
+            })->values()->toArray();
+
+            $jumlahPeserta = $ikanList->pluck('peserta_id')->unique()->count();
+
+            $data[] = [
+                'detail_anggota'        => $detailAnggota,
+                'total_mvp'             => $ikanList->count(),
+                'jumlah_peserta'        => $jumlahPeserta,
+                'total_rank_only'       => $totalRankOnly,
+                'total_team_rank_point' => $totalTeamRankPoint,
+                'ikans'                 => $ikanDetails,
+            ];
+        }
+
+        usort($data, function ($a, $b) {
+            return strcmp($a['detail_anggota'], $b['detail_anggota']);
+        });
+
+        return response()->json($data);
+    }
+
     public function toggleMvpRegistration()
     {
         $current = \DB::table('settings')->where('key', 'mvp_registration_open')->value('value');
