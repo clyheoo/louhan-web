@@ -701,6 +701,172 @@ var formFieldsLegacy={
     face:[{id:'pipi',label:'Pipi'},{id:'mata',label:'Mata'},{id:'bibir',label:'Bibir'},{id:'kondisi',label:'Kondisi Mata & Insang'}]
 };
 
+/* ═══════════════════════════════════════════════
+   EDIT NILAI & KUNCI NILAI (ADMIN)
+   ═══════════════════════════════════════════════ */
+var ADMIN_MINOR_DEFECTS=['Kutil','Bibir Miring','Katarak','Abses / Luka','Fintail Bleaching','Pangkal Ekor Naik/Trn','Dayung Tdk Seimbang'];
+var ADMIN_MAYOR_DEFECTS=['Bagian Bibir Hilang','Mulut Terbuka Terus','Muka Miring','Pangkal Bengkok/Patah','Fin/Tulang Hilang 1 Ruas'];
+var ADMIN_DEFECT_OPTIONS={
+    raw_head_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'}]}],
+    raw_face_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Bibir Miring',label:'Bibir Miring'},{value:'Katarak',label:'Katarak'}]},{label:'--- MAYOR ---',options:[{value:'Bagian Bibir Hilang',label:'Bagian Bibir Hilang'},{value:'Mulut Terbuka Terus',label:'Mulut Terbuka Terus'},{value:'Muka Miring',label:'Muka Miring'}]}],
+    raw_body_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Abses / Luka',label:'Abses / Luka'}]},{label:'--- MAYOR ---',options:[{value:'Pangkal Bengkok/Patah',label:'Pangkal Bengkok/Patah'}]}],
+    raw_finnage_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Fintail Bleaching',label:'Fintail Bleaching'},{value:'Pangkal Ekor Naik/Trn',label:'Pangkal Ekor Naik/Trn'},{value:'Dayung Tdk Seimbang',label:'Dayung Tdk Seimbang'}]},{label:'--- MAYOR ---',options:[{value:'Fin/Tulang Hilang 1 Ruas',label:'Fin/Tulang Hilang 1 Ruas'}]}]
+};
+
+var adminEditDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};
+var adminOrigDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};
+var adminActiveDefectKey=null;
+var adminEditId=null;
+var adminEditPData=null;
+var adminEditMemory={};
+var adminOrigValues={};
+var adminCurrentKat='overall';
+
+function adminNormDefArr(v){if(!v)return['0'];if(typeof v==='string')return[v];if(Array.isArray(v))return v;return['0'];}
+function adminGetScoreOptions(){var o=[];for(var i=90;i>=10;i-=5)o.push({value:i.toString(),label:i.toString()});return o;}
+function adminFreshMemory(){var m={};Object.keys(formFields).forEach(function(k){m[k]={};});return m;}
+function adminCloneValues(src){var m={};Object.keys(formFields).forEach(function(k){m[k]={};formFields[k].forEach(function(f){if(f.type==='defect')return;var v=(src&&src[k]&&src[k][f.id]);if(v===undefined&&f.id==='shining'&&src&&src[k]&&src[k].shinning!==undefined)v=src[k].shinning;m[k][f.id]=(v!==undefined&&v!==null&&v!=='')?String(v):'';});});return m;}
+function adminEvaluateDefects(){var parts=['head','face','body','finnage'];var partStatus={};parts.forEach(function(p){partStatus[p]={minor:false,mayor:false,items:[]};});var minorCount=0;parts.forEach(function(p){var defs=adminNormDefArr(adminEditDefectData['raw_'+p+'_penalty']);defs.forEach(function(d){if(d&&d!=='0'){partStatus[p].items.push(d);if(ADMIN_MINOR_DEFECTS.indexOf(d)!==-1){minorCount++;partStatus[p].minor=true;}if(ADMIN_MAYOR_DEFECTS.indexOf(d)!==-1)partStatus[p].mayor=true;}});});var isGlobalMayor=minorCount>=3;var results={};parts.forEach(function(p){if(partStatus[p].items.length>0){var isM=partStatus[p].mayor||(partStatus[p].minor&&isGlobalMayor);results[p+'_penalty']=isM?'30%':'10%';}else{results[p+'_penalty']='';}});return results;}
+
+function openDefectModalAdmin(defectKey){
+    adminActiveDefectKey=defectKey;
+    var partName=defectKey.replace('raw_','').replace('_penalty','').toUpperCase();
+    document.getElementById('defectAdminTitle').innerText='Pilih Defect - '+partName;
+    var options=ADMIN_DEFECT_OPTIONS[defectKey];
+    var currentValues=adminEditDefectData[defectKey]||['0'];
+    var html='';
+    options.forEach(function(group){
+        html+='<div style="margin-bottom:20px;"><div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;letter-spacing:.5px;">'+group.label+'</div><div style="display:flex;flex-direction:column;gap:8px;">';
+        group.options.forEach(function(opt){
+            var isChecked=currentValues.indexOf(opt.value)!==-1;
+            html+='<label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid '+(isChecked?'var(--purple)':'var(--bd-2)')+';border-radius:10px;cursor:pointer;background:'+(isChecked?'rgba(168,85,247,.12)':'var(--glass-2)')+';transition:all .2s;" onclick="toggleDefectAdmin(\''+defectKey+'\',\''+opt.value.replace(/'/g,"\\'")+'\')"><input type="checkbox" '+(isChecked?'checked':'')+' onclick="event.stopPropagation();toggleDefectAdmin(\''+defectKey+'\',\''+opt.value.replace(/'/g,"\\'")+'\')" style="width:18px;height:18px;accent-color:var(--purple);cursor:pointer;"><span style="font-size:13px;font-weight:600;color:var(--text);">'+opt.label+'</span></label>';
+        });
+        html+='</div></div>';
+    });
+    document.getElementById('defectAdminBody').innerHTML=html;
+    openModal('modalDefectAdmin');
+}
+function closeDefectAdmin(){closeModal('modalDefectAdmin');adminActiveDefectKey=null;renderEditInputsAdmin(adminCurrentKat);}
+function toggleDefectAdmin(defectKey,value){var current=adminEditDefectData[defectKey]||['0'];if(value==='0'){adminEditDefectData[defectKey]=['0'];}else{current=current.filter(function(v){return v!=='0';});if(current.indexOf(value)!==-1){current=current.filter(function(v){return v!==value;});}else{current.push(value);}if(current.length===0)current=['0'];adminEditDefectData[defectKey]=current;}openDefectModalAdmin(defectKey);}
+
+function openEditAdmin(idx){
+    var p=allScoringData[idx];
+    if(!p)return;
+    if(p.is_locked){popupError('Nilai Terkunci','Nilai ini sudah <b>TERKUNCI (FINAL)</b> dan tidak dapat diubah.');return;}
+    adminEditId=p.id;adminCurrentKat='overall';adminEditPData=p;
+    if(p.nilai_detail&&typeof p.nilai_detail==='object'){adminEditMemory=adminCloneValues(p.nilai_detail);}else{adminEditMemory=adminFreshMemory();}
+    adminOrigValues=adminCloneValues(adminEditMemory);
+    adminEditDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};
+    if(p.all_scorings&&p.all_scorings.length>0){
+        var targetSc=p.all_scorings.find(function(s){return s.edited_by_grand;})||p.all_scorings[0];
+        if(targetSc){
+            adminEditDefectData.raw_head_penalty=adminNormDefArr(targetSc.raw_head_penalty);
+            adminEditDefectData.raw_face_penalty=adminNormDefArr(targetSc.raw_face_penalty);
+            adminEditDefectData.raw_body_penalty=adminNormDefArr(targetSc.raw_body_penalty);
+            adminEditDefectData.raw_finnage_penalty=adminNormDefArr(targetSc.raw_finnage_penalty);
+        }
+    }
+    adminOrigDefectData=JSON.parse(JSON.stringify(adminEditDefectData));
+    var info='<b>'+esc(p.nama_peserta)+'</b> — Tank '+(p.nomor_tank||'—');
+    info+='<br><span style="font-size:11px;color:var(--primary);">'+esc(p.kategori)+' - '+(p.kelas||'—')+' | '+esc(p.detail_anggota||'—')+'</span>';
+    if(p.grand_juri_nama){info+='<br><span style="font-size:11px;color:#D8B4FE;"><i class="fas fa-crown" style="margin-right:3px;"></i> Terakhir diedit oleh: <b>'+esc(p.grand_juri_nama)+'</b></span>';}
+    document.getElementById('editAdminInfo').innerHTML=info;
+    renderEditListAdmin();renderEditInputsAdmin('overall');
+    openModal('modalEditAdmin');
+}
+
+function renderEditListAdmin(){
+    var c=document.getElementById('editAdminKatList');c.innerHTML='';
+    Object.keys(formFields).forEach(function(kat){
+        var changes=adminCountChanges(kat);
+        var btn=document.createElement('button');
+        btn.style.cssText='padding:9px 11px;background:var(--glass-2);border:1px solid '+(kat===adminCurrentKat?'var(--purple)':'var(--bd-2)')+';border-radius:10px;text-align:left;font-size:12px;font-weight:600;color:'+(kat===adminCurrentKat?'var(--purple)':'var(--text-muted)')+';cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:space-between;';
+        btn.innerHTML='<span>'+kat.charAt(0).toUpperCase()+kat.slice(1)+'</span><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;min-width:22px;text-align:center;'+(changes>0?'background:var(--success);color:#fff;':'background:var(--purple-lt);color:var(--purple);')+'">'+(changes>0?changes:'—')+'</span>';
+        btn.onclick=function(){adminSaveCurrentTab();adminCurrentKat=kat;renderEditListAdmin();renderEditInputsAdmin(kat);};
+        c.appendChild(btn);
+    });
+}
+function adminCountChanges(kat){if(!adminEditMemory[kat]||!adminOrigValues[kat])return 0;var n=0;formFields[kat].forEach(function(f){if(f.type==='defect')return;var cur=String(adminEditMemory[kat][f.id]||'');var ori=String(adminOrigValues[kat][f.id]||'');if(cur!==''&&cur!==ori)n++;});return n;}
+function adminSaveCurrentTab(){if(!formFields[adminCurrentKat])return;if(!adminEditMemory[adminCurrentKat])adminEditMemory[adminCurrentKat]={};formFields[adminCurrentKat].forEach(function(f){var el=document.getElementById('admEdit-'+f.id);if(el)adminEditMemory[adminCurrentKat][f.id]=el.value;});}
+
+function renderEditInputsAdmin(kat){
+    if(!adminEditMemory[kat])adminEditMemory[kat]={};
+    if(!adminOrigValues[kat])adminOrigValues[kat]={};
+    var html='';
+    formFields[kat].forEach(function(f){
+        if(f.type==='defect'){
+            var defectKey=f.defectKey;
+            var currentValues=adminEditDefectData[defectKey]||['0'];
+            var isAman=currentValues.indexOf('0')!==-1||currentValues.length===0;
+            var evaluated=adminEvaluateDefects();
+            var evalKey=defectKey.substring(4);
+            var evalString=evaluated[evalKey];
+            var btnLabel='AMAN';var btnStyle='padding:9px;text-align:center;border:2px solid var(--bd-2);border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;transition:.2s;background:var(--glass-2);color:var(--text-muted);font-family:inherit;width:100%;';
+            if(!isAman&&evalString&&evalString!==''){var isMayor=evalString==='30%';var persen=isMayor?30:10;var defectNames=currentValues.filter(function(v){return v!=='0';}).join(', ');btnLabel=defectNames+' (-'+persen+'%)';btnStyle='padding:9px;text-align:center;border:2px solid '+(isMayor?'rgba(239,68,68,.30)':'rgba(245,158,11,.30)')+';border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;transition:.2s;background:'+(isMayor?'rgba(239,68,68,.12)':'rgba(245,158,11,.12)')+';color:'+(isMayor?'#FCA5A5':'var(--gold-300)')+';font-family:inherit;width:100%;';}
+            html+='<div style="display:grid;grid-template-columns:1fr 115px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd-1);"><div><div style="font-size:13px;font-weight:700;color:var(--text);">'+f.label+'</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">'+f.desc+'</div></div><button type="button" style="'+btnStyle+'" onclick="openDefectModalAdmin(\''+defectKey+'\')">'+btnLabel+'</button></div>';
+        } else {
+            var options=adminGetScoreOptions();
+            var currentVal=adminEditMemory[kat][f.id]||'';
+            var origVal=adminOrigValues[kat][f.id]||'';
+            var isChanged=(currentVal!==''&&currentVal!==origVal);
+            html+='<div style="display:grid;grid-template-columns:1fr 115px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd-1);">';
+            html+='<div><div style="font-size:13px;font-weight:700;color:var(--text);">'+f.label+'</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">'+f.desc;
+            if(origVal!=='')html+=' &nbsp;|&nbsp; <span style="color:var(--text-muted);font-weight:600;">Nilai juri: <strong style="color:#D8B4FE;">'+origVal+'</strong></span>';
+            html+='</div></div>';
+            html+='<select class="gj-score-select'+(isChanged?' changed':'')+'" id="admEdit-'+f.id+'" onchange="onAdminEditInput(this,\''+kat+'\',\''+f.id+'\')" style="width:100%;padding:9px 28px 9px 8px;text-align:center;border:2px solid '+(isChanged?'var(--success)':'var(--bd-2)')+';border-radius:10px;font-size:15px;font-weight:800;color:'+(isChanged?'#34D399':'#D8B4FE')+';outline:none;transition:.2s;background:'+(isChanged?'rgba(16,185,129,.06)':'var(--glass-2)')+';cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url(\'data:image/svg+xml,%3Csvg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'12\\\' height=\\\'12\\\' viewBox=\\\'0 0 12 12\\\'%3E%3Cpath fill=\\\'%23A78BFA\\\' d=\\\'M6 8L1 3h10z\\\'/%3E%3C/svg%3E\');background-repeat:no-repeat;background-position:right 8px center;font-family:inherit;color-scheme:dark;"><option value="">-</option>';
+            options.forEach(function(opt){html+='<option value="'+opt.value+'"'+(currentVal==opt.value?' selected':'')+'>'+opt.label+'</option>';});
+            html+='</select></div>';
+        }
+    });
+    html+='<div style="text-align:right;font-size:13px;font-weight:900;color:#D8B4FE;padding:10px 0 0;border-top:2px solid rgba(168,85,247,.25);margin-top:8px;">Subtotal <em>'+kat+'</em>: <span id="adminSubVal">0</span></div>';
+    document.getElementById('editAdminFormArea').innerHTML=html;
+    adminUpdateSub(kat);
+}
+
+function onAdminEditInput(el,kat,fid){
+    var cur=el.value;var ori=adminOrigValues[kat]?String(adminOrigValues[kat][fid]||''):'';
+    if(cur!==''&&cur!==ori){el.classList.add('changed');el.style.borderColor='var(--success)';el.style.background='rgba(16,185,129,.06)';el.style.color='#34D399';}
+    else{el.classList.remove('changed');el.style.borderColor='var(--bd-2)';el.style.background='var(--glass-2)';el.style.color='#D8B4FE';}
+    if(!adminEditMemory[kat])adminEditMemory[kat]={};
+    adminEditMemory[kat][fid]=el.value;
+    adminUpdateSub(kat);renderEditListAdmin();
+}
+function adminUpdateSub(kat){var t=0;formFields[kat].forEach(function(f){var el=document.getElementById('admEdit-'+f.id);if(el&&el.value!=='')t+=parseInt(el.value)||0;});var s=document.getElementById('adminSubVal');if(s)s.textContent=t;}
+
+function submitEditAdmin(){
+    adminSaveCurrentTab();
+    var payload={};var totalChanged=0;
+    Object.keys(formFields).forEach(function(kat){formFields[kat].forEach(function(f){if(f.type==='defect')return;var cur=adminEditMemory[kat]?adminEditMemory[kat][f.id]:'';var ori=adminOrigValues[kat]?adminOrigValues[kat][f.id]:'';if(cur===''&&ori==='')return;if(String(cur)===String(ori))return;var val=parseInt(cur);if(isNaN(val))return;if(val<0)return;if(!payload[kat])payload[kat]={};payload[kat][f.id]=val;totalChanged++;});});
+    var defectChanged=false;
+    ['raw_head_penalty','raw_face_penalty','raw_body_penalty','raw_finnage_penalty'].forEach(function(key){var cur=JSON.stringify(adminEditDefectData[key]||['0']);var ori=JSON.stringify(adminOrigDefectData[key]||['0']);if(cur!==ori)defectChanged=true;});
+    if(totalChanged===0&&!defectChanged){popupInfo('Tidak Ada Perubahan','Ubah setidaknya satu komponen nilai sebelum menyimpan.');return;}
+    var btn=document.getElementById('btnSaveEditAdmin');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> MENYIMPAN...';
+    fetch('/api/grand-juri/edit-nilai',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({_token:getCsrf(),ikan_id:adminEditId,changed_fields:payload,defect_data:defectChanged?adminEditDefectData:null})})
+    .then(function(res){if(!res.ok)return res.json().then(function(d){d._err=true;return d;});return res.json();})
+    .then(function(d){
+        if(d._err||!d.success){popupError('Gagal Menyimpan',d.message||'Terjadi kesalahan pada server.');return;}
+        closeModal('modalEditAdmin');
+        popupSuccess('Nilai Berhasil Diperbarui!','Total nilai akhir: <strong style="color:#D8B4FE;font-size:18px;">'+d.total+'</strong><br><span style="font-size:12px;color:var(--text-muted);">'+totalChanged+' komponen diperbarui'+(defectChanged?' + defect data diperbarui':'')+'</span>');
+        loadScoringData();loadDashboard();
+    })
+    .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');})
+    .finally(function(){btn.disabled=false;btn.innerHTML='<i class="fas fa-save"></i> SIMPAN PERUBAHAN';});
+}
+
+function kunciNilaiAdmin(ikanId){
+    fetch('/api/grand-juri/kunci-nilai',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({_token:getCsrf(),ikan_id:ikanId})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.success){popupSuccess('Berhasil',d.message);loadScoringData();loadDashboard();}
+        else{popupError('Gagal',d.message||'Tidak dapat mengubah status kunci.');}
+    })
+    .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');});
+}
+
+document.getElementById('btnSaveEditAdmin').addEventListener('click',submitEditAdmin);
+document.getElementById('modalEditAdmin').addEventListener('click',function(e){if(e.target===this)closeModal('modalEditAdmin');});
+document.getElementById('modalDefectAdmin').addEventListener('click',function(e){if(e.target===this)closeDefectAdmin();});
+
 /* ── TOGGLE JURI DETAIL (ADMIN) ── */
 function toggleJuriDetailAdmin(uid){
     var t=document.getElementById(uid+'-toggle');
@@ -958,8 +1124,11 @@ function renderTable(data){
         }
 
         /* Status */
-        var sc=p.grand_juri_nama?'s-grand':(p.status==='Sudah Dinilai'?'s-dinilai':'s-belum');
-        var st=p.grand_juri_nama?'GRAND EDIT':(p.status==='Sudah Dinilai'?'DINILAI':'BELUM DINILAI');
+        var sc,st;
+        if(p.is_locked){sc='s-grand';st='<i class="fas fa-lock" style="margin-right:3px;font-size:8px;"></i>TERKUNCI';}
+        else if(p.grand_juri_nama){sc='s-grand';st='GRAND EDIT';}
+        else if(p.status==='Sudah Dinilai'){sc='s-dinilai';st='DINILAI';}
+        else{sc='s-belum';st='BELUM DINILAI';}
 
         /* ★ FIX: TOTAL NILAI — dari semua juri */
         var tv=p.total_nilai_semua>0
@@ -995,7 +1164,12 @@ function renderTable(data){
             '<td>'+tv+'</td>'+
             '<td style="text-align:center;">'+pv+'</td>'+
             '<td><span class="status-badge '+sc+'">'+st+'</span></td>'+
-            '<td><div style="display:flex;gap:4px;"><button class="btn-xs blue" onclick="openDetail('+i+')"><i class="fas fa-eye"></i></button><button class="btn-xs gold" onclick="openBonusModal('+i+')" title="Kelola Bonus Point"><i class="fas fa-trophy"></i></button><button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button></div></td>';        tb.appendChild(tr);
+            '<td><div style="display:flex;gap:4px;">'+
+            '<button class="btn-xs blue" onclick="openDetail('+i+')" title="Lihat Detail"><i class="fas fa-eye"></i></button>'+
+            (!p.is_locked?'<button class="btn-xs purple" onclick="openEditAdmin('+i+')" title="Edit Nilai"><i class="fas fa-pen-to-square"></i></button>':'<button class="btn-xs purple" style="opacity:.35;cursor:not-allowed;" disabled title="Nilai terkunci"><i class="fas fa-pen-to-square"></i></button>')+
+            (p.is_locked?'<button class="btn-xs" style="background:rgba(34,211,238,.12);color:#67E8F9;border:1px solid rgba(34,211,238,.25);" onclick="kunciNilaiAdmin('+p.id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i></button>':(p.submitted_juri_count>=p.total_juri_all?'<button class="btn-xs" style="background:rgba(245,158,11,.12);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);" onclick="kunciNilaiAdmin('+p.id+')" title="Kunci nilai (final)"><i class="fas fa-lock"></i></button>':'<button class="btn-xs" style="background:rgba(245,158,11,.12);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);opacity:.35;cursor:not-allowed;" disabled title="Belum semua juri menilai ('+p.submitted_juri_count+'/'+p.total_juri_all+')"><i class="fas fa-lock"></i></button>'))+
+            '<button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button>'+
+            '</div></td>';        tb.appendChild(tr);
     }
 }
 

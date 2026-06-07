@@ -281,7 +281,8 @@ class AdminDashboardController extends Controller
             $query->where('kategori', $request->kategori);
         }
 
-        $data = $query->orderBy('nomor_tank')->get()->map(function ($ikan) {
+        $totalJuriAll = \App\Models\User::where('role', 'juri')->count();
+        $data = $query->orderBy('nomor_tank')->get()->map(function ($ikan) use ($totalJuriAll) {
             $peserta = $ikan->peserta;
             $scorings = $ikan->scorings;
             $latestScoring = $scorings->first();
@@ -441,6 +442,9 @@ class AdminDashboardController extends Controller
                 'point_breakdown'    => $finalAvgDetail ? PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail, $mergedDefect) : null,
                 'all_scorings'       => $allScoringsData,
                 'detail_list_per_juri' => $detailListPerJuri,
+                'is_locked'             => (bool) ($ikan->is_locked ?? false),
+                'total_juri_all'        => $totalJuriAll,
+                'submitted_juri_count'  => $scorings->count(),
             ];
         })->toArray();
 

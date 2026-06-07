@@ -1325,6 +1325,42 @@
     </div>
 </div>
 
+<!-- ═══════════ MODAL: EDIT NILAI ADMIN ═══════════ -->
+<div class="modal-bg" id="modalEditAdmin" style="--mw:860px;">
+    <div class="modal-box">
+        <div class="modal-head" style="background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(168,85,247,.04));">
+            <h3><i class="fas fa-pen-to-square" style="color:#D8B4FE;"></i> Edit Nilai — Admin</h3>
+            <button class="modal-close" onclick="closeModal('modalEditAdmin')"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="background:linear-gradient(135deg,rgba(168,85,247,.10),rgba(168,85,247,.05));border:1px solid rgba(168,85,247,.25);border-radius:12px;padding:14px 16px;margin-bottom:12px;font-size:13px;color:var(--text);" id="editAdminInfo"></div>
+            <div style="font-size:11px;color:var(--gold-300);background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);padding:8px 12px;border-radius:10px;margin-bottom:14px;display:flex;align-items:center;gap:6px;">
+                <i class="fas fa-circle-info" style="color:var(--gold-400);"></i>
+                Nilai dari juri sudah terisi. <strong>Ubah hanya komponen yang ingin diperbarui</strong> lalu simpan.
+            </div>
+            <div style="display:grid;grid-template-columns:170px 1fr;gap:16px;">
+                <div style="display:flex;flex-direction:column;gap:5px;" id="editAdminKatList"></div>
+                <div id="editAdminFormArea"></div>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-cancel" onclick="closeModal('modalEditAdmin')"><i class="fas fa-xmark"></i> Batal</button>
+            <button class="btn-primary" id="btnSaveEditAdmin" style="background:linear-gradient(135deg,#7c3aed,#A855F7);box-shadow:0 4px 14px -4px rgba(168,85,247,.5),inset 0 1px 0 rgba(255,255,255,.2);"><i class="fas fa-save"></i> SIMPAN PERUBAHAN</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ MODAL: DEFECT ADMIN ═══════════ -->
+<div class="modal-bg" id="modalDefectAdmin" style="--mw:450px;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3 id="defectAdminTitle">Pilih Defect</h3>
+            <button class="modal-close" onclick="closeDefectAdmin()"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" id="defectAdminBody"></div>
+    </div>
+</div>
+
 <!-- ═══════════ POPUP SUCCESS ═══════════ -->
 <div class="popup-overlay" id="popupSuccess">
     <div class="popup-card">
