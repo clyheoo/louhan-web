@@ -239,8 +239,8 @@ class AdminDashboardController extends Controller
         $maxTankTotal = $maxGlobal - $minGlobal + 1;
 
         $totalPesertaUnik = Ikan::whereNotNull('nomor_tank')
-            ->distinct('peserta_id')
-            ->count('peserta_id');
+            ->distinct('nama_peserta')
+            ->count('nama_peserta');
 
         $sisaTank = max(0, $maxTankTotal - $totalIkan);
 
@@ -576,13 +576,12 @@ class AdminDashboardController extends Controller
 
             case 'total_peserta':
                 $rows = Ikan::whereNotNull('nomor_tank')
-                    ->selectRaw('peserta_id, COUNT(*) as jml')
-                    ->groupBy('peserta_id')
-                    ->with('peserta')
+                    ->selectRaw('nama_peserta, COUNT(*) as jml')
+                    ->groupBy('nama_peserta')
                     ->orderByDesc('jml')
                     ->get()
                     ->map(function ($i, $idx) {
-                        return [$idx + 1, $i->peserta ? $i->peserta->nama_peserta : ($i->nama_peserta ?? 'Unknown'), $i->jml];
+                        return [$idx + 1, $i->nama_peserta ?? 'Unknown', $i->jml];
                     })->toArray();
                 return response()->json(['title' => 'Total Peserta', 'columns' => ['#', 'PESERTA', 'JUMLAH IKAN'], 'rows' => $rows]);
 
