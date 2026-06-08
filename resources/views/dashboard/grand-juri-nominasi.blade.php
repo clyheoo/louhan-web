@@ -806,6 +806,13 @@ document.addEventListener('DOMContentLoaded', function() {
     loadNominasi();
     loadHistory();
     loadLateIkan();
+
+    // ★ AUTO-REFRESH: Polling setiap 5 detik agar data nominasi selalu real-time
+    //    Juri bisa cancel/kirim nominasi baru kapan saja, dan data langsung update.
+    setInterval(function() {
+        loadNominasi(true); // true = silent (tanpa animasi ikon refresh)
+        loadLateIkan();
+    }, 5000);
 });
 
 window.addEventListener('unhandledrejection', function(e) { e.preventDefault(); });

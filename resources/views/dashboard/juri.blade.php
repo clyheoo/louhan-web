@@ -71,9 +71,14 @@
                         <i class="fas fa-award" style="color:var(--cyan-400);"></i>
                         Pilih Tank untuk Dinominasikan
                     </h2>
-                    <button onclick="nomLoadData()" class="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors" style="background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);">
-                        <i id="nom-refresh-icon" class="fas fa-sync-alt"></i> Refresh
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="viewPendingNominations()" class="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors" style="background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);color:var(--gold-300);">
+                            <i class="fas fa-hourglass-half"></i> Lihat Pending
+                        </button>
+                        <button onclick="nomLoadData()" class="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors" style="background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);">
+                            <i id="nom-refresh-icon" class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
                 </div>
                 <div id="nom-filter-info" class="hidden mb-4 px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2" style="background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.22);color:var(--cyan-300);">
                     <i class="fas fa-info-circle" style="color:var(--cyan-400);opacity:0.6;"></i>
@@ -98,7 +103,10 @@
             </div>
             <h2 class="text-xl font-extrabold mb-2" style="color:var(--text-hi);">Nominasi Sedang Ditinjau</h2>
             <p class="text-sm mb-6" style="color:var(--text-mid);">Grand Juri sedang memeriksa pilihan Anda. Halaman akan otomatis diperbarui.</p>
-            <div id="nom-waiting-list" class="text-left rounded-xl p-4 border mb-6 max-h-60 overflow-y-auto custom-scrollbar" style="background:rgba(255,255,255,0.03);border-color:var(--bd-1);"></div>
+            <div id="nom-waiting-list" class="text-left rounded-xl p-4 border mb-4 max-h-60 overflow-y-auto custom-scrollbar" style="background:rgba(255,255,255,0.03);border-color:var(--bd-1);"></div>
+            <button onclick="goToNominasiPage()" class="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all mb-4 active:scale-[0.98]" style="background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:white;box-shadow:0 6px 16px -6px rgba(6,182,212,0.5),inset 0 1px 0 rgba(255,255,255,0.18);cursor:pointer;">
+                <i class="fas fa-plus-circle"></i> Tambah / Pilih Nominasi Lagi
+            </button>
             <div class="flex items-center justify-center gap-2 text-xs" style="color:var(--text-faint);">
                 <div class="w-2 h-2 rounded-full animate-pulse" style="background:var(--cyan-500);"></div>
                 Auto-refresh setiap 5
@@ -155,9 +163,6 @@
                             <svg class="w-4 h-4" style="color:var(--cyan-400);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                             Form Penilaian
                         </h2>
-                        <button onclick="goToNominasiPage()" title="Tambah / kelola nominasi" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(167,139,250,.30);background:rgba(167,139,250,.10);color:#C4B5FD;font-size:10.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:inherit;transition:all .2s;" onmouseover="this.style.background='rgba(167,139,250,.18)'" onmouseout="this.style.background='rgba(167,139,250,.10)'">
-                            <i class="fas fa-plus-circle" style="font-size:11px;"></i> Nominasi Lagi
-                        </button>
                     </div>
 
                     {{-- Filter + Kelas --}}
@@ -789,6 +794,10 @@ async function checkNominasiStatus(attempt = 1) {
 
 function nomShowNominasiPage(rejectedNoms) {
     nomHide('nom-waiting'); nomHide('scoring-page'); nomShow('nom-page');
+    // ★ Reset selection karena tidak ada pending (status = 'none')
+    nomState.selected = new Set();
+    nomState.defects = {};
+    nomUpdateCount();
     if (rejectedNoms && rejectedNoms.length > 0) {
         const rejected = rejectedNoms.filter(n => n.status === 'rejected');
         if (rejected.length > 0) {
@@ -891,58 +900,96 @@ function checkWaitingEmpty() {
     const list = document.getElementById('nom-waiting-list');
     if (!list) return;
     if (list.children.length === 0) {
-        // Stop auto-refresh karena tidak ada lagi yang ditunggu
-        if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
-        // Tampilkan empty state dengan tombol untuk kembali pilih nominasi (MANUAL — tidak auto-redirect)
         list.innerHTML =
-            '<div class="text-center py-6">' +
-                '<div class="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.30);">' +
-                    '<i class="fas fa-inbox" style="color:#A78BFA;font-size:24px;"></i>' +
+            '<div class="text-center py-4">' +
+                '<div class="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.30);">' +
+                    '<i class="fas fa-inbox" style="color:#A78BFA;font-size:20px;"></i>' +
                 '</div>' +
-                '<h4 class="text-sm font-bold mb-1" style="color:var(--text-hi);">Semua Nominasi Dibatalkan</h4>' +
-                '<p class="text-xs mb-4" style="color:var(--text-mid);">Antrian review Anda kosong sekarang.</p>' +
-                '<button onclick="goBackToNominasiFromEmpty()" style="padding:10px 20px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:white;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;box-shadow:0 6px 16px -6px rgba(6,182,212,.5);transition:all .2s;" onmouseover="this.style.transform=\'translateY(-1px)\'" onmouseout="this.style.transform=\'\'">' +
-                    '<i class="fas fa-arrow-right"></i> Pilih Nominasi Lagi' +
-                '</button>' +
+                '<p class="text-xs" style="color:var(--text-mid);">Tidak ada nominasi pending.</p>' +
             '</div>';
+        // ★ Jangan stop auto-refresh — biarkan polling tetap jalan.
+        //   Kalau grand juri approve nominasi lain, auto-refresh akan otomatis
+        //   pindahkan ke scoring page. Tombol "Tambah Nominasi" di template
+        //   sudah menyediakan cara manual untuk kembali pilih nominasi.
     }
 }
 
-function goBackToNominasiFromEmpty() {
-    // Stop auto-refresh kalau masih running
-    if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
-    sessionStorage.removeItem('nom_was_pending');
-    nomHide('nom-waiting');
-    nomHide('nom-approved-anim');
-    nomHide('nom-rejected-anim');
-    nomShow('nom-page');
-    nomLoadData();
+async function viewPendingNominations() {
+    nomShow('nom-loading');
+    try {
+        const res = await apiFetch('/api/juri/nominasi-status');
+        const pendingNoms = (res.nominations || []).filter(n => n.status === 'pending');
+
+        nomHide('nom-loading');
+
+        if (pendingNoms.length > 0) {
+            // ★ Paksa tampilkan halaman waiting meskipun ada yang sudah approved
+            nomHide('nom-page');
+            nomHide('scoring-page');
+            nomHide('nom-approved-anim');
+            nomHide('nom-rejected-anim');
+            nomShowWaiting(res.nominations); // Fungsi ini akan filter & render yang pending saja, lalu nyalakan auto-refresh
+        } else {
+            // Jika tidak ada yang pending, beri tahu user
+            showSuccessPopup('Status Nominasi', 'Tidak ada nominasi yang sedang pending. Semua sudah diproses atau belum diajukan.');
+        }
+    } catch (e) {
+        nomHide('nom-loading');
+        showWarningModal([{type:'select', msg:'Gagal memuat status nominasi. Cek koneksi internet Anda.'}]);
+    }
 }
 
 async function goToNominasiPage() {
-    // ★ Navigasi dari scoring page kembali ke nominasi page tanpa mengganggu nilai yang sudah disimpan
+    // ★ Stop auto-refresh timer kalau masih running
+    if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
+    // ★ Bersihkan flag pending supaya tidak trigger animasi rejection saat kembali
+    sessionStorage.removeItem('nom_was_pending');
+    // ★ Navigasi kembali ke nominasi page tanpa mengganggu nilai yang sudah disimpan
     nomHide('scoring-page');
     nomHide('nom-waiting');
     nomHide('nom-approved-anim');
     nomHide('nom-rejected-anim');
     nomShow('nom-page');
 
+    // ★ Reset selection dulu, lalu pre-select dari pending
+    nomState.selected = new Set();
+    nomState.defects = {};
+
     // Load ulang data nominasi (tank list + filter)
     try {
         const res = await apiFetch('/api/juri/nominasi-status');
-        // Tampilkan info nominasi pending/approved/rejected di banner kalau ada
         const pending = (res.nominations || []).filter(n => n.status === 'pending');
         const approved = (res.nominations || []).filter(n => n.status === 'approved');
+
+        // ★ PRE-SELECT: tank yang sudah pending otomatis terpilih
+        pending.forEach(function(n) {
+            nomState.selected.add(n.ikan_id);
+            // ★ Restore defect data dari pending nominasi
+            const hasDefect = ['raw_head_penalty','raw_face_penalty','raw_body_penalty','raw_finnage_penalty'].some(function(k) {
+                return n[k] && Array.isArray(n[k]) && n[k].some(function(v) { return v && v !== '0'; });
+            });
+            if (hasDefect) {
+                nomState.defects[n.ikan_id] = {
+                    raw_head_penalty:    n.raw_head_penalty    || ['0'],
+                    raw_face_penalty:    n.raw_face_penalty    || ['0'],
+                    raw_body_penalty:    n.raw_body_penalty    || ['0'],
+                    raw_finnage_penalty: n.raw_finnage_penalty || ['0'],
+                };
+            }
+        });
+        nomUpdateCount();
+
+        // ★ Banner info
         let bannerHtml = '';
         if (pending.length > 0) {
-            bannerHtml += '<div style="background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.30);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#FCD34D;"><i class="fas fa-clock" style="margin-right:6px;"></i><b>' + pending.length + ' nominasi PENDING</b> sedang di-review. Anda bisa membatalkan lewat tombol di samping setiap item, atau tambah nominasi baru di bawah.</div>';
+            bannerHtml += '<div style="background:rgba(34,211,238,.10);border:1px solid rgba(34,211,238,.30);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--cyan-300);"><i class="fas fa-check-double" style="margin-right:6px;"></i><b>' + pending.length + ' tank otomatis terpilih</b> (nominasi masih pending). Anda bisa menambah tank atau membatalkan pilihan, lalu kirim ulang.</div>';
         }
         if (approved.length > 0) {
             bannerHtml += '<div style="background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.30);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#34D399;"><i class="fas fa-check-circle" style="margin-right:6px;"></i><b>' + approved.length + ' nominasi DISETUJUI</b>. Lanjutkan penilaian kapan saja dengan tombol di bawah.</div>';
             bannerHtml += '<button onclick="nomHide(\'nom-page\');nomShow(\'scoring-page\');initScoringPage();" style="margin-bottom:14px;padding:10px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,#10B981,#059669);color:white;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 14px -4px rgba(16,185,129,.5);"><i class="fas fa-arrow-left"></i> Kembali ke Penilaian</button>';
         }
 
-        // Inject banner ke atas nom-page (cari atau buat container banner)
+        // Inject banner ke atas nom-page
         let bannerEl = document.getElementById('nom-info-banner');
         if (!bannerEl) {
             bannerEl = document.createElement('div');

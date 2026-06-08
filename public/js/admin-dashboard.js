@@ -3276,7 +3276,12 @@ loadUsers();
     };
     var loaded = { dashboard:true }; // dashboard loaded by initial loadDashboard()
 
+    var adminNomPollTimer = null; // ★ Timer untuk auto-refresh nominasi
+
     window.activatePage = function(pageId){
+        // ★ CLEAR polling timer dari halaman sebelumnya
+        if(adminNomPollTimer){ clearInterval(adminNomPollTimer); adminNomPollTimer = null; }
+
         // Toggle section visibility
         document.querySelectorAll('.page-section').forEach(function(s){
             s.style.display = (s.dataset.page === pageId) ? 'block' : 'none';
@@ -3308,6 +3313,14 @@ loadUsers();
             if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
             if(pageId === 'mvp'){ loadMvpStatus(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
+        }
+
+        // ★ START auto-polling kalau halaman nominasi aktif
+        if(pageId === 'nominasi'){
+            adminNomPollTimer = setInterval(function(){
+                loadAdminPendingReview();
+                loadAdminLateIkan();
+            }, 5000);
         }
 
         document.body.classList.remove('sidebar-open');

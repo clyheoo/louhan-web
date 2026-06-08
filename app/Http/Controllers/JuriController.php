@@ -282,6 +282,11 @@ class JuriController extends Controller
                     'status'        => $n->status,
                     'catatan'       => $n->catatan,
                     'reviewed_at'   => $n->reviewed_at?->toISOString(),
+                    // ★ Defect data untuk pre-fill saat kembali ke nominasi
+                    'raw_head_penalty'    => $n->raw_head_penalty ?? ['0'],
+                    'raw_face_penalty'    => $n->raw_face_penalty ?? ['0'],
+                    'raw_body_penalty'    => $n->raw_body_penalty ?? ['0'],
+                    'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
                 ];
             }),
             'approved_ikan_ids' => $approvedIds,
@@ -316,6 +321,13 @@ class JuriController extends Controller
         // ★ Multi-nominasi diperbolehkan: juri boleh kirim nominasi tambahan
         //   kapan saja, bahkan saat masih ada pending atau sudah ada approved.
         //   Setiap submission menjadi entry pending baru, di-review independen.
+
+        // ★ Hapus nominasi PENDING yang TIDAK ada di submission baru
+        //   (juri mungkin unselect tank yang sebelumnya pending)
+        Nominasi::where('juri_id', auth()->id())
+            ->where('status', 'pending')
+            ->whereNotIn('ikan_id', $ikanIds)
+            ->delete();
 
         // ★ Defect per ikan_id (opsional): { "12": {raw_head_penalty:[...], ...}, ... }
         $defects = $request->json('defects') ?? [];

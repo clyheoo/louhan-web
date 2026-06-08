@@ -49,12 +49,6 @@ Route::get('/juri', function () {
     return view('dashboard.juri');
 })->middleware('auth')->name('juri.index');
 
-Route::middleware('auth')->group(function () {
-    Route::get('/api/juri/data', [JuriController::class, 'getJuriData']);
-    Route::post('/api/juri/simpan-nilai', [JuriController::class, 'simpanNilai']);
-    Route::post('/api/juri/kirim-ke-grand', [JuriController::class, 'kirimKeGrandJuri']);
-});
-
 /* ═══════════════════════════════════════════
    GRAND JURI ( semua route di sini, TANPA duplikat )
    ═══════════════════════════════════════════ */
