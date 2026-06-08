@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/juri/nominasi-status', [JuriController::class, 'getNominasiStatus']);
     Route::get('/api/juri/tanks-nominasi', [JuriController::class, 'getTanksForNominasi']);
     Route::post('/api/juri/submit-nominasi', [JuriController::class, 'submitNominasi']);
+    Route::post('/api/juri/cancel-nominasi', [JuriController::class, 'cancelNominasi']);
 });
 
 Route::get('/juri', function () {

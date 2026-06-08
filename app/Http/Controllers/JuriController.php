@@ -256,10 +256,13 @@ class JuriController extends Controller
         $hasPending  = $nominations->contains('status', 'pending');
         $hasApproved = $nominations->contains('status', 'approved');
 
-        if ($hasPending) {
-            $status = 'pending';
-        } elseif ($hasApproved) {
+        // ★ Prioritas: approved > pending > none
+        //   Kalau juri sudah punya approved, langsung masuk scoring page.
+        //   Pending tambahan akan tetap di-review di background.
+        if ($hasApproved) {
             $status = 'approved';
+        } elseif ($hasPending) {
+            $status = 'pending';
         } else {
             $status = 'none';
         }
@@ -310,27 +313,9 @@ class JuriController extends Controller
             ], 422);
         }
 
-        $hasPending = Nominasi::where('juri_id', auth()->id())
-            ->where('status', 'pending')
-            ->exists();
-
-        if ($hasPending) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Anda masih memiliki nominasi yang sedang ditinjau Grand Juri. Tunggu hingga selesai.',
-            ], 422);
-        }
-
-        $hasApproved = Nominasi::where('juri_id', auth()->id())
-            ->where('status', 'approved')
-            ->exists();
-
-        if ($hasApproved) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Anda sudah memiliki nominasi yang disetujui.',
-            ], 422);
-        }
+        // ★ Multi-nominasi diperbolehkan: juri boleh kirim nominasi tambahan
+        //   kapan saja, bahkan saat masih ada pending atau sudah ada approved.
+        //   Setiap submission menjadi entry pending baru, di-review independen.
 
         // ★ Defect per ikan_id (opsional): { "12": {raw_head_penalty:[...], ...}, ... }
         $defects = $request->json('defects') ?? [];
@@ -392,6 +377,60 @@ class JuriController extends Controller
             'tanks'     => $tanks,
             'kategoris' => $kategoris,
             'kelass'    => $kelass,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       NOMINASI — CANCEL (juri batalkan nominasi pending)
+       ═══════════════════════════════════════════ */
+    public function cancelNominasi(Request $request)
+    {
+        $nominasiId = $request->json('nominasi_id');
+
+        if (!$nominasiId) {
+            return response()->json(['success' => false, 'message' => 'Nominasi ID wajib dikirim.'], 422);
+        }
+
+        $nominasi = Nominasi::where('id', $nominasiId)
+            ->where('juri_id', auth()->id())
+            ->first();
+
+        if (!$nominasi) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nominasi tidak ditemukan atau bukan milik Anda.',
+            ], 404);
+        }
+
+        if ($nominasi->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya nominasi yang masih PENDING yang dapat dibatalkan. Status saat ini: ' . strtoupper($nominasi->status),
+            ], 422);
+        }
+
+        $nomorTank = $nominasi->ikan->nomor_tank ?? '?';
+        $nominasi->delete();
+
+        // ★ Sync ke Google Sheets di background (kalau sync service tersedia)
+        try {
+            dispatch(function () {
+                try {
+                    $sync = app(\App\Services\SheetsSyncService::class);
+                    if (!$sync->isReady()) return;
+                    try { $sync->syncSemuaNominasi(); } catch (\Throwable $e) { \Log::error('Async-sync SemuaNominasi (cancel): ' . $e->getMessage()); }
+                    try { $sync->syncSemuaPilNom();   } catch (\Throwable $e) { \Log::error('Async-sync SemuaPilNom (cancel): '   . $e->getMessage()); }
+                } catch (\Throwable $e) {
+                    \Log::error('Async-sync outer (cancel nominasi): ' . $e->getMessage());
+                }
+            })->afterResponse();
+        } catch (\Throwable $e) {
+            \Log::error('Gagal register dispatch (cancel nominasi): ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Nominasi Tank ' . $nomorTank . ' berhasil dibatalkan.',
         ]);
     }
 }
