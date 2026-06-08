@@ -417,6 +417,8 @@ function isNoKelasGJ(kat) { return NO_KELAS_KAT.indexOf(kat) !== -1; }
 
 var CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 var pendingRejectId = null;
+var _pendingCache = '';
+var _lateCache = '';
 
 async function apiFetch(url, opts) {
     opts = opts || {};
@@ -570,12 +572,22 @@ async function approveAllInGroup(btn, ids) {
 async function loadNominasi(silent) {
     var icon = document.getElementById('gj-refresh-icon');
     if (icon && !silent) { icon.style.transition = 'transform .6s'; icon.style.transform = 'rotate(360deg)'; setTimeout(function(){ icon.style.transform = ''; }, 650); }
+
+    /* ★ Reset cache jika bukan silent → force re-render */
+    if(!silent) _pendingCache = '';
+
     try {
         var res = await apiFetch('/api/grand-juri/nominasi');
         if (!res || res.error) {
             if (!silent) showWarningModal([{ msg: (res && res.message) ? res.message : 'Gagal memuat data nominasi.' }]);
             return;
         }
+
+        /* ★ FINGERPRINT — skip re-render jika data identik */
+        var fingerprint = JSON.stringify(res);
+        if(fingerprint === _pendingCache) return;
+        _pendingCache = fingerprint;
+
         document.getElementById('stat-juri').textContent = res.total_juri || 0;
         document.getElementById('stat-tank').textContent = res.total_pending || 0;
         var list = document.getElementById('nom-list');
@@ -620,7 +632,7 @@ async function loadNominasi(silent) {
             } catch(e1) { /* skip group */ }
         }
         list.innerHTML = html;
-        loadLateIkan(); // ★ refresh late-ikan module setiap refresh nominasi
+        loadLateIkan(true); // ★ refresh late-ikan module setiap refresh nominasi (silent)
     } catch(e) {
         if (!silent) showWarningModal([{ msg: 'Gagal memuat data nominasi.' }]);
     }
@@ -683,10 +695,18 @@ async function loadHistory() {
 }
 
 /* ═══ LATE IKAN MODULE ═══ */
-async function loadLateIkan() {
+async function loadLateIkan(silent) {
+    /* ★ Reset cache jika bukan silent → force re-render */
+    if(!silent) _lateCache = '';
+
     try {
         var res = await apiFetch('/api/grand-juri/late-ikan');
         if (!res || res.error) return;
+
+        /* ★ FINGERPRINT — skip re-render jika data identik */
+        var fingerprint = JSON.stringify(res);
+        if(fingerprint === _lateCache) return;
+        _lateCache = fingerprint;
 
         var section = document.getElementById('late-section');
         var disabled = document.getElementById('late-disabled-info');
@@ -806,12 +826,12 @@ document.addEventListener('DOMContentLoaded', function() {
     loadNominasi();
     loadHistory();
     loadLateIkan();
-
-    // ★ AUTO-REFRESH: Polling setiap 5 detik agar data nominasi selalu real-time
-    //    Juri bisa cancel/kirim nominasi baru kapan saja, dan data langsung update.
-    setInterval(function() {
-        loadNominasi(true); // true = silent (tanpa animasi ikon refresh)
-        loadLateIkan();
+            // ★ AUTO-REFRESH: Polling setiap 5 detik agar data nominasi selalu real-time
+            //    Juri bisa cancel/kirim nominasi baru kapan saja, dan data langsung update.
+            //    Parameter `true` = silent poll, hanya update DOM jika ada perubahan data.
+        setInterval(function() {
+            loadNominasi(true);
+            loadLateIkan(true);
     }, 5000);
 });
 
