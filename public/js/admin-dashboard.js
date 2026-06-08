@@ -3272,7 +3272,8 @@ loadUsers();
         nominasi:     { title:'Nominasi',                        sub:'Pilih tank & review nominasi (admin = juri + grand juri)', icon:'fa-award' },
         mvp:          { title:'Kelola MVP',                      sub:'Manajemen pendaftaran ikan MVP', icon:'fa-star' },
         ranking:      { title:'Point Ranking',                   sub:'Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)', icon:'fa-trophy' },
-        undian:       { title:'Kelola Mesin Undian',             sub:'Membuka dan mengunci mesin undian tank untuk peserta', icon:'fa-dice' }
+        undian:       { title:'Kelola Mesin Undian',             sub:'Membuka dan mengunci mesin undian tank untuk peserta', icon:'fa-dice' },
+        jumbo_calc:   { title:'Hitung Point Jumbo',              sub:'Kalkulasi point Jumbo berdasarkan rumus kategori lain', icon:'fa-calculator' }
     };
     var loaded = { dashboard:true }; // dashboard loaded by initial loadDashboard()
 
@@ -3308,6 +3309,7 @@ loadUsers();
             if(pageId === 'mvp'){ loadMvpData(); loadMvpStatus(); loadMvpPeserta(); loadMvpIkanData(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
             if(pageId === 'undian'){ loadUndianStatus(); }
+            if(pageId === 'jumbo_calc'){ loadJumboCalcFish(); }
         } else {
             // Refresh ringan saat dibuka ulang (opsional)
             if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
@@ -3347,6 +3349,192 @@ loadUsers();
         __origOpenModal(id);
     };
 })();
+
+/* ═══════════════════════════════════════════════
+   HITUNG POINT JUMBO
+   ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   HITUNG POINT JUMBO (TABLE LAYOUT)
+   ═══════════════════════════════════════════════ */
+function loadJumboCalcFish(){
+    var wrap = document.getElementById('jumboCalcTableWrap');
+    var resultBox = document.getElementById('jumboCalcResult');
+    if(resultBox) resultBox.style.display = 'none';
+
+    wrap.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat data ikan Jumbo...</p></div>';
+
+    fetch('/api/admin/jumbo-scored-ikans', {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+        if(!data || data.length === 0){
+            wrap.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada ikan Jumbo yang sudah memiliki nilai dari juri.</p></div>';
+            return;
+        }
+
+        var kats = allKategoriList.filter(function(k){ return k !== 'Jumbo'; });
+        var katOptions = '<option value="">-- Pilih Rumus --</option>';
+        kats.forEach(function(k){ katOptions += '<option value="'+k+'">'+k+'</option>'; });
+
+        var html = '<div style="overflow-x:auto;border:1px solid var(--bd-2);border-radius:12px;">';
+        html += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+        
+        // Table Head
+        html += '<thead><tr style="border-bottom:2px solid var(--bd-2);background:var(--glass-2);">';
+        html += '<th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:800;color:var(--text-muted);width:40px;">#</th>';
+        html += '<th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:800;color:var(--text-muted);">NO TANK</th>';
+        html += '<th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:800;color:var(--text-muted);">NAMA PESERTA</th>';
+        html += '<th style="padding:12px 14px;text-align:center;font-size:10px;font-weight:800;color:var(--text-muted);width:60px;">JURI</th>';
+        html += '<th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:800;color:var(--text-muted);width:220px;">PILIH RUMUS</th>';
+        html += '<th style="padding:12px 14px;text-align:center;font-size:10px;font-weight:800;color:var(--text-muted);width:100px;">AKSI</th>';
+        html += '</tr></thead><tbody>';
+
+        // Table Rows
+        data.forEach(function(ikan, idx){
+            html += '<tr id="jumbo-row-'+ikan.id+'" style="border-bottom:1px solid var(--bd-1);transition:background .2s;">';
+            html += '<td style="padding:12px 14px;font-weight:700;color:var(--text-muted);">'+(idx+1)+'</td>';
+            html += '<td style="padding:12px 14px;font-weight:800;color:var(--cyan-400);">Tank '+(ikan.nomor_tank||'?')+'</td>';
+            html += '<td style="padding:12px 14px;font-weight:600;color:var(--text-hi);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+esc(ikan.nama_peserta)+'">'+esc(ikan.nama_peserta)+'</td>';
+            html += '<td style="padding:12px 14px;text-align:center;font-weight:700;color:var(--text-mid);">'+ikan.jumlah_juri+'</td>';
+            
+            // Custom Dark Dropdown
+            html += '<td style="padding:10px 14px;">';
+            html += '<select id="jumboKat-'+ikan.id+'" style="width:100%;padding:9px 28px 9px 12px;background:rgba(0,0,0,.3);border:1px solid var(--bd-2);border-radius:8px;color:var(--text-hi);font-family:inherit;font-size:12px;font-weight:600;outline:none;cursor:pointer;color-scheme:dark;transition:border-color .2s;appearance:none;-webkit-appearance:none;background-image:url(\'data:image/svg+xml,%3Csvg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'12\\\' height=\\\'12\\\' viewBox=\\\'0 0 12 12\\\'%3E%3Cpath fill=\\\'%23FCD34D\\\' d=\\\'M6 8L1 3h10z\\\'/%3E%3C/svg%3E\');background-repeat:no-repeat;background-position:right 10px center;" onfocus="this.style.borderColor=\'var(--gold-400)\'" onblur="this.style.borderColor=\'var(--bd-2)\'">'+katOptions+'</select>';
+            html += '</td>';
+            
+            // Hitung Button
+            html += '<td style="padding:10px 14px;text-align:center;">';
+            html += '<button onclick="calcJumboPointFromTable('+ikan.id+')" id="jumboBtn-'+ikan.id+'" style="padding:8px 14px;font-size:11px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--gold-600),var(--gold-500));color:var(--ocean-900);font-weight:800;cursor:pointer;box-shadow:0 2px 6px rgba(245,158,11,.3);transition:all .2s;font-family:inherit;"><i class="fas fa-calculator" style="margin-right:4px;"></i>Hitung</button>';
+            html += '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        wrap.innerHTML = html;
+    })
+    .catch(function(){
+        wrap.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat data Jumbo.</p></div>';
+    });
+}
+
+function calcJumboPointFromTable(ikanId){
+    var katSel = document.getElementById('jumboKat-'+ikanId);
+    var targetKat = katSel ? katSel.value : '';
+    var row = document.getElementById('jumbo-row-'+ikanId);
+    var btn = document.getElementById('jumboBtn-'+ikanId);
+    
+    if(!targetKat){
+        popupError('Rumus Belum Dipilih', 'Pilih rumus kategori terlebih dahulu pada baris Tank ini.');
+        if(katSel) katSel.style.borderColor = 'var(--danger)';
+        setTimeout(function(){ if(katSel) katSel.style.borderColor = 'var(--bd-2)'; }, 2000);
+        return;
+    }
+
+    // Highlight active row
+    if(row) row.style.background = 'rgba(245,158,11,.05)';
+    
+    var resultBox = document.getElementById('jumboCalcResult');
+    resultBox.style.display = 'none';
+
+    if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+
+    fetch('/api/admin/calc-jumbo-point', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'X-CSRF-TOKEN':getCsrf(), 'Accept':'application/json'},
+        body: JSON.stringify({ ikan_id: ikanId, target_kategori: targetKat })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d.success){
+            renderJumboCalcResult(d.data, targetKat);
+            resultBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            popupError('Gagal Menghitung', d.message || 'Terjadi kesalahan saat menghitung point.');
+        }
+    })
+    .catch(function(){
+        popupError('Kesalahan Jaringan', 'Gagal menghubungi server.');
+    })
+    .finally(function(){
+        if(row) row.style.background = '';
+        if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-calculator" style="margin-right:4px;"></i>Hitung'; }
+    });
+}
+
+function renderJumboCalcResult(data, kat){
+    var box = document.getElementById('jumboCalcResult');
+    var pb = data.point_breakdown || {};
+    
+    var html = '<div style="background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid var(--bd-2);border-radius:16px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,.2);">';
+    
+    // Header Info
+    html += '<div style="font-size:13px;font-weight:800;color:var(--gold-300);margin-bottom:20px;display:flex;align-items:center;gap:10px;"><i class="fas fa-chart-line" style="font-size:16px;"></i> HASIL PERHITUNGAN POINT</div>';
+    
+    html += '<div style="display:grid;grid-template-columns:140px 1fr;gap:10px 16px;font-size:12px;margin-bottom:20px;padding:14px 16px;background:var(--glass-2);border-radius:10px;border:1px solid var(--bd-1);">';
+    html += '<div style="color:var(--text-muted);font-weight:700;">Ikan Jumbo</div><div style="color:var(--text-hi);font-weight:800;">Tank '+data.nomor_tank+' — '+esc(data.nama_peserta)+'</div>';
+    html += '<div style="color:var(--text-muted);font-weight:700;">Rumus Kategori</div><div style="color:var(--purple);font-weight:800;">'+esc(kat)+'</div>';
+    html += '</div>';
+
+    // Tabel Breakdown
+    html += '<div style="overflow-x:auto;border:1px solid var(--bd-2);border-radius:10px;">';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+    
+    // Table Head
+    html += '<thead><tr style="border-bottom:2px solid var(--bd-2);background:var(--glass-2);">';
+    html += '<th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:800;color:var(--text-muted);letter-spacing:.5px;">KOMPONEN</th>';
+    html += '<th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:800;color:var(--text-muted);letter-spacing:.5px;">DETAIL RUMUS</th>';
+    html += '<th style="padding:12px 14px;text-align:right;font-size:10px;font-weight:800;color:var(--text-muted);letter-spacing:.5px;">POINT</th>';
+    html += '</tr></thead>';
+    
+    // Table Body
+    html += '<tbody>';
+    var katOrder = ['overall','head','face','body','marking','pearl','color','finnage'];
+    
+    katOrder.forEach(function(ki){
+        if(!pb[ki]) return;
+        var item = pb[ki];
+        
+        // Parsing label defect (Contoh: "Head (Defect -10%)")
+        var labelMain = item.label;
+        var defectHtml = '';
+        var defectIndex = labelMain.indexOf(' (Defect');
+        if(defectIndex !== -1){
+            var mainText = labelMain.substring(0, defectIndex);
+            var defectText = labelMain.substring(defectIndex);
+            labelMain = mainText;
+            defectHtml = '<div style="font-size:10px;font-weight:700;color:#FCA5A5;margin-top:3px;"><i class="fas fa-exclamation-triangle" style="margin-right:3px;font-size:9px;"></i>'+defectText+'</div>';
+        }
+        
+        // Formatting parts/rumus
+        var partsHtml = '-';
+        if(item.parts && item.parts.length > 0){
+            partsHtml = item.parts.map(function(p){
+                return '<span style="display:inline-block;padding:2px 6px;background:var(--glass-2);border-radius:4px;margin:1px 0;font-size:10px;color:var(--text-mid);font-family:monospace;letter-spacing:-.3px;">'+p+'</span>';
+            }).join(' <span style="color:var(--text-faint);margin:0 2px;">+</span> ');
+        }
+
+        var rowBg = defectHtml ? 'background:rgba(239,68,68,.04);' : '';
+        
+        html += '<tr style="border-bottom:1px solid var(--bd-1);'+rowBg+'">';
+        html += '<td style="padding:12px 14px;font-weight:700;color:var(--text-hi);vertical-align:top;">'+labelMain+defectHtml+'</td>';
+        html += '<td style="padding:12px 14px;color:var(--text-mid);vertical-align:top;line-height:1.8;">'+partsHtml+'</td>';
+        html += '<td style="padding:12px 14px;text-align:right;font-weight:900;color:var(--gold-300);font-family:\'Fraunces\',serif;font-size:15px;vertical-align:top;">'+item.point.toFixed(2)+'</td>';
+        html += '</tr>';
+    });
+    
+    html += '</tbody>';
+    
+    // Table Foot (Total)
+    html += '<tfoot><tr style="border-top:2px solid var(--gold-500);background:rgba(245,158,11,.08);">';
+    html += '<td colspan="2" style="padding:16px 14px;font-size:14px;font-weight:900;color:var(--text-hi);">TOTAL POINT JUMBO</td>';
+    html += '<td style="padding:16px 14px;text-align:right;font-size:24px;font-weight:900;color:var(--gold-300);font-family:\'Fraunces\',serif;">'+(pb.total ? pb.total.toFixed(2) : '0.00')+'</td>';
+    html += '</tr></tfoot>';
+    
+    html += '</table></div>';
+    html += '</div>';
+    
+    box.innerHTML = html;
+    box.style.display = 'block';
+}
 
 /* ═══════════════════════════════════════════════
    LOADING STATE OVERLAY UNTUK FETCH UTAMA

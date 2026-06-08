@@ -126,6 +126,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/point-ranking', [AdminDashboardController::class, 'getPointRanking']);
     Route::post('/api/admin/submit-nominasi', [AdminDashboardController::class, 'submitAdminNominasi']);
     Route::get('/api/admin/tanks-nominasi-tersedia', [AdminDashboardController::class, 'getTanksTersediaUntukNominasi']);
+    Route::get('/api/admin/jumbo-scored-ikans', [AdminDashboardController::class, 'getJumboScoredIkans']);
+    Route::post('/api/admin/calc-jumbo-point', [AdminDashboardController::class, 'calcJumboPoint']);
 });
 
 /* ═══════════════════════════════════════════

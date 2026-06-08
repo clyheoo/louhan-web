@@ -551,6 +551,30 @@
     @media (prefers-reduced-motion: reduce){
         *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.1s!important; }
     }
+    /* ===== G-CARD (Jumbo Calc) ===== */
+    .g-card{
+        background:linear-gradient(180deg, rgba(255,255,255,.04) 0%, rgba(255,255,255,.02) 100%);
+        border:1px solid var(--bd-1); border-radius:20px;
+        position:relative; overflow:hidden;
+        box-shadow:0 30px 60px -30px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .g-card-head{
+        padding:18px 22px; border-bottom:1px solid var(--bd-1);
+        display:flex; justify-content:space-between; align-items:center;
+        background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(245,158,11,.02));
+    }
+    .g-card-head-left{ display:flex; align-items:center; gap:14px; }
+    .g-card-head-icon{
+        width:42px; height:42px; border-radius:13px;
+        display:grid; place-items:center; font-size:17px; flex-shrink:0;
+    }
+    .g-card-head-icon.gold{
+        background:linear-gradient(135deg,var(--gold-600),var(--gold-500));
+        color:#fff; box-shadow:0 8px 18px -6px rgba(245,158,11,.5);
+    }
+    .g-card-head h3{ font-size:15px; font-weight:800; color:var(--text-hi); }
+    .g-card-head p.sub{ font-size:11px; color:var(--text-mid); margin-top:3px; }
+    .g-card-body{ padding:22px; }
         /* ═══ PERFORMANCE: Hentikan render gradient body saat modal/popup tampil ═══ */
     body:has(.modal-bg.show)::before,
     body:has(.popup-overlay.show)::before{
@@ -639,6 +663,9 @@
             <a class="sidebar-item" data-page="registrasi"><i class="fas fa-database"></i> Registrasi & Undian</a>
             <a class="sidebar-item" data-page="nominasi"><i class="fas fa-award"></i> Nominasi</a>
             <a class="sidebar-item" data-page="mvp"><i class="fas fa-star"></i> Kelola MVP</a>
+            <a class="sidebar-item" data-page="jumbo_calc">
+                <i class="fas fa-calculator"></i> Hitung Point Jumbo
+            </a>
             <a class="sidebar-item" data-page="ranking"><i class="fas fa-trophy"></i> Point Ranking</a>
             <a class="sidebar-item" data-page="undian"><i class="fas fa-dice"></i> Kelola Mesin Undian</a>
         </nav>
@@ -1117,6 +1144,35 @@
                     </div>
                 </div>
             </section>
+
+<!-- ═══ HITUNG POINT JUMBO ═══ -->
+<div class="page-section" data-page="jumbo_calc" style="display:none;">
+    <div class="g-card">
+        <div class="g-card-head">
+            <div class="g-card-head-left">
+                <div class="g-card-head-icon gold"><i class="fas fa-calculator"></i></div>
+                <div>
+                    <h3>Kalkulator Point Jumbo</h3>
+                    <p class="sub">Hitung point ikan Jumbo menggunakan bobot & rumus kategori lain</p>
+                </div>
+            </div>
+        </div>
+        <div class="g-card-body">
+            <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.20);border-radius:12px;padding:14px 16px;margin-bottom:20px;font-size:12px;color:var(--text-mid);line-height:1.6;">
+                <i class="fas fa-circle-info" style="color:var(--gold-400);margin-right:6px;"></i>
+                Pilih rumus kategori pada kolom <b style="color:var(--gold-300);">"Pilih Rumus"</b> di setiap baris ikan Jumbo, lalu klik tombol Hitung untuk melihat rincian point-nya.
+            </div>
+
+            <!-- Tabel Daftar Jumbo -->
+            <div id="jumboCalcTableWrap">
+                <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat data Jumbo...</p></div>
+            </div>
+
+            <!-- Result Box -->
+            <div id="jumboCalcResult" style="display:none;margin-top:28px;"></div>
+        </div>
+    </div>
+</div>
 
             <!-- ═══════════ PAGE: NOMINASI ═══════════ -->
             <section class="page-section" data-page="nominasi" style="display:none;">

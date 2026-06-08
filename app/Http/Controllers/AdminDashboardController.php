@@ -2113,4 +2113,124 @@ class AdminDashboardController extends Controller
 
         return response()->json($result);
     }
+
+        /* ═══════════════════════════════════════════
+       KALKULATOR POINT JUMBO
+       Mengambil daftar Jumbo bernilai, lalu menghitung point-nya 
+       menggunakan rumus kategori lain (misal: Cencu)
+       ═══════════════════════════════════════════ */
+    public function getJumboScoredIkans()
+    {
+        $ikans = Ikan::where('kategori', 'Jumbo')
+            ->whereNotNull('nomor_tank')
+            ->whereHas('scorings')
+            ->withCount('scorings')
+            ->orderBy('nomor_tank')
+            ->get()
+            ->map(function ($ikan) {
+                return [
+                    'id'            => $ikan->id,
+                    'nomor_tank'    => $ikan->nomor_tank ?? '?',
+                    'nama_peserta'  => $ikan->nama_peserta ?? '-',
+                    'jumlah_juri'   => $ikan->scorings_count,
+                ];
+            });
+
+        return response()->json($ikans);
+    }
+
+    public function calcJumboPoint(Request $request)
+    {
+        $request->validate([
+            'ikan_id'        => 'required|exists:ikans,id',
+            'target_kategori' => 'required|string',
+        ]);
+
+        $ikan = Ikan::where('id', $request->ikan_id)
+            ->where('kategori', 'Jumbo')
+            ->with('scorings', 'scorings.juri', 'scorings.grandJuri')
+            ->first();
+
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Ikan Jumbo tidak ditemukan.'], 404);
+        }
+
+        if ($ikan->scorings->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Ikan ini belum memiliki nilai dari juri.'], 422);
+        }
+
+        // ═══ HITUNG RATA-RATA NILAI DETAIL & DEFECT (SAMA PERSIS LOGIKA GRAND JURI) ═══
+        $totalNilaiSemua = 0;
+        $jumlahJuriYangNilai = 0;
+        $avgDetail = [];
+
+        foreach ($ikan->scorings as $s) {
+            if ($s->total_nilai) {
+                $totalNilaiSemua += $s->total_nilai;
+                $jumlahJuriYangNilai++;
+            }
+            if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                foreach ($s->nilai_detail as $kat => $fields) {
+                    foreach ($fields as $fid => $val) {
+                        if (!isset($avgDetail[$kat][$fid])) {
+                            $avgDetail[$kat][$fid] = ['sum' => 0, 'count' => 0];
+                        }
+                        $avgDetail[$kat][$fid]['sum'] += (float)($val ?? 0);
+                        $avgDetail[$kat][$fid]['count']++;
+                    }
+                }
+            }
+        }
+
+        $finalAvgDetail = [];
+        if ($jumlahJuriYangNilai > 0) {
+            foreach ($avgDetail as $kat => $fields) {
+                $finalAvgDetail[$kat] = [];
+                foreach ($fields as $fid => $d) {
+                    $finalAvgDetail[$kat][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                }
+            }
+        }
+
+        // Ambil defect data: prioritas Grand Juri edit, fallback ke scoring terbaru
+        $mergedDefect = [
+            'raw_head_penalty'    => ['0'],
+            'raw_face_penalty'    => ['0'],
+            'raw_body_penalty'    => ['0'],
+            'raw_finnage_penalty' => ['0'],
+        ];
+        $grandEdited = $ikan->scorings->first(function ($s) { return $s->edited_by_grand_juri; });
+        $defectSource = $grandEdited ?: $ikan->scorings->sortByDesc('updated_at')->first();
+        if ($defectSource) {
+            $mergedDefect['raw_head_penalty']    = $defectSource->raw_head_penalty    ?: ['0'];
+            $mergedDefect['raw_face_penalty']    = $defectSource->raw_face_penalty    ?: ['0'];
+            $mergedDefect['raw_body_penalty']    = $defectSource->raw_body_penalty    ?: ['0'];
+            $mergedDefect['raw_finnage_penalty'] = $defectSource->raw_finnage_penalty ?: ['0'];
+        }
+
+        // ═══ KALKULASI MENGGUNAKAN TARGET KATEGORI ═══
+        $targetKat = $request->target_kategori;
+        
+        // Cek apakah config rumus kategori target tersedia
+        $cfgExists = ScoringPointConfig::where('kategori', $targetKat)->exists();
+        if (!$cfgExists) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Rumus point untuk kategori "' . $targetKat . '" belum dikonfigurasi di database.'
+            ], 422);
+        }
+
+        $totalPoint = PointCalculator::hitungPoint($targetKat, $finalAvgDetail, $mergedDefect);
+        $breakdown  = PointCalculator::hitungBreakdown($targetKat, $finalAvgDetail, $mergedDefect);
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'nomor_tank'     => $ikan->nomor_tank ?? '?',
+                'nama_peserta'   => $ikan->nama_peserta ?? '-',
+                'total_point'    => round($totalPoint, 2),
+                'point_breakdown'=> $breakdown,
+            ]
+        ]);
+    }
 }
