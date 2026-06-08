@@ -2232,4 +2232,35 @@ class AdminDashboardController extends Controller
             ]
         ]);
     }
+
+    /* ═══════════════════════════════════════════
+       PENGATURAN KUNCI PENILAIAN JURI
+       Admin bisa mengunci/membuka akses penjurian.
+       Meskipun nominasi sudah approved, juri TIDAK
+       bisa mengisi penilaian selama sesi terkunci.
+       ═══════════════════════════════════════════ */
+    public function toggleScoringLock()
+    {
+        $current = \DB::table('settings')->where('key', 'scoring_unlocked')->value('value');
+        $newVal  = ($current === '1') ? '0' : '1';
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'scoring_unlocked'],
+            ['value' => $newVal, 'updated_at' => now()]
+        );
+
+        return response()->json([
+            'success'          => true,
+            'scoring_unlocked' => (bool) $newVal,
+            'message'          => $newVal === '1'
+                ? 'Sesi Penjurian DIBUKA — Juri sudah dapat mengisi penilaian.'
+                : 'Sesi Penjurian DIKUNCI — Juri tidak dapat mengisi penilaian.',
+        ]);
+    }
+
+    public function getScoringStatus()
+    {
+        $unlocked = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
+        return response()->json(['scoring_unlocked' => $unlocked]);
+    }
 }

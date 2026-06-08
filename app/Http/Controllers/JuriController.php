@@ -93,6 +93,15 @@ class JuriController extends Controller
 
     public function simpanNilai(Request $request)
     {
+        // ★ CEGAH PENYIMPANAN JIKA PENILAIAN MASIH TERKUNCI OLEH ADMIN
+        $scoringUnlocked = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
+        if (!$scoringUnlocked) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sesi penjurian masih TERKUNCI. Admin belum membuka akses penilaian.',
+            ], 403);
+        }
+
         $data       = $request->json()->all();
         $ikanId     = $data['ikan_id'] ?? null;
         $kelas      = $data['kelas'] ?? null;
@@ -285,8 +294,12 @@ class JuriController extends Controller
 
         $approvedIds = $nominations->where('status', 'approved')->pluck('ikan_id')->toArray();
 
+        // ★ Cek apakah admin sudah membuka kunci penjurian
+        $scoringUnlocked = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
+
         return response()->json([
             'status'            => $status,
+            'scoring_unlocked'  => $scoringUnlocked,
             'nominations'       => $nominations->map(function ($n) {
                 return [
                     'id'            => $n->id,

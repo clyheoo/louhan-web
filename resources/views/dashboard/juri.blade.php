@@ -1,12 +1,32 @@
 @extends('layouts.juri')
 
 @section('content')
-<div>
+<div class="flex flex-col lg:flex-row gap-4 md:gap-6">
+
+    {{-- ════════════════════════════════════════════════════════════
+         SIDEBAR NAVIGASI JURI — Mengambang dengan Sticky
+         ════════════════════════════════════════════════════════════ --}}
+    <div class="lg:w-56 flex-shrink-0">
+        <div class="juri-sidebar-card lg:sticky lg:top-24 p-3 space-y-2">
+            <div class="px-3 py-2 mb-2" style="border-bottom:1px solid var(--bd-1);">
+                <h3 class="text-xs font-black uppercase tracking-widest" style="color:var(--text-low);">Menu Juri</h3>
+            </div>
+            <button onclick="switchJuriView('nominasi')" id="nav-btn-nominasi" class="sidebar-nav-btn active">
+                <i class="fas fa-award w-5 text-center"></i> Nominasi
+            </button>
+            <button onclick="switchJuriView('penjurian')" id="nav-btn-penjurian" class="sidebar-nav-btn">
+                <i class="fas fa-pen-ruler w-5 text-center"></i> Penjurian
+            </button>
+        </div>
+    </div>
+
+    {{-- MAIN CONTENT AREA --}}
+    <div class="flex-1 min-w-0">
 
     {{-- ════════════════════════════════════════════════════════════
          LAYER 0: LOADING
          ════════════════════════════════════════════════════════════ --}}
-    <div id="nom-loading" class="lg:col-span-12 flex flex-col items-center justify-center py-32">
+    <div id="nom-loading" class="flex flex-col items-center justify-center py-32">
         <div class="w-12 h-12 border-4 rounded-full animate-spin mb-4" style="border-color:var(--glass-strong);border-top-color:var(--cyan-400);"></div>
         <p class="text-sm font-bold" style="color:var(--text-mid);">Memeriksa status nominasi...</p>
     </div>
@@ -14,7 +34,7 @@
     {{-- ════════════════════════════════════════════════════════════
          LAYER 1: HALAMAN NOMINASI
          ════════════════════════════════════════════════════════════ --}}
-    <div id="nom-page" class="hidden lg:col-span-12">
+    <div id="nom-page" class="hidden">
 
         {{-- Notifikasi Ditolak --}}
         <div id="nom-rejected-notice" class="hidden mb-4 p-4 rounded-xl" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);">
@@ -96,7 +116,7 @@
     {{-- ════════════════════════════════════════════════════════════
          LAYER 2: HALAMAN MENUNGGU
          ════════════════════════════════════════════════════════════ --}}
-    <div id="nom-waiting" class="hidden lg:col-span-12">
+    <div id="nom-waiting" class="hidden">
         <div class="glass-card p-8 md:p-12 text-center max-w-lg mx-auto">
             <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style="background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.25);">
                 <i class="fas fa-hourglass-half text-3xl animate-pulse" style="color:var(--gold-400);"></i>
@@ -149,7 +169,21 @@
     {{-- ════════════════════════════════════════════════════════════
          LAYER 4: HALAMAN PENILAIAN
          ════════════════════════════════════════════════════════════ --}}
-    <div id="scoring-page" class="hidden">
+    <div id="scoring-page" class="hidden relative">
+        
+        {{-- OVERLAY PENGUIJAN TERKUNCI --}}
+        <div id="scoring-lock-overlay" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center rounded-3xl text-center p-8" style="background: rgba(4,7,15,0.92); backdrop-filter: blur(10px); border: 1px solid var(--bd-2);">
+            <div class="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl" style="background: linear-gradient(135deg, #F59E0B, #B45309); box-shadow: 0 0 40px rgba(245,158,11,0.3);">
+                <i class="fas fa-lock text-white text-4xl"></i>
+            </div>
+            <h2 class="text-xl font-extrabold mb-2" style="color: var(--text-hi);">Sesi Penjurian Terkunci</h2>
+            <p class="text-sm mb-6" style="color: var(--text-mid); max-width: 320px;">Admin belum membuka akses untuk melakukan penilaian. Silakan menunggu hingga sesi dibuka.</p>
+            <div class="flex items-center justify-center gap-2 text-xs" style="color:var(--text-faint);">
+                <div class="w-2 h-2 rounded-full animate-pulse" style="background:var(--gold-400);"></div>
+                Auto-refresh status
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
 
             {{-- ── KOLOM KIRI: FORM BATCH ────────────────────── --}}
@@ -363,11 +397,51 @@
         <div class="overflow-y-auto flex-1 mb-4 space-y-4 custom-scrollbar pr-1" id="defect-modal-body"></div>
         <button onclick="saveDefect()" class="w-full py-3.5 text-white font-bold rounded-xl transition-transform active:scale-95" style="background:linear-gradient(135deg,var(--ocean-600),var(--ocean-700));box-shadow:0 6px 16px -6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.1);">Selesai & Simpan</button>
     </div>
-</div>
+    </div>{{-- End flex-1 min-w-0 --}}
+</div>{{-- End flex wrapper --}}
 @endsection
 
 @push('scripts')
 <style>
+        /* ── SIDEBAR CARD — Tanpa overflow:hidden agar sticky bekerja ── */
+    .juri-sidebar-card {
+        background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%);
+        border: 1px solid var(--bd-1);
+        border-radius: 24px;
+        box-shadow: var(--shadow-card);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        /* ★ TANPA overflow:hidden — ini yang memecahkan sticky */
+    }
+    
+    /* ── SIDEBAR NAV BUTTONS ── */
+    .sidebar-nav-btn {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        text-align: left;
+        font-weight: 700;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: all 0.2s ease;
+        background: transparent;
+        color: var(--text-mid);
+        border: 1px solid transparent;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .sidebar-nav-btn:hover {
+        background: var(--glass-2);
+        color: var(--text-hi);
+    }
+    .sidebar-nav-btn.active {
+        background: linear-gradient(135deg, rgba(37,99,235,0.15), rgba(6,182,212,0.10));
+        border-color: rgba(34,211,238,0.25);
+        color: var(--cyan-300);
+        box-shadow: 0 4px 12px -4px rgba(6,182,212,0.15);
+    }
     @keyframes popIn { 0%{transform:scale(0) rotate(-10deg);opacity:0} 60%{transform:scale(1.1) rotate(2deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
     @keyframes fadeUp { from{opacity:0;transform:translateY(15px)} to{opacity:1;transform:translateY(0)} }
     .check-draw { stroke-dasharray: 50; stroke-dashoffset: 50; animation: drawCheck 0.5s 0.6s ease-out forwards; }
@@ -742,39 +816,62 @@ let nomState = {
     autoRefreshTimer: null,
 };
 
+// ★ State Global UI Juri
+let currentJuriView = 'nominasi'; // 'nominasi' atau 'penjurian'
+let isScoringUnlocked = false;    // Default terkunci, diupdate dari API
+let scoringLockTimer = null;      // Timer polling status kunci
+
 function nomShow(id) { document.getElementById(id)?.classList.remove('hidden'); }
 function nomHide(id) { document.getElementById(id)?.classList.add('hidden'); }
 
 async function checkNominasiStatus(attempt = 1) {
+    // ★ GUARD: Jika user di tab Penjurian, JANGAN ubah halaman
+    const isOnPenjurianTab = (currentJuriView === 'penjurian');
+    
     try {
         const res = await apiFetch('/api/juri/nominasi-status');
         const status = res.status;
         const wasPending = sessionStorage.getItem('nom_was_pending') === '1';
-        nomHide('nom-loading');
+        
+        if (!isOnPenjurianTab) nomHide('nom-loading');
 
         if (status === 'approved') {
-            // ★ Stop polling — sudah approved, tidak perlu cek terus-menerus
             if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
-            // ★ Cegah init ulang scoring page kalau sudah aktif (mencegah reset activeTab)
+
+            isScoringUnlocked = res.scoring_unlocked === true;
+            updateScoringLockUI();
+
+            // ★ Jika di tab penjurian, cukup update state
+            if (isOnPenjurianTab) return;
+
             var scoringPage = document.getElementById('scoring-page');
             var scoringAlreadyVisible = scoringPage && !scoringPage.classList.contains('hidden');
+            
             if (wasPending) {
                 sessionStorage.removeItem('nom_was_pending');
                 nomShowApprovedAnim();
+            } else if (currentJuriView === 'nominasi') {
+                nomShowNominasiPage(res.nominations);
             } else if (!scoringAlreadyVisible) {
-                // Hanya jalan kalau scoring page BELUM terbuka
                 nomHide('nom-page'); nomHide('nom-waiting');
                 nomHide('nom-approved-anim'); nomHide('nom-rejected-anim');
                 nomShow('scoring-page'); initScoringPage();
             }
-            // Kalau scoring page sudah terbuka, JANGAN init ulang (mencegah reset tab)
+
         } else if (status === 'pending') {
+            // ★ Jika di tab penjurian, JANGAN pindah ke waiting
+            if (isOnPenjurianTab) {
+                if (nomState.autoRefreshTimer) clearInterval(nomState.autoRefreshTimer);
+                nomState.autoRefreshTimer = setInterval(checkNominasiStatus, 5000);
+                return;
+            }
             nomShowWaiting(res.nominations);
         } else {
-            // status === 'none'
+            // ★ Jika di tab penjurian, JANGAN pindah ke nominasi
+            if (isOnPenjurianTab) return;
+            
             const hasRejected = (res.nominations || []).some(function(n) { return n.status === 'rejected'; });
             if (wasPending && hasRejected) {
-                // ★ Transisi pending → ditolak: tampilkan animasi rejection
                 sessionStorage.removeItem('nom_was_pending');
                 nomShowRejectedAnim(res.nominations);
             } else {
@@ -782,12 +879,11 @@ async function checkNominasiStatus(attempt = 1) {
             }
         }
     } catch (e) {
-        // ★ Retry up to 3x dengan backoff: 800ms, 1600ms, 2400ms
         if (attempt < 3) {
             await new Promise(r => setTimeout(r, attempt * 800));
             return checkNominasiStatus(attempt + 1);
         }
-        nomHide('nom-loading');
+        if (!isOnPenjurianTab) nomHide('nom-loading');
         showWarningModal([{type:'select', msg:'Gagal memeriksa status nominasi. Periksa koneksi internet Anda.'}]);
     }
 }
@@ -1944,8 +2040,164 @@ function initScoringPage() {
     loadJuriData();
 }
 
+function switchJuriView(view) {
+    currentJuriView = view;
+    
+    // Update UI Button
+    document.getElementById('nav-btn-nominasi').classList.toggle('active', view === 'nominasi');
+    document.getElementById('nav-btn-penjurian').classList.toggle('active', view === 'penjurian');
+
+    if (view === 'nominasi') {
+        nomHide('scoring-page');
+        stopScoringLockPolling();
+        
+        // ★ STOP timer polling nominasi
+        if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
+        
+        // Reset animasi & tampilkan loading
+        nomHide('nom-approved-anim');
+        nomHide('nom-rejected-anim');
+        nomShow('nom-loading'); 
+        
+        checkNominasiStatus();
+    } else if (view === 'penjurian') {
+        // ★ STOP timer polling nominasi SAAT pindah ke penjurian
+        if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
+        
+        nomHide('nom-page');
+        nomHide('nom-waiting');
+        nomHide('nom-approved-anim');
+        nomHide('nom-rejected-anim');
+        nomHide('nom-loading');
+        
+        nomShow('scoring-page');
+        
+        // ★ SELALU load data penjurian, tidak tergantung lock status
+        //    Lock overlay akan menutupi form jika masih terkunci
+        loadJuriDataForPenjurian();
+        startScoringLockPolling();
+    }
+}
+
+function updateScoringLockUI() {
+    const lockOverlay = document.getElementById('scoring-lock-overlay');
+    if (!lockOverlay) return;
+
+    if (isScoringUnlocked) {
+        lockOverlay.classList.add('hidden');
+    } else {
+        lockOverlay.classList.remove('hidden');
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOAD DATA UNTUK PENJURIAN — Selalu load meskipun terkunci
+// ═══════════════════════════════════════════════════════════════
+async function loadJuriDataForPenjurian() {
+    try {
+        // Cek status nominasi dulu untuk update lock UI
+        const statusRes = await apiFetch('/api/juri/nominasi-status');
+        isScoringUnlocked = statusRes.scoring_unlocked === true;
+        updateScoringLockUI();
+        
+        // ★ SELALU load data juri, lock overlay akan handle UI blocking
+        const dataRes = await apiFetch('/api/juri/data');
+        appData.available_tanks    = dataRes.available_tanks || [];
+        appData.my_scores          = dataRes.my_scores || [];
+        appData.all_scored         = dataRes.all_scored || {};
+        appData.scored_counts      = dataRes.scored_counts || {};
+        appData.nomination_defects = dataRes.nomination_defects || {};
+
+        initTankScores(appData.available_tanks);
+        loadDraft();
+
+        // ★ Pre-fill defect dari nominasi
+        Object.keys(appData.nomination_defects).forEach(function(ikanId) {
+            const nd = appData.nomination_defects[ikanId];
+            if (!nd || !tankScores[ikanId]) return;
+
+            if (!tankScores[ikanId].defects) {
+                tankScores[ikanId].defects = {
+                    raw_head_penalty:    ['0'],
+                    raw_face_penalty:    ['0'],
+                    raw_body_penalty:    ['0'],
+                    raw_finnage_penalty: ['0']
+                };
+            }
+
+            ['head','face','body','finnage'].forEach(function(p) {
+                const k = 'raw_'+p+'_penalty';
+                const cur = tankScores[ikanId].defects[k];
+                const isCurDefault = !cur || cur.length === 0 || (cur.length === 1 && cur[0] === '0');
+                const ndArr = nd[k];
+                const hasReal = Array.isArray(ndArr) && ndArr.some(function(v) { return v && v !== '0'; });
+                if (isCurDefault && hasReal) {
+                    tankScores[ikanId].defects[k] = ndArr.slice();
+                }
+            });
+        });
+
+        populateFilter(); 
+        renderFormTable(); 
+        renderLiveTable();
+        
+    } catch(e) {
+        console.error('Gagal load data penjurian:', e);
+        showWarningModal([{type:'select', msg:'Gagal memuat data penjurian. Periksa koneksi internet Anda.'}]);
+    }
+}
+
+async function checkScoringLockAndInit() {
+    try {
+        const res = await apiFetch('/api/juri/nominasi-status');
+        isScoringUnlocked = res.scoring_unlocked === true;
+        updateScoringLockUI();
+        // ★ Data sudah diload oleh loadJuriDataForPenjurian(), di sini hanya update lock status
+    } catch (e) {
+        isScoringUnlocked = false;
+        updateScoringLockUI();
+    }
+}
+
+function startScoringLockPolling() {
+    stopScoringLockPolling();
+    scoringLockTimer = setInterval(async function() {
+        // ★ Hanya poll jika user masih di tab penjurian
+        if (currentJuriView !== 'penjurian') {
+            stopScoringLockPolling();
+            return;
+        }
+        
+        try {
+            const res = await apiFetch('/api/juri/nominasi-status');
+            const wasLocked = !isScoringUnlocked;
+            isScoringUnlocked = res.scoring_unlocked === true;
+            updateScoringLockUI();
+
+            if (wasLocked && isScoringUnlocked) {
+                showSuccessPopup('Sesi Dibuka!', 'Admin telah membuka akses penjurian. Anda bisa mulai menilai.');
+                // ★ Reload data untuk memastikan form terupdate
+                loadJuriDataForPenjurian();
+            }
+            if (!wasLocked && !isScoringUnlocked) {
+                showWarningModal([{type:'select', msg:'Admin telah MENGUNCI sesi penjurian.'}]);
+            }
+        } catch (e) {}
+    }, 8000);
+}
+
+function stopScoringLockPolling() {
+    if (scoringLockTimer) { clearInterval(scoringLockTimer); scoringLockTimer = null; }
+}
+
+// ★ Auto init tab aktif saat pertama load
+function initJuriSidebar() {
+    switchJuriView('nominasi');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    renderTabs(); checkNominasiStatus();
+    renderTabs(); 
+    initJuriSidebar(); // ★ Sudah memanggil checkNominasiStatus() di dalamnya
     document.getElementById('modal-defect').addEventListener('click', function(e) { if (e.target === this) saveDefect(); });
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && !document.getElementById('modal-defect').classList.contains('hidden')) saveDefect(); });
 });

@@ -95,6 +95,8 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/api/admin/dashboard-stats', [AdminDashboardController::class, 'getDashboardStats']);
+    Route::post('/api/admin/toggle-scoring-lock', [AdminDashboardController::class, 'toggleScoringLock']);
+    Route::get('/api/admin/scoring-status', [AdminDashboardController::class, 'getScoringStatus']);
     Route::get('/api/admin/scoring-data', [AdminDashboardController::class, 'getScoringData']);
     Route::post('/api/admin/create-user', [AdminDashboardController::class, 'createUser']);
     Route::post('/api/admin/change-role', [AdminDashboardController::class, 'changeRole']);

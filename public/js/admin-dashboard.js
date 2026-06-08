@@ -944,6 +944,48 @@ document.getElementById('btnSaveEditAdmin').addEventListener('click',submitEditA
 document.getElementById('modalEditAdmin').addEventListener('click',function(e){if(e.target===this)closeModal('modalEditAdmin');});
 document.getElementById('modalDefectAdmin').addEventListener('click',function(e){if(e.target===this)closeDefectAdmin();});
 
+/* ═══ KELOLA AKSES PENILAIAN JURI (TOGGLE GLOBAL) ═══ */
+function loadJuriScoringLockStatus(){
+    fetch('/api/admin/scoring-status',{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        updateJuriScoringLockUI(d.scoring_unlocked||false);
+    })
+    .catch(function(){updateJuriScoringLockUI(false);});
+}
+
+function toggleJuriScoringLock(){
+    var btn=document.getElementById('btnToggleJuriScoring');
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+    fetch('/api/admin/toggle-scoring-lock',{
+        method:'POST',
+        headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.success){
+            updateJuriScoringLockUI(d.scoring_unlocked);
+            popupSuccess('Status Penjurian Diperbarui',d.message);
+        }else{
+            popupError('Gagal',d.message||'Terjadi kesalahan.');
+        }
+    })
+    .catch(function(){popupError('Error','Gagal menghubungi server.');})
+    .finally(function(){btn.disabled=false;});
+}
+
+function updateJuriScoringLockUI(isUnlocked){
+    var btn=document.getElementById('btnToggleJuriScoring');
+    if(btn)btn.disabled=false;
+    if(isUnlocked){
+        btn.innerHTML='<i class="fas fa-lock-open"></i> KUNCI PENILAIAN JURI';
+        btn.style.background='var(--danger)';btn.style.boxShadow='0 3px 10px rgba(239,68,68,.2)';
+    }else{
+        btn.innerHTML='<i class="fas fa-lock"></i> BUKA PENILAIAN JURI';
+        btn.style.background='var(--success)';btn.style.boxShadow='0 3px 10px rgba(34,197,94,.2)';
+    }
+}
+
 /* ── TOGGLE JURI DETAIL (ADMIN) ── */
 function toggleJuriDetailAdmin(uid){
     var t=document.getElementById(uid+'-toggle');
@@ -3259,6 +3301,7 @@ loadGlobalRangeDisplay();
 loadDashboard();
 loadScoringData();
 loadUsers();
+loadJuriScoringLockStatus();
 
 /* ═══════════════════════════════════════════════
    SIDEBAR NAVIGATION
