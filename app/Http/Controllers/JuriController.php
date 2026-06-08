@@ -256,13 +256,14 @@ class JuriController extends Controller
         $hasPending  = $nominations->contains('status', 'pending');
         $hasApproved = $nominations->contains('status', 'approved');
 
-        // ★ Prioritas: approved > pending > none
-        //   Kalau juri sudah punya approved, langsung masuk scoring page.
-        //   Pending tambahan akan tetap di-review di background.
-        if ($hasApproved) {
-            $status = 'approved';
-        } elseif ($hasPending) {
+        // ★ Prioritas: pending > approved > none
+        //   Selama ada SATU PUN nominasi yang masih pending,
+        //   juri TIDAK boleh masuk scoring page.
+        //   Semua nominasi harus selesai di-review (approved/rejected) dulu.
+        if ($hasPending) {
             $status = 'pending';
+        } elseif ($hasApproved) {
+            $status = 'approved';
         } else {
             $status = 'none';
         }
