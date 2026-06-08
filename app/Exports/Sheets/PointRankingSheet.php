@@ -135,7 +135,7 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
         // ═══════════════════════════════════════════════════════════
         // STEP 3: Hitung Breakdown Point menggunakan HELPER (KONSISTEN!)
         // ═══════════════════════════════════════════════════════════
-        $breakdown = PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail);
+        $breakdown = PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail, $defectDataForCalc);
         
         if (!$breakdown) return null;
 
@@ -169,19 +169,17 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                 }
                 
                 // ═══════════════════════════════════════════════════
-                // STEP 6: Ambil Subtotal dari Breakdown & Terapkan Penalty
+                // STEP 6: Ambil Subtotal dari Breakdown (SUDAH TERMASUK PENALTY)
                 // ═══════════════════════════════════════════════════
-                $rawPoint = $breakdown[$kat]['point'] ?? 0;
+                $catSubs[$kat] = $breakdown[$kat]['point'] ?? 0;
                 
-                // Terapkan defect penalty jika ada
+                // Hitung deduction amount untuk info display saja (tidak mengubah point)
                 $defectInfo = $defectDetails[$kat] ?? [];
                 if (!empty($defectInfo['percent'])) {
                     $penaltyPercent = $defectInfo['percent_value'];
-                    $deductionAmount = $rawPoint * ($penaltyPercent / 100);
-                    $totalDeduction += $deductionAmount;
-                    $catSubs[$kat] = round($rawPoint - $deductionAmount, 2);
-                } else {
-                    $catSubs[$kat] = $rawPoint;
+                    // Hitung raw point tanpa penalty untuk kalkulasi deduction display
+                    $rawPointWithoutPenalty = array_sum($compPoints[$kat] ?? []);
+                    $totalDeduction += $rawPointWithoutPenalty * ($penaltyPercent / 100);
                 }
             }
         }
@@ -203,7 +201,8 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
         // ═══════════════════════════════════════════════════════════
         // STEP 8: Hitung Final Values
         // ═══════════════════════════════════════════════════════════
-        $totalPoint = $breakdown['total'] ?? round(array_sum($catSubs));
+        // ★ TOTAL POINT: gunakan breakdown['total'] yang SUDAH termasuk penalty
+        $totalPoint = $breakdown['total'] ?? 0;
         $totalBonus = (int) $ikan->bonusPoints->sum('points');
         $totalDeductionPercent = $defectDetails['total_deduction_percent'] ?? 0;
 
