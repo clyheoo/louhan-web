@@ -709,8 +709,8 @@ var ADMIN_MAYOR_DEFECTS=['Bagian Bibir Hilang','Mulut Terbuka Terus','Bibir Tida
 var ADMIN_DEFECT_OPTIONS={
     raw_head_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'}]}],
     raw_face_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Bibir Miring (kasat mata)',label:'Bibir Miring (kasat mata)'},{value:'Katarak',label:'Katarak'}]},{label:'--- MAYOR ---',options:[{value:'Bagian Bibir Hilang',label:'Bagian Bibir Hilang'},{value:'Bibir Tidak Menutup Sempurna & Selaput Bergerak',label:'Bibir Tidak Menutup Sempurna & Selaput Bergerak'},{value:'Muka Miring',label:'Muka Miring'}]}],
-    raw_body_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Abses / Luka',label:'Abses / Luka'}]},{label:'--- MAYOR ---',options:[{value:'Pangkal Bengkok / Melintir',label:'Pangkal Bengkok / Melintir'}]}],
-    raw_finnage_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Fintail Bleaching / Transparan',label:'Fintail Bleaching / Transparan'},{value:'Pangkal Ekor Naik atau Turun',label:'Pangkal Ekor Naik atau Turun'},{value:'Sirip Dayung Tidak Seimbang',label:'Sirip Dayung Tidak Seimbang'}]},{label:'--- MAYOR ---',options:[{value:'Fin/Tulang Hilang 1 Ruas',label:'Fin/Tulang Hilang 1 Ruas'}]}]
+    raw_body_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Abses / Luka',label:'Abses / Luka'}]}],
+    raw_finnage_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Fintail Bleaching / Transparan',label:'Fintail Bleaching / Transparan'},{value:'Pangkal Ekor Naik atau Turun',label:'Pangkal Ekor Naik atau Turun'},{value:'Sirip Dayung Tidak Seimbang',label:'Sirip Dayung Tidak Seimbang'}]},{label:'--- MAYOR ---',options:[{value:'Fin/Tulang Hilang 1 Ruas',label:'Fin/Tulang Hilang 1 Ruas'},{value:'Pangkal Bengkok / Melintir',label:'Pangkal Bengkok / Melintir'}]}]
 };
 
 var ADMIN_DEFECT_LEGACY_MAP={'Bibir Miring':'Bibir Miring (kasat mata)','Fintail Bleaching':'Fintail Bleaching / Transparan','Pangkal Ekor Naik/Trn':'Pangkal Ekor Naik atau Turun','Dayung Tdk Seimbang':'Sirip Dayung Tidak Seimbang','Mulut Terbuka Terus':'Bibir Tidak Menutup Sempurna & Selaput Bergerak','Pangkal Bengkok/Patah':'Pangkal Bengkok / Melintir'};
@@ -860,8 +860,15 @@ function kunciNilaiAdmin(ikanId){
     fetch('/api/grand-juri/kunci-nilai',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({_token:getCsrf(),ikan_id:ikanId})})
     .then(function(r){return r.json();})
     .then(function(d){
-        if(d.success){popupSuccess('Berhasil',d.message);loadScoringData();loadDashboard();}
-        else{popupError('Gagal',d.message||'Tidak dapat mengubah status kunci.');}
+        if(d.success){
+            popupSuccess('Berhasil',d.message);
+            // ★ Refresh Point Ranking (sumber utama lock action) + Data Penilaian (status badge) + dashboard counter
+            if (typeof loadAdminPointRanking === 'function') loadAdminPointRanking();
+            loadScoringData();
+            loadDashboard();
+        } else {
+            popupError('Gagal',d.message||'Tidak dapat mengubah status kunci.');
+        }
     })
     .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');});
 }
@@ -1169,8 +1176,7 @@ function renderTable(data){
             '<td><span class="status-badge '+sc+'">'+st+'</span></td>'+
             '<td><div style="display:flex;gap:4px;">'+
             '<button class="btn-xs blue" onclick="openDetail('+i+')" title="Lihat Detail"><i class="fas fa-eye"></i></button>'+
-            (!p.is_locked?'<button class="btn-xs purple" onclick="openEditAdmin('+i+')" title="Edit Nilai"><i class="fas fa-pen-to-square"></i></button>':'<button class="btn-xs purple" style="opacity:.35;cursor:not-allowed;" disabled title="Nilai terkunci"><i class="fas fa-pen-to-square"></i></button>')+
-            (p.is_locked?'<button class="btn-xs" style="background:rgba(34,211,238,.12);color:#67E8F9;border:1px solid rgba(34,211,238,.25);" onclick="kunciNilaiAdmin('+p.id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i></button>':(p.submitted_juri_count>=p.total_juri_all?'<button class="btn-xs" style="background:rgba(245,158,11,.12);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);" onclick="kunciNilaiAdmin('+p.id+')" title="Kunci nilai (final)"><i class="fas fa-lock"></i></button>':'<button class="btn-xs" style="background:rgba(245,158,11,.12);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);opacity:.35;cursor:not-allowed;" disabled title="Belum semua juri menilai ('+p.submitted_juri_count+'/'+p.total_juri_all+')"><i class="fas fa-lock"></i></button>'))+
+            (!p.is_locked?'<button class="btn-xs purple" onclick="openEditAdmin('+i+')" title="Edit Nilai"><i class="fas fa-pen-to-square"></i></button>':'<button class="btn-xs purple" style="opacity:.35;cursor:not-allowed;" disabled title="Nilai terkunci — buka kunci dari Point Ranking"><i class="fas fa-pen-to-square"></i></button>')+
             '<button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button>'+
             '</div></td>';        tb.appendChild(tr);
     }
@@ -3131,7 +3137,7 @@ function loadAdminPointRanking(){
             html += '<div style="font-size:13px;font-weight:800;color:var(--text-hi);display:flex;align-items:center;gap:9px;"><i class="fas '+(isGlobal?'fa-globe':'fa-layer-group')+'" style="color:var(--gold-500);"></i> '+esc(g.group_name)+'</div>';
             html += '<span style="font-size:11px;color:var(--gold-300);font-weight:700;">'+g.total+' peserta</span></div>';
             html += '<div style="overflow-x:auto;border-radius:0 0 10px 10px;border:1px solid rgba(245,158,11,.20);border-top:none;"><table class="data-table" style="min-width:800px;">';
-            html += '<thead><tr><th style="width:40px;text-align:center;">#</th><th>PESERTA</th>'+(isGlobal?'<th>KATEGORI</th>':'')+'<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:80px;text-align:center;">POINT</th><th style="width:100px;text-align:center;">RANK POINT</th></tr></thead><tbody>';
+            html += '<thead><tr><th style="width:40px;text-align:center;">#</th><th>PESERTA</th>'+(isGlobal?'<th>KATEGORI</th>':'')+'<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:80px;text-align:center;">POINT</th><th style="width:100px;text-align:center;">RANK POINT</th><th style="width:90px;text-align:center;">AKSI</th></tr></thead><tbody>';
             g.data.forEach(function(d,i){
                 var rankPt = d.rank_point ?? 0;
                 var frp = d.final_rank_point ?? rankPt;
@@ -3148,7 +3154,9 @@ function loadAdminPointRanking(){
                 if(posisi === 1) medalHtml = '<i class="fas fa-medal" style="color:var(--gold-500);font-size:12px;margin-right:4px;" title="Juara 1"></i>';
                 else if(posisi === 2) medalHtml = '<i class="fas fa-medal" style="color:#C0C0C0;font-size:12px;margin-right:4px;" title="Juara 2"></i>';
                 else if(posisi === 3) medalHtml = '<i class="fas fa-medal" style="color:#CD7F32;font-size:12px;margin-right:4px;" title="Juara 3"></i>';
-                html += '<tr><td style="text-align:center;font-weight:800;color:var(--text-muted);">'+posisi+'</td><td style="font-weight:700;">'+medalHtml+esc(d.nama_peserta)+'</td>';
+                var rowStyle = d.is_locked ? '' : 'opacity:.6;';
+                var posisiHtml = d.is_locked ? posisi : '<i class="fas fa-lock-open" style="color:var(--gold-300);font-size:11px;" title="Belum dikunci"></i>';
+                html += '<tr style="'+rowStyle+'"><td style="text-align:center;font-weight:800;color:var(--text-muted);">'+posisiHtml+'</td><td style="font-weight:700;">'+(d.is_locked?medalHtml:'')+esc(d.nama_peserta)+'</td>';
                 if(isGlobal) html += '<td style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">'+esc(d.kategori)+'</td>';
                 html += '<td style="font-weight:700;color:var(--primary);text-align:center;">'+(d.nomor_tank||'—')+'</td>';
                 html += '<td style="text-align:center;">'+esc(d.kelas)+'</td>';
@@ -3159,7 +3167,14 @@ function loadAdminPointRanking(){
                 html += '<td style="text-align:center;"><div style="font-weight:900;font-size:15px;color:var(--primary);">'+basePt+'</div></td>';
                 html += '<td style="text-align:center;"><span style="display:inline-block;padding:5px 14px;border-radius:8px;font-size:14px;font-weight:900;background:'+rankBg+';color:'+rankColor+';border:1px solid '+rankBorder+';">'+frp+'</span>';
                 if(bonus > 0) html += '<div style="font-size:9px;color:#34D399;font-weight:800;margin-top:3px;"><i class="fas fa-trophy" style="font-size:7px;"></i> '+rankPt+' + '+bonus+'</div>';
-                html += '</td></tr>';
+                html += '</td>';
+                // ★ Tombol Kunci / Buka Kunci di Point Ranking (dipindah dari Data Penilaian)
+                if(d.is_locked){
+                    html += '<td style="text-align:center;"><button class="btn-xs" style="background:rgba(34,211,238,.12);color:#67E8F9;border:1px solid rgba(34,211,238,.25);" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></td>';
+                } else {
+                    html += '<td style="text-align:center;"><button class="btn-xs" style="background:rgba(245,158,11,.12);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Kunci nilai (final)"><i class="fas fa-lock"></i> Kunci</button></td>';
+                }
+                html += '</tr>';
             });
             html += '</tbody></table></div></div>';
         });

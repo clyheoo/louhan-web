@@ -749,8 +749,12 @@ class AdminDashboardController extends Controller
         ]);
 
         // ★ AUTO-SYNC NILAI JURI & MVP
-        try { $this->sheetsSync->syncNilaiJuri(); } catch (\Exception $e) { \Log::error('Auto-sync NILAI JURI gagal (add bonus): ' . $e->getMessage()); }
-        try { $this->sheetsSync->syncMvp(); } catch (\Exception $e) { \Log::error('Auto-sync MVP gagal (add bonus): ' . $e->getMessage()); }
+        $sync = $this->sheetsSync;
+        app()->terminating(function () use ($sync) {
+            if (!$sync->isReady()) return;
+            try { $sync->syncNilaiJuri(); } catch (\Exception $e) { \Log::error('Async-sync NilaiJuri (add bonus): ' . $e->getMessage()); }
+            try { $sync->syncMvp();       } catch (\Exception $e) { \Log::error('Async-sync MVP (add bonus): '       . $e->getMessage()); }
+        });
 
         return response()->json([
             'success' => true,
@@ -779,8 +783,12 @@ class AdminDashboardController extends Controller
         $bonus->delete();
 
         // ★ AUTO-SYNC NILAI JURI & MVP
-        try { $this->sheetsSync->syncNilaiJuri(); } catch (\Exception $e) { \Log::error('Auto-sync NILAI JURI gagal (remove bonus): ' . $e->getMessage()); }
-        try { $this->sheetsSync->syncMvp(); } catch (\Exception $e) { \Log::error('Auto-sync MVP gagal (remove bonus): ' . $e->getMessage()); }
+        $sync = $this->sheetsSync;
+        app()->terminating(function () use ($sync) {
+            if (!$sync->isReady()) return;
+            try { $sync->syncNilaiJuri(); } catch (\Exception $e) { \Log::error('Async-sync NilaiJuri (remove bonus): ' . $e->getMessage()); }
+            try { $sync->syncMvp();       } catch (\Exception $e) { \Log::error('Async-sync MVP (remove bonus): '       . $e->getMessage()); }
+        });
 
         return response()->json([
             'success' => true,
@@ -852,8 +860,16 @@ class AdminDashboardController extends Controller
             //   muncul sebagai "hantu" di spreadsheet sampai trigger berikutnya.
             if ($created > 0) {
                 try {
-                    if ($this->sheetsSync->isReady()) {
-                        $this->sheetsSync->syncHasilNominasi();
+                    // ★ Sync HASIL NOMINASI: di loop di atas, record rejected lama dihapus
+            //   untuk memungkinkan resubmit. Sheet HASIL NOMINASI menampilkan
+            //   rejected, jadi tanpa sync di sini data rejected lama akan
+            //   muncul sebagai "hantu" di spreadsheet sampai trigger berikutnya.
+            if ($created > 0) {
+                $sync = $this->sheetsSync;
+                app()->terminating(function () use ($sync) {
+                    if (!$sync->isReady()) return;
+                    try { $sync->syncHasilNominasi(); } catch (\Exception $e) { \Log::warning('Async-sync HasilNominasi (admin submit nominasi): ' . $e->getMessage()); }
+                });
                     }
                 } catch (\Exception $e) {
                     \Log::warning('Auto-sync HASIL NOMINASI gagal (admin submit nominasi): ' . $e->getMessage());
@@ -1916,8 +1932,7 @@ class AdminDashboardController extends Controller
         if ($scope === 'global') {
             $limit = 10;
 
-            $ikans = Ikan::where('is_locked', true)
-                ->whereNotNull('nomor_tank')
+            $ikans = Ikan::whereNotNull('nomor_tank')
                 ->whereHas('scorings', function ($q) {})
                 ->with(['peserta', 'scorings' => function ($q) {}, 'scorings.juri', 'scorings.grandJuri', 'bonusPoints'])
                 ->get();
@@ -1985,6 +2000,7 @@ class AdminDashboardController extends Controller
                     'total_bonus'       => $totalBonus,
                     'final_point'       => (float) $finalPoint,
                     'jumlah_juri'       => $jumlahJuriYangNilai,
+                    'is_locked'         => (bool) $ikan->is_locked,
                 ];
             }
 
@@ -1999,8 +2015,7 @@ class AdminDashboardController extends Controller
             ]]);
         }
 
-        $query = Ikan::where('is_locked', true)
-            ->whereNotNull('nomor_tank')
+        $query = Ikan::whereNotNull('nomor_tank')
             ->whereHas('scorings', function ($q) {})
             ->with(['peserta', 'scorings' => function ($q) {}, 'scorings.grandJuri', 'bonusPoints']);
 

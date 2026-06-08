@@ -716,7 +716,7 @@ let nomState = {
 function nomShow(id) { document.getElementById(id)?.classList.remove('hidden'); }
 function nomHide(id) { document.getElementById(id)?.classList.add('hidden'); }
 
-async function checkNominasiStatus() {
+async function checkNominasiStatus(attempt = 1) {
     try {
         const res = await apiFetch('/api/juri/nominasi-status');
         const status = res.status;
@@ -748,6 +748,11 @@ async function checkNominasiStatus() {
             }
         }
     } catch (e) {
+        // ★ Retry up to 3x dengan backoff: 800ms, 1600ms, 2400ms
+        if (attempt < 3) {
+            await new Promise(r => setTimeout(r, attempt * 800));
+            return checkNominasiStatus(attempt + 1);
+        }
         nomHide('nom-loading');
         showWarningModal([{type:'select', msg:'Gagal memeriksa status nominasi. Periksa koneksi internet Anda.'}]);
     }

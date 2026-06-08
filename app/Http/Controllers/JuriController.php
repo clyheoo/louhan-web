@@ -171,27 +171,27 @@ class JuriController extends Controller
 
         Scoring::create($scoringData);
 
-                // ★ AUTO-SYNC: sheet langsung update begitu juri simpan nilai
+                // ★ AUTO-SYNC dijalankan SETELAH response dikirim ke browser.
+        //   Outer try/catch melindungi bila terminating() sendiri error.
+        //   Catch \Throwable agar Error/TypeError tidak bocor ke response.
+        try {
+            app()->terminating(function () {
                 try {
-                    app(\App\Services\SheetsSyncService::class)->syncCnt();
-                } catch (\Exception $e) {
-                    \Log::error('Auto-sync CNT gagal (simpan): ' . $e->getMessage());
+                    $sync = app(\App\Services\SheetsSyncService::class);
+                    if (!$sync->isReady()) return;
+                    try { $sync->syncCnt();       } catch (\Throwable $e) { \Log::error('Async-sync CNT (simpan): '       . $e->getMessage()); }
+                    try { $sync->syncHasilJuri(); } catch (\Throwable $e) { \Log::error('Async-sync HasilJuri (simpan): ' . $e->getMessage()); }
+                    try { $sync->syncNilaiJuri(); } catch (\Throwable $e) { \Log::error('Async-sync NilaiJuri (simpan): ' . $e->getMessage()); }
+                } catch (\Throwable $e) {
+                    \Log::error('Async-sync outer (simpan): ' . $e->getMessage());
                 }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Gagal register terminating (simpan): ' . $e->getMessage());
+        }
 
-                try {
-                    app(\App\Services\SheetsSyncService::class)->syncHasilJuri();
-                } catch (\Exception $e) {
-                    \Log::error('Auto-sync HASIL JURI gagal (simpan): ' . $e->getMessage());
-                }
-
-                try {
-                    app(\App\Services\SheetsSyncService::class)->syncNilaiJuri();
-                } catch (\Exception $e) {
-                    \Log::error('Auto-sync NILAI JURI gagal (simpan): ' . $e->getMessage());
-                }
-
-                return response()->json(['success' => true, 'message' => 'Nilai berhasil disimpan!']);
-            }
+        return response()->json(['success' => true, 'message' => 'Nilai berhasil disimpan!']);
+    }
 
     public function kirimKeGrandJuri(Request $request)
     {
@@ -215,26 +215,21 @@ class JuriController extends Controller
 
         $scoring->update(['submitted_to_grand' => true]);
 
-        // ★ AUTO-SYNC HASIL JURI
-        // ★ AUTO-SYNC CNT
-        try { 
-            app(\App\Services\SheetsSyncService::class)->syncCnt(); 
-        } catch (\Exception $e) { 
-            \Log::error('Auto-sync CNT gagal (kirim): ' . $e->getMessage()); 
-        }
-
-// ★ AUTO-SYNC HASIL JURI
-        try { 
-            app(\App\Services\SheetsSyncService::class)->syncHasilJuri(); 
-        } catch (\Exception $e) { 
-            \Log::error('Auto-sync hasil juri gagal (kirim): ' . $e->getMessage()); 
-        }
-
-        // ★ AUTO-SYNC NILAI JURI (FIX: sebelumnya missing di sini)
+        // ★ AUTO-SYNC dijalankan SETELAH response dikirim ke browser
         try {
-            app(\App\Services\SheetsSyncService::class)->syncNilaiJuri();
-        } catch (\Exception $e) {
-            \Log::error('Auto-sync NILAI JURI gagal (kirim): ' . $e->getMessage());
+            app()->terminating(function () {
+                try {
+                    $sync = app(\App\Services\SheetsSyncService::class);
+                    if (!$sync->isReady()) return;
+                    try { $sync->syncCnt();       } catch (\Throwable $e) { \Log::error('Async-sync CNT (kirim): '       . $e->getMessage()); }
+                    try { $sync->syncHasilJuri(); } catch (\Throwable $e) { \Log::error('Async-sync HasilJuri (kirim): ' . $e->getMessage()); }
+                    try { $sync->syncNilaiJuri(); } catch (\Throwable $e) { \Log::error('Async-sync NilaiJuri (kirim): ' . $e->getMessage()); }
+                } catch (\Throwable $e) {
+                    \Log::error('Async-sync outer (kirim): ' . $e->getMessage());
+                }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Gagal register terminating (kirim): ' . $e->getMessage());
         }
 
         return response()->json(['success' => true, 'message' => 'Nilai berhasil dikirim ke Grand Juri.']);

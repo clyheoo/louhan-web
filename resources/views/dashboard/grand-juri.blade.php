@@ -291,8 +291,8 @@
         .rincian-ekor{font-family:'Fraunces',serif;font-size:20px;font-weight:500;color:var(--text-hi);letter-spacing:-.02em;}
 
         /* ═══════ JURI CHIPS ═══════ */
-        .juri-chip-list{display:flex;flex-wrap:wrap;gap:8px;}
-        .juri-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:10px;font-size:12px;font-weight:700;border:1px solid;cursor:pointer;transition:all .2s;}
+        .juri-chip-list{display:flex;flex-wrap:wrap;gap:14px;}
+        .juri-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:12px;font-size:12px;font-weight:700;border:1px solid;cursor:pointer;transition:all .2s;}
         .juri-chip:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.2);}
         .juri-chip.juri-awal{background:rgba(34,211,238,.08);color:var(--cyan-300);border-color:rgba(34,211,238,.20);}
         .juri-chip.juri-awal:hover{background:rgba(34,211,238,.14);}
@@ -613,9 +613,6 @@
                 <i class="fas fa-clipboard-check"></i> Review Nominasi
                 <span class="link-badge gold" id="sidebarNominasiBadge">0</span>
             </a>
-            <a class="sidebar-link" onclick="document.getElementById('exportDD').classList.toggle('show')" data-nolink>
-                <i class="fas fa-file-excel" style="color:#34D399;"></i> Export Excel
-            </a>
         </nav>
         <div class="sidebar-footer">
             <div class="sidebar-user">
@@ -650,20 +647,6 @@
                 </div>
             </div>
             <div class="nav-right">
-                <div class="export-wrap">
-                    <button class="export-btn" onclick="document.getElementById('exportDD').classList.toggle('show')">
-                        <i class="fas fa-file-excel"></i> <span class="hide-mobile">Export</span> Excel
-                    </button>
-                    <div class="export-dd" id="exportDD">
-                        <div class="export-dd-item" onclick="doExport('all')"><i class="fas fa-layer-group" style="color:var(--purple);"></i> Export Semua Data</div>
-                        <div class="export-dd-sep"></div>
-                        <div class="export-dd-item" onclick="doExport('daftar')"><i class="fas fa-list" style="color:var(--primary);"></i> Daftar Ikan</div>
-                        <div class="export-dd-sep"></div>
-                        <div class="export-dd-item" onclick="doExport('ranking_kk')"><i class="fas fa-layer-group" style="color:var(--success);"></i> Ranking: Per Kat + Kelas</div>
-                        <div class="export-dd-item" onclick="doExport('ranking_k')"><i class="fas fa-tags" style="color:var(--warning);"></i> Ranking: Per Kategori</div>
-                        <div class="export-dd-item" onclick="doExport('ranking_global')"><i class="fas fa-globe" style="color:var(--danger);"></i> Ranking: Global</div>
-                    </div>
-                </div>
                 <a href="{{ route('grand-juri.nominasi') }}" class="btn-sm btn-edit" style="padding:8px 14px;border-radius:10px;text-decoration:none;">
                     <i class="fas fa-clipboard-check"></i> <span class="hide-mobile">Review </span>Nominasi
                 </a>
@@ -990,8 +973,8 @@ var MAYOR_DEFECTS=['Bagian Bibir Hilang','Mulut Terbuka Terus','Bibir Tidak Menu
 var DEFECT_OPTIONS={
     raw_head_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'}]}],
     raw_face_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Bibir Miring (kasat mata)',label:'Bibir Miring (kasat mata)'},{value:'Katarak',label:'Katarak'}]},{label:'--- MAYOR ---',options:[{value:'Bagian Bibir Hilang',label:'Bagian Bibir Hilang'},{value:'Bibir Tidak Menutup Sempurna & Selaput Bergerak',label:'Bibir Tidak Menutup Sempurna & Selaput Bergerak'},{value:'Muka Miring',label:'Muka Miring'}]}],
-    raw_body_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Abses / Luka',label:'Abses / Luka'}]},{label:'--- MAYOR ---',options:[{value:'Pangkal Bengkok / Melintir',label:'Pangkal Bengkok / Melintir'}]}],
-    raw_finnage_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Fintail Bleaching / Transparan',label:'Fintail Bleaching / Transparan'},{value:'Pangkal Ekor Naik atau Turun',label:'Pangkal Ekor Naik atau Turun'},{value:'Sirip Dayung Tidak Seimbang',label:'Sirip Dayung Tidak Seimbang'}]},{label:'--- MAYOR ---',options:[{value:'Fin/Tulang Hilang 1 Ruas',label:'Fin/Tulang Hilang 1 Ruas'}]}]
+    raw_body_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Abses / Luka',label:'Abses / Luka'}]}],
+    raw_finnage_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Fintail Bleaching / Transparan',label:'Fintail Bleaching / Transparan'},{value:'Pangkal Ekor Naik atau Turun',label:'Pangkal Ekor Naik atau Turun'},{value:'Sirip Dayung Tidak Seimbang',label:'Sirip Dayung Tidak Seimbang'}]},{label:'--- MAYOR ---',options:[{value:'Fin/Tulang Hilang 1 Ruas',label:'Fin/Tulang Hilang 1 Ruas'},{value:'Pangkal Bengkok / Melintir',label:'Pangkal Bengkok / Melintir'}]}]
 };
 function getStandardOptionsGJ(){var o=[];for(var i=90;i>=10;i-=5)o.push({value:i.toString(),label:i.toString()});return o;}
 var DEFECT_LEGACY_MAP={'Bibir Miring':'Bibir Miring (kasat mata)','Fintail Bleaching':'Fintail Bleaching / Transparan','Pangkal Ekor Naik/Trn':'Pangkal Ekor Naik atau Turun','Dayung Tdk Seimbang':'Sirip Dayung Tidak Seimbang','Mulut Terbuka Terus':'Bibir Tidak Menutup Sempurna & Selaput Bergerak','Pangkal Bengkok/Patah':'Pangkal Bengkok / Melintir'};
@@ -1064,7 +1047,8 @@ function loadPeserta(search){
             var td6=document.createElement('td');var totalHtml=p.total_nilai_semua>0?'<span class="total-cell">'+p.total_nilai_semua+'</span>':'<span class="total-cell zero">—</span>';if(p.jumlah_juri_yang_nilai>1)totalHtml+='<div style="font-size:9px;color:var(--text-muted);font-weight:600;"><i class="fas fa-users" style="font-size:8px;margin-right:2px;"></i>'+p.jumlah_juri_yang_nilai+' juri</div>';td6.innerHTML=totalHtml;tr.appendChild(td6);
             var td6b=document.createElement('td');var finalPt=p.final_point||p.total_point||0;var bonusPt=p.total_bonus||0;if(finalPt>0){var ptHtml='<div style="font-family:\'Fraunces\',serif;font-size:16px;font-weight:500;color:'+(bonusPt>0?'#34D399':'var(--primary)')+';letter-spacing:-.02em;">'+finalPt+'</div>';if(bonusPt>0)ptHtml+='<div style="font-size:9px;color:#34D399;font-weight:800;"><i class="fas fa-trophy" style="font-size:7px;"></i> +'+bonusPt+' bonus</div>';td6b.innerHTML=ptHtml;}else{td6b.innerHTML='<span style="font-size:12px;color:var(--text-muted);">—</span>';}tr.appendChild(td6b);
             var td7=document.createElement('td');if(p.is_locked){td7.innerHTML='<span class="badge badge-success"><i class="fas fa-lock" style="margin-right:3px;font-size:9px;"></i>NILAI FINAL</span>';}else if(p.grand_juri_nama){td7.innerHTML='<span class="badge badge-purple"><i class="fas fa-crown" style="margin-right:3px;font-size:9px;"></i>GRAND EDITED</span>';}else{td7.innerHTML='<span class="badge '+(p.status_class||'badge-success')+'">'+(p.status||'—').toUpperCase()+'</span>';}tr.appendChild(td7);
-            var td8=document.createElement('td');if(p.is_locked){td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm btn-lock" style="background:var(--primary-light);color:var(--primary);border-color:rgba(34,211,238,.20);" onclick="kunciNilai('+p.id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></div>';}else{var canLock=p.submitted_juri_count>=p.total_juri_all;var lockHtml=canLock?'<button class="btn-sm btn-lock" onclick="kunciNilai('+p.id+')" title="Semua juri sudah kirim — siap dikunci"><i class="fas fa-lock-open"></i> Kunci</button>':'<button class="btn-sm btn-lock" style="opacity:.35;cursor:not-allowed;" disabled title="Masih ada juri yang belum mengirim"><i class="fas fa-lock-open"></i> Kunci</button>';td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm btn-edit" onclick="openEdit('+p.id+')"><i class="fas fa-pen-to-square"></i> Edit</button>'+lockHtml+'</div>';}tr.appendChild(td8);tbody.appendChild(tr);
+            var td8=document.createElement('td');if(p.is_locked){td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm btn-lock" style="background:var(--primary-light);color:var(--primary);border-color:rgba(34,211,238,.20);" onclick="kunciNilai('+p.id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></div>';}else{var lockHtml='<button class="btn-sm btn-lock" onclick="kunciNilai('+p.id+')" title="Kunci nilai (final)"><i class="fas fa-lock-open"></i> Kunci</button>';
+                td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm btn-edit" onclick="openEdit('+p.id+')"><i class="fas fa-pen-to-square"></i> Edit</button>'+lockHtml+'</div>';}tr.appendChild(td8);tbody.appendChild(tr);
         });
     }).catch(function(){document.getElementById('tbodyPeserta').innerHTML='<tr><td colspan="8"><div class="empty-state">Gagal memuat data.</div></td></tr>';});
 }
@@ -1194,10 +1178,6 @@ function loadPointRanking(){
             html+='</tbody></table></div></div>';
         });el.innerHTML=html;
     }).catch(function(){el.innerHTML='<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation" style="font-size:28px;display:block;margin-bottom:8px;"></i>Gagal memuat data ranking.</div>';});}
-
-/* ================================================================ EXPORT ================================================================ */
-function doExport(sheets){document.getElementById('exportDD').classList.remove('show');window.location.href='/api/grand-juri/export?sheets='+sheets;}
-document.addEventListener('click',function(e){if(!e.target.closest('.export-wrap')){document.getElementById('exportDD').classList.remove('show');}});
 
 /* ================================================================ INIT ================================================================ */
 loadStats();loadPeserta();loadJuriSummary();loadPointRanking();

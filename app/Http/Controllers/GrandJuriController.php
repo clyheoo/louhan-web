@@ -212,16 +212,15 @@ class GrandJuriController extends Controller
         //     jadi pada reject yang membatalkan record yang sebelumnya approved,
         //     ketiga sheet itu WAJIB di-refresh agar record hantu hilang.
         //   - HASIL NOMINASI menampilkan approved+rejected → wajib sync di kedua action.
-        try {
-            if ($this->sheetsSync->isReady()) {
-                $this->sheetsSync->syncSemuaNominasi();
-                $this->sheetsSync->syncSemuaPilNom();
-                $this->sheetsSync->syncHasilNominasi();
-                $this->sheetsSync->syncNominasiFix();
-            }
-        } catch (\Exception $e) {
-            \Log::error('Auto-sync nominasi gagal (' . $action . '): ' . $e->getMessage());
-        }
+        $sync = $this->sheetsSync;
+        $actionLog = $action;
+        app()->terminating(function () use ($sync, $actionLog) {
+            if (!$sync->isReady()) return;
+            try { $sync->syncSemuaNominasi();  } catch (\Exception $e) { \Log::error("Async-sync SemuaNominasi ($actionLog): "  . $e->getMessage()); }
+            try { $sync->syncSemuaPilNom();    } catch (\Exception $e) { \Log::error("Async-sync SemuaPilNom ($actionLog): "    . $e->getMessage()); }
+            try { $sync->syncHasilNominasi();  } catch (\Exception $e) { \Log::error("Async-sync HasilNominasi ($actionLog): "  . $e->getMessage()); }
+            try { $sync->syncNominasiFix();    } catch (\Exception $e) { \Log::error("Async-sync NominasiFix ($actionLog): "    . $e->getMessage()); }
+        });
 
         return response()->json([
             'success' => true,
@@ -396,27 +395,23 @@ class GrandJuriController extends Controller
         $nomorTank = $ikan->nomor_tank;
 
         // Auto-sync ke 4 sheet kalau approve
-        if ($action === 'approve') {
+        $sync = $this->sheetsSync;
+        $act  = $action;
+        app()->terminating(function () use ($sync, $act) {
+            if (!$sync->isReady()) return;
             try {
-                if ($this->sheetsSync->isReady()) {
-                    $this->sheetsSync->syncSemuaNominasi();
-                    $this->sheetsSync->syncSemuaPilNom();
-                    $this->sheetsSync->syncHasilNominasi();
-                    $this->sheetsSync->syncNominasiFix();
+                if ($act === 'approve') {
+                    $sync->syncSemuaNominasi();
+                    $sync->syncSemuaPilNom();
+                    $sync->syncHasilNominasi();
+                    $sync->syncNominasiFix();
+                } else {
+                    $sync->syncHasilNominasi();
                 }
             } catch (\Exception $e) {
-                \Log::error('Auto-sync late-ikan gagal: ' . $e->getMessage());
+                \Log::error("Async-sync late-ikan ($act): " . $e->getMessage());
             }
-        } else {
-            // Reject: tetap sync HASIL NOMINASI saja (history)
-            try {
-                if ($this->sheetsSync->isReady()) {
-                    $this->sheetsSync->syncHasilNominasi();
-                }
-            } catch (\Exception $e) {
-                \Log::error('Auto-sync late-ikan reject gagal: ' . $e->getMessage());
-            }
-        }
+        });
 
         return response()->json([
             'success' => true,
@@ -736,34 +731,16 @@ class GrandJuriController extends Controller
             'total_sesudah'  => $totalNilai,
         ]);
 
-        // ★ AUTO-SYNC HASIL JURI
-        // ★ AUTO-SYNC CNT
-        try { 
-            $this->sheetsSync->syncCnt(); 
-        } catch (\Exception $e) { 
-            \Log::error('Auto-sync CNT gagal (edit): ' . $e->getMessage()); 
-        }
-
-        // ★ AUTO-SYNC HASIL JURI
-        try { 
-            $this->sheetsSync->syncHasilJuri(); 
-        } catch (\Exception $e) { 
-            \Log::error('Auto-sync hasil juri gagal (edit): ' . $e->getMessage()); 
-        }
-
-        // ★ AUTO-SYNC NILAI JURI
-        try { 
-            $this->sheetsSync->syncNilaiJuri(); 
-        } catch (\Exception $e) { 
-            \Log::error('Auto-sync NILAI JURI gagal (edit): ' . $e->getMessage()); 
-        }
-
-        // ★ AUTO-SYNC MVP
-        try { 
-            $this->sheetsSync->syncMvp(); 
-        } catch (\Exception $e) { 
-            \Log::error('Auto-sync MVP gagal (edit): ' . $e->getMessage()); 
-        }
+        // ★ AUTO-SYNC: dijalankan SETELAH response dikirim ke browser.
+        //   User tidak perlu menunggu Google Sheets API selesai.
+        $sync = $this->sheetsSync;
+        app()->terminating(function () use ($sync) {
+            if (!$sync->isReady()) return;
+            try { $sync->syncCnt();       } catch (\Exception $e) { \Log::error('Async-sync CNT (edit): '       . $e->getMessage()); }
+            try { $sync->syncHasilJuri(); } catch (\Exception $e) { \Log::error('Async-sync HasilJuri (edit): ' . $e->getMessage()); }
+            try { $sync->syncNilaiJuri(); } catch (\Exception $e) { \Log::error('Async-sync NilaiJuri (edit): ' . $e->getMessage()); }
+            try { $sync->syncMvp();       } catch (\Exception $e) { \Log::error('Async-sync MVP (edit): '       . $e->getMessage()); }
+        });
 
         return response()->json([
             'success'     => true,
@@ -786,16 +763,12 @@ class GrandJuriController extends Controller
             return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
         }
 
-        $totalJuriSemua = \App\Models\User::where('role', 'juri')->count();
-        $jumlahSudahNilai = Scoring::where('ikan_id', $ikanId)
-            ->distinct('juri_id')
-            ->count('juri_id');
-
-        if ($jumlahSudahNilai < $totalJuriSemua) {
-            $sisa = $totalJuriSemua - $jumlahSudahNilai;
+        // ★ Gate dihapus: Grand Juri boleh kunci kapan saja, minimal 1 juri saja yang sudah nilai.
+        $adaNilai = Scoring::where('ikan_id', $ikanId)->exists();
+        if (!$adaNilai) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tidak bisa mengunci. Masih ada ' . $sisa . ' juri yang belum menilai tank ini.',
+                'message' => 'Tidak bisa mengunci. Belum ada satupun juri yang menilai tank ini.',
             ]);
         }
 
@@ -817,10 +790,10 @@ class GrandJuriController extends Controller
         try {
             $merged = [];
 
-            // --- Juri biasa (hanya yang sudah kirim ke Grand Juri) ---
             $juriRows = \DB::table('scorings')
                 ->join('users', 'scorings.juri_id', '=', 'users.id')
                 ->whereNotNull('scorings.juri_id')
+                ->where('users.role', 'juri')
                 ->selectRaw('scorings.juri_id, users.name, COUNT(DISTINCT scorings.ikan_id) as total_ikan')
                 ->groupBy('scorings.juri_id', 'users.name')
                 ->orderByDesc('total_ikan')
@@ -838,33 +811,6 @@ class GrandJuriController extends Controller
                 }
             }
 
-            // --- Grand Juri yang pernah edit ---
-            $hasEditedColumn = \Schema::hasColumn('scorings', 'edited_by_grand_juri');
-
-            $grandQuery = \DB::table('scorings')
-                ->join('users', 'scorings.grand_juri_id', '=', 'users.id')
-                ->whereNotNull('scorings.grand_juri_id');
-
-            if ($hasEditedColumn) {
-                $grandQuery->where('scorings.edited_by_grand_juri', true);
-            }
-
-            $grandRows = $grandQuery
-                ->selectRaw('scorings.grand_juri_id, users.name, COUNT(DISTINCT scorings.ikan_id) as total_ikan')
-                ->groupBy('scorings.grand_juri_id', 'users.name')
-                ->get();
-
-            foreach ($grandRows as $row) {
-                $key = $row->name . '_grand_juri';
-                if (!isset($merged[$key])) {
-                    $merged[$key] = [
-                        'juri_id'       => $row->grand_juri_id,
-                        'name'          => $row->name,
-                        'role'          => 'grand_juri',
-                        'total_peserta' => $row->total_ikan,
-                    ];
-                }
-            }
 
             return response()->json(array_values($merged));
 
@@ -1362,8 +1308,11 @@ public function getMvpIkan()
             'added_by'   => auth()->id(),
         ]);
 
-        // ★ AUTO-SYNC MVP
-        try { $this->sheetsSync->syncMvp(); } catch (\Exception $e) { \Log::error('Auto-sync MVP gagal (add bonus): ' . $e->getMessage()); }
+        $sync = $this->sheetsSync;
+        app()->terminating(function () use ($sync) {
+            if (!$sync->isReady()) return;
+            try { $sync->syncMvp(); } catch (\Exception $e) { \Log::error('Async-sync MVP (add bonus): ' . $e->getMessage()); }
+        });
 
         return response()->json([
             'success' => true,
