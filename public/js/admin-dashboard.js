@@ -3318,8 +3318,8 @@ loadUsers();
         // ★ START auto-polling kalau halaman nominasi aktif
         if(pageId === 'nominasi'){
             adminNomPollTimer = setInterval(function(){
-                loadAdminPendingReview();
-                loadAdminLateIkan();
+                loadAdminPendingReview(true);
+                loadAdminLateIkan(true);
             }, 5000);
         }
 
@@ -3393,7 +3393,12 @@ var adminNomState = {
     histData: { approved: [], rejected: [] }
 };
 
+var _adminPendingCache = '';
+var _adminLateCache = '';
+
 function loadAdminNominasiAll(){
+    _adminPendingCache = '';
+    _adminLateCache = '';
     loadAdminNomTanks();
     loadAdminPendingReview();
     loadAdminLateIkan();
@@ -3526,14 +3531,26 @@ document.addEventListener('input', function(e){
     if(e.target && e.target.id === 'adminNomSearch') renderAdminNomGrid();
 });
 
-/* ── (B) PENDING REVIEW ── */
-function loadAdminPendingReview(){
+function loadAdminPendingReview(silent){
     var body = document.getElementById('adminPendingBody');
     if(!body) return;
-    body.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat pending...</p></div>';
+
+    /* ★ Reset cache jika bukan silent → force re-render */
+    if(!silent) _adminPendingCache = '';
+
+    /* ★ Spinner hanya saat load pertama (body kosong atau masih spinner) */
+    if(!silent && (!body.children.length || body.querySelector('.fa-spinner'))){
+        body.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat pending...</p></div>';
+    }
+
     fetch('/api/grand-juri/nominasi', { headers:{'Accept':'application/json'} })
     .then(function(r){ return r.json(); })
     .then(function(d){
+        /* ★ FINGERPRINT — skip re-render jika data identik */
+        var fingerprint = JSON.stringify(d);
+        if(fingerprint === _adminPendingCache) return;
+        _adminPendingCache = fingerprint;
+
         document.getElementById('adminPendingCount').textContent = (d.total_pending || 0) + ' pending';
         if(!d.grouped || d.grouped.length === 0){
             body.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada nominasi pending untuk direview.</p></div>';
@@ -3567,6 +3584,7 @@ function loadAdminPendingReview(){
         body.innerHTML = html;
     })
     .catch(function(){
+        if(silent) return; /* ★ Jangan ganggu UI saat silent poll gagal */
         body.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat pending.</p></div>';
     });
 }
@@ -3649,14 +3667,26 @@ function adminApproveAllInGroup(btn, idsJson){
     });
 }
 
-/* ── (C) LATE IKAN ── */
-function loadAdminLateIkan(){
+function loadAdminLateIkan(silent){
     var body = document.getElementById('adminLateBody');
     if(!body) return;
-    body.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
+
+    /* ★ Reset cache jika bukan silent → force re-render */
+    if(!silent) _adminLateCache = '';
+
+    /* ★ Spinner hanya saat load pertama */
+    if(!silent && (!body.children.length || body.querySelector('.fa-spinner'))){
+        body.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
+    }
+
     fetch('/api/grand-juri/late-ikan', { headers:{'Accept':'application/json'} })
     .then(function(r){ return r.json(); })
     .then(function(d){
+        /* ★ FINGERPRINT — skip re-render jika data identik */
+        var fingerprint = JSON.stringify(d);
+        if(fingerprint === _adminLateCache) return;
+        _adminLateCache = fingerprint;
+
         var countEl = document.getElementById('adminLateCount');
         if(!d.enabled){
             countEl.textContent = (d.juri_done||0)+'/'+(d.total_juri||0)+' juri selesai';
@@ -3686,6 +3716,7 @@ function loadAdminLateIkan(){
         body.innerHTML = html;
     })
     .catch(function(){
+        if(silent) return; /* ★ Jangan ganggu UI saat silent poll gagal */
         body.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat data.</p></div>';
     });
 }
