@@ -1541,6 +1541,14 @@ function evalDefects(ts) {
     return results;
 }
 
+// ★ Tambahan: Cek apakah komponen dikunci berdasarkan kategori
+function isFieldLocked(kategori, fieldKey) {
+    if (!kategori) return false;
+    if ((kategori === 'Freemarking' || kategori === 'Goldenbase') && fieldKey.startsWith('marking.')) return true;
+    if (kategori === 'Klasik' && fieldKey.startsWith('pearl.')) return true;
+    return false;
+}
+
 function getDefectBtnHtml(tankId, partKey, ts) {
     const vals = ts.defects['raw_'+partKey+'_penalty'] || ['0'];
     const isAman = vals.includes('0') || vals.length === 0;
@@ -1594,7 +1602,11 @@ function renderFormTable() {
         const ts = tankScores[tank.id]; if (!ts) return '';
         const cells = group.fields.map(f => {
             if (f.type === 'defect') { return '<td class="p-1.5">'+getDefectBtnHtml(tank.id, f.part, ts)+'</td>'; }
-            const val = getVal(tank.id, f.key);
+            const locked = isFieldLocked(tank.kategori, f.key);
+            const val = locked ? '' : getVal(tank.id, f.key);
+            if (locked) {
+                return '<td class="p-1.5"><div class="w-full px-2 py-2 border rounded text-center font-mono font-bold text-xs flex items-center justify-center gap-1.5" style="border-color:var(--bd-1);background:rgba(255,255,255,0.02);color:var(--text-faint);"><i class="fas fa-lock text-[9px] opacity-50"></i> -</div></td>';
+            }
             return '<td class="p-1.5"><select onchange="setVal('+tank.id+',\''+f.key+'\',this.value)" class="w-full px-2 py-2 border rounded text-center font-mono font-bold outline-none cursor-pointer text-sm" style="border-color:var(--bd-2);background:var(--glass-2);color:var(--text-hi);">'+buildSelectHtml(val, f.type)+'</select></td>';
         }).join('');
         return '<tr><td class="p-1 sticky left-0 z-10" style="background:rgba(255,255,255,0.04);border-right:1px solid var(--bd-1);box-shadow:2px 0 5px -2px rgba(0,0,0,0.1);"><input type="number" disabled value="'+tank.nomor_tank+'" class="w-[50px] mx-auto block px-1 py-2 rounded text-center font-bold text-sm cursor-not-allowed" style="background:rgba(255,255,255,0.02);border:1px solid var(--bd-1);color:var(--text-hi);"></td>'+cells+'</tr>';
@@ -1754,7 +1766,7 @@ async function batchSubmit() {
     tanks.forEach(function(tank) {
         const ts = tankScores[tank.id]; if (!ts) return;
         let isComplete = true; const missingFields = [];
-        SCORING_GROUPS.forEach(function(group) { group.fields.forEach(function(field) { if (field.type === 'defect') return; if (getVal(tank.id, field.key) === '') { isComplete = false; missingFields.push(group.title + ' > ' + field.label); } }); });
+        SCORING_GROUPS.forEach(function(group) { group.fields.forEach(function(field) { if (field.type === 'defect') return; if (isFieldLocked(tank.kategori, field.key)) return; if (getVal(tank.id, field.key) === '') { isComplete = false; missingFields.push(group.title + ' > ' + field.label); } }); });
         if (isComplete) { toSubmit.push(tank); } else { skippedErrors.push('Tank T' + tank.nomor_tank + ': ' + missingFields.join(', ')); }
     });
     if (toSubmit.length === 0) { showWarningModal(skippedErrors.map(function(e) { return {type:'select', msg: e}; })); return; }

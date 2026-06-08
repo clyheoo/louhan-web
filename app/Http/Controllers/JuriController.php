@@ -123,6 +123,21 @@ class JuriController extends Controller
             return response()->json(['success' => false, 'message' => 'Format all_scores tidak valid.'], 422);
         }
 
+        // ★ Paksa nilai 0 untuk komponen yang terkunci berdasarkan kategori (Keamanan Backend)
+        $noMarking = in_array($ikan->kategori, ['Freemarking', 'Goldenbase']);
+        $noPearl   = $ikan->kategori === 'Klasik';
+
+        if ($noMarking && isset($allScores['marking'])) {
+            foreach ($allScores['marking'] as $k => $v) {
+                if ($k !== 'defect') $allScores['marking'][$k] = 0;
+            }
+        }
+        if ($noPearl && isset($allScores['pearl'])) {
+            foreach ($allScores['pearl'] as $k => $v) {
+                if ($k !== 'defect') $allScores['pearl'][$k] = 0;
+            }
+        }
+
         $totalNilai = 0;
         foreach ($allScores as $detailNilai) {
             if (is_array($detailNilai)) {
