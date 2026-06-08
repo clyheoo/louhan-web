@@ -857,20 +857,87 @@ function submitEditAdmin(){
 }
 
 function kunciNilaiAdmin(ikanId){
+    // ★ LOADING STATE: disable SEMUA tombol kunci untuk ikan ini agar tidak double-click
+    var btns=document.querySelectorAll('button[onclick*="kunciNilaiAdmin('+ikanId+')"]');
+    btns.forEach(function(b){
+        b._origHTML=b.innerHTML;
+        b.disabled=true;
+        b.style.opacity='0.65';
+        b.style.cursor='wait';
+        b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    });
+    var restoreBtns=function(){
+        btns.forEach(function(b){
+            b.disabled=false;
+            b.style.opacity='';
+            b.style.cursor='';
+            if(b._origHTML) b.innerHTML=b._origHTML;
+        });
+    };
     fetch('/api/grand-juri/kunci-nilai',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({_token:getCsrf(),ikan_id:ikanId})})
     .then(function(r){return r.json();})
     .then(function(d){
         if(d.success){
             popupSuccess('Berhasil',d.message);
-            // ★ Refresh Point Ranking (sumber utama lock action) + Data Penilaian (status badge) + dashboard counter
-            if (typeof loadAdminPointRanking === 'function') loadAdminPointRanking();
+            if(typeof loadAdminPointRanking==='function') loadAdminPointRanking(); // tombol di-render ulang
             loadScoringData();
             loadDashboard();
         } else {
+            restoreBtns();
             popupError('Gagal',d.message||'Tidak dapat mengubah status kunci.');
         }
     })
-    .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');});
+    .catch(function(){
+        restoreBtns();
+        popupError('Kesalahan Jaringan','Gagal menghubungi server.');
+    });
+}
+
+function kunciSemuaAdmin(){
+    popupConfirm(
+        'Kunci Semua Peserta?',
+        'Tindakan ini akan <b>MENGUNCI SEMUA peserta</b> yang sudah dinilai tetapi belum terkunci. Setelah dikunci, nilai tidak dapat diubah lagi.<br><br>Lanjutkan?',
+        'Ya, Kunci Semua',
+        function(){
+            var btn=document.getElementById('btnKunciSemua');
+            var orig=btn?btn.innerHTML:'';
+            if(btn){
+                btn.disabled=true;
+                btn.style.opacity='0.65';
+                btn.style.cursor='wait';
+                btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> MENGUNCI...';
+            }
+            var restore=function(){
+                if(btn){
+                    btn.disabled=false;
+                    btn.style.opacity='';
+                    btn.style.cursor='';
+                    btn.innerHTML=orig;
+                }
+            };
+            fetch('/api/grand-juri/kunci-semua',{
+                method:'POST',
+                headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+                body:JSON.stringify({_token:getCsrf()})
+            })
+            .then(function(r){return r.json();})
+            .then(function(d){
+                if(d.success){
+                    popupSuccess('Berhasil!',d.message);
+                    if(typeof loadAdminPointRanking==='function') loadAdminPointRanking();
+                    if(typeof loadScoringData==='function') loadScoringData();
+                    if(typeof loadDashboard==='function') loadDashboard();
+                } else {
+                    restore();
+                    popupError('Gagal',d.message||'Tidak dapat mengunci.');
+                }
+            })
+            .catch(function(){
+                restore();
+                popupError('Kesalahan Jaringan','Gagal menghubungi server.');
+            });
+        }
+    );
 }
 
 document.getElementById('btnSaveEditAdmin').addEventListener('click',submitEditAdmin);
@@ -3168,11 +3235,11 @@ function loadAdminPointRanking(){
                 html += '<td style="text-align:center;"><span style="display:inline-block;padding:5px 14px;border-radius:8px;font-size:14px;font-weight:900;background:'+rankBg+';color:'+rankColor+';border:1px solid '+rankBorder+';">'+frp+'</span>';
                 if(bonus > 0) html += '<div style="font-size:9px;color:#34D399;font-weight:800;margin-top:3px;"><i class="fas fa-trophy" style="font-size:7px;"></i> '+rankPt+' + '+bonus+'</div>';
                 html += '</td>';
-                // ★ Tombol Kunci / Buka Kunci di Point Ranking (dipindah dari Data Penilaian)
+                // ★ Tombol Kunci / Buka Kunci di Point Ranking — versi cerah & menonjol
                 if(d.is_locked){
-                    html += '<td style="text-align:center;"><button class="btn-xs" style="background:rgba(34,211,238,.12);color:#67E8F9;border:1px solid rgba(34,211,238,.25);" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></td>';
+                    html += '<td style="text-align:center;"><button class="btn-xs" style="background:linear-gradient(135deg,#22D3EE,#06B6D4);color:#fff;border:none;font-weight:800;padding:6px 12px;box-shadow:0 2px 8px rgba(6,182,212,.35);transition:all .2s;" onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(6,182,212,.5)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 2px 8px rgba(6,182,212,.35)\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></td>';
                 } else {
-                    html += '<td style="text-align:center;"><button class="btn-xs" style="background:rgba(245,158,11,.12);color:var(--gold-300);border:1px solid rgba(245,158,11,.25);" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Kunci nilai (final)"><i class="fas fa-lock"></i> Kunci</button></td>';
+                    html += '<td style="text-align:center;"><button class="btn-xs" style="background:linear-gradient(135deg,#FBBF24,#D97706);color:#fff;border:none;font-weight:800;padding:6px 12px;box-shadow:0 2px 8px rgba(245,158,11,.35);transition:all .2s;" onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(245,158,11,.5)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 2px 8px rgba(245,158,11,.35)\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Kunci nilai (final)"><i class="fas fa-lock"></i> Kunci</button></td>';
                 }
                 html += '</tr>';
             });

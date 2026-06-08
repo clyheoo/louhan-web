@@ -1007,9 +1007,41 @@ function freshMemory(){var m={};Object.keys(formFields).forEach(function(k){m[k]
 function cloneValues(source){var m={};Object.keys(formFields).forEach(function(k){m[k]={};formFields[k].forEach(function(f){if(f.type==='defect')return;var v=(source&&source[k]&&source[k][f.id]);if(v===undefined&&f.id==='shining'&&source&&source[k]&&source[k].shinning!==undefined)v=source[k].shinning;m[k][f.id]=(v!==undefined&&v!==null&&v!=='')?String(v):'';});});return m;}
 
 function kunciNilai(id){
+    // ★ LOADING STATE: disable SEMUA tombol kunci untuk ikan ini agar tidak double-click
+    var btns=document.querySelectorAll('button[onclick*="kunciNilai('+id+')"]');
+    btns.forEach(function(b){
+        b._origHTML=b.innerHTML;
+        b.disabled=true;
+        b.style.opacity='0.65';
+        b.style.cursor='wait';
+        b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    });
+    var restoreBtns=function(){
+        btns.forEach(function(b){
+            b.disabled=false;
+            b.style.opacity='';
+            b.style.cursor='';
+            if(b._origHTML) b.innerHTML=b._origHTML;
+        });
+    };
     fetch('/api/grand-juri/kunci-nilai',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({_token:getCsrf(),ikan_id:id})})
-    .then(function(r){return r.json();}).then(function(d){if(d.success){document.getElementById('popupSuccessDesc').textContent=d.message;showPopup('popupSuccess');loadPeserta(document.getElementById('searchInput').value);}else{document.getElementById('popupErrorDesc').textContent=d.message||'Gagal.';showPopup('popupError');}})
-    .catch(function(){document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan.';showPopup('popupError');});
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.success){
+            document.getElementById('popupSuccessDesc').textContent=d.message;
+            showPopup('popupSuccess');
+            loadPeserta(document.getElementById('searchInput').value); // tombol akan di-render ulang
+        }else{
+            restoreBtns();
+            document.getElementById('popupErrorDesc').textContent=d.message||'Gagal.';
+            showPopup('popupError');
+        }
+    })
+    .catch(function(){
+        restoreBtns();
+        document.getElementById('popupErrorDesc').textContent='Kesalahan jaringan.';
+        showPopup('popupError');
+    });
 }
 
 /* ================================================================ LOAD STATS ================================================================ */
@@ -1055,7 +1087,26 @@ function loadPeserta(search){
 var searchT;document.getElementById('searchInput').addEventListener('input',function(){var q=this.value;clearTimeout(searchT);searchT=setTimeout(function(){loadPeserta(q);},300);});
 
 /* ================================================================ FETCH SINGLE ================================================================ */
-function fetchSingle(id,cb){fetch('/api/grand-juri/peserta?id='+id,{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(data){cb(data&&data[0]?data[0]:null);}).catch(function(){cb(null);});}
+function fetchSingle(id,cb){
+    // ★ FAST PATH: pakai cache dari loadPeserta untuk respons instan
+    if(allIkanDataGJ[id]){
+        cb(allIkanDataGJ[id]);
+        // Refresh cache di background — tidak blocking
+        fetch('/api/grand-juri/peserta?id='+id,{headers:{'Accept':'application/json'}})
+            .then(function(r){return r.json();})
+            .then(function(data){ if(data&&data[0]) allIkanDataGJ[id]=data[0]; })
+            .catch(function(){});
+        return;
+    }
+    fetch('/api/grand-juri/peserta?id='+id,{headers:{'Accept':'application/json'}})
+        .then(function(r){return r.json();})
+        .then(function(data){
+            var p=data&&data[0]?data[0]:null;
+            if(p) allIkanDataGJ[id]=p;
+            cb(p);
+        })
+        .catch(function(){cb(null);});
+}
 
 /* ================================================================ MODAL DETAIL ================================================================ */
 function openDetail(id){currentId=id;document.getElementById('detailContent').innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:20px;display:block;margin-bottom:8px;"></i>Memuat...</div>';document.getElementById('modalDetail').classList.add('show');fetchSingle(id,function(p){if(!p){document.getElementById('detailContent').innerHTML='<div class="empty-state">Data tidak ditemukan.</div>';return;}currentPData=p;var editBtn=document.getElementById('btnToEdit');if(p.is_locked){editBtn.style.display='none';}else{editBtn.style.display='';editBtn.onclick=function(){closeModal('modalDetail');openEdit(id);};}renderDetail(p);});}

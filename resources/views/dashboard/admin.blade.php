@@ -1075,6 +1075,9 @@
                             <h3><span class="ti" style="background:rgba(245,158,11,.12);border-color:var(--bd-gold);color:var(--gold-400);"><i class="fas fa-trophy"></i></span>Sistem Point Ranking</h3>
                             <div class="card-sub">Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)</div>
                         </div>
+                        <button id="btnKunciSemua" onclick="kunciSemuaAdmin()" style="padding:10px 18px;border:none;border-radius:12px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#FBBF24,#D97706);color:#fff;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 14px -4px rgba(245,158,11,.6),inset 0 1px 0 rgba(255,255,255,.2);transition:all .2s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 20px -6px rgba(245,158,11,.7),inset 0 1px 0 rgba(255,255,255,.2)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px -4px rgba(245,158,11,.6),inset 0 1px 0 rgba(255,255,255,.2)'">
+                            <i class="fas fa-lock"></i> KUNCI SEMUA PESERTA
+                        </button>
                     </div>
                     <div class="card-body">
                         <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">

@@ -1373,4 +1373,32 @@ public function getMvpIkan()
 
         return Excel::download(new GrandJuriExport($sheets), $fileName);
     }
+
+    /* ═══════════════════════════════════════════
+       KUNCI SEMUA — Lock semua ikan yang sudah dinilai sekaligus
+       ═══════════════════════════════════════════ */
+    public function kunciSemua()
+    {
+        // Cari semua ikan yang sudah ada scoring tapi belum dikunci
+        $candidates = Ikan::whereNotNull('nomor_tank')
+            ->where('is_locked', false)
+            ->whereHas('scorings')
+            ->pluck('id');
+
+        if ($candidates->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada peserta yang bisa dikunci. Semua sudah terkunci atau belum ada nilai.',
+                'count'   => 0,
+            ]);
+        }
+
+        $count = Ikan::whereIn('id', $candidates)->update(['is_locked' => true]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Berhasil mengunci ' . $count . ' peserta.',
+            'count'   => $count,
+        ]);
+    }
 }

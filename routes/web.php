@@ -86,6 +86,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/grand-juri/nominasi-history', [GrandJuriController::class, 'getNominasiHistory']);
     Route::get('/api/grand-juri/late-ikan', [GrandJuriController::class, 'getLateIkan']);
     Route::post('/api/grand-juri/late-ikan-review', [GrandJuriController::class, 'reviewLateIkan']);
+    Route::post('/api/grand-juri/kunci-semua', [GrandJuriController::class, 'kunciSemua']);
 });
 
 Route::middleware('auth')->group(function () {
