@@ -777,6 +777,14 @@ class DashboardController extends Controller
                             'ikan_id' => $pi->id,
                             'total_point' => (float) $totalPoint,
                             'total_bonus' => $totalBonus,
+
+                            // Ambil subtotal dari breakdown yang sama dengan admin/grand juri.
+                            // Tidak hardcode rumus dan tidak perlu migration.
+                            'component_subtotals' => $this->buildComponentSubtotalsFromBreakdown(
+                                $pi->kategori,
+                                $finalAvgDetail,
+                                $mergedDefect
+                            ),
                         ];
                     }
 
@@ -795,17 +803,34 @@ class DashboardController extends Controller
                             continue;
                         }
 
+                        $groupLabel = $ikan->kategori;
+                        if (!in_array($ikan->kategori, ['Bonsai', 'Jumbo']) && $ikan->kelas) {
+                            $groupLabel .= ' - Kelas ' . $ikan->kelas;
+                        }
+
                         $myResults[] = [
-                            'ikan_id'        => $ikan->id,
-                            'kategori'       => $ikan->kategori,
-                            'kelas'          => $ikan->kelas ?? '-',
-                            'detail_anggota' => $ikan->detail_anggota ?? '-',
-                            'point'          => $r['total_point'] ?? 0,
-                            'rank_point'     => $r['rank_point'] ?? 0,
-                            'position'       => $idx + 1,
-                            'nomor_tank'     => $ikan->nomor_tank,
-                            'total_bonus'    => (int) $ikan->bonusPoints->sum('points'),
-                            'bonus_list'     => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                            'ikan_id'             => $ikan->id,
+                            'kategori'            => $ikan->kategori,
+                            'kelas'               => $ikan->kelas ?? '-',
+                            'group_key'           => $ikan->kategori . '|' . ($ikan->kelas ?? '-'),
+                            'group_label'         => $groupLabel,
+                            'detail_anggota'      => $ikan->detail_anggota ?? '-',
+                            'point'               => $r['total_point'] ?? 0,
+                            'rank_point'          => $r['rank_point'] ?? 0,
+                            'position'            => $idx + 1,
+                            'nomor_tank'          => $ikan->nomor_tank,
+                            'total_bonus'         => (int) $ikan->bonusPoints->sum('points'),
+                            'bonus_list'          => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                            'component_subtotals' => $r['component_subtotals'] ?? [
+                                'overall' => ['label' => 'Overall', 'value' => 0],
+                                'head'    => ['label' => 'Head', 'value' => 0],
+                                'face'    => ['label' => 'Face', 'value' => 0],
+                                'body'    => ['label' => 'Body', 'value' => 0],
+                                'marking' => ['label' => 'Marking', 'value' => 0],
+                                'pearl'   => ['label' => 'Pearl', 'value' => 0],
+                                'color'   => ['label' => 'Color', 'value' => 0],
+                                'finnage' => ['label' => 'Finnage', 'value' => 0],
+                            ],
                         ];
                     }
                 }
@@ -816,18 +841,35 @@ class DashboardController extends Controller
                     ->map(function ($ikan) use ($myResults) {
                         $rankInfo = collect($myResults)->firstWhere('ikan_id', $ikan->id);
 
+                        $groupLabel = $ikan->kategori;
+                        if (!in_array($ikan->kategori, ['Bonsai', 'Jumbo']) && $ikan->kelas) {
+                            $groupLabel .= ' - Kelas ' . $ikan->kelas;
+                        }
+
                         return [
-                            'ikan_id'          => $ikan->id,
-                            'nama_peserta'     => $ikan->nama_peserta ?? '-',
-                            'detail_anggota'   => $ikan->detail_anggota ?? '-',
-                            'kategori'         => $ikan->kategori,
-                            'kelas'            => $ikan->kelas ?? '-',
-                            'nomor_tank'       => $ikan->nomor_tank ?? '-',
-                            'position'         => $rankInfo['position'] ?? 0,
-                            'rank_point'       => $rankInfo['rank_point'] ?? 0,
-                            'bonus_list'       => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
-                            'total_bonus'      => (int) $ikan->bonusPoints->sum('points'),
-                            'final_rank_point' => (int)($rankInfo['rank_point'] ?? 0) + (int)$ikan->bonusPoints->sum('points'),
+                            'ikan_id'             => $ikan->id,
+                            'nama_peserta'        => $ikan->nama_peserta ?? '-',
+                            'detail_anggota'      => $ikan->detail_anggota ?? '-',
+                            'kategori'            => $ikan->kategori,
+                            'kelas'               => $ikan->kelas ?? '-',
+                            'group_key'           => $ikan->kategori . '|' . ($ikan->kelas ?? '-'),
+                            'group_label'         => $groupLabel,
+                            'nomor_tank'          => $ikan->nomor_tank ?? '-',
+                            'position'            => $rankInfo['position'] ?? 0,
+                            'rank_point'          => $rankInfo['rank_point'] ?? 0,
+                            'bonus_list'          => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                            'total_bonus'         => (int) $ikan->bonusPoints->sum('points'),
+                            'final_rank_point'    => (int)($rankInfo['rank_point'] ?? 0) + (int)$ikan->bonusPoints->sum('points'),
+                            'component_subtotals' => $rankInfo['component_subtotals'] ?? [
+                                'overall' => ['label' => 'Overall', 'value' => 0],
+                                'head'    => ['label' => 'Head', 'value' => 0],
+                                'face'    => ['label' => 'Face', 'value' => 0],
+                                'body'    => ['label' => 'Body', 'value' => 0],
+                                'marking' => ['label' => 'Marking', 'value' => 0],
+                                'pearl'   => ['label' => 'Pearl', 'value' => 0],
+                                'color'   => ['label' => 'Color', 'value' => 0],
+                                'finnage' => ['label' => 'Finnage', 'value' => 0],
+                            ],
                         ];
                     })
                     ->values()
@@ -852,6 +894,69 @@ class DashboardController extends Controller
             // Untuk debugging di browser console
             'result_debug' => $resultDebug,
         ]);
+    }
+
+    private function buildComponentSubtotalsFromBreakdown(string $kategori, array $finalAvgDetail, array $mergedDefect): array
+    {
+        $empty = [
+            'overall' => ['label' => 'Overall', 'value' => 0],
+            'head'    => ['label' => 'Head', 'value' => 0],
+            'face'    => ['label' => 'Face', 'value' => 0],
+            'body'    => ['label' => 'Body Shape', 'value' => 0],
+            'marking' => ['label' => 'Marking', 'value' => 0],
+            'pearl'   => ['label' => 'Pearl', 'value' => 0],
+            'color'   => ['label' => 'Color', 'value' => 0],
+            'finnage' => ['label' => 'Finnage', 'value' => 0],
+        ];
+
+        $breakdown = PointCalculator::hitungBreakdown($kategori, $finalAvgDetail, $mergedDefect);
+
+        $aliases = [
+            'overall' => ['overall'],
+            'head'    => ['head'],
+            'face'    => ['face'],
+            'body'    => ['body', 'body_shape', 'body shape', 'bodyshape'],
+            'marking' => ['marking'],
+            'pearl'   => ['pearl'],
+            'color'   => ['color'],
+            'finnage' => ['finnage'],
+        ];
+
+        foreach ($breakdown as $key => $row) {
+            $normalizedKey = strtolower(str_replace(['_', '-'], ' ', (string) $key));
+            $targetKey = null;
+
+            foreach ($aliases as $componentKey => $possibleKeys) {
+                foreach ($possibleKeys as $possibleKey) {
+                    if ($normalizedKey === strtolower(str_replace(['_', '-'], ' ', $possibleKey))) {
+                        $targetKey = $componentKey;
+                        break 2;
+                    }
+                }
+            }
+
+            if (!$targetKey) {
+                continue;
+            }
+
+            $value = 0;
+
+            if (is_array($row)) {
+                $value =
+                    $row['subtotal'] ??
+                    $row['total'] ??
+                    $row['point'] ??
+                    $row['value'] ??
+                    $row['nilai'] ??
+                    0;
+            } elseif (is_numeric($row)) {
+                $value = $row;
+            }
+
+            $empty[$targetKey]['value'] = round((float) $value, 2);
+        }
+
+        return $empty;
     }
 
     public function hasilJuara()

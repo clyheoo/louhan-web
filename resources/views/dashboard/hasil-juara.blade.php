@@ -89,7 +89,203 @@
             .brand-text h1{font-size:15px}
             .brand-text p{display:none}
         }
-    </style>
+        .result-filter-wrap{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:10px;
+            margin-bottom:18px;
+        }
+        .result-filter-card{
+            background:rgba(255,255,255,.035);
+            border:1px solid var(--bd-1);
+            border-radius:14px;
+            padding:12px;
+        }
+        .result-filter-card label{
+            display:block;
+            font-size:10px;
+            font-weight:900;
+            text-transform:uppercase;
+            letter-spacing:.08em;
+            color:var(--text-low);
+            margin-bottom:7px;
+        }
+        .result-filter-card select{
+            width:100%;
+            padding:10px 12px;
+            border-radius:10px;
+            border:1px solid var(--bd-2);
+            background-color:#111E36;
+            color:#F8FAFC;
+            font-family:inherit;
+            font-size:12px;
+            font-weight:800;
+            outline:none;
+            appearance:auto;
+        }
+
+        .result-filter-card select:focus{
+            border-color:rgba(34,211,238,.45);
+            box-shadow:0 0 0 3px rgba(34,211,238,.10);
+        }
+
+        .result-filter-card select option{
+            background-color:#111E36;
+            color:#F8FAFC;
+            font-weight:700;
+        }
+
+        .result-filter-card select option:hover,
+        .result-filter-card select option:checked{
+            background-color:#182947;
+            color:#67E8F9;
+        }
+        .result-section-title{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            margin:18px 0 10px;
+            padding-bottom:10px;
+            border-bottom:1px solid var(--bd-1);
+        }
+        .result-section-title h3{
+            font-size:14px;
+            font-weight:900;
+            color:var(--text-hi);
+            display:flex;
+            align-items:center;
+            gap:8px;
+        }
+        .result-count-pill{
+            font-size:10px;
+            font-weight:900;
+            color:var(--cyan-300);
+            background:rgba(34,211,238,.10);
+            border:1px solid rgba(34,211,238,.22);
+            border-radius:999px;
+            padding:5px 9px;
+            white-space:nowrap;
+        }
+        .simple-result-card{
+            background:rgba(255,255,255,.035);
+            border:1px solid var(--bd-1);
+            border-radius:16px;
+            padding:14px;
+            margin-bottom:12px;
+        }
+        .simple-result-card.mvp{
+            background:rgba(245,158,11,.045);
+            border-color:rgba(245,158,11,.22);
+        }
+        .simple-result-top{
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:12px;
+            margin-bottom:12px;
+        }
+        .simple-result-title{
+            min-width:0;
+        }
+        .simple-result-title h4{
+            font-size:14px;
+            font-weight:900;
+            color:var(--text-hi);
+            margin-bottom:4px;
+        }
+        .simple-result-title p{
+            font-size:11px;
+            font-weight:700;
+            color:var(--text-low);
+            line-height:1.45;
+        }
+        .rank-badge{
+            min-width:52px;
+            padding:8px 10px;
+            border-radius:12px;
+            text-align:center;
+            background:rgba(16,185,129,.10);
+            border:1px solid rgba(16,185,129,.22);
+        }
+        .rank-badge .small{
+            display:block;
+            font-size:8px;
+            font-weight:900;
+            color:var(--text-low);
+            text-transform:uppercase;
+            letter-spacing:.08em;
+            margin-bottom:2px;
+        }
+        .score-row{
+            display:grid;
+            grid-template-columns:repeat(4,1fr);
+            gap:8px;
+            margin-bottom:12px;
+        }
+        .score-box{
+            background:rgba(0,0,0,.20);
+            border:1px solid var(--bd-1);
+            border-radius:12px;
+            padding:9px 10px;
+        }
+        .score-box .label{
+            font-size:9px;
+            font-weight:900;
+            color:var(--text-low);
+            text-transform:uppercase;
+            letter-spacing:.07em;
+            margin-bottom:4px;
+        }
+        .score-box .value{
+            font-size:15px;
+            font-weight:900;
+            color:var(--text-hi);
+        }
+        .score-box .value.gold{color:var(--gold-300)}
+        .score-box .value.cyan{color:var(--cyan-300)}
+        .component-grid{
+            display:grid;
+            grid-template-columns:repeat(4,1fr);
+            gap:7px;
+        }
+        .component-chip{
+            background:rgba(255,255,255,.035);
+            border:1px solid var(--bd-1);
+            border-radius:10px;
+            padding:8px 9px;
+            display:flex;
+            justify-content:space-between;
+            gap:8px;
+            align-items:center;
+        }
+        .component-chip span:first-child{
+            font-size:10px;
+            font-weight:800;
+            color:var(--text-mid);
+        }
+        .component-chip span:last-child{
+            font-size:12px;
+            font-weight:900;
+            color:var(--cyan-300);
+        }
+        .bonus-line{
+            margin-top:10px;
+            padding-top:10px;
+            border-top:1px dashed var(--bd-1);
+            font-size:11px;
+            color:var(--text-mid);
+            display:flex;
+            gap:8px;
+            flex-wrap:wrap;
+            align-items:center;
+        }
+        @media(max-width:768px){
+            .result-filter-wrap{grid-template-columns:1fr}
+            .score-row{grid-template-columns:repeat(2,1fr)}
+            .component-grid{grid-template-columns:repeat(2,1fr)}
+        }
+</style>
 </head>
 <body>
     <div class="app-shell">
@@ -141,6 +337,13 @@
     </div>
 
 <script>
+    var hasilData = {
+        results: [],
+        mvp: [],
+        activeResultGroup: 'all',
+        activeMvpGroup: 'all'
+    };
+
     function escapeHtml(str){
         if(str === null || str === undefined) return '';
         return String(str)
@@ -150,17 +353,21 @@
             .replace(/"/g,'&quot;');
     }
 
+    function formatNumber(n){
+        n = parseFloat(n || 0);
+        if(Number.isInteger(n)) return String(n);
+        return n.toFixed(2).replace(/\.00$/, '');
+    }
+
     function formatJuara(pos){
         pos = parseInt(pos || 0, 10);
 
         if(pos === 1){
             return '<span class="result-juara j1"><i class="fas fa-medal" style="color:#FFD700;font-size:16px;"></i> 1</span>';
         }
-
         if(pos === 2){
             return '<span class="result-juara j2"><i class="fas fa-medal" style="color:#C0C0C0;font-size:16px;"></i> 2</span>';
         }
-
         if(pos === 3){
             return '<span class="result-juara j3"><i class="fas fa-medal" style="color:#CD7F32;font-size:16px;"></i> 3</span>';
         }
@@ -168,11 +375,40 @@
         return '<span class="result-juara j4plus">' + (pos > 0 ? pos : '-') + '</span>';
     }
 
+    function groupKey(item){
+        return item.group_key || ((item.kategori || '-') + '|' + (item.kelas || '-'));
+    }
+
+    function groupLabel(item){
+        if(item.group_label) return item.group_label;
+
+        var kategori = item.kategori || '-';
+        var kelas = item.kelas || '-';
+
+        if(kategori === 'Bonsai' || kategori === 'Jumbo' || kelas === '-' || kelas === ''){
+            return kategori;
+        }
+
+        return kategori + ' - Kelas ' + kelas;
+    }
+
+    function uniqueGroups(items){
+        var map = {};
+
+        items.forEach(function(item){
+            map[groupKey(item)] = groupLabel(item);
+        });
+
+        return Object.keys(map)
+            .map(function(k){ return {key:k, label:map[k]}; })
+            .sort(function(a,b){ return a.label.localeCompare(b.label); });
+    }
+
     function formatBonusList(list){
         list = Array.isArray(list) ? list : [];
 
         if(list.length === 0){
-            return '<span style="color:var(--text-low);">Tidak ada bonus</span>';
+            return '<span style="color:var(--text-low);font-weight:700;">Tidak ada bonus</span>';
         }
 
         var labels = {
@@ -192,22 +428,126 @@
         }).join('');
     }
 
+    function renderComponentSubtotals(subtotals){
+        var order = ['overall','head','face','body','marking','pearl','color','finnage'];
+
+        subtotals = subtotals || {};
+
+        return '<div class="component-grid">' + order.map(function(k){
+            var item = subtotals[k] || {};
+            var label = item.label || k;
+            var value = item.value || 0;
+
+            return '<div class="component-chip">' +
+                '<span>' + escapeHtml(label) + '</span>' +
+                '<span>' + formatNumber(value) + '</span>' +
+            '</div>';
+        }).join('') + '</div>';
+    }
+
+    function buildFilters(){
+        var resultGroups = uniqueGroups(hasilData.results);
+        var mvpGroups = uniqueGroups(hasilData.mvp);
+
+        var html = '';
+
+        html += '<div class="result-filter-wrap">';
+
+        html += '<div class="result-filter-card">';
+        html += '<label><i class="fas fa-trophy"></i> Filter Hasil Juara</label>';
+        html += '<select id="filterHasilGroup" onchange="onFilterHasilChange()">';
+        html += '<option value="all">Semua Kategori & Kelas</option>';
+        resultGroups.forEach(function(g){
+            html += '<option value="'+escapeHtml(g.key)+'">'+escapeHtml(g.label)+'</option>';
+        });
+        html += '</select>';
+        html += '</div>';
+
+        html += '<div class="result-filter-card">';
+        html += '<label><i class="fas fa-star"></i> Filter MVP</label>';
+        html += '<select id="filterMvpGroup" onchange="onFilterMvpChange()">';
+        html += '<option value="all">Semua Kategori & Kelas MVP</option>';
+        mvpGroups.forEach(function(g){
+            html += '<option value="'+escapeHtml(g.key)+'">'+escapeHtml(g.label)+'</option>';
+        });
+        html += '</select>';
+        html += '</div>';
+
+        html += '</div>';
+
+        return html;
+    }
+
+    function onFilterHasilChange(){
+        hasilData.activeResultGroup = document.getElementById('filterHasilGroup').value || 'all';
+        renderPage();
+    }
+
+    function onFilterMvpChange(){
+        hasilData.activeMvpGroup = document.getElementById('filterMvpGroup').value || 'all';
+        renderPage();
+    }
+
+    function renderResultCard(r){
+        return '<div class="simple-result-card">' +
+            '<div class="simple-result-top">' +
+                '<div class="simple-result-title">' +
+                    '<h4>Tank ' + escapeHtml(r.nomor_tank || '-') + ' · ' + escapeHtml(groupLabel(r)) + '</h4>' +
+                    '<p>' + escapeHtml(r.detail_anggota || '-') + '</p>' +
+                '</div>' +
+                '<div class="rank-badge">' +
+                    '<span class="small">Juara</span>' +
+                    formatJuara(r.position) +
+                '</div>' +
+            '</div>' +
+
+            '<div class="score-row">' +
+                '<div class="score-box"><div class="label">Total Point</div><div class="value cyan">'+formatNumber(r.point || 0)+'</div></div>' +
+                '<div class="score-box"><div class="label">Rank Point</div><div class="value gold">'+formatNumber(r.rank_point || 0)+'</div></div>' +
+                '<div class="score-box"><div class="label">Bonus</div><div class="value">'+formatNumber(r.total_bonus || 0)+'</div></div>' +
+                '<div class="score-box"><div class="label">Final</div><div class="value gold">'+formatNumber((parseFloat(r.rank_point || 0) + parseFloat(r.total_bonus || 0)))+'</div></div>' +
+            '</div>' +
+
+            renderComponentSubtotals(r.component_subtotals) +
+        '</div>';
+    }
+
+    function renderMvpCard(m){
+        return '<div class="simple-result-card mvp">' +
+            '<div class="simple-result-top">' +
+                '<div class="simple-result-title">' +
+                    '<h4>Tank ' + escapeHtml(m.nomor_tank || '-') + ' · MVP · ' + escapeHtml(groupLabel(m)) + '</h4>' +
+                    '<p>' + escapeHtml(m.nama_peserta || '-') + ' · ' + escapeHtml(m.detail_anggota || '-') + '</p>' +
+                '</div>' +
+                '<div class="rank-badge" style="background:rgba(245,158,11,.10);border-color:rgba(245,158,11,.25);">' +
+                    '<span class="small">Posisi</span>' +
+                    formatJuara(m.position) +
+                '</div>' +
+            '</div>' +
+
+            '<div class="score-row">' +
+                '<div class="score-box"><div class="label">Rank Point</div><div class="value gold">'+formatNumber(m.rank_point || 0)+'</div></div>' +
+                '<div class="score-box"><div class="label">Bonus Point</div><div class="value cyan">+'+formatNumber(m.total_bonus || 0)+'</div></div>' +
+                '<div class="score-box"><div class="label">Final MVP</div><div class="value gold">'+formatNumber(m.final_rank_point || 0)+'</div></div>' +
+                '<div class="score-box"><div class="label">Kategori</div><div class="value">'+escapeHtml(groupLabel(m))+'</div></div>' +
+            '</div>' +
+
+            renderComponentSubtotals(m.component_subtotals) +
+
+            '<div class="bonus-line">' +
+                '<b style="color:var(--text-hi);">Detail Bonus:</b> ' + formatBonusList(m.bonus_list) +
+            '</div>' +
+        '</div>';
+    }
+
     function renderEmptyState(data){
         var resultUnlocked = !!(data && data.result_unlocked);
-        var debug = data && data.result_debug ? data.result_debug : {};
 
         if(resultUnlocked){
             return '<div class="empty-state" style="padding:50px 20px;">'+
                 '<div style="width:80px;height:80px;border-radius:50%;background:var(--glass-2);border:1px solid var(--bd-2);display:grid;place-items:center;margin:0 auto 16px;color:var(--warning);font-size:32px;"><i class="fas fa-circle-exclamation"></i></div>'+
                 '<p style="font-size:14px;font-weight:700;color:var(--text-mid);margin-bottom:6px;">Akses Hasil Sudah Dibuka</p>'+
                 '<p style="font-size:12px;color:var(--text-low);max-width:390px;margin:0 auto;line-height:1.6;">Tetapi belum ada ikan Anda yang memenuhi syarat hasil juara. Syaratnya: punya nomor tank, sudah dinilai, dan sudah dikunci/final oleh Grand Juri/Admin.</p>'+
-                '<div style="margin:16px auto 0;max-width:390px;text-align:left;background:rgba(255,255,255,.04);border:1px solid var(--bd-1);border-radius:12px;padding:12px 14px;font-size:11px;color:var(--text-mid);line-height:1.8;">'+
-                    '<div><b>Total ikan:</b> '+escapeHtml(debug.total_ikan_user || 0)+'</div>'+
-                    '<div><b>Ikan terkunci:</b> '+escapeHtml(debug.ikan_terkunci || 0)+'</div>'+
-                    '<div><b>Ikan punya nomor tank:</b> '+escapeHtml(debug.ikan_punya_nomor_tank || 0)+'</div>'+
-                    '<div><b>Ikan punya scoring:</b> '+escapeHtml(debug.ikan_punya_scoring || 0)+'</div>'+
-                    '<div><b>Ikan final layak tampil:</b> '+escapeHtml(debug.ikan_final_layak_tampil || 0)+'</div>'+
-                '</div>'+
             '</div>';
         }
 
@@ -218,82 +558,72 @@
         '</div>';
     }
 
-    function renderHasilJuara(results){
-        var html = '';
+    function renderPage(){
+        var body = document.getElementById('hasilJuaraBody');
 
-        results.forEach(function(r){
-            html += '<div class="result-item">';
-            html += '<div class="result-header">';
-            html += '<div class="result-kategori"><i class="fas fa-tag" style="font-size:10px;"></i> '+escapeHtml(r.kategori || '-')+' - Kelas '+escapeHtml(r.kelas || '-')+'</div>';
-            html += formatJuara(r.position);
-            html += '</div>';
+        var results = hasilData.results.slice();
+        var mvp = hasilData.mvp.slice();
 
-            html += '<div class="result-grid">';
-            html += '<div><div class="rg-label">Asal / Team</div><div class="rg-val">'+escapeHtml(r.detail_anggota || '-')+'</div></div>';
-            html += '<div><div class="rg-label">No. Tank</div><div class="rg-val cyan">Tank '+escapeHtml(r.nomor_tank || '-')+'</div></div>';
-            html += '<div><div class="rg-label">Point</div><div class="rg-val">'+escapeHtml(r.point || r.total_point || 0)+'</div></div>';
-            html += '<div><div class="rg-label">Rank Point</div><div class="rg-val gold">'+escapeHtml(r.rank_point || 0)+'</div></div>';
-            html += '</div>';
-
-            html += '</div>';
-        });
-
-        return html;
-    }
-
-    function renderMvpResults(mvpResults){
-        var html = '';
-
-        if(!mvpResults || mvpResults.length === 0){
-            return html;
+        if(hasilData.activeResultGroup !== 'all'){
+            results = results.filter(function(r){ return groupKey(r) === hasilData.activeResultGroup; });
         }
 
-        html += '<div style="margin:24px 0 12px;padding-top:18px;border-top:1px solid var(--bd-2);">';
-        html += '<h3 style="font-size:14px;font-weight:900;color:var(--gold-300);display:flex;align-items:center;gap:8px;margin-bottom:8px;"><i class="fas fa-star"></i> Data MVP Team Anda</h3>';
-        html += '<p style="font-size:11px;color:var(--text-mid);margin-bottom:12px;">Data MVP ini hanya menampilkan ikan MVP yang didaftarkan oleh akun/team Anda sendiri.</p>';
+        if(hasilData.activeMvpGroup !== 'all'){
+            mvp = mvp.filter(function(r){ return groupKey(r) === hasilData.activeMvpGroup; });
+        }
+
+        var html = '';
+
+        html += buildFilters();
+
+        html += '<div class="result-section-title">';
+        html += '<h3><i class="fas fa-trophy" style="color:#6EE7B7;"></i> Pengumuman Hasil Juara</h3>';
+        html += '<span class="result-count-pill">'+results.length+' data</span>';
         html += '</div>';
 
-        mvpResults.forEach(function(m){
-            html += '<div class="result-item" style="background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.22);">';
-            html += '<div class="result-header">';
-            html += '<div class="result-kategori" style="color:var(--gold-300);"><i class="fas fa-fish"></i> MVP - '+escapeHtml(m.kategori || '-')+' - Kelas '+escapeHtml(m.kelas || '-')+'</div>';
-            html += formatJuara(m.position);
-            html += '</div>';
+        if(results.length > 0){
+            html += results.map(renderResultCard).join('');
+        } else {
+            html += '<div class="empty-state" style="padding:26px 10px;"><i class="fas fa-folder-open"></i><p>Tidak ada hasil juara pada filter ini.</p></div>';
+        }
 
-            html += '<div class="result-grid">';
-            html += '<div><div class="rg-label">Nama Peserta</div><div class="rg-val">'+escapeHtml(m.nama_peserta || '-')+'</div></div>';
-            html += '<div><div class="rg-label">No. Tank</div><div class="rg-val cyan">Tank '+escapeHtml(m.nomor_tank || '-')+'</div></div>';
-            html += '<div><div class="rg-label">Rank Point</div><div class="rg-val gold">'+escapeHtml(m.rank_point || 0)+'</div></div>';
-            html += '<div><div class="rg-label">Bonus Point</div><div class="rg-val" style="color:#6EE7B7;">+'+escapeHtml(m.total_bonus || 0)+'</div></div>';
-            html += '<div><div class="rg-label">Final Rank Point</div><div class="rg-val gold">'+escapeHtml(m.final_rank_point || 0)+'</div></div>';
-            html += '<div><div class="rg-label">Detail Bonus</div><div class="rg-val">'+formatBonusList(m.bonus_list)+'</div></div>';
-            html += '</div>';
+        html += '<div class="result-section-title">';
+        html += '<h3><i class="fas fa-star" style="color:var(--gold-300);"></i> Data MVP Team Anda</h3>';
+        html += '<span class="result-count-pill">'+mvp.length+' MVP</span>';
+        html += '</div>';
 
-            html += '</div>';
-        });
+        if(mvp.length > 0){
+            html += mvp.map(renderMvpCard).join('');
+        } else {
+            html += '<div class="empty-state" style="padding:26px 10px;"><i class="fas fa-star-half-stroke"></i><p>Tidak ada data MVP pada filter ini.</p></div>';
+        }
 
-        return html;
+        body.innerHTML = html;
+
+        var f1 = document.getElementById('filterHasilGroup');
+        var f2 = document.getElementById('filterMvpGroup');
+
+        if(f1) f1.value = hasilData.activeResultGroup;
+        if(f2) f2.value = hasilData.activeMvpGroup;
     }
 
     function loadHasilJuara(){
         var body = document.getElementById('hasilJuaraBody');
 
         fetch('/api/user/my-ikans?_t=' + Date.now(), {
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+            headers:{
+                'Accept':'application/json',
+                'X-Requested-With':'XMLHttpRequest'
             }
         })
         .then(function(r){
             if(r.status === 401){
-                window.location.href = '/login';
+                window.location.href='/login';
                 return null;
             }
 
             if(!r.ok){
-                return r.json().then(function(d){
-                    throw d;
-                });
+                return r.json().then(function(d){ throw d; });
             }
 
             return r.json();
@@ -304,38 +634,27 @@
                 return;
             }
 
-            console.log('HASIL JUARA RESPONSE:', data);
+            hasilData.results = Array.isArray(data.my_results) ? data.my_results : [];
+            hasilData.mvp = Array.isArray(data.my_mvp_results) ? data.my_mvp_results : [];
 
-            var results = Array.isArray(data.my_results) ? data.my_results : [];
-            var mvpResults = Array.isArray(data.my_mvp_results) ? data.my_mvp_results : [];
-
-            if(results.length === 0 && mvpResults.length === 0){
+            if(hasilData.results.length === 0 && hasilData.mvp.length === 0){
                 body.innerHTML = renderEmptyState(data);
                 return;
             }
 
-            var html = '';
+            hasilData.activeResultGroup = 'all';
+            hasilData.activeMvpGroup = 'all';
 
-            if(results.length > 0){
-                html += renderHasilJuara(results);
-            }
-
-            if(mvpResults.length > 0){
-                html += renderMvpResults(mvpResults);
-            }
-
-            body.innerHTML = html;
+            renderPage();
         })
         .catch(function(e){
             console.error('loadHasilJuara error:', e);
 
-            var msg = e && e.message ? e.message : 'Gagal memuat data hasil.';
-
-            body.innerHTML = '<div class="empty-state">'+
-                '<i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i>'+
-                '<p style="color:var(--danger);font-weight:700;">Gagal memuat data hasil.</p>'+
-                '<p style="font-size:11px;color:var(--text-low);margin-top:6px;">'+escapeHtml(msg)+'</p>'+
-            '</div>';
+            body.innerHTML =
+                '<div class="empty-state">' +
+                    '<i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i>' +
+                    '<p style="color:var(--danger);font-weight:700;">Gagal memuat data hasil.</p>' +
+                '</div>';
         });
     }
 
