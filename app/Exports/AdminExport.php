@@ -28,7 +28,8 @@ class AdminExport implements WithMultipleSheets
         if ($this->sheets === 'all') {
             $result[] = new AdminDaftarIkanSheet();
             $result[] = new AdminUserDetailSheet();
-            $result[] = new MvpIkanSheet();
+            $result[] = new MvpIkanSheet('team');
+            $result[] = new MvpIkanSheet('perorangan');
             $result[] = new PointRankingSheet($rankingScope);
             $result[] = new RumusPenilaianSheet();
             $result[] = new NominasiSheet();
@@ -38,7 +39,8 @@ class AdminExport implements WithMultipleSheets
         } elseif ($this->sheets === 'users') {
             $result[] = new AdminUserDetailSheet();
         } elseif ($this->sheets === 'mvp') {
-            $result[] = new MvpIkanSheet();
+            $result[] = new MvpIkanSheet('team');
+            $result[] = new MvpIkanSheet('perorangan');
         } elseif ($this->sheets === 'ranking_kk') {
             $result[] = new PointRankingSheet('per_kategori_kelas');
         } elseif ($this->sheets === 'ranking_k') {

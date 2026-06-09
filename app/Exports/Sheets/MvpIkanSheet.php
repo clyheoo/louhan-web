@@ -14,9 +14,16 @@ use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class MvpIkanSheet implements WithTitle, WithEvents
 {
+    private $type;
+
+    public function __construct(string $type = 'team')
+    {
+        $this->type = $type; // 'team' atau 'perorangan'
+    }
+
     public function title(): string
     {
-        return 'DATA IKAN MVP';
+        return $this->type === 'team' ? 'MVP TEAM / CLUB' : 'MVP PERORANGAN';
     }
 
     public function registerEvents(): array
@@ -38,19 +45,29 @@ class MvpIkanSheet implements WithTitle, WithEvents
                 ];
 
                 // ═══════════════════════════════════════════════════════
-                // 2. DATA RETRIEVAL & RANK CACHE (SAMA PERSIS DENGAN syncMvp)
+                // 2. DATA RETRIEVAL & RANK CACHE
                 // ═══════════════════════════════════════════════════════
-                $mvpIkans = Ikan::where('is_mvp', true)
+                $query = Ikan::where('is_mvp', true)
                     ->whereHas('peserta', fn($q) => $q->where('is_mvp_submitted', true))
-                    ->with(['peserta', 'bonusPoints', 'scorings'])
-                    ->get();
+                    ->with(['peserta', 'bonusPoints', 'scorings']);
+
+                // Filter berdasarkan jenis keanggotaan
+                if ($this->type === 'team') {
+                    $query->where('jenis_keanggotaan', 'team');
+                } else {
+                    $query->where(function($q) {
+                        $q->where('jenis_keanggotaan', '!=', 'team')->orWhereNull('jenis_keanggotaan');
+                    });
+                }
+
+                $mvpIkans = $query->get();
 
                 if ($mvpIkans->isEmpty()) {
-                    $sheet->setCellValue('A1', 'Tidak ada data MVP.');
+                    $sheet->setCellValue('A1', 'Tidak ada data MVP untuk kategori ini.');
                     return;
                 }
 
-                // Build Rank Cache per (kategori|kelas)
+                // Build Rank Cache per (kategori|kelas) - SAMA PERSIS DENGAN SHEETSSYNCSERVICE
                 $combos = $mvpIkans->map(fn($i) => $i->kategori . '|' . ($i->kelas ?? '-'))->unique()->values();
                 $rankCache = [];
 
@@ -98,14 +115,11 @@ class MvpIkanSheet implements WithTitle, WithEvents
                             }
                         }
 
-                        // ★ LOGIKA DEFECT SAMA DENGAN SHEETSSYNCSERVICE (Prioritas Grand Juri)
                         $grandEdited  = $pi->scorings->first(fn($s) => $s->edited_by_grand_juri);
                         $defectSource = $grandEdited ?: $pi->scorings->sortByDesc('updated_at')->first();
                         $merged = [
-                            'raw_head_penalty'    => ['0'],
-                            'raw_face_penalty'    => ['0'],
-                            'raw_body_penalty'    => ['0'],
-                            'raw_finnage_penalty' => ['0'],
+                            'raw_head_penalty'    => ['0'], 'raw_face_penalty'    => ['0'],
+                            'raw_body_penalty'    => ['0'], 'raw_finnage_penalty' => ['0'],
                         ];
                         if ($defectSource) {
                             $merged['raw_head_penalty']    = $defectSource->raw_head_penalty    ?: ['0'];
@@ -126,7 +140,7 @@ class MvpIkanSheet implements WithTitle, WithEvents
                     foreach ($ranked as $idx => $r) {
                         $cache[$r['ikan_id']] = [
                             'rank_point' => $r['rank_point'],
-                            'position'   => $idx + 1, // Re-sort position
+                            'position'   => $idx + 1,
                         ];
                     }
                     $rankCache[$combo] = $cache;
@@ -137,23 +151,21 @@ class MvpIkanSheet implements WithTitle, WithEvents
                 // ═══════════════════════════════════════════════════════
                 $groups = $mvpIkans->groupBy(function ($ikan) {
                     $key = trim($ikan->detail_anggota ?? '');
-                    return $key === '' ? '(Tanpa Kota/Team)' : $key;
+                    return $key === '' ? '(Tanpa Asal)' : $key;
                 });
 
                 $bonusLabels = [
-                    'best_of_the_best' => 'BEST OF THE BEST',
-                    'best_of_show'     => 'BEST OF SHOW',
-                    'grand_champion'   => 'GRAND CHAMPION',
-                    'young_champion'   => 'YOUNG CHAMPION',
-                    'junior'           => 'JUNIOR',
-                    'baby_champion'    => 'BABY CHAMPION',
+                    'best_of_the_best' => 'BEST OF THE BEST', 'best_of_show' => 'BEST OF SHOW',
+                    'grand_champion'   => 'GRAND CHAMPION',   'young_champion' => 'YOUNG CHAMPION',
+                    'junior'           => 'JUNIOR',            'baby_champion'  => 'BABY CHAMPION',
                     'mini_champion'    => 'MINI CHAMPION',
                 ];
 
+                $maxDataRows = $this->type === 'team' ? 35 : 15;
+                $prefix = $this->type === 'team' ? 'Team/Club' : 'Perorangan';
+
                 $teamData = [];
                 foreach ($groups as $detailAnggota => $items) {
-                    $jenis  = strtolower(trim($items->first()->jenis_keanggotaan ?? 'perorangan'));
-                    $prefix = ($jenis === 'team') ? 'Team/Club' : 'Kota';
                     $headerText = $prefix . ' - ' . $detailAnggota;
 
                     $rows = [];
@@ -164,6 +176,8 @@ class MvpIkanSheet implements WithTitle, WithEvents
                     $sorted = $items->sortBy(fn($ikan) => $ikan->nomor_tank ?? 99999);
 
                     foreach ($sorted as $ikan) {
+                        if ($no > $maxDataRows) break; // Batasi maksimal ikan per grup tabel
+
                         $combo    = $ikan->kategori . '|' . ($ikan->kelas ?? '-');
                         $rankInfo = $rankCache[$combo][$ikan->id] ?? ['rank_point' => 0, 'position' => 0];
                         $rankPt   = (int) $rankInfo['rank_point'];
@@ -177,32 +191,23 @@ class MvpIkanSheet implements WithTitle, WithEvents
                         $kelasDisp    = in_array($ikan->kategori, ['Bonsai', 'Jumbo']) ? '' : ($ikan->kelas ?? '');
                         $katKelasDisp = strtoupper($ikan->kategori ?? '') . ($kelasDisp ? ' ' . $kelasDisp : '');
 
-                        // ★ NO TANK MULTI-LINE (Tank + Juara N)
                         $tankCell = (string) ($ikan->nomor_tank ?? '');
                         if ($position >= 1 && $position <= 10 && $final > 0) {
                             $tankCell .= "\nJuara " . $position;
                         }
 
-                        $rows[] = [
-                            $no,
-                            $ikan->nama_peserta ?? '—',
-                            $katKelasDisp,
-                            $tankCell,
-                            $final,
-                        ];
+                        $rows[] = [ $no, $ikan->nama_peserta ?? '—', $katKelasDisp, $tankCell, $final ];
 
-                        // ★ KETERANGAN BONUS
                         $bonusTypes = $ikan->bonusPoints->pluck('bonus_type')->toArray();
                         if (!empty($bonusTypes)) {
-                            $labels = array_map(function ($t) use ($bonusLabels) {
-                                return $bonusLabels[$t] ?? strtoupper($t);
-                            }, $bonusTypes);
+                            $labels = array_map(fn($t) => $bonusLabels[$t] ?? strtoupper($t), $bonusTypes);
                             $bonusDescParts[] = '[Tank ' . ($ikan->nomor_tank ?? '?') . '] ' . implode(', ', $labels) . ' (+' . $bonus . ')';
                         }
                         $no++;
                     }
 
-                    $tableHeight = 2 + count($rows) + 1 + 1; // Header + SubHeader + Rows + Total + Keterangan
+                    // Table Height = Header + SubHeader + MaxDataRows + Total + Keterangan
+                    $tableHeight = 2 + $maxDataRows + 1 + 1;
 
                     $teamData[] = [
                         'header'       => $headerText,
@@ -253,7 +258,7 @@ class MvpIkanSheet implements WithTitle, WithEvents
                         $colLetterStart = Coordinate::stringFromColumnIndex($cs + 1);
                         $colLetterEnd   = Coordinate::stringFromColumnIndex($cs + $COLS_PER_TABLE);
 
-                        // Baris 1: Header (Merge + Style)
+                        // Baris 1: Header
                         $sheet->mergeCells("{$colLetterStart}{$currentRow}:{$colLetterEnd}{$currentRow}");
                         $sheet->setCellValue("{$colLetterStart}{$currentRow}", $data['header']);
                         $sheet->getStyle("{$colLetterStart}{$currentRow}:{$colLetterEnd}{$currentRow}")->applyFromArray([
@@ -271,14 +276,16 @@ class MvpIkanSheet implements WithTitle, WithEvents
                         }
                         $sheet->getStyle("{$colLetterStart}{$subRow}:{$colLetterEnd}{$subRow}")->applyFromArray($styleHeader);
 
-                        // Baris 3+: Data Ikan
+                        // Baris 3+: Data Ikan (Fixed height sesuai $maxDataRows)
                         $dataRow = $subRow + 1;
-                        foreach ($data['rows'] as $rowArr) {
+                        for ($i = 0; $i < $maxDataRows; $i++) {
+                            $rowArr = $data['rows'][$i] ?? [null, null, null, null, null]; // Pad with nulls
                             foreach ($rowArr as $ci => $val) {
                                 $colLetter = Coordinate::stringFromColumnIndex($cs + $ci + 1);
                                 $sheet->setCellValue("{$colLetter}{$dataRow}", $val);
                             }
-                            // Wrap text untuk kolom NO TANK (index 3)
+                            
+                            // Wrap text untuk kolom NO TANK
                             $tankColLetter = Coordinate::stringFromColumnIndex($cs + 3 + 1);
                             $sheet->getStyle("{$tankColLetter}{$dataRow}")->applyFromArray([
                                 'alignment' => ['wrapText' => true, 'horizontal' => 'center', 'vertical' => 'center'],
