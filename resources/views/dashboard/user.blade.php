@@ -262,7 +262,9 @@
             text-decoration: none;
             font-family: inherit;
         }
-        .btn-logout:hover { background: rgba(239,68,68,0.12); color: #fca5a5; border-color: rgba(239,68,68,0.35); }
+        .btn-logout:hover { background: rgba(239,68,68,0.12); color: #fca5a5; border-color: rgba(239,68,68,0.35); 
+        }
+        .nav-actions{display:flex;align-items:center;gap:7px;flex-shrink:0;}
 
         /* ====================================================
            MAIN CONTENT
@@ -1249,6 +1251,7 @@
                 gap: 7px;
                 flex-shrink: 0;
             }
+            .nav-actions{width:100%;justify-content:center;}
             .user-card {
                 padding: 5px 12px 5px 5px;
                 gap: 9px;
@@ -1452,7 +1455,6 @@
             </div>
 
             <div class="nav-user">
-                <a href="{{ route('hasil-juara') }}" class="btn-nav gold" title="Lihat Hasil Juara"><i class="fas fa-trophy"></i> Hasil Juara</a>
                 <div class="user-card">
                     <div class="avatar">{{ $initial ?: 'P' }}</div>
                     <div class="user-info">
@@ -1460,10 +1462,13 @@
                         <span>Peserta Kontes</span>
                     </div>
                 </div>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="btn-logout"><i class="fas fa-right-from-bracket"></i> Keluar</button>
-                </form>
+                <div class="nav-actions">
+                    <a href="{{ route('hasil-juara') }}" class="btn-logout" style="background:rgba(245,158,11,.12);color:var(--gold-300);border-color:rgba(245,158,11,.35);text-decoration:none;" onmouseover="this.style.background='var(--warning)';this.style.color='#fff'" onmouseout="this.style.background='rgba(245,158,11,.12)';this.style.color='var(--gold-300)'" title="Lihat Hasil Juara"><i class="fas fa-trophy"></i> Hasil Juara</a>
+                    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+                        @csrf
+                        <button type="submit" class="btn-logout"><i class="fas fa-right-from-bracket"></i> Keluar</button>
+                    </form>
+                </div>
             </div>
         </nav>
 

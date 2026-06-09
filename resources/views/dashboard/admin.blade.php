@@ -1150,8 +1150,8 @@
                             <div class="card-sub">Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)</div>
                         </div>
                         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                            <span id="kunciStatusBadge" style="font-size:10px;font-weight:800;padding:5px 12px;border-radius:999px;background:var(--glass-3);color:var(--text-mid);border:1px solid var(--bd-2);display:none;align-items:center;gap:5px;"></span>
-                            <button id="btnKunciSemua" onclick="kunciSemuaAdmin()" style="padding:10px 18px;border:none;border-radius:12px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#FBBF24,#D97706);color:#fff;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 14px -4px rgba(245,158,11,.6),inset 0 1px 0 rgba(255,255,255,.2);transition:all .2s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 20px -6px rgba(245,158,11,.7),inset 0 1px 0 rgba(255,255,255,.2)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px -4px rgba(245,158,11,.6),inset 0 1px 0 rgba(255,255,255,.2)'">
+                            <span id="kunciStatusBadge" style="font-size:10px;font-weight:800;padding:5px 12px;border-radius:999px;display:none;align-items:center;gap:5px;transition:all .2s;"></span>
+                            <button id="btnKunciSemua" onclick="kunciSemuaAdmin()" style="padding:10px 18px;border:none;border-radius:12px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#fff;display:inline-flex;align-items:center;gap:8px;transition:all .2s;">
                                 <i class="fas fa-lock"></i> <span id="btnKunciSemuaText">KUNCI SEMUA PESERTA</span>
                             </button>
                         </div>

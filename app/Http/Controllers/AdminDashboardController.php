@@ -2339,17 +2339,22 @@ class AdminDashboardController extends Controller
             $u = $p->user;
             if (!$u) return null;
             $lockedCount = $p->ikans()->where('is_locked', true)->count();
-            return [
-                'id'                 => $u->id,
-                'name'               => $u->name,
-                'email'              => $u->email,
-                'has_peserta'        => true,
-                'result_unlocked'    => $p->result_unlocked_at !== null,
-                'result_unlocked_at' => $p->result_unlocked_at
-                    ? $p->result_unlocked_at->format('d M Y H:i')
-                    : null,
-                'locked_ikan_count'  => $lockedCount,
-            ];
+                return [
+                    'id'                 => $u->id,
+                    'name'               => $u->name,
+                    'email'              => $u->email,
+                    'has_peserta'        => true,
+                    'result_unlocked'    => $p->result_unlocked_at !== null,
+                    'result_unlocked_at' => $p->result_unlocked_at
+                        ? $p->result_unlocked_at->format('d M Y H:i')
+                        : null,
+                    'locked_ikan_count'  => $lockedCount,
+                    'jenis_keanggotaan'  => $p->jenis_keanggotaan ?? 'perorangan',
+                    'detail_anggota'     => $p->detail_anggota ?? '-',
+                    'display_name'       => ($p->jenis_keanggotaan === 'team' && $p->detail_anggota)
+                        ? $p->detail_anggota
+                        : ($p->nama_peserta ?: $u->name),
+                ];
         })->filter()->values();
 
         $totalPublished = Peserta::whereNotNull('result_unlocked_at')->count();
@@ -2359,6 +2364,15 @@ class AdminDashboardController extends Controller
             'users'           => $users,
             'total_published' => $totalPublished,
             'total_peserta'   => $totalPeserta,
+        ]);
+    }
+
+    public function bukaSemuaKunci()
+    {
+        $count = Ikan::where('is_locked', true)->update(['is_locked' => false]);
+        return response()->json([
+            'success' => true,
+            'message' => $count . ' ikan berhasil dibuka kuncinya.',
         ]);
     }
 

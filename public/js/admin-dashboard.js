@@ -894,50 +894,79 @@ function kunciNilaiAdmin(ikanId){
 }
 
 function kunciSemuaAdmin(){
-    popupConfirm(
-        'Kunci Semua Peserta?',
-        'Tindakan ini akan <b>MENGUNCI SEMUA peserta</b> yang sudah dinilai tetapi belum terkunci. Setelah dikunci, nilai tidak dapat diubah lagi.<br><br>Lanjutkan?',
-        'Ya, Kunci Semua',
-        function(){
-            var btn=document.getElementById('btnKunciSemua');
-            var orig=btn?btn.innerHTML:'';
-            if(btn){
-                btn.disabled=true;
-                btn.style.opacity='0.65';
-                btn.style.cursor='wait';
-                btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> MENGUNCI...';
+    var badge = document.getElementById('kunciStatusBadge');
+    var btn = document.getElementById('btnKunciSemua');
+    var isAllLocked = badge && badge.innerHTML.indexOf('TERKUNCI') !== -1;
+
+    if(isAllLocked){
+        popupConfirm(
+            'Buka Semua Kunci?',
+            'Tindakan ini akan <b>MEMBUKA KUNCI SEMUA peserta</b> yang sudah terkunci. Setelah dibuka, nilai dapat diubah kembali oleh Grand Juri.<br><br>Lanjutkan?',
+            'Ya, Buka Semua',
+            function(){
+                btn.disabled=true; btn.style.opacity='0.65'; btn.style.cursor='wait';
+                btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> MEMBUKA...';
+                fetch('/api/admin/buka-semua-kunci',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+                    body:JSON.stringify({_token:getCsrf()})
+                })
+                .then(function(r){return r.json();})
+                .then(function(d){
+                    btn.disabled=false; btn.style.opacity=''; btn.style.cursor='';
+                    if(d.success){
+                        updateKunciUI(false, 0, 0); // Instant update ke state terbuka
+                        popupSuccess('Berhasil!',d.message);
+                        if(typeof loadAdminPointRanking==='function') loadAdminPointRanking();
+                        if(typeof loadScoringData==='function') loadScoringData();
+                        if(typeof loadDashboard==='function') loadDashboard();
+                    } else {
+                        updateKunciUI(true, 0, 0); // Revert ke state terkunci
+                        popupError('Gagal',d.message||'Tidak dapat membuka kunci.');
+                    }
+                })
+                .catch(function(){
+                    btn.disabled=false; btn.style.opacity=''; btn.style.cursor='';
+                    updateKunciUI(true, 0, 0);
+                    popupError('Kesalahan Jaringan','Gagal menghubungi server.');
+                });
             }
-            var restore=function(){
-                if(btn){
-                    btn.disabled=false;
-                    btn.style.opacity='';
-                    btn.style.cursor='';
-                    btn.innerHTML=orig;
-                }
-            };
-            fetch('/api/grand-juri/kunci-semua',{
-                method:'POST',
-                headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
-                body:JSON.stringify({_token:getCsrf()})
-            })
-            .then(function(r){return r.json();})
-            .then(function(d){
-                if(d.success){
-                    popupSuccess('Berhasil!',d.message);
-                    if(typeof loadAdminPointRanking==='function') loadAdminPointRanking();
-                    if(typeof loadScoringData==='function') loadScoringData();
-                    if(typeof loadDashboard==='function') loadDashboard();
-                } else {
-                    restore();
-                    popupError('Gagal',d.message||'Tidak dapat mengunci.');
-                }
-            })
-            .catch(function(){
-                restore();
-                popupError('Kesalahan Jaringan','Gagal menghubungi server.');
-            });
-        }
-    );
+        );
+    } else {
+        popupConfirm(
+            'Kunci Semua Peserta?',
+            'Tindakan ini akan <b>MENGUNCI SEMUA peserta</b> yang sudah dinilai tetapi belum terkunci. Setelah dikunci, nilai tidak dapat diubah lagi.<br><br>Lanjutkan?',
+            'Ya, Kunci Semua',
+            function(){
+                btn.disabled=true; btn.style.opacity='0.65'; btn.style.cursor='wait';
+                btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> MENGUNCI...';
+                fetch('/api/grand-juri/kunci-semua',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+                    body:JSON.stringify({_token:getCsrf()})
+                })
+                .then(function(r){return r.json();})
+                .then(function(d){
+                    btn.disabled=false; btn.style.opacity=''; btn.style.cursor='';
+                    if(d.success){
+                        updateKunciUI(true, 0, 0); // Instant update ke state terkunci
+                        popupSuccess('Berhasil!',d.message);
+                        if(typeof loadAdminPointRanking==='function') loadAdminPointRanking();
+                        if(typeof loadScoringData==='function') loadScoringData();
+                        if(typeof loadDashboard==='function') loadDashboard();
+                    } else {
+                        updateKunciUI(false, 0, 0); // Revert ke state terbuka
+                        popupError('Gagal',d.message||'Tidak dapat mengunci.');
+                    }
+                })
+                .catch(function(){
+                    btn.disabled=false; btn.style.opacity=''; btn.style.cursor='';
+                    updateKunciUI(false, 0, 0);
+                    popupError('Kesalahan Jaringan','Gagal menghubungi server.');
+                });
+            }
+        );
+    }
 }
 
 document.getElementById('btnSaveEditAdmin').addEventListener('click',submitEditAdmin);
@@ -3310,31 +3339,51 @@ function updateKunciHeaderBadge(groups){
             }
         });
     }
-    var badge = document.getElementById('kunciStatusBadge');
-    var btnText = document.getElementById('btnKunciSemuaText');
+    // Jika semua terkunci -> state LOCKED, jika ada yang terbuka -> state UNLOCKED
+    var isLocked = (totalUnlocked === 0 && totalLocked > 0);
+    updateKunciUI(isLocked, totalLocked, totalUnlocked);
+}
+
+/* ═══ UPDATE UI KUNCI (Mirip MVP Toggle) ═══ */
+function updateKunciUI(isLocked, totalLocked, totalUnlocked){
     var btn = document.getElementById('btnKunciSemua');
-    if(!badge || !btnText || !btn) return;
+    var badge = document.getElementById('kunciStatusBadge');
+    if(!btn) return;
 
-    if(totalLocked + totalUnlocked === 0){
-        badge.style.display = 'none';
-        btnText.textContent = 'KUNCI SEMUA PESERTA';
-        btn.querySelector('i').className = 'fas fa-lock';
-        return;
-    }
+    if(isLocked){
+        // STATE: TERKUNCI -> Tombol merah untuk BUKA
+        btn.innerHTML = '<i class="fas fa-lock-open"></i> BUKA SEMUA KUNCI';
+        btn.style.background = 'var(--danger)';
+        btn.style.boxShadow = '0 3px 10px rgba(239,68,68,.2)';
 
-    badge.style.display = 'inline-flex';
-    if(totalUnlocked > 0){
-        badge.innerHTML = '<i class="fas fa-lock-open" style="font-size:8px;color:var(--gold-300);"></i> <span style="color:var(--gold-300);">'+totalUnlocked+' terbuka</span>'+(totalLocked>0?' &nbsp;|&nbsp; <i class="fas fa-lock" style="font-size:8px;color:#6EE7B7;"></i> <span style="color:#6EE7B7;">'+totalLocked+' terkunci</span>':'');
-        badge.style.borderColor = 'rgba(245,158,11,.3)';
-        badge.style.background = 'rgba(245,158,11,.08)';
-        btnText.textContent = 'KUNCI SEMUA PESERTA';
-        btn.querySelector('i').className = 'fas fa-lock';
+        if(badge){
+            badge.innerHTML = '<i class="fas fa-circle-check" style="color:var(--success);"></i> Status: <b style="color:var(--success);">TERKUNCI</b> ('+totalLocked+' peserta final)';
+            badge.style.display = 'inline-flex';
+            badge.style.background = 'rgba(16,185,129,.08)';
+            badge.style.color = '#6EE7B7';
+            badge.style.borderColor = 'rgba(16,185,129,.3)';
+        }
     } else {
-        badge.innerHTML = '<i class="fas fa-lock" style="font-size:8px;color:#6EE7B7;"></i> <span style="color:#6EE7B7;">Semua terkunci ('+totalLocked+')</span>';
-        badge.style.borderColor = 'rgba(16,185,129,.3)';
-        badge.style.background = 'rgba(16,185,129,.08)';
-        btnText.textContent = 'BUKA SEMUA KUNCI';
-        btn.querySelector('i').className = 'fas fa-lock-open';
+        // STATE: TERBUKA -> Tombol hijau untuk KUNCI
+        btn.innerHTML = '<i class="fas fa-lock"></i> KUNCI SEMUA PESERTA';
+        btn.style.background = 'var(--success)';
+        btn.style.boxShadow = '0 3px 10px rgba(34,197,94,.2)';
+
+        if(badge){
+            var info = '';
+            if(totalUnlocked > 0 && totalLocked > 0){
+                info = totalUnlocked+' terbuka, '+totalLocked+' terkunci';
+            } else if(totalUnlocked > 0){
+                info = totalUnlocked+' peserta belum dikunci';
+            } else {
+                info = 'Belum ada peserta';
+            }
+            badge.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--danger);"></i> Status: <b style="color:var(--danger);">TERBUKA</b> ('+info+')';
+            badge.style.display = 'inline-flex';
+            badge.style.background = 'rgba(239,68,68,.08)';
+            badge.style.color = '#FCA5A5';
+            badge.style.borderColor = 'rgba(239,68,68,.3)';
+        }
     }
 }
 
@@ -3385,7 +3434,11 @@ function loadResultsStatus(){
 
             html += '<tr>';
             html += '<td style="font-weight:700;color:var(--text-low);font-size:11px;">'+(idx+1)+'</td>';
-            html += '<td style="font-weight:700;">'+esc(u.name)+'</td>';
+            var nameCell = esc(u.display_name || u.name);
+            if(u.jenis_keanggotaan === 'team'){
+                nameCell += ' <span style="font-size:9px;font-weight:700;color:var(--gold-300);background:rgba(245,158,11,.10);padding:2px 6px;border-radius:4px;border:1px solid rgba(245,158,11,.20);margin-left:4px;vertical-align:middle;">TEAM</span>';
+            }
+            html += '<td style="font-weight:700;">'+nameCell+'</td>';
             html += '<td style="font-size:11px;color:var(--text-mid);">'+esc(u.email)+'</td>';
             html += '<td style="text-align:center;font-weight:800;color:'+(u.locked_ikan_count>0?'var(--cyan-300)':'var(--text-faint)')+';">'+u.locked_ikan_count+'</td>';
             html += '<td style="text-align:center;">'+statusHtml+'</td>';

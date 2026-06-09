@@ -136,6 +136,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/publish-results-all', [AdminDashboardController::class, 'publishResultsAll']);
     Route::post('/api/admin/publish-result-user', [AdminDashboardController::class, 'publishResultUser']);
     Route::post('/api/admin/unpublish-result-user', [AdminDashboardController::class, 'unpublishResultUser']);
+    Route::post('/api/admin/buka-semua-kunci', [AdminDashboardController::class, 'bukaSemuaKunci']);
     Route::post('/api/admin/unpublish-results-all', [AdminDashboardController::class, 'unpublishResultsAll']);
 });
 
