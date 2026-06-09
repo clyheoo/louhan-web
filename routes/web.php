@@ -130,6 +130,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/tanks-nominasi-tersedia', [AdminDashboardController::class, 'getTanksTersediaUntukNominasi']);
     Route::get('/api/admin/jumbo-scored-ikans', [AdminDashboardController::class, 'getJumboScoredIkans']);
     Route::post('/api/admin/calc-jumbo-point', [AdminDashboardController::class, 'calcJumboPoint']);
+    Route::post('/api/admin/reset-rejected-nominasi', [AdminDashboardController::class, 'resetRejectedNominasi']);
 });
 
 /* ═══════════════════════════════════════════

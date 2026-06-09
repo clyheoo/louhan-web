@@ -4003,6 +4003,32 @@ function adminRejectLate(ikanId, nomorTank){
     );
 }
 
+function adminResetRejected(nominasiId, nomorTank){
+    popupConfirm(
+        'Reset Nominasi Ditolak?',
+        'Yakin ingin mereset penolakan Tank <strong>'+nomorTank+'</strong>?<br><span style="font-size:11px;color:var(--text-mid);">Data penolakan akan dihapus sehingga Juri dapat mengajukan ulang nominasi tank ini.</span>',
+        'Ya, Reset',
+        function(){
+            fetch('/api/admin/reset-rejected-nominasi', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json','X-CSRF-TOKEN':getCsrf(),'Accept':'application/json'},
+                body: JSON.stringify({ nominasi_id: nominasiId })
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if(d.success){
+                    popupSuccess('Berhasil Direset', d.message);
+                    loadAdminNomHistory(); // Refresh riwayat
+                    loadAdminNomTanks();   // Refresh grid tank yang tersedia
+                } else {
+                    popupError('Gagal', d.message || 'Terjadi kesalahan.');
+                }
+            })
+            .catch(function(){ popupError('Error', 'Gagal menghubungi server.'); });
+        }
+    );
+}
+
 /* ── (D) HISTORY ── */
 function loadAdminNomHistory(){
     fetch('/api/grand-juri/nominasi-history', { headers:{'Accept':'application/json'} })
@@ -4062,6 +4088,9 @@ function renderAdminHistory(){
             html += kelasH;
             if(!isApp && t.catatan) html += '<div style="font-size:9px;color:'+color+';margin-top:5px;line-height:1.4;"><i class="fas fa-comment-dots"></i> '+esc(t.catatan)+'</div>';
             html += '<div style="font-size:9px;color:var(--text-low);margin-top:5px;font-weight:600;">'+esc(t.reviewed_at||'')+'</div>';
+            if (!isApp) {
+                html += '<button class="btn-xs blue" onclick="adminResetRejected('+t.nominasi_id+',\''+(t.nomor_tank||0)+'\')" style="margin-top:8px;width:100%;font-size:9px;padding:5px 8px;"><i class="fas fa-rotate-left" style="margin-right:3px;"></i>Reset & Ajukan Ulang</button>';
+            }
             html += '</div>';
         });
         html += '</div></div>';
@@ -4088,4 +4117,5 @@ window.adminRejectLate        = adminRejectLate;
 window.loadAdminNomHistory    = loadAdminNomHistory;
 window.adminSwitchHistTab     = adminSwitchHistTab;
 window.renderAdminHistory     = renderAdminHistory;
+window.adminResetRejected = adminResetRejected;
 })();

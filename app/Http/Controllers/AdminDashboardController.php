@@ -2263,4 +2263,36 @@ class AdminDashboardController extends Controller
         $unlocked = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
         return response()->json(['scoring_unlocked' => $unlocked]);
     }
+
+    public function resetRejectedNominasi(Request $request)
+    {
+        $request->validate([
+            'nominasi_id' => 'required|exists:nominasis,id',
+        ]);
+
+        $nominasi = \App\Models\Nominasi::find($request->nominasi_id);
+
+        // Hanya bisa reset yang berstatus rejected
+        if ($nominasi->status !== 'rejected') {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Hanya nominasi berstatus DITOLAK yang bisa di-reset.'
+            ], 422);
+        }
+
+        // Hapus record nominasi sehingga juri bisa mengajukan ulang
+        $nominasi->delete();
+
+        // Auto-sync ke Sheets
+        try { 
+            app(\App\Services\SheetsSyncService::class)->syncSemuaNominasi(); 
+        } catch (\Exception $e) { 
+            \Log::error('Sync nominasi gagal (reset-rejected): ' . $e->getMessage()); 
+        }
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Nominasi berhasil di-reset. Juri kini dapat mengajukan ulang tank ini.'
+        ]);
+    }
 }
