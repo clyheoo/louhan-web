@@ -391,12 +391,17 @@ class JuriController extends Controller
         ]);
     }
 
-    /* ═══════════════════════════════════════════
-       NOMINASI — AMBIL DATA TANK UNTUK GRID
-       ═══════════════════════════════════════════ */
     public function getTanksForNominasi()
     {
+        // ★ Exclude ikan yang sudah di-approve atau di-reject oleh juri ini
+        $excludedIkanIds = Nominasi::where('juri_id', auth()->id())
+            ->whereIn('status', ['approved', 'rejected'])
+            ->pluck('ikan_id')
+            ->unique()
+            ->toArray();
+
         $tanks = Ikan::whereNotNull('nomor_tank')
+            ->whereNotIn('id', $excludedIkanIds)
             ->with('peserta')
             ->orderBy('nomor_tank')
             ->get()
@@ -411,13 +416,39 @@ class JuriController extends Controller
                 ];
             });
 
+        // ★ Kembalikan pending ikan_ids + defect data untuk pre-select di frontend
+        $pendingNominations = Nominasi::where('juri_id', auth()->id())
+            ->where('status', 'pending')
+            ->get();
+
+        $pendingIkanIds = $pendingNominations->pluck('ikan_id')->unique()->toArray();
+
+        $pendingDefects = [];
+        foreach ($pendingNominations as $n) {
+            $hasDefect = collect(['raw_head_penalty','raw_face_penalty','raw_body_penalty','raw_finnage_penalty'])
+                ->some(function ($k) use ($n) {
+                    $val = $n->$k;
+                    return is_array($val) && collect($val)->some(function ($v) { return $v && $v !== '0'; });
+                });
+            if ($hasDefect) {
+                $pendingDefects[$n->ikan_id] = [
+                    'raw_head_penalty'    => $n->raw_head_penalty    ?? ['0'],
+                    'raw_face_penalty'    => $n->raw_face_penalty    ?? ['0'],
+                    'raw_body_penalty'    => $n->raw_body_penalty    ?? ['0'],
+                    'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
+                ];
+            }
+        }
+
         $kategoris = $tanks->pluck('kategori')->unique()->sort()->values();
         $kelass    = $tanks->pluck('kelas')->filter()->unique()->sort()->values();
 
         return response()->json([
-            'tanks'     => $tanks,
-            'kategoris' => $kategoris,
-            'kelass'    => $kelass,
+            'tanks'            => $tanks,
+            'kategoris'        => $kategoris,
+            'kelass'           => $kelass,
+            'pending_ikan_ids' => $pendingIkanIds,
+            'pending_defects'  => $pendingDefects,
         ]);
     }
 

@@ -21,12 +21,12 @@
     </div>
 
     {{-- MAIN CONTENT AREA --}}
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 min-w-0 relative" style="min-height:70vh;">
 
     {{-- ════════════════════════════════════════════════════════════
          LAYER 0: LOADING
          ════════════════════════════════════════════════════════════ --}}
-    <div id="nom-loading" class="flex flex-col items-center justify-center py-32">
+    <div id="nom-loading" class="absolute inset-0 z-40 flex flex-col items-center justify-center rounded-3xl" style="background:rgba(4,7,15,0.88);backdrop-filter:blur(8px);">
         <div class="w-12 h-12 border-4 rounded-full animate-spin mb-4" style="border-color:var(--glass-strong);border-top-color:var(--cyan-400);"></div>
         <p class="text-sm font-bold" style="color:var(--text-mid);">Memeriksa status nominasi...</p>
     </div>
@@ -814,6 +814,7 @@ let nomState = {
     filterKelas: '',
     searchTerm: '',
     autoRefreshTimer: null,
+    excludedTankIds: new Set(),
 };
 
 // ★ State Global UI Juri
@@ -832,6 +833,18 @@ async function checkNominasiStatus(attempt = 1) {
         const res = await apiFetch('/api/juri/nominasi-status');
         const status = res.status;
         const wasPending = sessionStorage.getItem('nom_was_pending') === '1';
+        
+        // ★ Update daftar tank yang diexclude (sudah approve/reject)
+        nomState.excludedTankIds = new Set();
+        (res.nominations || []).forEach(function(n) {
+            if (n.status === 'approved' || n.status === 'rejected') {
+                nomState.excludedTankIds.add(n.ikan_id);
+            }
+        });
+        nomState.excludedTankIds.forEach(function(id) {
+            nomState.selected.delete(id);
+            delete nomState.defects[id];
+        });
         
         if (!isOnPenjurianTab) nomHide('nom-loading');
 
@@ -1154,9 +1167,23 @@ async function nomLoadData() {
     if (icon) icon.classList.add('animate-spin');
     try {
         const res = await apiFetch('/api/juri/tanks-nominasi');
+
         nomState.tanks = res.tanks || [];
         nomState.kategoris = res.kategoris || [];
         nomState.kelass = res.kelass || [];
+
+        // ★ Pre-select tank yang masih pending (hanya jika belum ada pilihan manual)
+        if (nomState.selected.size === 0) {
+            (res.pending_ikan_ids || []).forEach(function(id) {
+                nomState.selected.add(id);
+            });
+            var pd = res.pending_defects || {};
+            Object.keys(pd).forEach(function(id) {
+                nomState.defects[id] = pd[id];
+            });
+        }
+
+        nomUpdateCount();
         nomRenderFilterBtns();
         nomRenderGrid();
     } catch (e) { showWarningModal([{type:'select', msg:'Gagal memuat data tank.'}]); }
@@ -1200,6 +1227,7 @@ function nomSetKelas(val) {
 
 function nomGetFiltered() {
     return nomState.tanks.filter(function(t) {
+        if (nomState.excludedTankIds.has(t.id)) return false;
         if (nomState.filterKat && t.kategori !== nomState.filterKat) return false;
         if (nomState.filterKelas && t.kelas !== nomState.filterKelas) return false;
         if (nomState.searchTerm) {
