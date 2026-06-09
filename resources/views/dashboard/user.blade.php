@@ -6,6 +6,7 @@
     $progressUndian = $totalIkan > 0 ? round(($totalDiundi / $totalIkan) * 100) : 0;
     $mvpCount = 0;
     try { $mvpCount = $ikansSaya->where('is_mvp', true)->count(); } catch (\Throwable $e) { $mvpCount = 0; }
+    $maxMvp = $maxMvp ?? 15;
     $initial = strtoupper(mb_substr(trim($user->name), 0, 1));
     $undianOpen = $undianOpen ?? true; // ★ Dari controller, default true
 @endphp
@@ -1505,7 +1506,7 @@
                     <div class="stat-card is-gold">
                         <div class="stat-icon"><i class="fas fa-star"></i></div>
                         <div class="stat-label">MVP Terdaftar</div>
-                        <div class="stat-value">{{ $mvpCount }}<span class="stat-sub">/ 30</span></div>
+                        <div class="stat-value">{{ $mvpCount }}<span class="stat-sub">/ {{ $maxMvp }}</span></div>
                         <div class="stat-meta" id="heroMvpStatus"><i class="fas fa-crown"></i>Status MVP</div>
                     </div>
                 </div>
@@ -1645,14 +1646,14 @@
                                     <span class="title-icon"><i class="fas fa-star"></i></span>
                                     Pendaftaran MVP
                                 </h2>
-                                <p class="card-subtitle">Pilih maksimal 30 ikan terbaik Anda untuk kompetisi MVP.</p>
+                                <p class="card-subtitle">Pilih maksimal {{ $maxMvp }} ikan terbaik Anda untuk MVP.</p>
                             </div>
-                            <div class="mvp-badge" id="mvpCountBadge">{{ $mvpCount }}/30 MVP</div>
+                            <div class="mvp-badge" id="mvpCountBadge">{{ $mvpCount }}/{{ $maxMvp }} MVP</div>
                         </div>
                         <div class="card-body" id="mvpCardBody" style="padding-top:12px;">
 
                             <div class="mvp-progress-bar" aria-hidden="true">
-                                <div class="mvp-progress-fill" id="mvpProgressFill" style="width: {{ min(100, ($mvpCount / 30) * 100) }}%"></div>
+                                <div class="mvp-progress-fill" id="mvpProgressFill" style="width: {{ min(100, ($mvpCount / max(1, $maxMvp)) * 100) }}%"></div>
                             </div>
 
                             <div id="mvpLockedState">
@@ -2116,7 +2117,8 @@
         let currentIkans = {};
         let isMvpOpen = false;
         let currentMvpSubmitted = false;
-        let isUndianOpen = {{ $undianOpen ? 'true' : 'false' }}; // ★ Dari server, tanpa delay
+        let isUndianOpen = {{ $undianOpen ? 'true' : 'false' }};
+        let maxMvp = {{ $maxMvp ?? 15 }}; // ★ Dari server, tanpa delay
 
         // ★ FUNGSI: Update visual lock pada card Mesin Undian & Daftar Ikan
         function updateUndianLockUI(isOpen) {
@@ -2180,6 +2182,8 @@
                 const resetInfo = response.reset_info;
                 const mvpOpen = response.mvp_open || false;
                 const mvpSubmitted = response.mvp_submitted || false;
+
+                if (response.max_mvp) maxMvp = response.max_mvp;                
 
                 if (response.tank_range_max) tankDrawMax = response.tank_range_max;
 
@@ -2323,10 +2327,10 @@
                 });
 
                 document.getElementById('mvpListContainer').innerHTML = mvpListHtml;
-                document.getElementById('mvpCountBadge').textContent = `${mvpCount}/30 MVP`;
+                document.getElementById('mvpCountBadge').textContent = `${mvpCount}/${maxMvp} MVP`;
                 // Update progress bar
                 var progFill = document.getElementById('mvpProgressFill');
-                if (progFill) progFill.style.width = Math.min(100, (mvpCount / 30) * 100) + '%';
+                if (progFill) progFill.style.width = Math.min(100, (mvpCount / maxMvp) * 100) + '%';
 
                 if(isMvpOpen) {
                     document.getElementById('mvpEmptyList').style.display = mvpCount > 0 ? 'none' : 'block';

@@ -53,6 +53,10 @@ class DashboardController extends Controller
             $daftarTeam = $daftarTeam->unique()->sort()->values();
         }
 
+        $mvpCount = 0;
+        try { $mvpCount = $ikansSaya->where('is_mvp', true)->count(); } catch (\Throwable $e) { $mvpCount = 0; }
+        $maxMvp = $pesertaSaya ? ($pesertaSaya->jenis_keanggotaan === 'team' ? 35 : 15) : 15;
+
         return view('dashboard.user', [
             'user'         => $user, 
             'pesertaSaya'  => $pesertaSaya,
@@ -60,6 +64,7 @@ class DashboardController extends Controller
             'undianOpen'   => $undianOpen,
             'daftarKota'   => $daftarKota,
             'daftarTeam'   => $daftarTeam,
+            'maxMvp'       => $maxMvp,
         ]);
     }
 
@@ -552,8 +557,9 @@ class DashboardController extends Controller
 
         if (!$ikan->is_mvp) {
             $mvpCount = Ikan::where('peserta_id', $ikan->peserta_id)->where('is_mvp', true)->count();
-            if ($mvpCount >= 30) {
-                return response()->json(['success' => false, 'message' => 'Gagal! Batas maksimal 30 ikan untuk MVP sudah tercapai.'], 422);
+            $maxMvp = $ikan->peserta->jenis_keanggotaan === 'team' ? 35 : 15;
+            if ($mvpCount >= $maxMvp) {
+                return response()->json(['success' => false, 'message' => 'Gagal! Batas maksimal ' . $maxMvp . ' ikan untuk MVP sudah tercapai.'], 422);
             }
         }
 
@@ -625,6 +631,7 @@ class DashboardController extends Controller
                 'mvp_submitted' => $mvpSubmitted,
                 'undian_open' => $undianOpen,
                 'tank_range_max' => $maxTankRange,
+                'max_mvp' => 15,
             ]);
         }
 
@@ -642,6 +649,8 @@ class DashboardController extends Controller
             ];
         });
 
+        $maxMvp = $peserta->jenis_keanggotaan === 'team' ? 35 : 15;
+
         return response()->json([
             'ikans' => $ikans,
             'reset_info' => $resetInfo,
@@ -649,6 +658,7 @@ class DashboardController extends Controller
             'mvp_submitted' => $mvpSubmitted,
             'undian_open' => $undianOpen,
             'tank_range_max' => $maxTankRange,
+            'max_mvp' => $maxMvp,
         ]);
     }
 
