@@ -17,6 +17,7 @@ Route::get('/', function () {
    DASHBOARD UTAMA
    ═══════════════════════════════════════════ */
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth')->name('dashboard');
+Route::get('/hasil-juara', [DashboardController::class, 'hasilJuara'])->middleware('auth')->name('hasil-juara');
 
 /* ═══════════════════════════════════════════
    API REGISTRASI & UNDIAN
@@ -131,6 +132,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/jumbo-scored-ikans', [AdminDashboardController::class, 'getJumboScoredIkans']);
     Route::post('/api/admin/calc-jumbo-point', [AdminDashboardController::class, 'calcJumboPoint']);
     Route::post('/api/admin/reset-rejected-nominasi', [AdminDashboardController::class, 'resetRejectedNominasi']);
+    Route::get('/api/admin/results-status', [AdminDashboardController::class, 'getResultsStatus']);    
+    Route::post('/api/admin/publish-results-all', [AdminDashboardController::class, 'publishResultsAll']);
+    Route::post('/api/admin/publish-result-user', [AdminDashboardController::class, 'publishResultUser']);
+    Route::post('/api/admin/unpublish-result-user', [AdminDashboardController::class, 'unpublishResultUser']);
+    Route::post('/api/admin/unpublish-results-all', [AdminDashboardController::class, 'unpublishResultsAll']);
 });
 
 /* ═══════════════════════════════════════════

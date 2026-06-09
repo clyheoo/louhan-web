@@ -1452,6 +1452,7 @@
             </div>
 
             <div class="nav-user">
+                <a href="{{ route('hasil-juara') }}" class="btn-nav gold" title="Lihat Hasil Juara"><i class="fas fa-trophy"></i> Hasil Juara</a>
                 <div class="user-card">
                     <div class="avatar">{{ $initial ?: 'P' }}</div>
                     <div class="user-info">

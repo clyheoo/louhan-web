@@ -2003,7 +2003,22 @@ class AdminDashboardController extends Controller
                 ];
             }
 
+            // ★ Build lookup map untuk is_locked
+            $globalLockMap = [];
+            foreach ($allItems as $ai) {
+                $globalLockMap[$ai['ikan_id']] = $ai['is_locked'] ?? false;
+            }
+
             $ranked = PointCalculator::hitungRankPoints($allItems, 'total_point');
+            // ★ Re-attach is_locked setelah ranking
+            foreach ($ranked as &$r) {
+                if (isset($r['ikan_id']) && isset($globalLockMap[$r['ikan_id']])) {
+                    $r['is_locked'] = $globalLockMap[$r['ikan_id']];
+                } else {
+                    $r['is_locked'] = false;
+                }
+            }
+            unset($r);
             $totalRanked = count($ranked);
             $topItems = array_slice($ranked, 0, $limit);
 
@@ -2094,12 +2109,30 @@ class AdminDashboardController extends Controller
                 'total_bonus'       => $totalBonus,
                 'final_point'       => (float) $finalPoint,
                 'jumlah_juri'       => $jumlahJuriYangNilai,
+                'is_locked'         => (bool) $ikan->is_locked,
             ];
+        }
+
+        // ★ Build lookup map untuk is_locked (hitungRankPoints mungkin strip field tambahan)
+        $ikanLockMap = [];
+        foreach ($groups as $name => $items) {
+            foreach ($items as $item) {
+                $ikanLockMap[$item['ikan_id']] = $item['is_locked'] ?? false;
+            }
         }
 
         $result = [];
         foreach ($groups as $name => $items) {
             $ranked   = PointCalculator::hitungRankPoints($items, 'total_point');
+            // ★ Re-attach is_locked setelah ranking
+            foreach ($ranked as &$r) {
+                if (isset($r['ikan_id']) && isset($ikanLockMap[$r['ikan_id']])) {
+                    $r['is_locked'] = $ikanLockMap[$r['ikan_id']];
+                } else {
+                    $r['is_locked'] = false;
+                }
+            }
+            unset($r);
             $totalAll = count($ranked);
             $top10    = array_slice($ranked, 0, 10);
             $result[] = [
@@ -2294,5 +2327,83 @@ class AdminDashboardController extends Controller
             'success' => true, 
             'message' => 'Nominasi berhasil di-reset. Juri kini dapat mengajukan ulang tank ini.'
         ]);
+    }
+
+        public function getResultsStatus()
+    {
+        // ★ Query dari Peserta (bukan User::where('role','user')) 
+        // karena bisa saja role user bukan 'user' tapi tetap punya profil peserta
+        $pesertas = Peserta::with('user')->orderBy('nama_peserta')->get();
+
+        $users = $pesertas->map(function ($p) {
+            $u = $p->user;
+            if (!$u) return null;
+            $lockedCount = $p->ikans()->where('is_locked', true)->count();
+            return [
+                'id'                 => $u->id,
+                'name'               => $u->name,
+                'email'              => $u->email,
+                'has_peserta'        => true,
+                'result_unlocked'    => $p->result_unlocked_at !== null,
+                'result_unlocked_at' => $p->result_unlocked_at
+                    ? $p->result_unlocked_at->format('d M Y H:i')
+                    : null,
+                'locked_ikan_count'  => $lockedCount,
+            ];
+        })->filter()->values();
+
+        $totalPublished = Peserta::whereNotNull('result_unlocked_at')->count();
+        $totalPeserta   = Peserta::count();
+
+        return response()->json([
+            'users'           => $users,
+            'total_published' => $totalPublished,
+            'total_peserta'   => $totalPeserta,
+        ]);
+    }
+
+    public function publishResultsAll()
+    {
+        \App\Models\Peserta::whereNotNull('is_mvp_submitted')->update(['result_unlocked_at' => now()]);
+        // Clear user result caches
+        $pesertas = \App\Models\Peserta::whereNotNull('result_unlocked_at')->get();
+        foreach ($pesertas as $p) {
+            \Cache::forget('user_results_' . $p->user_id);
+        }
+        return response()->json(['success' => true, 'message' => 'Hasil juara berhasil dikirim ke SEMUA peserta.']);
+    }
+
+    public function publishResultUser(Request $request)
+    {
+        $request->validate(['user_id' => 'required|exists:users,id']);
+        $peserta = \App\Models\Peserta::where('user_id', $request->user_id)->first();
+        if ($peserta) {
+            $peserta->update(['result_unlocked_at' => now()]);
+            \Cache::forget('user_results_' . $request->user_id);
+            return response()->json(['success' => true, 'message' => 'Hasil juara berhasil dikirim ke peserta.']);
+        }
+        return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan.'], 404);
+    }
+
+        public function unpublishResultUser(Request $request)
+    {
+        $request->validate(['user_id' => 'required|exists:users,id']);
+        $peserta = \App\Models\Peserta::where('user_id', $request->user_id)->first();
+        if ($peserta && $peserta->result_unlocked_at) {
+            $peserta->update(['result_unlocked_at' => null]);
+            \Cache::forget('user_results_' . $request->user_id);
+            return response()->json(['success' => true, 'message' => 'Akses hasil juara berhasil dicabut dari peserta.']);
+        }
+        return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan atau belum menerima hasil.'], 404);
+    }
+
+    public function unpublishResultsAll()
+    {
+        $pesertas = \App\Models\Peserta::whereNotNull('result_unlocked_at')->get();
+        foreach ($pesertas as $p) {
+            \Cache::forget('user_results_' . $p->user_id);
+        }
+        \App\Models\Peserta::whereNotNull('result_unlocked_at')->update(['result_unlocked_at' => null]);
+        return response()->json(['success' => true, 'message' => 'Akses hasil juara berhasil dicabut dari semua peserta.']);
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Peserta;
 use App\Models\Ikan;
 use App\Models\User;
+use App\Helpers\PointCalculator;
 use App\Services\SheetsSyncService;
 
 class DashboardController extends Controller
@@ -650,6 +651,124 @@ class DashboardController extends Controller
         });
 
         $maxMvp = $peserta->jenis_keanggotaan === 'team' ? 35 : 15;
+        $myResults = [];
+        if ($peserta && $peserta->result_unlocked_at) {
+            $cacheKey = 'user_results_' . $userId;
+            $myResults = \Cache::remember($cacheKey, 120, function() use ($peserta) {
+                $results = [];
+                $myLockedIkans = $peserta->ikans()->where('is_locked', true)->get();
+
+                if ($myLockedIkans->isEmpty()) return $results;
+
+                // Group user's locked ikans by kategori+kelas
+                $groups = [];
+                foreach ($myLockedIkans as $ikan) {
+                    $key = $ikan->kategori . '|' . ($ikan->kelas ?? '-');
+                    if (!isset($groups[$key])) $groups[$key] = [];
+                    $groups[$key][] = $ikan;
+                }
+
+                foreach ($groups as $key => $userIkans) {
+                    [$kat, $kls] = explode('|', $key, 2);
+                    $kls = ($kls === '-') ? null : $kls;
+
+                    // Get ALL locked ikans in this kategori+kelas
+                    $q = Ikan::where('is_locked', true)
+                        ->whereNotNull('nomor_tank')
+                        ->where('kategori', $kat)
+                        ->whereHas('scorings');
+                    if ($kls !== null) $q->where('kelas', $kls);
+                    else $q->whereNull('kelas');
+
+                    $allIkans = $q->with(['scorings', 'bonusPoints'])->get();
+
+                    // Calculate points for ALL ikans in this group
+                    $allItems = [];
+                    foreach ($allIkans as $pi) {
+                        $scorings = $pi->scorings;
+                        if ($scorings->isEmpty()) continue;
+
+                        $avgDetail = [];
+                        $jumlahJuriYangNilai = 0;
+
+                        foreach ($scorings as $s) {
+                            if ($s->total_nilai) $jumlahJuriYangNilai++;
+                            if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                                foreach ($s->nilai_detail as $kt => $fields) {
+                                    if (!is_array($fields)) continue;
+                                    foreach ($fields as $fid => $val) {
+                                        if (!isset($avgDetail[$kt][$fid])) {
+                                            $avgDetail[$kt][$fid] = ['sum' => 0, 'count' => 0];
+                                        }
+                                        $avgDetail[$kt][$fid]['sum'] += (float)($val ?? 0);
+                                        $avgDetail[$kt][$fid]['count']++;
+                                    }
+                                }
+                            }
+                        }
+
+                        $finalAvgDetail = [];
+                        if ($jumlahJuriYangNilai > 0) {
+                            foreach ($avgDetail as $kt => $fields) {
+                                $finalAvgDetail[$kt] = [];
+                                foreach ($fields as $fid => $d) {
+                                    $finalAvgDetail[$kt][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                                }
+                            }
+                        }
+
+                        $grandEdited = $scorings->first(function ($s) { return $s->edited_by_grand_juri; });
+                        $defectSource = $grandEdited ?: $scorings->sortByDesc('updated_at')->first();
+                        $merged = [
+                            'raw_head_penalty'    => ['0'],
+                            'raw_face_penalty'    => ['0'],
+                            'raw_body_penalty'    => ['0'],
+                            'raw_finnage_penalty' => ['0'],
+                        ];
+                        if ($defectSource) {
+                            $merged['raw_head_penalty']    = $defectSource->raw_head_penalty    ?: ['0'];
+                            $merged['raw_face_penalty']    = $defectSource->raw_face_penalty    ?: ['0'];
+                            $merged['raw_body_penalty']    = $defectSource->raw_body_penalty    ?: ['0'];
+                            $merged['raw_finnage_penalty'] = $defectSource->raw_finnage_penalty ?: ['0'];
+                        }
+
+                        $totalPoint = PointCalculator::hitungPoint($pi->kategori, $finalAvgDetail, $merged);
+                        $totalBonus = (int) $pi->bonusPoints->sum('points');
+
+                        $allItems[] = [
+                            'ikan_id'     => $pi->id,
+                            'total_point' => (float) $totalPoint,
+                            'total_bonus' => $totalBonus,
+                        ];
+                    }
+
+                    // Rank them using same logic as admin
+                    $ranked = PointCalculator::hitungRankPoints($allItems, 'total_point');
+
+                    // Find user's ikans in the ranking
+                    $userIkanIds = collect($userIkans)->pluck('id')->toArray();
+
+                    foreach ($ranked as $idx => $r) {
+                        if (in_array($r['ikan_id'], $userIkanIds)) {
+                            $ikan = $myLockedIkans->firstWhere('id', $r['ikan_id']);
+                            if ($ikan) {
+                                $results[] = [
+                                    'kategori'       => $ikan->kategori,
+                                    'kelas'          => $ikan->kelas,
+                                    'detail_anggota' => $ikan->detail_anggota,
+                                    'point'          => $r['total_point'],
+                                    'rank_point'     => $r['rank_point'],
+                                    'position'       => $idx + 1,
+                                    'nomor_tank'     => $ikan->nomor_tank,
+                                ];
+                            }
+                        }
+                    }
+                }
+
+                return $results;
+            });
+        }
 
         return response()->json([
             'ikans' => $ikans,
@@ -659,6 +778,22 @@ class DashboardController extends Controller
             'undian_open' => $undianOpen,
             'tank_range_max' => $maxTankRange,
             'max_mvp' => $maxMvp,
+            'my_results' => $myResults,
+        ]);
+    }
+
+    public function hasilJuara()
+    {
+        $user = Auth::user()->fresh();
+        if (!$user) return redirect()->route('login');
+
+        $peserta = Peserta::where('user_id', $user->id)->first();
+        $initial = strtoupper(mb_substr(trim($user->name), 0, 1));
+
+        return view('dashboard.hasil-juara', [
+            'user' => $user,
+            'peserta' => $peserta,
+            'initial' => $initial,
         ]);
     }
 

@@ -666,6 +666,7 @@
             <a class="sidebar-item" data-page="jumbo_calc">
                 <i class="fas fa-calculator"></i> Hitung Point Jumbo
             </a>
+            <a class="sidebar-item" data-page="results"><i class="fas fa-paper-plane"></i> Kirim Hasil Juara</a>
             <a class="sidebar-item" data-page="ranking"><i class="fas fa-trophy"></i> Point Ranking</a>
             <a class="sidebar-item" data-page="undian"><i class="fas fa-dice"></i> Kelola Mesin Undian</a>
         </nav>
@@ -1097,6 +1098,49 @@
 
             </section>
 
+                        <!-- ═══════════ PAGE: KIRIM HASIL JUARA ═══════════ -->
+            <section class="page-section" data-page="results" style="display:none;">
+                <div class="glass-card" style="margin-bottom:16px;">
+                    <div class="card-head">
+                        <h3><span class="ti" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#34D399;"><i class="fas fa-paper-plane"></i></span>Kirim Hasil Juara ke Peserta</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:11px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:#6EE7B7;line-height:1.6;">
+                            <i class="fas fa-circle-info" style="margin-right:6px;"></i>
+                            Kirimkan hasil juara ke peserta. Peserta hanya dapat melihat data miliknya sendiri (kategori, kelas, asal/team, point, rank point, dan posisi juara). <b>Total nilai tidak ditampilkan.</b>
+                        </div>
+                        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+                            <div style="flex:1;display:flex;gap:10px;align-items:center;">
+                                <span style="font-size:12px;font-weight:700;color:var(--text-mid);">Status:</span>
+                                <span id="resultsStatusBadge" style="font-size:11px;font-weight:800;padding:6px 14px;border-radius:999px;background:var(--glass-3);color:var(--text-mid);border:1px solid var(--bd-2);display:inline-flex;align-items:center;gap:6px;">Memuat...</span>
+                            </div>
+                            <button type="button" onclick="publishResultsAll()" style="padding:9px 18px;border:none;border-radius:11px;background:linear-gradient(135deg,var(--success),#059669);color:#fff;font-family:inherit;font-size:11.5px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 12px -4px rgba(16,185,129,.4);transition:all .2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+                                <i class="fas fa-paper-plane"></i> Kirim ke Semua Peserta
+                            </button>
+                            <button type="button" onclick="unpublishResultsAll()" style="padding:9px 18px;border:none;border-radius:11px;background:rgba(239,68,68,.12);color:#FCA5A5;border:1px solid rgba(239,68,68,.3);font-family:inherit;font-size:11.5px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .2s;" onmouseover="this.style.background='var(--danger)';this.style.color='#fff'" onmouseout="this.style.background='rgba(239,68,68,.12)';this.style.color='#FCA5A5'">
+                                <i class="fas fa-ban"></i> Cabut Akses Semua
+                            </button>
+                        </div>
+                        <div style="font-size:10px;font-weight:800;color:var(--text-mid);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Daftar Peserta (User)</div>
+                        <div style="max-height:400px;overflow-y:auto;border:1px solid var(--bd-2);border-radius:12px;">
+                            <table class="data-table" style="min-width:auto;">
+                                <thead><tr>
+                                    <th style="width:30px;">#</th>
+                                    <th>NAMA</th>
+                                    <th>EMAIL</th>
+                                    <th style="text-align:center;">IKAN TERKUNCI</th>
+                                    <th style="text-align:center;">STATUS HASIL</th>
+                                    <th style="text-align:center;">AKSI</th>
+                                </tr></thead>
+                                <tbody id="resultsUserBody">
+                                    <tr><td colspan="6"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- ═══════════ PAGE: POINT RANKING ═══════════ -->
             <section class="page-section" data-page="ranking" style="display:none;">
                 <div class="glass-card">
@@ -1105,9 +1149,12 @@
                             <h3><span class="ti" style="background:rgba(245,158,11,.12);border-color:var(--bd-gold);color:var(--gold-400);"><i class="fas fa-trophy"></i></span>Sistem Point Ranking</h3>
                             <div class="card-sub">Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)</div>
                         </div>
-                        <button id="btnKunciSemua" onclick="kunciSemuaAdmin()" style="padding:10px 18px;border:none;border-radius:12px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#FBBF24,#D97706);color:#fff;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 14px -4px rgba(245,158,11,.6),inset 0 1px 0 rgba(255,255,255,.2);transition:all .2s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 20px -6px rgba(245,158,11,.7),inset 0 1px 0 rgba(255,255,255,.2)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px -4px rgba(245,158,11,.6),inset 0 1px 0 rgba(255,255,255,.2)'">
-                            <i class="fas fa-lock"></i> KUNCI SEMUA PESERTA
-                        </button>
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <span id="kunciStatusBadge" style="font-size:10px;font-weight:800;padding:5px 12px;border-radius:999px;background:var(--glass-3);color:var(--text-mid);border:1px solid var(--bd-2);display:none;align-items:center;gap:5px;"></span>
+                            <button id="btnKunciSemua" onclick="kunciSemuaAdmin()" style="padding:10px 18px;border:none;border-radius:12px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#FBBF24,#D97706);color:#fff;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 14px -4px rgba(245,158,11,.6),inset 0 1px 0 rgba(255,255,255,.2);transition:all .2s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 20px -6px rgba(245,158,11,.7),inset 0 1px 0 rgba(255,255,255,.2)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px -4px rgba(245,158,11,.6),inset 0 1px 0 rgba(255,255,255,.2)'">
+                                <i class="fas fa-lock"></i> <span id="btnKunciSemuaText">KUNCI SEMUA PESERTA</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">

@@ -2741,10 +2741,10 @@ function openMvpDataDetail(idx){
             else if(pos === 2) medal = '<i class="fas fa-medal" style="color:#C0C0C0;font-size:11px;margin-right:3px;"></i>';
             else if(pos === 3) medal = '<i class="fas fa-medal" style="color:#CD7F32;font-size:11px;margin-right:3px;"></i>';
 
-            rankHtml = '<div style="text-align:center;">'
-                +'<span style="display:inline-block;padding:4px 12px;border-radius:8px;font-size:14px;font-weight:900;background:'+rkBg+';color:'+rkColor+';border:1px solid rgba(255,255,255,.08);">'+finalRank+'</span>'
-                +'<div style="font-size:9px;color:var(--text-low);font-weight:700;margin-top:3px;">'+medal+'Juara '+pos+(ikan.total_bonus > 0 ? ' • '+rankPt+'+'+ikan.total_bonus : '')+'</div>'
-                +'</div>';
+            rankHtml = '<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">' +
+                '<span style="display:inline-block;padding:5px 12px;border-radius:8px;font-size:14px;font-weight:900;background:'+rkBg+';color:'+rkColor+';border:1px solid rgba(255,255,255,.08);">'+finalRank+'</span>' +
+                medal + // Dipindahkan ke sebelah kanan Rank Point
+            '</div>';
         } else {
             rankHtml = ikan.total_bonus > 0
                 ? '<div style="text-align:center;"><span style="display:inline-block;padding:4px 12px;border-radius:8px;font-size:14px;font-weight:900;background:rgba(16,185,129,.12);color:#34D399;border:1px solid rgba(16,185,129,.25);">'+ikan.total_bonus+'</span><div style="font-size:9px;color:var(--text-low);font-weight:700;margin-top:3px;">bonus saja</div></div>'
@@ -3260,12 +3260,12 @@ function loadAdminPointRanking(){
                 else if(posisi <= 10){ rankBg='var(--purple-lt)'; rankColor='var(--purple)'; rankBorder='rgba(168,85,247,.25)'; }
                 else{ rankBg='var(--glass-2)'; rankColor='var(--text-faint)'; rankBorder='var(--bd-2)'; }
                 var medalHtml = '';
-                if(posisi === 1) medalHtml = '<i class="fas fa-medal" style="color:var(--gold-500);font-size:12px;margin-right:4px;" title="Juara 1"></i>';
-                else if(posisi === 2) medalHtml = '<i class="fas fa-medal" style="color:#C0C0C0;font-size:12px;margin-right:4px;" title="Juara 2"></i>';
-                else if(posisi === 3) medalHtml = '<i class="fas fa-medal" style="color:#CD7F32;font-size:12px;margin-right:4px;" title="Juara 3"></i>';
+                if(posisi === 1) medalHtml = '<span style="display:inline-flex;align-items:center;gap:3px;font-weight:900;color:#FBBF24;font-size:11px;white-space:nowrap;"><i class="fas fa-medal" style="font-size:12px;"></i>Juara 1</span>';
+                else if(posisi === 2) medalHtml = '<span style="display:inline-flex;align-items:center;gap:3px;font-weight:900;color:#C0C0C0;font-size:11px;white-space:nowrap;"><i class="fas fa-medal" style="font-size:12px;"></i>Juara 2</span>';
+                else if(posisi === 3) medalHtml = '<span style="display:inline-flex;align-items:center;gap:3px;font-weight:900;color:#CD7F32;font-size:11px;white-space:nowrap;"><i class="fas fa-medal" style="font-size:12px;"></i>Juara 3</span>';
                 var rowStyle = d.is_locked ? '' : 'opacity:.6;';
                 var posisiHtml = d.is_locked ? posisi : '<i class="fas fa-lock-open" style="color:var(--gold-300);font-size:11px;" title="Belum dikunci"></i>';
-                html += '<tr style="'+rowStyle+'"><td style="text-align:center;font-weight:800;color:var(--text-muted);">'+posisiHtml+'</td><td style="font-weight:700;">'+(d.is_locked?medalHtml:'')+esc(d.nama_peserta)+'</td>';
+                html += '<tr style="'+rowStyle+'"><td style="text-align:center;font-weight:800;color:var(--text-muted);">'+posisiHtml+'</td><td style="font-weight:700;">'+esc(d.nama_peserta)+'</td>';
                 if(isGlobal) html += '<td style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">'+esc(d.kategori)+'</td>';
                 html += '<td style="font-weight:700;color:var(--primary);text-align:center;">'+(d.nomor_tank||'—')+'</td>';
                 html += '<td style="text-align:center;">'+esc(d.kelas)+'</td>';
@@ -3274,24 +3274,211 @@ function loadAdminPointRanking(){
                 if(d.jumlah_juri > 0) html += '<div style="font-size:9px;color:var(--text-muted);font-weight:600;">'+d.jumlah_juri+' juri</div>';
                 html += '</td>';
                 html += '<td style="text-align:center;"><div style="font-weight:900;font-size:15px;color:var(--primary);">'+basePt+'</div></td>';
-                html += '<td style="text-align:center;"><span style="display:inline-block;padding:5px 14px;border-radius:8px;font-size:14px;font-weight:900;background:'+rankBg+';color:'+rankColor+';border:1px solid '+rankBorder+';">'+frp+'</span>';
+                html += '<td style="text-align:center;"><span style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:8px;font-size:14px;font-weight:900;background:'+rankBg+';color:'+rankColor+';border:1px solid '+rankBorder+';">'+frp+(d.is_locked?medalHtml:'')+'</span>';
                 if(bonus > 0) html += '<div style="font-size:9px;color:#34D399;font-weight:800;margin-top:3px;"><i class="fas fa-trophy" style="font-size:7px;"></i> '+rankPt+' + '+bonus+'</div>';
                 html += '</td>';
                 // ★ Tombol Kunci / Buka Kunci di Point Ranking — versi cerah & menonjol
+                // GANTI BLOK TOMBOL KUNCI/BUKA DENGAN INI:
                 if(d.is_locked){
-                    html += '<td style="text-align:center;"><button class="btn-xs" style="background:linear-gradient(135deg,#22D3EE,#06B6D4);color:#fff;border:none;font-weight:800;padding:6px 12px;box-shadow:0 2px 8px rgba(6,182,212,.35);transition:all .2s;" onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(6,182,212,.5)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 2px 8px rgba(6,182,212,.35)\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></td>';
+                    html += '<td style="text-align:center;"><div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:800;color:#FCA5A5;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock" style="font-size:8px;"></i> Terkunci</span></div><button class="btn-xs" style="background:rgba(239,68,68,.15);color:#FCA5A5;border:1px solid rgba(239,68,68,.3);font-weight:800;padding:5px 10px;transition:all .2s;" onmouseover="this.style.background=\'var(--danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(239,68,68,.15)\';this.style.color=\'#FCA5A5\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></td>';
                 } else {
-                    html += '<td style="text-align:center;"><button class="btn-xs" style="background:linear-gradient(135deg,#FBBF24,#D97706);color:#fff;border:none;font-weight:800;padding:6px 12px;box-shadow:0 2px 8px rgba(245,158,11,.35);transition:all .2s;" onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(245,158,11,.5)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 2px 8px rgba(245,158,11,.35)\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Kunci nilai (final)"><i class="fas fa-lock"></i> Kunci</button></td>';
+                    html += '<td style="text-align:center;"><div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:800;color:var(--gold-300);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock-open" style="font-size:8px;"></i> Terbuka</span></div><button class="btn-xs" style="background:rgba(245,158,11,.15);color:var(--gold-300);border:1px solid rgba(245,158,11,.3);font-weight:800;padding:5px 10px;transition:all .2s;" onmouseover="this.style.background=\'var(--gold-500)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(245,158,11,.15)\';this.style.color=\'var(--gold-300)\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Kunci nilai (final)"><i class="fas fa-lock"></i> Kunci</button></td>';
                 }
                 html += '</tr>';
             });
             html += '</tbody></table></div></div>';
         });
         el.innerHTML = html;
+        updateKunciHeaderBadge(groups);
     })
     .catch(function(){
         el.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation" style="font-size:28px;display:block;margin-bottom:8px;"></i>Gagal memuat data ranking.</div>';
     });
+}
+
+/* ═══════════════════════════════════════════════
+   UPDATE KUNCI HEADER BADGE
+   ═══════════════════════════════════════════════ */
+function updateKunciHeaderBadge(groups){
+    var totalLocked=0, totalUnlocked=0;
+    if(groups && groups.length){
+        groups.forEach(function(g){
+            if(g.data && g.data.length){
+                g.data.forEach(function(d){
+                    if(d.is_locked) totalLocked++; else totalUnlocked++;
+                });
+            }
+        });
+    }
+    var badge = document.getElementById('kunciStatusBadge');
+    var btnText = document.getElementById('btnKunciSemuaText');
+    var btn = document.getElementById('btnKunciSemua');
+    if(!badge || !btnText || !btn) return;
+
+    if(totalLocked + totalUnlocked === 0){
+        badge.style.display = 'none';
+        btnText.textContent = 'KUNCI SEMUA PESERTA';
+        btn.querySelector('i').className = 'fas fa-lock';
+        return;
+    }
+
+    badge.style.display = 'inline-flex';
+    if(totalUnlocked > 0){
+        badge.innerHTML = '<i class="fas fa-lock-open" style="font-size:8px;color:var(--gold-300);"></i> <span style="color:var(--gold-300);">'+totalUnlocked+' terbuka</span>'+(totalLocked>0?' &nbsp;|&nbsp; <i class="fas fa-lock" style="font-size:8px;color:#6EE7B7;"></i> <span style="color:#6EE7B7;">'+totalLocked+' terkunci</span>':'');
+        badge.style.borderColor = 'rgba(245,158,11,.3)';
+        badge.style.background = 'rgba(245,158,11,.08)';
+        btnText.textContent = 'KUNCI SEMUA PESERTA';
+        btn.querySelector('i').className = 'fas fa-lock';
+    } else {
+        badge.innerHTML = '<i class="fas fa-lock" style="font-size:8px;color:#6EE7B7;"></i> <span style="color:#6EE7B7;">Semua terkunci ('+totalLocked+')</span>';
+        badge.style.borderColor = 'rgba(16,185,129,.3)';
+        badge.style.background = 'rgba(16,185,129,.08)';
+        btnText.textContent = 'BUKA SEMUA KUNCI';
+        btn.querySelector('i').className = 'fas fa-lock-open';
+    }
+}
+
+/* ═══════════════════════════════════════════════
+   MODUL KIRIM HASIL JUARA
+   ═══════════════════════════════════════════════ */
+function loadResultsStatus(){
+    var tb = document.getElementById('resultsUserBody');
+    if(!tb) return;
+    tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat data peserta...</p></div></td></tr>';
+
+    fetch('/api/admin/results-status',{headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        var badge = document.getElementById('resultsStatusBadge');
+        if(badge){
+            if(d.total_published > 0){
+                badge.innerHTML = '<i class="fas fa-check-circle" style="font-size:8px;"></i> '+d.total_published+'/'+d.total_peserta+' peserta sudah menerima hasil';
+                badge.style.background = 'rgba(16,185,129,.12)';
+                badge.style.color = '#6EE7B7';
+                badge.style.borderColor = 'rgba(16,185,129,.3)';
+            } else {
+                badge.innerHTML = '<i class="fas fa-circle-xmark" style="font-size:8px;"></i> Belum ada peserta yang menerima hasil';
+                badge.style.background = 'var(--glass-3)';
+                badge.style.color = 'var(--text-mid)';
+                badge.style.borderColor = 'var(--bd-2)';
+            }
+        }
+
+        if(!d.users || d.users.length === 0){
+            tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-users-slash"></i><p>Tidak ada user dengan role peserta.</p></div></td></tr>';
+            return;
+        }
+
+        var html = '';
+        d.users.forEach(function(u, idx){
+            var statusHtml, actionHtml;
+            if(!u.has_peserta || u.locked_ikan_count === 0){
+                statusHtml = '<span style="font-size:10px;font-weight:700;color:var(--text-low);display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-minus-circle" style="font-size:9px;"></i> Tidak ada ikan terkunci</span>';
+                actionHtml = '<span style="font-size:10px;color:var(--text-faint);">—</span>';
+            } else if(u.result_unlocked){
+                statusHtml = '<span style="font-size:10px;font-weight:800;color:#6EE7B7;display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,.12);padding:4px 10px;border-radius:6px;border:1px solid rgba(16,185,129,.25);"><i class="fas fa-check-circle" style="font-size:9px;"></i> Sudah Dikirim</span>';
+                actionHtml = '<button class="btn-xs red" onclick="unpublishResultSingleUser('+u.id+',\''+esc(u.name).replace(/'/g,"\\'")+'\')" style="padding:5px 10px;font-size:9px;"><i class="fas fa-ban"></i> Cabut</button>';
+            } else {
+                statusHtml = '<span style="font-size:10px;font-weight:800;color:var(--gold-300);display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,.10);padding:4px 10px;border-radius:6px;border:1px solid rgba(245,158,11,.20);"><i class="fas fa-clock" style="font-size:9px;"></i> Belum Dikirim</span>';
+                actionHtml = '<button class="btn-xs green" onclick="publishResultSingleUser('+u.id+',\''+esc(u.name).replace(/'/g,"\\'")+'\')" style="padding:5px 10px;font-size:9px;"><i class="fas fa-paper-plane"></i> Kirim</button>';
+            }
+
+            html += '<tr>';
+            html += '<td style="font-weight:700;color:var(--text-low);font-size:11px;">'+(idx+1)+'</td>';
+            html += '<td style="font-weight:700;">'+esc(u.name)+'</td>';
+            html += '<td style="font-size:11px;color:var(--text-mid);">'+esc(u.email)+'</td>';
+            html += '<td style="text-align:center;font-weight:800;color:'+(u.locked_ikan_count>0?'var(--cyan-300)':'var(--text-faint)')+';">'+u.locked_ikan_count+'</td>';
+            html += '<td style="text-align:center;">'+statusHtml+'</td>';
+            html += '<td style="text-align:center;">'+actionHtml+'</td>';
+            html += '</tr>';
+        });
+        tb.innerHTML = html;
+    })
+    .catch(function(){
+        tb.innerHTML = '<tr><td colspan="6"><div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat data.</p></div></td></tr>';
+    });
+}
+
+function unpublishResultSingleUser(userId, userName){
+    popupConfirm(
+        'Cabut Akses Hasil Juara?',
+        'Cabut akses hasil juara dari <strong>'+esc(userName)+'</strong>?<br><span style="font-size:11px;color:var(--danger);">Peserta tidak akan bisa lagi melihat hasil juara mereka.</span>',
+        'Ya, Cabut',
+        function(){
+            fetch('/api/admin/unpublish-result-user',{
+                method:'POST',
+                headers:{'X-CSRF-TOKEN':getCsrf(),'Accept':'application/json','Content-Type':'application/json'},
+                body:JSON.stringify({user_id:userId})
+            })
+            .then(function(r){return r.json();})
+            .then(function(d){
+                if(d.success){popupSuccess('Berhasil',d.message);loadResultsStatus();}
+                else popupError('Gagal',d.message);
+            })
+            .catch(function(){popupError('Error','Gagal menghubungi server');});
+        }
+    );
+}
+
+function publishResultsAll(){
+    popupConfirm(
+        'Publikasikan Hasil ke Semua Peserta?',
+        'Tindakan ini akan membuka akses agar <strong>Semua Peserta</strong> dapat melihat hasil juara mereka masing-masing.<br><span style="font-size:11px;color:var(--warning);">Pastikan semua nilai sudah dikunci dan benar.</span>',
+        'Ya, Publikasikan',
+        function(){
+            fetch('/api/admin/publish-results-all', {
+                method:'POST',
+                headers:{'X-CSRF-TOKEN':getCsrf(),'Accept':'application/json','Content-Type':'application/json'}
+            })
+            .then(r=>r.json())
+            .then(d=>{
+                if(d.success) popupSuccess('Berhasil', d.message);
+                else popupError('Gagal', d.message);
+            })
+            .catch(()=>popupError('Error','Gagal menghubungi server'));
+        }
+    );
+}
+
+function unpublishResultsAll(){
+    popupConfirm(
+        'Cabut Akses Hasil Juara?',
+        'Peserta tidak akan bisa lagi melihat hasil juara mereka.',
+        'Ya, Cabut',
+        function(){
+            fetch('/api/admin/unpublish-results-all', {
+                method:'POST',
+                headers:{'X-CSRF-TOKEN':getCsrf(),'Accept':'application/json','Content-Type':'application/json'}
+            })
+            .then(r=>r.json())
+            .then(d=>{
+                if(d.success) popupSuccess('Berhasil', d.message);
+                else popupError('Gagal', d.message);
+            })
+            .catch(()=>popupError('Error','Gagal menghubungi server'));
+        }
+    );
+}
+
+function publishResultSingleUser(userId, userName){
+    popupConfirm(
+        'Kirim Hasil ke Peserta?',
+        'Kirim hasil juara ke <strong>'+esc(userName)+'</strong>?',
+        'Ya, Kirim',
+        function(){
+            fetch('/api/admin/publish-result-user', {
+                method:'POST',
+                headers:{'X-CSRF-TOKEN':getCsrf(),'Accept':'application/json','Content-Type':'application/json'},
+                body: JSON.stringify({user_id: userId})
+            })
+            .then(r=>r.json())
+            .then(d=>{
+                if(d.success) popupSuccess('Berhasil', d.message);
+                else popupError('Gagal', d.message);
+            })
+            .catch(()=>popupError('Error','Gagal menghubungi server'));
+        }
+    );
 }
 
 /* ═══════════════════════════════════════════════
@@ -3308,6 +3495,7 @@ loadJuriScoringLockStatus();
    ═══════════════════════════════════════════════ */
 (function initSidebar(){
     var pageTitles = {
+        results:      { title:'Kirim Hasil Juara',              sub:'Kirim data hasil juara ke peserta', icon:'fa-paper-plane' },
         dashboard:    { title:'Dashboard',                       sub:'Ringkasan statistik & grafik kontes', icon:'fa-gauge-high' },
         penilaian:    { title:'Data Penilaian',                  sub:'Semua input nilai dari Juri & Grand Juri', icon:'fa-table-list' },
         users:        { title:'Kelola User',                     sub:'Manajemen akun pengguna sistem', icon:'fa-users-gear' },
@@ -3350,6 +3538,7 @@ loadJuriScoringLockStatus();
             if(pageId === 'registrasi'){ loadPesertaOld(); loadTankRange(); loadGlobalRangeDisplay(); }
             if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
             if(pageId === 'mvp'){ loadMvpData(); loadMvpStatus(); loadMvpPeserta(); loadMvpIkanData(); }
+            if(pageId === 'results'){ loadResultsStatus(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
             if(pageId === 'undian'){ loadUndianStatus(); }
             if(pageId === 'jumbo_calc'){ loadJumboCalcFish(); }
@@ -3357,6 +3546,7 @@ loadJuriScoringLockStatus();
             // Refresh ringan saat dibuka ulang (opsional)
             if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
             if(pageId === 'mvp'){ loadMvpStatus(); }
+            if(pageId === 'results'){ loadResultsStatus(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
         }
 

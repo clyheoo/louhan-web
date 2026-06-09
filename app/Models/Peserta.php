@@ -14,11 +14,12 @@ class Peserta extends Model
         'nama_peserta',
         'jenis_keanggotaan',
         'detail_anggota',
-        'user_id', 'nama_peserta', 'jenis_keanggotaan', 'detail_anggota', 'is_mvp_submitted',
+        'user_id', 'nama_peserta', 'jenis_keanggotaan', 'detail_anggota', 'is_mvp_submitted', 'result_unlocked_at',
     ];
 
     protected $casts = [
         'is_mvp_submitted' => 'boolean',
+        'result_unlocked_at' => 'datetime',
     ];
 
     public function ikans()
