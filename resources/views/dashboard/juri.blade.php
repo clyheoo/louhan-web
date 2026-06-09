@@ -1049,68 +1049,57 @@ async function viewPendingNominations() {
 }
 
 async function goToNominasiPage() {
-    // ★ Stop auto-refresh timer kalau masih running
-    if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
-    // ★ Bersihkan flag pending supaya tidak trigger animasi rejection saat kembali
+    if (nomState.autoRefreshTimer) {
+        clearInterval(nomState.autoRefreshTimer);
+        nomState.autoRefreshTimer = null;
+    }
+
     sessionStorage.removeItem('nom_was_pending');
-    // ★ Navigasi kembali ke nominasi page tanpa mengganggu nilai yang sudah disimpan
+
     nomHide('scoring-page');
     nomHide('nom-waiting');
     nomHide('nom-approved-anim');
     nomHide('nom-rejected-anim');
     nomShow('nom-page');
 
-    // ★ Reset selection dulu, lalu pre-select dari pending
-    nomState.selected = new Set();
-    nomState.defects = {};
+    // Jangan hapus pilihan manual yang sudah ada,
+    // tapi pending akan tetap dipaksa selected oleh nomLoadData().
+    nomShow('nom-loading');
 
-    // Load ulang data nominasi (tank list + filter)
     try {
-        const res = await apiFetch('/api/juri/nominasi-status');
-        const pending = (res.nominations || []).filter(n => n.status === 'pending');
-        const approved = (res.nominations || []).filter(n => n.status === 'approved');
+        await nomLoadData();
 
-        // ★ PRE-SELECT: tank yang sudah pending otomatis terpilih
-        pending.forEach(function(n) {
-            nomState.selected.add(n.ikan_id);
-            // ★ Restore defect data dari pending nominasi
-            const hasDefect = ['raw_head_penalty','raw_face_penalty','raw_body_penalty','raw_finnage_penalty'].some(function(k) {
-                return n[k] && Array.isArray(n[k]) && n[k].some(function(v) { return v && v !== '0'; });
-            });
-            if (hasDefect) {
-                nomState.defects[n.ikan_id] = {
-                    raw_head_penalty:    n.raw_head_penalty    || ['0'],
-                    raw_face_penalty:    n.raw_face_penalty    || ['0'],
-                    raw_body_penalty:    n.raw_body_penalty    || ['0'],
-                    raw_finnage_penalty: n.raw_finnage_penalty || ['0'],
-                };
-            }
-        });
-        nomUpdateCount();
+        const pendingCount = (nomState.tanks || []).filter(function(t) {
+            return t.is_pending;
+        }).length;
 
-        // ★ Banner info
         let bannerHtml = '';
-        if (pending.length > 0) {
-            bannerHtml += '<div style="background:rgba(34,211,238,.10);border:1px solid rgba(34,211,238,.30);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--cyan-300);"><i class="fas fa-check-double" style="margin-right:6px;"></i><b>' + pending.length + ' tank otomatis terpilih</b> (nominasi masih pending). Anda bisa menambah tank atau membatalkan pilihan, lalu kirim ulang.</div>';
-        }
-        if (approved.length > 0) {
-            bannerHtml += '<div style="background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.30);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#34D399;"><i class="fas fa-check-circle" style="margin-right:6px;"></i><b>' + approved.length + ' nominasi DISETUJUI</b>. Lanjutkan penilaian kapan saja dengan tombol di bawah.</div>';
-            bannerHtml += '<button onclick="nomHide(\'nom-page\');nomShow(\'scoring-page\');initScoringPage();" style="margin-bottom:14px;padding:10px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,#10B981,#059669);color:white;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 14px -4px rgba(16,185,129,.5);"><i class="fas fa-arrow-left"></i> Kembali ke Penilaian</button>';
+
+        if (pendingCount > 0) {
+            bannerHtml +=
+                '<div style="background:rgba(34,211,238,.10);border:1px solid rgba(34,211,238,.30);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--cyan-300);">' +
+                    '<i class="fas fa-check-double" style="margin-right:6px;"></i>' +
+                    '<b>' + pendingCount + ' tank pending otomatis terpilih</b> dan ditampilkan paling atas. Anda bisa menambah nominasi lain lalu kirim ulang.' +
+                '</div>';
         }
 
-        // Inject banner ke atas nom-page
         let bannerEl = document.getElementById('nom-info-banner');
+
         if (!bannerEl) {
             bannerEl = document.createElement('div');
             bannerEl.id = 'nom-info-banner';
-            const nomPage = document.getElementById('nom-page');
-            nomPage.insertBefore(bannerEl, nomPage.firstChild);
+
+            const page = document.getElementById('nom-page');
+            if (page) page.insertBefore(bannerEl, page.firstChild);
         }
+
         bannerEl.innerHTML = bannerHtml;
+        bannerEl.style.display = bannerHtml ? 'block' : 'none';
     } catch (e) {
-        // Diam-diam saja, tidak perlu warning
+        showWarningModal([{type:'select', msg:'Gagal membuka halaman nominasi. Periksa koneksi internet Anda.'}]);
+    } finally {
+        nomHide('nom-loading');
     }
-    nomLoadData();
 }
 
 function nomShowWaiting(nominations) {
@@ -1164,29 +1153,65 @@ function nomShowRejectedAnim(nominations) {
 
 async function nomLoadData() {
     var icon = document.getElementById('nom-refresh-icon');
+    var grid = document.getElementById('nom-grid');
+
     if (icon) icon.classList.add('animate-spin');
+
+    if (grid) {
+        grid.innerHTML =
+            '<div class="glass-card" style="grid-column:1/-1;padding:28px;text-align:center;">' +
+                '<div class="w-10 h-10 border-4 rounded-full animate-spin mx-auto mb-3" style="border-color:var(--glass-strong);border-top-color:var(--cyan-400);"></div>' +
+                '<p class="text-xs font-bold" style="color:var(--text-mid);">Memuat pilihan tank nominasi...</p>' +
+            '</div>';
+    }
+
     try {
-        const res = await apiFetch('/api/juri/tanks-nominasi');
+        const res = await apiFetch('/api/juri/tanks-nominasi?_t=' + Date.now());
 
         nomState.tanks = res.tanks || [];
         nomState.kategoris = res.kategoris || [];
         nomState.kelass = res.kelass || [];
 
-        // ★ Pre-select tank yang masih pending (hanya jika belum ada pilihan manual)
-        if (nomState.selected.size === 0) {
-            (res.pending_ikan_ids || []).forEach(function(id) {
-                nomState.selected.add(id);
-            });
-            var pd = res.pending_defects || {};
-            Object.keys(pd).forEach(function(id) {
-                nomState.defects[id] = pd[id];
-            });
-        }
+        // Pending harus selalu otomatis terpilih,
+        // walaupun sebelumnya user sudah memilih tank lain.
+        const pendingIds = res.pending_ikan_ids || [];
+        pendingIds.forEach(function(id) {
+            nomState.selected.add(parseInt(id, 10));
+        });
+
+        // Restore defect dari pending.
+        var pd = res.pending_defects || {};
+        Object.keys(pd).forEach(function(id) {
+            nomState.defects[parseInt(id, 10)] = pd[id];
+        });
+
+        // Paksa pending tampil paling atas, lalu yang selected, lalu nomor tank.
+        nomState.tanks.sort(function(a, b) {
+            var ap = a.is_pending ? 1 : 0;
+            var bp = b.is_pending ? 1 : 0;
+            if (ap !== bp) return bp - ap;
+
+            var as = nomState.selected.has(a.id) ? 1 : 0;
+            var bs = nomState.selected.has(b.id) ? 1 : 0;
+            if (as !== bs) return bs - as;
+
+            return (parseInt(a.nomor_tank || 0, 10) || 0) - (parseInt(b.nomor_tank || 0, 10) || 0);
+        });
 
         nomUpdateCount();
         nomRenderFilterBtns();
         nomRenderGrid();
-    } catch (e) { showWarningModal([{type:'select', msg:'Gagal memuat data tank.'}]); }
+    } catch (e) {
+        if (grid) {
+            grid.innerHTML =
+                '<div class="glass-card" style="grid-column:1/-1;padding:28px;text-align:center;color:var(--danger);">' +
+                    '<i class="fas fa-triangle-exclamation text-2xl mb-2"></i>' +
+                    '<p class="text-xs font-bold">Gagal memuat data tank nominasi.</p>' +
+                '</div>';
+        }
+        showWarningModal([{type:'select', msg:'Gagal memuat data tank. Periksa koneksi internet Anda.'}]);
+    }
+
     if (icon) icon.classList.remove('animate-spin');
 }
 
@@ -1261,18 +1286,44 @@ function nomRenderGrid() {
     const filtered = nomGetFiltered();
     const grid = document.getElementById('nom-grid');
     const empty = document.getElementById('nom-grid-empty');
-    if (filtered.length === 0) { grid.innerHTML = ''; nomShow('nom-grid-empty'); return; }
+
+    if (filtered.length === 0) {
+        grid.innerHTML = '';
+        nomShow('nom-grid-empty');
+        return;
+    }
+
     nomHide('nom-grid-empty');
 
-    grid.innerHTML = filtered.map(function(t) {
+    const sorted = filtered.slice().sort(function(a, b) {
+        var ap = a.is_pending ? 1 : 0;
+        var bp = b.is_pending ? 1 : 0;
+        if (ap !== bp) return bp - ap;
+
+        var as = nomState.selected.has(a.id) ? 1 : 0;
+        var bs = nomState.selected.has(b.id) ? 1 : 0;
+        if (as !== bs) return bs - as;
+
+        return (parseInt(a.nomor_tank || 0, 10) || 0) - (parseInt(b.nomor_tank || 0, 10) || 0);
+    });
+
+    grid.innerHTML = sorted.map(function(t) {
         const sel = nomState.selected.has(t.id);
 
-        // ★ Satu tombol "Defect" — muncul hanya kalau card sudah dipilih (bintang aktif)
+        let pendingBadge = '';
+        if (t.is_pending) {
+            pendingBadge =
+                '<div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:7px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.28);color:var(--gold-300);font-size:9px;font-weight:900;letter-spacing:.03em;">' +
+                    '<i class="fas fa-hourglass-half"></i> PENDING' +
+                '</div>';
+        }
+
         let defectBtn = '';
         if (sel) {
             const sum = nomDefectSummary(t.id);
             let klass = 'nom-defect-btn nom-defect-empty';
             let label = '<i class="fas fa-circle-exclamation"></i> Tandai Defect';
+
             if (sum.level === 'minor') {
                 klass = 'nom-defect-btn nom-defect-minor';
                 label = '<i class="fas fa-circle-exclamation"></i> Defect Minor (' + sum.count + ')';
@@ -1280,20 +1331,26 @@ function nomRenderGrid() {
                 klass = 'nom-defect-btn nom-defect-mayor';
                 label = '<i class="fas fa-triangle-exclamation"></i> Defect Mayor (' + sum.count + ')';
             }
-            defectBtn = '<button type="button" class="' + klass + '" '
-                + 'onclick="event.stopPropagation();openNomDefectAll(' + t.id + ')">'
-                + label + '</button>';
+
+            defectBtn = '<button type="button" class="' + klass + '" onclick="event.stopPropagation();openNomDefectAll(' + t.id + ')">' + label + '</button>';
         }
 
         return '<div class="p-3 cursor-pointer ' + (sel ? 'selected-card' : '') + '" onclick="nomToggle(' + t.id + ')">' +
             '<div class="flex justify-between items-start mb-3">' +
-            '<div class="tank-num-badge">' + t.nomor_tank + '</div>' +
-            '<button class="star-btn" onclick="event.stopPropagation();nomToggle(' + t.id + ')">' +
-            '<i class="' + (sel ? 'fas' : 'fa-regular') + ' fa-star"></i></button></div>' +
+                '<div>' +
+                    '<div class="tank-num-badge">' + t.nomor_tank + '</div>' +
+                    pendingBadge +
+                '</div>' +
+                '<button class="star-btn" onclick="event.stopPropagation();nomToggle(' + t.id + ')">' +
+                    '<i class="' + (sel ? 'fas' : 'fa-regular') + ' fa-star"></i>' +
+                '</button>' +
+            '</div>' +
             '<div class="flex flex-col gap-1">' +
-            '<div class="cat-badge">' + t.kategori + '</div>' +
-            kelasDisplay(t.kategori, t.kelas) +
-            '</div>' + defectBtn + '</div>';
+                '<div class="cat-badge">' + t.kategori + '</div>' +
+                kelasDisplay(t.kategori, t.kelas) +
+            '</div>' +
+            defectBtn +
+        '</div>';
     }).join('');
 }
 
@@ -1478,30 +1535,46 @@ function nomClosePreview() { document.getElementById('nom-preview-modal').classL
 
 async function nomConfirmSubmit() {
     const btn = document.getElementById('nom-btn-confirm');
+    const oldHtml = btn.innerHTML;
+
     btn.disabled = true;
     btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Mengirim...';
+
     try {
-        // ★ Bangun payload defect hanya untuk tank yang dipilih
         const defectsPayload = {};
+
         nomState.selected.forEach(function(id) {
             const d = nomState.defects[id];
             if (d) defectsPayload[id] = d;
         });
+
         const res = await apiFetch('/api/juri/submit-nominasi', {
             method: 'POST',
             body: JSON.stringify({
                 ikan_ids: Array.from(nomState.selected),
-                defects:  defectsPayload
+                defects: defectsPayload
             })
         });
+
         if (res.success) {
             nomClosePreview();
             showSuccessPopup('Nominasi Terkirim!', res.message);
-            setTimeout(function() { checkNominasiStatus(); }, 1000);
-        } else { showWarningModal([{type:'select', msg: res.message}]); }
-    } catch (e) { showWarningModal([{type:'select', msg:'Gagal mengirim. Periksa koneksi internet Anda.'}]); }
+
+            // Refresh list supaya pending baru langsung selected dan tampil paling atas.
+            await nomLoadData();
+
+            setTimeout(function() {
+                checkNominasiStatus();
+            }, 800);
+        } else {
+            showWarningModal([{type:'select', msg: res.message || 'Gagal mengirim nominasi.'}]);
+        }
+    } catch (e) {
+        showWarningModal([{type:'select', msg:'Gagal mengirim. Periksa koneksi internet Anda.'}]);
+    }
+
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim Fix';
+    btn.innerHTML = oldHtml || '<i class="fas fa-paper-plane"></i> Kirim Fix';
 }
 
 document.getElementById('nom-search')?.addEventListener('input', function(e) {
@@ -2010,7 +2083,7 @@ function lihatDetail(scoringId) {
 
 async function loadJuriData() {
     try {
-        const res = await apiFetch('/api/juri/data');
+        const res = await apiFetch('/api/juri/data?_t=' + Date.now());
         appData.available_tanks    = res.available_tanks || [];
         appData.my_scores          = res.my_scores || [];
         appData.all_scored         = res.all_scored || {};
@@ -2107,6 +2180,9 @@ function switchJuriView(view) {
     }
 }
 
+// Pastikan function bisa dipanggil oleh onclick="" di HTML.
+window.switchJuriView = switchJuriView;
+
 function updateScoringLockUI() {
     const lockOverlay = document.getElementById('scoring-lock-overlay');
     if (!lockOverlay) return;
@@ -2124,12 +2200,15 @@ function updateScoringLockUI() {
 async function loadJuriDataForPenjurian() {
     try {
         // Cek status nominasi dulu untuk update lock UI
-        const statusRes = await apiFetch('/api/juri/nominasi-status');
+        const statusRes = await apiFetch('/api/juri/nominasi-status?_t=' + Date.now());
+
         isScoringUnlocked = statusRes.scoring_unlocked === true;
         updateScoringLockUI();
-        
-        // ★ SELALU load data juri, lock overlay akan handle UI blocking
-        const dataRes = await apiFetch('/api/juri/data');
+
+        // Selalu load data juri terbaru.
+        // Cache buster dipakai agar hasil reset/acak ulang nomor tank dari admin langsung terbaca.
+        const dataRes = await apiFetch('/api/juri/data?_t=' + Date.now());
+
         appData.available_tanks    = dataRes.available_tanks || [];
         appData.my_scores          = dataRes.my_scores || [];
         appData.all_scored         = dataRes.all_scored || {};
@@ -2139,9 +2218,10 @@ async function loadJuriDataForPenjurian() {
         initTankScores(appData.available_tanks);
         loadDraft();
 
-        // ★ Pre-fill defect dari nominasi
+        // Pre-fill defect dari nominasi yang sudah approved.
         Object.keys(appData.nomination_defects).forEach(function(ikanId) {
             const nd = appData.nomination_defects[ikanId];
+
             if (!nd || !tankScores[ikanId]) return;
 
             if (!tankScores[ikanId].defects) {
@@ -2153,34 +2233,50 @@ async function loadJuriDataForPenjurian() {
                 };
             }
 
-            ['head','face','body','finnage'].forEach(function(p) {
-                const k = 'raw_'+p+'_penalty';
+            ['head', 'face', 'body', 'finnage'].forEach(function(p) {
+                const k = 'raw_' + p + '_penalty';
                 const cur = tankScores[ikanId].defects[k];
-                const isCurDefault = !cur || cur.length === 0 || (cur.length === 1 && cur[0] === '0');
+
+                const isCurDefault =
+                    !cur ||
+                    cur.length === 0 ||
+                    (cur.length === 1 && cur[0] === '0');
+
                 const ndArr = nd[k];
-                const hasReal = Array.isArray(ndArr) && ndArr.some(function(v) { return v && v !== '0'; });
+
+                const hasReal = Array.isArray(ndArr) && ndArr.some(function(v) {
+                    return v && v !== '0';
+                });
+
                 if (isCurDefault && hasReal) {
                     tankScores[ikanId].defects[k] = ndArr.slice();
                 }
             });
         });
 
-        populateFilter(); 
-        renderFormTable(); 
+        populateFilter();
+        renderFormTable();
         renderLiveTable();
-        
+
     } catch(e) {
         console.error('Gagal load data penjurian:', e);
-        showWarningModal([{type:'select', msg:'Gagal memuat data penjurian. Periksa koneksi internet Anda.'}]);
+
+        showWarningModal([
+            {
+                type: 'select',
+                msg: 'Gagal memuat data penjurian. Periksa koneksi internet Anda.'
+            }
+        ]);
     }
 }
 
 async function checkScoringLockAndInit() {
     try {
-        const res = await apiFetch('/api/juri/nominasi-status');
+        const res = await apiFetch('/api/juri/nominasi-status?_t=' + Date.now());
+
         isScoringUnlocked = res.scoring_unlocked === true;
         updateScoringLockUI();
-        // ★ Data sudah diload oleh loadJuriDataForPenjurian(), di sini hanya update lock status
+
     } catch (e) {
         isScoringUnlocked = false;
         updateScoringLockUI();
@@ -2197,7 +2293,7 @@ function startScoringLockPolling() {
         }
         
         try {
-            const res = await apiFetch('/api/juri/nominasi-status');
+            const res = await apiFetch('/api/juri/nominasi-status?_t=' + Date.now());
             const wasLocked = !isScoringUnlocked;
             isScoringUnlocked = res.scoring_unlocked === true;
             updateScoringLockUI();

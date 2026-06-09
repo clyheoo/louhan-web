@@ -803,6 +803,7 @@
                     <div class="card-body">
                         <div class="filter-bar">
                             <div class="search-box"><i class="fas fa-search"></i><input type="text" id="filterSearch" placeholder="Cari nama peserta..."></div>
+                            <div class="search-box" style="max-width:160px;flex:none;"><i class="fas fa-hashtag"></i><input type="text" id="filterTank" placeholder="No. Tank..." inputmode="numeric"></div>
                             <select class="filter-select" id="filterKategori">
                                 <option value="">Semua Kategori</option>
                                 <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
@@ -1548,6 +1549,42 @@
             <button class="modal-close" onclick="closeDefectAdmin()"><i class="fas fa-xmark"></i></button>
         </div>
         <div class="modal-body" id="defectAdminBody"></div>
+    </div>
+</div>
+
+<!-- ═══════════ MODAL: EDIT KATEGORI & KELAS ═══════════ -->
+<div class="modal-bg" id="modalEditKatKelas" style="--mw:460px;">
+    <div class="modal-box">
+        <div class="modal-head"><h3><i class="fas fa-tags" style="color:var(--gold-400);"></i> Edit Kategori & Kelas</h3><button class="modal-close" onclick="closeModal('modalEditKatKelas')"><i class="fas fa-xmark"></i></button></div>
+        <div class="modal-body">
+            <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--gold-300);display:flex;gap:8px;align-items:flex-start;">
+                <i class="fas fa-circle-info" style="margin-top:2px;"></i>
+                <span>Mengubah kategori/kelas akan mempengaruhi perhitungan point dan ranking ikan ini.</span>
+            </div>
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;">
+                <span id="editKKNama"></span> — <span id="editKKTank" style="color:var(--primary);"></span>
+            </div>
+            <input type="hidden" id="editKKIdx">
+            <div class="form-group">
+                <label class="form-label">Kategori</label>
+                <select id="editKKKat" class="form-control" onchange="onEditKKKatChange()" style="padding-left:14px;">
+                    <option value="">-- Pilih Kategori --</option>
+                    <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
+                    <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                </select>
+            </div>
+            <div class="form-group" id="editKKKelasWrap">
+                <label class="form-label">Kelas</label>
+                <select id="editKKKelas" class="form-control" style="padding-left:14px;">
+                    <option value="">-- Pilih Kelas --</option>
+                    <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-cancel" onclick="closeModal('modalEditKatKelas')">Batal</button>
+            <button class="btn-primary" id="btnSaveKK" onclick="submitEditKatKelas()" style="background:linear-gradient(135deg,var(--gold-600),var(--gold-700));box-shadow:0 4px 14px -4px rgba(245,158,11,.5),inset 0 1px 0 rgba(255,255,255,.18);"><i class="fas fa-save"></i> Simpan</button>
+        </div>
     </div>
 </div>
 

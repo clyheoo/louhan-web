@@ -1235,7 +1235,9 @@ function loadScoringData(){
     var s=document.getElementById('filterSearch').value;
     var k=document.getElementById('filterKategori').value;
     var st=document.getElementById('filterStatus').value;
+    var tn=document.getElementById('filterTank').value;
     if(s)params.set('search',s);if(k)params.set('kategori',k);if(st)params.set('status',st);
+    if(tn)params.set('tank',tn);
     fetch('/api/admin/scoring-data?'+params.toString(),{headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
     .then(function(data){allScoringData=data;renderTable(data);})
@@ -1314,16 +1316,89 @@ function renderTable(data){
             '<td><span class="status-badge '+sc+'">'+st+'</span></td>'+
             '<td><div style="display:flex;gap:4px;">'+
             '<button class="btn-xs blue" onclick="openDetail('+i+')" title="Lihat Detail"><i class="fas fa-eye"></i></button>'+
+            '<button class="btn-xs gold" onclick="openEditKatKelas('+i+')" title="Edit Kategori & Kelas"><i class="fas fa-tags"></i></button>'+
             (!p.is_locked?'<button class="btn-xs purple" onclick="openEditAdmin('+i+')" title="Edit Nilai"><i class="fas fa-pen-to-square"></i></button>':'<button class="btn-xs purple" style="opacity:.35;cursor:not-allowed;" disabled title="Nilai terkunci — buka kunci dari Point Ranking"><i class="fas fa-pen-to-square"></i></button>')+
             '<button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button>'+
-            '</div></td>';        tb.appendChild(tr);
+            '</div></td>';
+      tb.appendChild(tr);
     }
+}
+
+/* ═══ EDIT KATEGORI & KELAS ═══ */
+function openEditKatKelas(idx){
+    var p=allScoringData[idx];
+    if(!p) return;
+    document.getElementById('editKKIdx').value=idx;
+    document.getElementById('editKKNama').textContent=p.nama_peserta;
+    document.getElementById('editKKTank').textContent='Tank '+(p.nomor_tank||'—');
+    var katSel=document.getElementById('editKKKat');
+    katSel.value=p.kategori||'';
+    onEditKKKatChange();
+    if(noKelasKategori.indexOf(p.kategori)===-1){
+        document.getElementById('editKKKelas').value=p.kelas||'';
+    }
+    openModal('modalEditKatKelas');
+}
+
+function onEditKKKatChange(){
+    var kat=document.getElementById('editKKKat').value;
+    var kelasSel=document.getElementById('editKKKelas');
+    var kelasWrap=document.getElementById('editKKKelasWrap');
+    if(noKelasKategori.indexOf(kat)!==-1){
+        kelasSel.value='';
+        kelasWrap.style.display='none';
+    } else {
+        kelasWrap.style.display='';
+    }
+}
+
+function submitEditKatKelas(){
+    var idx=parseInt(document.getElementById('editKKIdx').value);
+    var p=allScoringData[idx];
+    if(!p) return;
+    var kat=document.getElementById('editKKKat').value;
+    var kelas=document.getElementById('editKKKelas').value;
+    if(!kat){popupError('Kategori Wajib','Pilih kategori terlebih dahulu.');return;}
+    if(noKelasKategori.indexOf(kat)===-1&&!kelas){popupError('Kelas Wajib','Pilih kelas terlebih dahulu.');return;}
+
+    var btn=document.getElementById('btnSaveKK');
+    var orig=btn.innerHTML;
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+    var fd=new FormData();
+    fd.append('_token',getCsrf());
+    fd.append('ikan_id',p.id);
+    fd.append('kategori',kat);
+    fd.append('kelas',kelas);
+
+    fetch('/api/admin/edit-kategori-kelas',{
+        method:'POST',
+        headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
+        body:fd
+    })
+    .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
+    .then(function(d){
+        if(d.success){
+            closeModal('modalEditKatKelas');
+            loadScoringData();
+            loadDashboard();
+            popupSuccess('Berhasil','Kategori & kelas berhasil diperbarui.');
+        } else {
+            popupError('Gagal',d.message||'Terjadi kesalahan.');
+        }
+    })
+    .catch(function(e){
+        if(e.message)popupError('Gagal',esc(e.message));
+        else popupError('Kesalahan Jaringan','Gagal menghubungi server.');
+    })
+    .finally(function(){btn.disabled=false;btn.innerHTML=orig;});
 }
 
 var filterT;
 document.getElementById('filterSearch').addEventListener('input',function(){clearTimeout(filterT);filterT=setTimeout(loadScoringData,300);});
 document.getElementById('filterKategori').addEventListener('change',loadScoringData);
 document.getElementById('filterStatus').addEventListener('change',loadScoringData);
+document.getElementById('filterTank').addEventListener('input',function(){clearTimeout(filterT);filterT=setTimeout(loadScoringData,300);});
 
 /* ═══════════════════════════════════════════════
    DETAIL NILAI MODAL (UPDATE: LANGSUNG DARI DATA TABEL)
@@ -2274,30 +2349,64 @@ function submitResetTank() {
             fd.append('reason', reason);
             
             var btn = document.getElementById('btnSubmitReset');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
-            
+            var btnOldHtml = btn ? btn.innerHTML : '';
+
+            if(btn){
+                btn.disabled = true;
+                btn.style.opacity = '0.7';
+                btn.style.cursor = 'wait';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mereset nomor tank...';
+            }
+
+            showLoader('Mereset semua nomor tank. Mohon tunggu...');
+
             fetch('/api/admin/reset-tank', {
                 method: 'POST',
-                headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'},
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
                 body: fd
             })
-            .then(function(r){ return r.json(); })
+            .then(function(r){
+                if(!r.ok){
+                    return r.json().then(function(d){ throw d; });
+                }
+                return r.json();
+            })
             .then(function(d){
                 if (d.success) {
                     closeModal('modalResetTank');
-                    loadPesertaOld();
-                    loadDashboard();
-                    document.getElementById('numberDisplayOld').textContent = '--';
-                    popupSuccess('Berhasil Direset', 'Semua nomor tank telah dihapus. Peserta akan mendapatkan notifikasi.');
+
+                    if(document.getElementById('numberDisplayOld')){
+                        document.getElementById('numberDisplayOld').textContent = '--';
+                    }
+
+                    if(typeof loadPesertaOld === 'function') loadPesertaOld();
+                    if(typeof loadDashboard === 'function') loadDashboard();
+                    if(typeof loadScoringData === 'function') loadScoringData();
+
+                    popupSuccess(
+                        'Berhasil Direset',
+                        (d.message || 'Semua nomor tank berhasil direset.') +
+                        '<br><span style="font-size:11px;color:var(--text-mid);">Sync spreadsheet berjalan di background, jadi halaman tidak perlu menunggu lama.</span>'
+                    );
                 } else {
                     popupError('Gagal', d.message || 'Terjadi kesalahan.');
                 }
             })
-            .catch(function(){ popupError('Error', 'Gagal menghubungi server.'); })
+            .catch(function(e){
+                popupError('Error', e && e.message ? e.message : 'Gagal menghubungi server.');
+            })
             .finally(function(){
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-rotate-left"></i> Ya, Reset Semua';
+                hideLoader();
+
+                if(btn){
+                    btn.disabled = false;
+                    btn.style.opacity = '';
+                    btn.style.cursor = '';
+                    btn.innerHTML = btnOldHtml || '<i class="fas fa-rotate-left"></i> Ya, Reset Semua';
+                }
             });
         }
     );
@@ -3288,22 +3397,35 @@ function loadAdminPointRanking(){
                 else if(posisi <= 6){ rankBg='rgba(34,211,238,.08)'; rankColor='var(--cyan-300)'; rankBorder='rgba(34,211,238,.25)'; }
                 else if(posisi <= 10){ rankBg='var(--purple-lt)'; rankColor='var(--purple)'; rankBorder='rgba(168,85,247,.25)'; }
                 else{ rankBg='var(--glass-2)'; rankColor='var(--text-faint)'; rankBorder='var(--bd-2)'; }
-                var medalHtml = '';
-                if(posisi === 1) medalHtml = '<span style="display:inline-flex;align-items:center;gap:3px;font-weight:900;color:#FBBF24;font-size:11px;white-space:nowrap;"><i class="fas fa-medal" style="font-size:12px;"></i>Juara 1</span>';
-                else if(posisi === 2) medalHtml = '<span style="display:inline-flex;align-items:center;gap:3px;font-weight:900;color:#C0C0C0;font-size:11px;white-space:nowrap;"><i class="fas fa-medal" style="font-size:12px;"></i>Juara 2</span>';
-                else if(posisi === 3) medalHtml = '<span style="display:inline-flex;align-items:center;gap:3px;font-weight:900;color:#CD7F32;font-size:11px;white-space:nowrap;"><i class="fas fa-medal" style="font-size:12px;"></i>Juara 3</span>';
                 var rowStyle = d.is_locked ? '' : 'opacity:.6;';
-                var posisiHtml = d.is_locked ? posisi : '<i class="fas fa-lock-open" style="color:var(--gold-300);font-size:11px;" title="Belum dikunci"></i>';
-                html += '<tr style="'+rowStyle+'"><td style="text-align:center;font-weight:800;color:var(--text-muted);">'+posisiHtml+'</td><td style="font-weight:700;">'+esc(d.nama_peserta)+'</td>';
-                if(isGlobal) html += '<td style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">'+esc(d.kategori)+'</td>';
-                html += '<td style="font-weight:700;color:var(--primary);text-align:center;">'+(d.nomor_tank||'—')+'</td>';
+                var posisiHtml;
+                if(!d.is_locked){
+                    posisiHtml = '<i class="fas fa-lock-open" style="color:var(--gold-300);font-size:11px;" title="Belum dikunci"></i>';
+                } else if(posisi === 1){
+                    posisiHtml = '<span style="display:inline-flex;align-items:center;gap:3px;font-weight:900;color:#FBBF24;font-size:12px;"><i class="fas fa-medal" style="font-size:11px;"></i> 1</span>';
+                } else if(posisi === 2){
+                    posisiHtml = '<span style="display:inline-flex;align-items:center;gap:3px;font-weight:900;color:#C0C0C0;font-size:12px;"><i class="fas fa-medal" style="font-size:11px;"></i> 2</span>';
+                } else if(posisi === 3){
+                    posisiHtml = '<span style="display:inline-flex;align-items:center;gap:3px;font-weight:900;color:#CD7F32;font-size:12px;"><i class="fas fa-medal" style="font-size:11px;"></i> 3</span>';
+                } else {
+                    posisiHtml = '<span style="font-weight:800;color:var(--text-muted);font-size:12px;">'+posisi+'</span>';
+                }
+                html += '<tr style="'+rowStyle+'">';
+                html += '<td style="text-align:center;font-weight:800;color:var(--text-muted);">'+formatRankCellAdmin(posisi)+'</td>';
+                html += '<td style="font-weight:800;color:var(--text-hi);">'+esc(d.nama_peserta || '-')+'</td>';
+
+                if(isGlobal){
+                    html += '<td style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">'+esc(d.kategori || '-')+'</td>';
+                }
+
+                html += '<td style="font-weight:700;color:var(--primary);text-align:center;">'+(d.nomor_tank || '—')+'</td>';
                 html += '<td style="text-align:center;">'+esc(d.kelas)+'</td>';
                 html += '<td style="font-size:11px;color:var(--text-muted);">'+esc(d.detail_anggota)+'</td>';
                 html += '<td style="text-align:center;"><div style="font-weight:800;">'+(d.total_nilai_semua ?? 0)+'</div>';
                 if(d.jumlah_juri > 0) html += '<div style="font-size:9px;color:var(--text-muted);font-weight:600;">'+d.jumlah_juri+' juri</div>';
                 html += '</td>';
                 html += '<td style="text-align:center;"><div style="font-weight:900;font-size:15px;color:var(--primary);">'+basePt+'</div></td>';
-                html += '<td style="text-align:center;"><span style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:8px;font-size:14px;font-weight:900;background:'+rankBg+';color:'+rankColor+';border:1px solid '+rankBorder+';">'+frp+(d.is_locked?medalHtml:'')+'</span>';
+                html += '<td style="text-align:center;"><span style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:8px;font-size:14px;font-weight:900;background:'+rankBg+';color:'+rankColor+';border:1px solid '+rankBorder+';">'+frp+'</span>';
                 if(bonus > 0) html += '<div style="font-size:9px;color:#34D399;font-weight:800;margin-top:3px;"><i class="fas fa-trophy" style="font-size:7px;"></i> '+rankPt+' + '+bonus+'</div>';
                 html += '</td>';
                 // ★ Tombol Kunci / Buka Kunci di Point Ranking — versi cerah & menonjol
@@ -3323,6 +3445,22 @@ function loadAdminPointRanking(){
     .catch(function(){
         el.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation" style="font-size:28px;display:block;margin-bottom:8px;"></i>Gagal memuat data ranking.</div>';
     });
+}
+
+function formatRankCellAdmin(posisi){
+    posisi = parseInt(posisi || 0, 10);
+
+    if(posisi === 1){
+        return '<i class="fas fa-medal" style="color:var(--gold-500);font-size:12px;margin-right:4px;" title="Juara 1"></i>1';
+    }
+    if(posisi === 2){
+        return '<i class="fas fa-medal" style="color:#C0C0C0;font-size:12px;margin-right:4px;" title="Juara 2"></i>2';
+    }
+    if(posisi === 3){
+        return '<i class="fas fa-medal" style="color:#CD7F32;font-size:12px;margin-right:4px;" title="Juara 3"></i>3';
+    }
+
+    return String(posisi > 0 ? posisi : '-');
 }
 
 /* ═══════════════════════════════════════════════
@@ -3393,15 +3531,30 @@ function updateKunciUI(isLocked, totalLocked, totalUnlocked){
 function loadResultsStatus(){
     var tb = document.getElementById('resultsUserBody');
     if(!tb) return;
+
     tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat data peserta...</p></div></td></tr>';
 
-    fetch('/api/admin/results-status',{headers:{'Accept':'application/json'}})
-    .then(function(r){ return r.json(); })
+    fetch('/api/admin/results-status?_t=' + Date.now(), {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(function(r){
+        if(!r.ok){
+            return r.json().then(function(d){ throw d; });
+        }
+        return r.json();
+    })
     .then(function(d){
         var badge = document.getElementById('resultsStatusBadge');
+
         if(badge){
-            if(d.total_published > 0){
-                badge.innerHTML = '<i class="fas fa-check-circle" style="font-size:8px;"></i> '+d.total_published+'/'+d.total_peserta+' peserta sudah menerima hasil';
+            var totalPublished = parseInt(d.total_published || 0, 10);
+            var totalPeserta = parseInt(d.total_peserta || 0, 10);
+
+            if(totalPublished > 0){
+                badge.innerHTML = '<i class="fas fa-check-circle" style="font-size:8px;"></i> ' + totalPublished + '/' + totalPeserta + ' peserta sudah menerima hasil';
                 badge.style.background = 'rgba(16,185,129,.12)';
                 badge.style.color = '#6EE7B7';
                 badge.style.borderColor = 'rgba(16,185,129,.3)';
@@ -3414,41 +3567,62 @@ function loadResultsStatus(){
         }
 
         if(!d.users || d.users.length === 0){
-            tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-users-slash"></i><p>Tidak ada user dengan role peserta.</p></div></td></tr>';
+            tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-users-slash"></i><p>Tidak ada peserta.</p></div></td></tr>';
             return;
         }
 
         var html = '';
+
         d.users.forEach(function(u, idx){
-            var statusHtml, actionHtml;
-            if(!u.has_peserta || u.locked_ikan_count === 0){
-                statusHtml = '<span style="font-size:10px;font-weight:700;color:var(--text-low);display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-minus-circle" style="font-size:9px;"></i> Tidak ada ikan terkunci</span>';
+            var finalCount = parseInt(
+                u.final_ikan_count !== undefined && u.final_ikan_count !== null
+                    ? u.final_ikan_count
+                    : (u.locked_ikan_count || 0),
+                10
+            );
+
+            var hasPeserta = !!u.has_peserta;
+            var hasFinal = hasPeserta && finalCount > 0;
+            var isUnlocked = !!u.result_unlocked;
+
+            var statusHtml = '';
+            var actionHtml = '';
+
+            if(!hasPeserta){
+                statusHtml = '<span style="font-size:10px;font-weight:700;color:var(--text-low);display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-user-slash" style="font-size:9px;"></i> Belum ada profil peserta</span>';
                 actionHtml = '<span style="font-size:10px;color:var(--text-faint);">—</span>';
-            } else if(u.result_unlocked){
+            } else if(!hasFinal){
+                statusHtml = '<span style="font-size:10px;font-weight:700;color:var(--text-low);display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-minus-circle" style="font-size:9px;"></i> Tidak ada ikan final/terkunci</span>';
+                actionHtml = '<span style="font-size:10px;color:var(--text-faint);">—</span>';
+            } else if(isUnlocked){
                 statusHtml = '<span style="font-size:10px;font-weight:800;color:#6EE7B7;display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,.12);padding:4px 10px;border-radius:6px;border:1px solid rgba(16,185,129,.25);"><i class="fas fa-check-circle" style="font-size:9px;"></i> Sudah Dikirim</span>';
-                actionHtml = '<button class="btn-xs red" onclick="unpublishResultSingleUser('+u.id+',\''+esc(u.name).replace(/'/g,"\\'")+'\')" style="padding:5px 10px;font-size:9px;"><i class="fas fa-ban"></i> Cabut</button>';
+                actionHtml = '<button class="btn-xs red" onclick="unpublishResultSingleUser('+u.id+','+JSON.stringify(u.display_name || u.name)+')" style="padding:5px 10px;font-size:9px;"><i class="fas fa-ban"></i> Cabut</button>';
             } else {
                 statusHtml = '<span style="font-size:10px;font-weight:800;color:var(--gold-300);display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,.10);padding:4px 10px;border-radius:6px;border:1px solid rgba(245,158,11,.20);"><i class="fas fa-clock" style="font-size:9px;"></i> Belum Dikirim</span>';
-                actionHtml = '<button class="btn-xs green" onclick="publishResultSingleUser('+u.id+',\''+esc(u.name).replace(/'/g,"\\'")+'\')" style="padding:5px 10px;font-size:9px;"><i class="fas fa-paper-plane"></i> Kirim</button>';
+                actionHtml = '<button class="btn-xs green" onclick="publishResultSingleUser('+u.id+','+JSON.stringify(u.display_name || u.name)+')" style="padding:5px 10px;font-size:9px;"><i class="fas fa-paper-plane"></i> Kirim</button>';
+            }
+
+            var nameCell = esc(u.display_name || u.name || '-');
+
+            if(u.jenis_keanggotaan === 'team'){
+                nameCell += ' <span style="font-size:9px;font-weight:700;color:var(--gold-300);background:rgba(245,158,11,.10);padding:2px 6px;border-radius:4px;border:1px solid rgba(245,158,11,.20);margin-left:4px;vertical-align:middle;">TEAM</span>';
             }
 
             html += '<tr>';
             html += '<td style="font-weight:700;color:var(--text-low);font-size:11px;">'+(idx+1)+'</td>';
-            var nameCell = esc(u.display_name || u.name);
-            if(u.jenis_keanggotaan === 'team'){
-                nameCell += ' <span style="font-size:9px;font-weight:700;color:var(--gold-300);background:rgba(245,158,11,.10);padding:2px 6px;border-radius:4px;border:1px solid rgba(245,158,11,.20);margin-left:4px;vertical-align:middle;">TEAM</span>';
-            }
             html += '<td style="font-weight:700;">'+nameCell+'</td>';
-            html += '<td style="font-size:11px;color:var(--text-mid);">'+esc(u.email)+'</td>';
-            html += '<td style="text-align:center;font-weight:800;color:'+(u.locked_ikan_count>0?'var(--cyan-300)':'var(--text-faint)')+';">'+u.locked_ikan_count+'</td>';
+            html += '<td style="font-size:11px;color:var(--text-mid);">'+esc(u.email || '-')+'</td>';
+            html += '<td style="text-align:center;font-weight:800;color:'+(finalCount > 0 ? 'var(--cyan-300)' : 'var(--text-faint)')+';">'+finalCount+'</td>';
             html += '<td style="text-align:center;">'+statusHtml+'</td>';
             html += '<td style="text-align:center;">'+actionHtml+'</td>';
             html += '</tr>';
         });
+
         tb.innerHTML = html;
     })
-    .catch(function(){
-        tb.innerHTML = '<tr><td colspan="6"><div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat data.</p></div></td></tr>';
+    .catch(function(e){
+        var msg = e && e.message ? e.message : 'Gagal memuat data.';
+        tb.innerHTML = '<tr><td colspan="6"><div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>'+esc(msg)+'</p></div></td></tr>';
     });
 }
 
@@ -3458,17 +3632,33 @@ function unpublishResultSingleUser(userId, userName){
         'Cabut akses hasil juara dari <strong>'+esc(userName)+'</strong>?<br><span style="font-size:11px;color:var(--danger);">Peserta tidak akan bisa lagi melihat hasil juara mereka.</span>',
         'Ya, Cabut',
         function(){
-            fetch('/api/admin/unpublish-result-user',{
-                method:'POST',
-                headers:{'X-CSRF-TOKEN':getCsrf(),'Accept':'application/json','Content-Type':'application/json'},
-                body:JSON.stringify({user_id:userId})
+            fetch('/api/admin/unpublish-result-user', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': getCsrf(),
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({user_id: userId})
             })
-            .then(function(r){return r.json();})
+            .then(function(r){
+                if(!r.ok){
+                    return r.json().then(function(d){ throw d; });
+                }
+                return r.json();
+            })
             .then(function(d){
-                if(d.success){popupSuccess('Berhasil',d.message);loadResultsStatus();}
-                else popupError('Gagal',d.message);
+                if(d.success){
+                    popupSuccess('Berhasil', d.message || 'Akses berhasil dicabut.');
+                    loadResultsStatus();
+                } else {
+                    popupError('Gagal', d.message || 'Gagal mencabut akses.');
+                }
             })
-            .catch(function(){popupError('Error','Gagal menghubungi server');});
+            .catch(function(e){
+                popupError('Error', e && e.message ? e.message : 'Gagal menghubungi server.');
+            });
         }
     );
 }
@@ -3476,19 +3666,35 @@ function unpublishResultSingleUser(userId, userName){
 function publishResultsAll(){
     popupConfirm(
         'Publikasikan Hasil ke Semua Peserta?',
-        'Tindakan ini akan membuka akses agar <strong>Semua Peserta</strong> dapat melihat hasil juara mereka masing-masing.<br><span style="font-size:11px;color:var(--warning);">Pastikan semua nilai sudah dikunci dan benar.</span>',
+        'Tindakan ini akan membuka akses hasil juara untuk semua peserta yang sudah memiliki ikan final/terkunci.<br><span style="font-size:11px;color:var(--warning);">Pastikan semua nilai sudah dikunci dan benar.</span>',
         'Ya, Publikasikan',
         function(){
             fetch('/api/admin/publish-results-all', {
-                method:'POST',
-                headers:{'X-CSRF-TOKEN':getCsrf(),'Accept':'application/json','Content-Type':'application/json'}
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': getCsrf(),
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             })
-            .then(r=>r.json())
-            .then(d=>{
-                if(d.success) popupSuccess('Berhasil', d.message);
-                else popupError('Gagal', d.message);
+            .then(function(r){
+                if(!r.ok){
+                    return r.json().then(function(d){ throw d; });
+                }
+                return r.json();
             })
-            .catch(()=>popupError('Error','Gagal menghubungi server'));
+            .then(function(d){
+                if(d.success){
+                    popupSuccess('Berhasil', d.message || 'Hasil berhasil dikirim.');
+                    loadResultsStatus();
+                } else {
+                    popupError('Gagal', d.message || 'Gagal mengirim hasil.');
+                }
+            })
+            .catch(function(e){
+                popupError('Error', e && e.message ? e.message : 'Gagal menghubungi server.');
+            });
         }
     );
 }
@@ -3500,15 +3706,31 @@ function unpublishResultsAll(){
         'Ya, Cabut',
         function(){
             fetch('/api/admin/unpublish-results-all', {
-                method:'POST',
-                headers:{'X-CSRF-TOKEN':getCsrf(),'Accept':'application/json','Content-Type':'application/json'}
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': getCsrf(),
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             })
-            .then(r=>r.json())
-            .then(d=>{
-                if(d.success) popupSuccess('Berhasil', d.message);
-                else popupError('Gagal', d.message);
+            .then(function(r){
+                if(!r.ok){
+                    return r.json().then(function(d){ throw d; });
+                }
+                return r.json();
             })
-            .catch(()=>popupError('Error','Gagal menghubungi server'));
+            .then(function(d){
+                if(d.success){
+                    popupSuccess('Berhasil', d.message || 'Akses semua peserta berhasil dicabut.');
+                    loadResultsStatus();
+                } else {
+                    popupError('Gagal', d.message || 'Gagal mencabut akses.');
+                }
+            })
+            .catch(function(e){
+                popupError('Error', e && e.message ? e.message : 'Gagal menghubungi server.');
+            });
         }
     );
 }
@@ -3520,16 +3742,32 @@ function publishResultSingleUser(userId, userName){
         'Ya, Kirim',
         function(){
             fetch('/api/admin/publish-result-user', {
-                method:'POST',
-                headers:{'X-CSRF-TOKEN':getCsrf(),'Accept':'application/json','Content-Type':'application/json'},
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': getCsrf(),
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: JSON.stringify({user_id: userId})
             })
-            .then(r=>r.json())
-            .then(d=>{
-                if(d.success) popupSuccess('Berhasil', d.message);
-                else popupError('Gagal', d.message);
+            .then(function(r){
+                if(!r.ok){
+                    return r.json().then(function(d){ throw d; });
+                }
+                return r.json();
             })
-            .catch(()=>popupError('Error','Gagal menghubungi server'));
+            .then(function(d){
+                if(d.success){
+                    popupSuccess('Berhasil', d.message || 'Hasil berhasil dikirim.');
+                    loadResultsStatus();
+                } else {
+                    popupError('Gagal', d.message || 'Gagal mengirim hasil.');
+                }
+            })
+            .catch(function(e){
+                popupError('Error', e && e.message ? e.message : 'Gagal menghubungi server.');
+            });
         }
     );
 }

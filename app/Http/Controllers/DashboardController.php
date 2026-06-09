@@ -652,9 +652,14 @@ class DashboardController extends Controller
 
         $maxMvp = $peserta->jenis_keanggotaan === 'team' ? 35 : 15;
         $myResults = [];
+        $myMvpResults = [];
+        $myMvpResults = [];
         if ($peserta && $peserta->result_unlocked_at) {
             $cacheKey = 'user_results_' . $userId;
-            $myResults = \Cache::remember($cacheKey, 120, function() use ($peserta) {
+
+            $cached = \Cache::remember($cacheKey, 120, function() use ($peserta) {
+                $results = [];
+                $mvpResults = [];
                 $results = [];
                 $myLockedIkans = $peserta->ikans()->where('is_locked', true)->get();
 
@@ -766,7 +771,111 @@ class DashboardController extends Controller
                     }
                 }
 
-                return $results;
+                // MVP khusus milik peserta/team login saja.
+                // Tidak mengambil MVP dari team lain.
+                $myMvpIkans = $peserta->ikans()
+                    ->where('is_mvp', true)
+                    ->where('is_locked', true)
+                    ->whereNotNull('nomor_tank')
+                    ->with(['scorings', 'bonusPoints'])
+                    ->get();
+
+                foreach ($myMvpIkans as $mvpIkan) {
+                    $comboKat = $mvpIkan->kategori;
+                    $comboKls = $mvpIkan->kelas;
+
+                    $poolQuery = Ikan::where('is_locked', true)
+                        ->whereNotNull('nomor_tank')
+                        ->where('kategori', $comboKat)
+                        ->whereHas('scorings')
+                        ->with(['scorings', 'bonusPoints']);
+
+                    if ($comboKls !== null && $comboKls !== '-') {
+                        $poolQuery->where('kelas', $comboKls);
+                    } else {
+                        $poolQuery->whereNull('kelas');
+                    }
+
+                    $pool = $poolQuery->get();
+                    $items = [];
+
+                    foreach ($pool as $pi) {
+                        $scorings = $pi->scorings;
+                        if ($scorings->isEmpty()) continue;
+
+                        $avgDetail = [];
+                        $jumlahJuriYangNilai = 0;
+
+                        foreach ($scorings as $s) {
+                            if ($s->total_nilai) $jumlahJuriYangNilai++;
+
+                            if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                                foreach ($s->nilai_detail as $kt => $fields) {
+                                    if (!is_array($fields)) continue;
+
+                                    foreach ($fields as $fid => $val) {
+                                        if (!isset($avgDetail[$kt][$fid])) {
+                                            $avgDetail[$kt][$fid] = ['sum' => 0, 'count' => 0];
+                                        }
+
+                                        $avgDetail[$kt][$fid]['sum'] += (float)($val ?? 0);
+                                        $avgDetail[$kt][$fid]['count']++;
+                                    }
+                                }
+                            }
+                        }
+
+                        $finalAvgDetail = [];
+                        foreach ($avgDetail as $kt => $fields) {
+                            foreach ($fields as $fid => $d) {
+                                $finalAvgDetail[$kt][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                            }
+                        }
+
+                        $defectSource = $scorings->first(function ($s) {
+                            return $s->edited_by_grand_juri;
+                        }) ?: $scorings->sortByDesc('updated_at')->first();
+
+                        $mergedDefect = [
+                            'raw_head_penalty'    => $defectSource ? ($defectSource->raw_head_penalty ?: ['0']) : ['0'],
+                            'raw_face_penalty'    => $defectSource ? ($defectSource->raw_face_penalty ?: ['0']) : ['0'],
+                            'raw_body_penalty'    => $defectSource ? ($defectSource->raw_body_penalty ?: ['0']) : ['0'],
+                            'raw_finnage_penalty' => $defectSource ? ($defectSource->raw_finnage_penalty ?: ['0']) : ['0'],
+                        ];
+
+                        $items[] = [
+                            'ikan_id'     => $pi->id,
+                            'total_point' => (float) PointCalculator::hitungPoint($pi->kategori, $finalAvgDetail, $mergedDefect),
+                            'total_bonus' => (int) $pi->bonusPoints->sum('points'),
+                        ];
+                    }
+
+                    $ranked = PointCalculator::hitungRankPoints($items, 'total_point');
+                    $rankInfo = collect($ranked)->firstWhere('ikan_id', $mvpIkan->id);
+
+                    $rankPoint = (int)($rankInfo['rank_point'] ?? 0);
+                    $position  = $rankInfo ? ((int)array_search($rankInfo, $ranked, true) + 1) : 0;
+                    $bonus     = (int)$mvpIkan->bonusPoints->sum('points');
+
+                    $mvpResults[] = [
+                        'ikan_id'          => $mvpIkan->id,
+                        'nama_peserta'     => $mvpIkan->nama_peserta ?? '-',
+                        'detail_anggota'   => $mvpIkan->detail_anggota ?? '-',
+                        'kategori'         => $mvpIkan->kategori,
+                        'kelas'            => $mvpIkan->kelas ?? '-',
+                        'nomor_tank'       => $mvpIkan->nomor_tank ?? '-',
+                        'position'         => $position,
+                        'rank_point'       => $rankPoint,
+                        'bonus_list'       => $mvpIkan->bonusPoints->pluck('bonus_type')->toArray(),
+                        'total_bonus'      => $bonus,
+                        'final_rank_point' => $rankPoint + $bonus,
+                    ];
+                }
+
+                return [
+                    'my_results' => $results,
+                    'my_mvp_results' => $mvpResults,
+                ];
             });
         }
 
@@ -778,7 +887,9 @@ class DashboardController extends Controller
             'undian_open' => $undianOpen,
             'tank_range_max' => $maxTankRange,
             'max_mvp' => $maxMvp,
+            'result_unlocked' => $peserta && $peserta->result_unlocked_at ? true : false,
             'my_results' => $myResults,
+            'my_mvp_results' => $myMvpResults ?? [],
         ]);
     }
 

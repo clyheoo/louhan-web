@@ -14,7 +14,8 @@ class Peserta extends Model
         'nama_peserta',
         'jenis_keanggotaan',
         'detail_anggota',
-        'user_id', 'nama_peserta', 'jenis_keanggotaan', 'detail_anggota', 'is_mvp_submitted', 'result_unlocked_at',
+        'is_mvp_submitted',
+        'result_unlocked_at',
     ];
 
     protected $casts = [

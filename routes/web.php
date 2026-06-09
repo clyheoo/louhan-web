@@ -99,6 +99,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/toggle-scoring-lock', [AdminDashboardController::class, 'toggleScoringLock']);
     Route::get('/api/admin/scoring-status', [AdminDashboardController::class, 'getScoringStatus']);
     Route::get('/api/admin/scoring-data', [AdminDashboardController::class, 'getScoringData']);
+    Route::post('/api/admin/edit-kategori-kelas', [AdminDashboardController::class, 'editKategoriKelas']);
     Route::post('/api/admin/create-user', [AdminDashboardController::class, 'createUser']);
     Route::post('/api/admin/change-role', [AdminDashboardController::class, 'changeRole']);
     Route::post('/api/admin/delete-user', [AdminDashboardController::class, 'deleteUser']);

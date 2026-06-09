@@ -12,27 +12,36 @@ class JuriController extends Controller
 {
     public function getJuriData()
     {
-        // ★ Cari ikan_id yang pernah ditolak, ikan tersebut tidak berhak masuk penilaian
-        $rejectedIkanIds = Nominasi::where('status', 'rejected')
+    $juriId = auth()->id();
+        // Ambil ikan yang sudah approved untuk juri login.
+        // Rejected global tetap tidak dipakai di sini agar hasil reset/re-submit dari admin
+        // tidak membuat data approved juri hilang karena record rejected lama.
+        $approvedIkanIds = Nominasi::where('juri_id', $juriId)
+            ->where('status', 'approved')
             ->pluck('ikan_id')
             ->unique()
-            ->toArray();
-
-        // ★ Hanya ambil ikan_id yang approved DAN tidak ada di daftar rejected
-        $approvedIkanIds = Nominasi::where('status', 'approved')
-            ->whereNotIn('ikan_id', $rejectedIkanIds)
-            ->pluck('ikan_id')
-            ->unique()
+            ->values()
             ->toArray();
 
         $hasApproved = count($approvedIkanIds) > 0;
 
-        $availableTanks = Ikan::whereNotNull('nomor_tank')
+        $availableTanks = Ikan::query()
+            ->select([
+                'id',
+                'peserta_id',
+                'nomor_tank',
+                'kategori',
+                'kelas',
+                'nama_peserta',
+                'detail_anggota',
+                'jenis_keanggotaan',
+                'is_locked',
+            ])
+            ->whereNotNull('nomor_tank')
             ->when($hasApproved, function ($q) use ($approvedIkanIds) {
                 $q->whereIn('id', $approvedIkanIds);
             })
-            ->with('peserta')
-            ->orderBy('nomor_tank')
+            ->orderByRaw('CAST(nomor_tank AS UNSIGNED) ASC')
             ->get();
 
         $myScores = Scoring::where('juri_id', auth()->id())
@@ -336,112 +345,198 @@ class JuriController extends Controller
             ], 422);
         }
 
+        $ikanIds = collect($ikanIds)
+            ->map(fn($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+
         $ikans = Ikan::whereIn('id', $ikanIds)
             ->whereNotNull('nomor_tank')
-            ->get();
+            ->pluck('id')
+            ->toArray();
 
-        if ($ikans->count() !== count($ikanIds)) {
+        if (count($ikans) !== count($ikanIds)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Beberapa tank tidak ditemukan atau belum memiliki nomor tank.',
             ], 422);
         }
 
-        // ★ Multi-nominasi diperbolehkan: juri boleh kirim nominasi tambahan
-        //   kapan saja, bahkan saat masih ada pending atau sudah ada approved.
-        //   Setiap submission menjadi entry pending baru, di-review independen.
-
-        // ★ Hapus nominasi PENDING yang TIDAK ada di submission baru
-        //   (juri mungkin unselect tank yang sebelumnya pending)
-        Nominasi::where('juri_id', auth()->id())
-            ->where('status', 'pending')
-            ->whereNotIn('ikan_id', $ikanIds)
-            ->delete();
-
-        // ★ Defect per ikan_id (opsional): { "12": {raw_head_penalty:[...], ...}, ... }
+        $juriId  = auth()->id();
         $defects = $request->json('defects') ?? [];
 
-        foreach ($ikanIds as $ikanId) {
-            Nominasi::where('juri_id', auth()->id())
-                ->where('ikan_id', $ikanId)
+        $createdOrUpdated = 0;
+        $skippedApproved  = 0;
+
+        \DB::transaction(function () use ($ikanIds, $juriId, $defects, &$createdOrUpdated, &$skippedApproved) {
+            // Tank pending yang tidak ikut submission baru dianggap dibatalkan.
+            Nominasi::where('juri_id', $juriId)
+                ->where('status', 'pending')
+                ->whereNotIn('ikan_id', $ikanIds)
                 ->delete();
 
-            $payload = [
-                'juri_id' => auth()->id(),
-                'ikan_id' => $ikanId,
-                'status'  => 'pending',
-            ];
+            foreach ($ikanIds as $ikanId) {
+                // Jangan ubah nominasi yang sudah approved.
+                $alreadyApproved = Nominasi::where('juri_id', $juriId)
+                    ->where('ikan_id', $ikanId)
+                    ->where('status', 'approved')
+                    ->exists();
 
-            // Defect dikirim bisa keyed by int atau string → cek dua-duanya
-            $d = $defects[$ikanId] ?? $defects[(string) $ikanId] ?? null;
-            if (is_array($d)) {
-                $payload['raw_head_penalty']    = $d['raw_head_penalty']    ?? ['0'];
-                $payload['raw_face_penalty']    = $d['raw_face_penalty']    ?? ['0'];
-                $payload['raw_body_penalty']    = $d['raw_body_penalty']    ?? ['0'];
-                $payload['raw_finnage_penalty'] = $d['raw_finnage_penalty'] ?? ['0'];
+                if ($alreadyApproved) {
+                    $skippedApproved++;
+                    continue;
+                }
+
+                $payload = [
+                    'juri_id' => $juriId,
+                    'ikan_id' => $ikanId,
+                    'status'  => 'pending',
+                ];
+
+                $d = $defects[$ikanId] ?? $defects[(string) $ikanId] ?? null;
+
+                if (is_array($d)) {
+                    $payload['raw_head_penalty']    = $d['raw_head_penalty']    ?? ['0'];
+                    $payload['raw_face_penalty']    = $d['raw_face_penalty']    ?? ['0'];
+                    $payload['raw_body_penalty']    = $d['raw_body_penalty']    ?? ['0'];
+                    $payload['raw_finnage_penalty'] = $d['raw_finnage_penalty'] ?? ['0'];
+                }
+
+                // Hapus pending/rejected lama milik juri ini untuk ikan yang sama,
+                // lalu buat pending baru. Approved tidak disentuh.
+                Nominasi::where('juri_id', $juriId)
+                    ->where('ikan_id', $ikanId)
+                    ->whereIn('status', ['pending', 'rejected'])
+                    ->delete();
+
+                Nominasi::create($payload);
+                $createdOrUpdated++;
             }
+        });
 
-            Nominasi::create($payload);
+        // Sync spreadsheet setelah response agar tombol kirim tidak lama.
+        try {
+            app()->terminating(function () {
+                try {
+                    $sync = app(\App\Services\SheetsSyncService::class);
+                    if (!$sync->isReady()) return;
+
+                    try { $sync->syncSemuaNominasi(); } catch (\Throwable $e) { \Log::error('Async-sync SemuaNominasi submit nominasi: ' . $e->getMessage()); }
+                    try { $sync->syncSemuaPilNom(); } catch (\Throwable $e) { \Log::error('Async-sync SemuaPilNom submit nominasi: ' . $e->getMessage()); }
+                    try { $sync->syncHasilNominasi(); } catch (\Throwable $e) { \Log::error('Async-sync HasilNominasi submit nominasi: ' . $e->getMessage()); }
+                } catch (\Throwable $e) {
+                    \Log::error('Async-sync outer submit nominasi: ' . $e->getMessage());
+                }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Gagal register async submit nominasi: ' . $e->getMessage());
+        }
+
+        $msg = $createdOrUpdated . ' nominasi berhasil dikirim dan menunggu review Grand Juri.';
+        if ($skippedApproved > 0) {
+            $msg .= ' ' . $skippedApproved . ' tank yang sudah approved dilewati.';
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Nominasi berhasil dikirim! Menunggu review Grand Juri.',
-            'count'   => count($ikanIds),
+            'message' => $msg,
+            'count'   => $createdOrUpdated,
+            'skipped_approved' => $skippedApproved,
         ]);
     }
 
     public function getTanksForNominasi()
     {
-        // ★ Exclude ikan yang sudah di-approve atau di-reject oleh juri ini
-        $excludedIkanIds = Nominasi::where('juri_id', auth()->id())
+        $juriId = auth()->id();
+
+        // Pending milik juri ini harus tetap muncul dan otomatis terpilih di frontend.
+        $pendingNominations = Nominasi::where('juri_id', $juriId)
+            ->where('status', 'pending')
+            ->get();
+
+        $pendingIkanIds = $pendingNominations
+            ->pluck('ikan_id')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        // Approved/rejected milik juri ini tidak perlu muncul lagi di pilihan nominasi.
+        // Pending jangan di-exclude, karena harus tampil paling atas.
+        $excludedIkanIds = Nominasi::where('juri_id', $juriId)
             ->whereIn('status', ['approved', 'rejected'])
             ->pluck('ikan_id')
             ->unique()
+            ->values()
             ->toArray();
 
-        $tanks = Ikan::whereNotNull('nomor_tank')
-            ->whereNotIn('id', $excludedIkanIds)
-            ->with('peserta')
-            ->orderBy('nomor_tank')
+        $pendingSet = array_flip($pendingIkanIds);
+
+        $query = Ikan::query()
+            ->select([
+                'id',
+                'nomor_tank',
+                'kategori',
+                'kelas',
+                'nama_peserta',
+                'detail_anggota',
+            ])
+            ->whereNotNull('nomor_tank');
+
+        if (!empty($excludedIkanIds)) {
+            $query->whereNotIn('id', $excludedIkanIds);
+        }
+
+        // PENTING:
+        // Jangan pakai orderByRaw('0') saat tidak ada pending.
+        // MySQL akan membaca "0" sebagai nama kolom dan menyebabkan error.
+        if (!empty($pendingIkanIds)) {
+            $safePendingIds = implode(',', array_map('intval', $pendingIkanIds));
+
+            $query->orderByRaw("CASE WHEN id IN ($safePendingIds) THEN 0 ELSE 1 END");
+        }
+
+        $tanks = $query
+            ->orderByRaw('CAST(nomor_tank AS UNSIGNED) ASC')
             ->get()
-            ->map(function ($ikan) {
+            ->map(function ($ikan) use ($pendingSet) {
                 return [
                     'id'             => $ikan->id,
                     'nomor_tank'     => $ikan->nomor_tank,
                     'kategori'       => $ikan->kategori,
                     'kelas'          => $ikan->kelas,
                     'nama_peserta'   => $ikan->nama_peserta ?? 'Unknown',
-                    'detail_anggota' => $ikan->peserta->detail_anggota ?? '—',
+                    'detail_anggota' => $ikan->detail_anggota ?? '—',
+                    'is_pending'     => isset($pendingSet[$ikan->id]),
                 ];
-            });
-
-        // ★ Kembalikan pending ikan_ids + defect data untuk pre-select di frontend
-        $pendingNominations = Nominasi::where('juri_id', auth()->id())
-            ->where('status', 'pending')
-            ->get();
-
-        $pendingIkanIds = $pendingNominations->pluck('ikan_id')->unique()->toArray();
+            })
+            ->values();
 
         $pendingDefects = [];
+
         foreach ($pendingNominations as $n) {
-            $hasDefect = collect(['raw_head_penalty','raw_face_penalty','raw_body_penalty','raw_finnage_penalty'])
-                ->some(function ($k) use ($n) {
-                    $val = $n->$k;
-                    return is_array($val) && collect($val)->some(function ($v) { return $v && $v !== '0'; });
-                });
-            if ($hasDefect) {
-                $pendingDefects[$n->ikan_id] = [
-                    'raw_head_penalty'    => $n->raw_head_penalty    ?? ['0'],
-                    'raw_face_penalty'    => $n->raw_face_penalty    ?? ['0'],
-                    'raw_body_penalty'    => $n->raw_body_penalty    ?? ['0'],
-                    'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
-                ];
-            }
+            $pendingDefects[$n->ikan_id] = [
+                'raw_head_penalty'    => $n->raw_head_penalty    ?? ['0'],
+                'raw_face_penalty'    => $n->raw_face_penalty    ?? ['0'],
+                'raw_body_penalty'    => $n->raw_body_penalty    ?? ['0'],
+                'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
+            ];
         }
 
-        $kategoris = $tanks->pluck('kategori')->unique()->sort()->values();
-        $kelass    = $tanks->pluck('kelas')->filter()->unique()->sort()->values();
+        $kategoris = $tanks
+            ->pluck('kategori')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        $kelass = $tanks
+            ->pluck('kelas')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
 
         return response()->json([
             'tanks'            => $tanks,
@@ -449,6 +544,7 @@ class JuriController extends Controller
             'kelass'           => $kelass,
             'pending_ikan_ids' => $pendingIkanIds,
             'pending_defects'  => $pendingDefects,
+            'server_time'      => now()->toDateTimeString(),
         ]);
     }
 

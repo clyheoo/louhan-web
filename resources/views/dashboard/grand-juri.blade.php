@@ -1189,6 +1189,22 @@ function setPointScope(s){
 
 function setGlobalTopN(n){document.getElementById('globalTopN').value=n;loadPointRanking();}
 
+function formatRankCell(posisi){
+    posisi = parseInt(posisi || 0, 10);
+
+    if(posisi === 1){
+        return '<i class="fas fa-medal" style="color:var(--gold-500);font-size:12px;margin-right:4px;" title="Juara 1"></i>1';
+    }
+    if(posisi === 2){
+        return '<i class="fas fa-medal" style="color:#C0C0C0;font-size:12px;margin-right:4px;" title="Juara 2"></i>2';
+    }
+    if(posisi === 3){
+        return '<i class="fas fa-medal" style="color:#CD7F32;font-size:12px;margin-right:4px;" title="Juara 3"></i>3';
+    }
+
+    return String(posisi > 0 ? posisi : '-');
+}
+
 function loadPointRanking(){
     var kat=document.getElementById('pointFilterKategori').value;var kelas=document.getElementById('pointFilterKelas').value;
     var params='?scope='+pointScope;if(kat)params+='&kategori='+encodeURIComponent(kat);if(kelas)params+='&kelas='+kelas;
@@ -1213,11 +1229,7 @@ function loadPointRanking(){
                 else if(posisi<=6){rankBg='rgba(34,211,238,.08)';rankColor='var(--cyan-300)';rankBorder='rgba(34,211,238,.25)';}
                 else if(posisi<=10){rankBg='var(--purple-light)';rankColor='var(--purple)';rankBorder='rgba(124,58,237,.25)';}
                 else{rankBg='var(--glass-2)';rankColor='var(--text-faint)';rankBorder='var(--bd-2)';}
-                var medalHtml='';
-                if(posisi===1)medalHtml='<i class="fas fa-medal" style="color:var(--gold-500);font-size:12px;margin-right:4px;" title="Juara 1"></i>';
-                else if(posisi===2)medalHtml='<i class="fas fa-medal" style="color:#C0C0C0;font-size:12px;margin-right:4px;" title="Juara 2"></i>';
-                else if(posisi===3)medalHtml='<i class="fas fa-medal" style="color:#CD7F32;font-size:12px;margin-right:4px;" title="Juara 3"></i>';
-                html+='<tr><td style="text-align:center;font-weight:800;color:var(--text-muted);white-space:nowrap;">'+medalHtml+posisi+'</td>';
+                html+='<tr><td style="text-align:center;font-weight:800;color:var(--text-muted);white-space:nowrap;">'+formatRankCell(posisi)+'</td>';
                 if(isGlobal)html+='<td style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">'+esc(d.kategori)+'</td>';
                 html+='<td style="font-weight:700;color:var(--purple);text-align:center;">'+(d.nomor_tank||'—')+'</td><td style="text-align:center;">'+esc(d.kelas)+'</td><td style="font-size:11px;color:var(--text-muted);">'+esc(d.detail_anggota)+'</td>';
                 html+='<td style="text-align:center;"><div style="font-weight:800;">'+(d.total_nilai_semua??0)+'</div>';if(d.jumlah_juri>0)html+='<div style="font-size:9px;color:var(--text-muted);font-weight:600;">'+d.jumlah_juri+' juri</div>';html+='</td>';

@@ -273,13 +273,19 @@ class AdminDashboardController extends Controller
         }, 'scorings.juri', 'scorings.grandJuri', 'bonusPoints']);
 
         if ($request->filled('search')) {
-            $query->whereHas('peserta', function ($q) use ($request) {
-                $q->where('nama_peserta', 'LIKE', '%' . $request->search . '%');
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->whereHas('peserta', function ($q2) use ($s) {
+                    $q2->where('nama_peserta', 'LIKE', '%' . $s . '%');
+                })->orWhere('nomor_tank', 'LIKE', '%' . $s . '%');
             });
         }
 
         if ($request->filled('kategori')) {
             $query->where('kategori', $request->kategori);
+        }
+        if ($request->filled('tank')) {
+            $query->where('nomor_tank', $request->tank);
         }
 
         $totalJuriAll = \App\Models\User::where('role', 'juri')->count();
@@ -1182,22 +1188,55 @@ class AdminDashboardController extends Controller
             'reason' => 'required|string|max:255',
         ]);
 
-        // HANYA kosongkan nomor tank, data penilaian (scorings) TIDAK DIHAPUS
-        \App\Models\Ikan::query()->update(['nomor_tank' => null]);
+        $resetAt = now();
 
-        // Simpan info reset ke tabel settings untuk dibaca user
-        \DB::table('settings')->updateOrInsert(
-            ['key' => 'tank_reset_info'],
-            [
-                'value' => json_encode([
-                    'reason'   => $request->reason,
-                    'reset_at' => now()->toDateTimeString(),
-                ]),
-                'updated_at' => now(),
-            ]
-        );
+        \DB::transaction(function () use ($request, $resetAt) {
+            // HANYA kosongkan nomor tank. Data ikan, scoring, bonus, dan nominasi tetap aman.
+            \App\Models\Ikan::query()->update([
+                'nomor_tank' => null,
+                'updated_at' => $resetAt,
+            ]);
 
-        return response()->json(['success' => true, 'message' => 'Semua nomor tank berhasil direset. Data penilaian tetap aman.']);
+            // Simpan info reset agar halaman user/juri bisa tahu data tank baru perlu dimuat ulang.
+            \DB::table('settings')->updateOrInsert(
+                ['key' => 'tank_reset_info'],
+                [
+                    'value' => json_encode([
+                        'reason'   => $request->reason,
+                        'reset_at' => $resetAt->toDateTimeString(),
+                    ]),
+                    'updated_at' => $resetAt,
+                ]
+            );
+        });
+
+        // Sync spreadsheet dijalankan SETELAH response dikirim,
+        // supaya reset di browser tidak terasa lama.
+        $sync = $this->sheetsSync;
+
+        try {
+            app()->terminating(function () use ($sync) {
+                try {
+                    if (!$sync->isReady()) return;
+
+                    try { $sync->syncSemuaPeserta(); } catch (\Throwable $e) { \Log::error('Async-sync SemuaPeserta reset tank: ' . $e->getMessage()); }
+                    try { $sync->syncPlotingTank();  } catch (\Throwable $e) { \Log::error('Async-sync PlotingTank reset tank: ' . $e->getMessage()); }
+                    try { $sync->syncSemuaNominasi(); } catch (\Throwable $e) { \Log::error('Async-sync SemuaNominasi reset tank: ' . $e->getMessage()); }
+                    try { $sync->syncSemuaPilNom(); } catch (\Throwable $e) { \Log::error('Async-sync SemuaPilNom reset tank: ' . $e->getMessage()); }
+                    try { $sync->syncHasilJuri(); } catch (\Throwable $e) { \Log::error('Async-sync HasilJuri reset tank: ' . $e->getMessage()); }
+                } catch (\Throwable $e) {
+                    \Log::error('Async-sync outer reset tank: ' . $e->getMessage());
+                }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Gagal register async reset tank sync: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success'  => true,
+            'message'  => 'Semua nomor tank berhasil direset. Sync spreadsheet berjalan di background.',
+            'reset_at' => $resetAt->toDateTimeString(),
+        ]);
     }
 
     /* ═══════════════════════════════════════════
@@ -2329,36 +2368,44 @@ class AdminDashboardController extends Controller
         ]);
     }
 
-        public function getResultsStatus()
+    public function getResultsStatus()
     {
-        // ★ Query dari Peserta (bukan User::where('role','user')) 
-        // karena bisa saja role user bukan 'user' tapi tetap punya profil peserta
-        $pesertas = Peserta::with('user')->orderBy('nama_peserta')->get();
+        $pesertas = Peserta::with('user')
+            ->whereHas('user')
+            ->orderBy('nama_peserta')
+            ->get();
 
         $users = $pesertas->map(function ($p) {
             $u = $p->user;
             if (!$u) return null;
-            $lockedCount = $p->ikans()->where('is_locked', true)->count();
-                return [
-                    'id'                 => $u->id,
-                    'name'               => $u->name,
-                    'email'              => $u->email,
-                    'has_peserta'        => true,
-                    'result_unlocked'    => $p->result_unlocked_at !== null,
-                    'result_unlocked_at' => $p->result_unlocked_at
-                        ? $p->result_unlocked_at->format('d M Y H:i')
-                        : null,
-                    'locked_ikan_count'  => $lockedCount,
-                    'jenis_keanggotaan'  => $p->jenis_keanggotaan ?? 'perorangan',
-                    'detail_anggota'     => $p->detail_anggota ?? '-',
-                    'display_name'       => ($p->jenis_keanggotaan === 'team' && $p->detail_anggota)
-                        ? $p->detail_anggota
-                        : ($p->nama_peserta ?: $u->name),
-                ];
+
+            $finalCount = $p->ikans()
+                ->where('is_locked', true)
+                ->whereNotNull('nomor_tank')
+                ->whereHas('scorings')
+                ->count();
+
+            return [
+                'id'                 => $u->id,
+                'name'               => $u->name,
+                'email'              => $u->email,
+                'has_peserta'        => true,
+                'result_unlocked'    => $p->result_unlocked_at !== null,
+                'result_unlocked_at' => $p->result_unlocked_at
+                    ? $p->result_unlocked_at->format('d M Y H:i')
+                    : null,
+                'locked_ikan_count'  => $finalCount,
+                'final_ikan_count'   => $finalCount,
+                'jenis_keanggotaan'  => $p->jenis_keanggotaan ?? 'perorangan',
+                'detail_anggota'     => $p->detail_anggota ?? '-',
+                'display_name'       => ($p->jenis_keanggotaan === 'team' && $p->detail_anggota)
+                    ? $p->detail_anggota
+                    : ($p->nama_peserta ?: $u->name),
+            ];
         })->filter()->values();
 
         $totalPublished = Peserta::whereNotNull('result_unlocked_at')->count();
-        $totalPeserta   = Peserta::count();
+        $totalPeserta   = Peserta::whereHas('user')->count();
 
         return response()->json([
             'users'           => $users,
@@ -2378,46 +2425,136 @@ class AdminDashboardController extends Controller
 
     public function publishResultsAll()
     {
-        \App\Models\Peserta::whereNotNull('is_mvp_submitted')->update(['result_unlocked_at' => now()]);
-        // Clear user result caches
-        $pesertas = \App\Models\Peserta::whereNotNull('result_unlocked_at')->get();
+        $pesertas = \App\Models\Peserta::whereHas('ikans', function ($q) {
+                $q->where('is_locked', true)
+                ->whereNotNull('nomor_tank')
+                ->whereHas('scorings');
+            })
+            ->whereNotNull('user_id')
+            ->get();
+
         foreach ($pesertas as $p) {
+            $p->update(['result_unlocked_at' => now()]);
             \Cache::forget('user_results_' . $p->user_id);
         }
-        return response()->json(['success' => true, 'message' => 'Hasil juara berhasil dikirim ke SEMUA peserta.']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hasil juara berhasil dikirim ke ' . $pesertas->count() . ' peserta yang memiliki ikan final/terkunci.',
+            'published_count' => $pesertas->count(),
+        ]);
     }
 
     public function publishResultUser(Request $request)
     {
-        $request->validate(['user_id' => 'required|exists:users,id']);
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
         $peserta = \App\Models\Peserta::where('user_id', $request->user_id)->first();
-        if ($peserta) {
-            $peserta->update(['result_unlocked_at' => now()]);
-            \Cache::forget('user_results_' . $request->user_id);
-            return response()->json(['success' => true, 'message' => 'Hasil juara berhasil dikirim ke peserta.']);
+
+        if (!$peserta) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Peserta tidak ditemukan.',
+            ], 404);
         }
-        return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan.'], 404);
+
+        $hasFinalResult = $peserta->ikans()
+            ->where('is_locked', true)
+            ->whereNotNull('nomor_tank')
+            ->whereHas('scorings')
+            ->exists();
+
+        if (!$hasFinalResult) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Peserta ini belum memiliki ikan final/terkunci.',
+            ], 422);
+        }
+
+        $peserta->update(['result_unlocked_at' => now()]);
+        \Cache::forget('user_results_' . $request->user_id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hasil juara berhasil dikirim ke peserta.',
+        ]);
     }
 
-        public function unpublishResultUser(Request $request)
+    public function unpublishResultUser(Request $request)
     {
-        $request->validate(['user_id' => 'required|exists:users,id']);
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
         $peserta = \App\Models\Peserta::where('user_id', $request->user_id)->first();
-        if ($peserta && $peserta->result_unlocked_at) {
-            $peserta->update(['result_unlocked_at' => null]);
-            \Cache::forget('user_results_' . $request->user_id);
-            return response()->json(['success' => true, 'message' => 'Akses hasil juara berhasil dicabut dari peserta.']);
+
+        if (!$peserta) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Peserta tidak ditemukan.',
+            ], 404);
         }
-        return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan atau belum menerima hasil.'], 404);
+
+        $peserta->update(['result_unlocked_at' => null]);
+        \Cache::forget('user_results_' . $request->user_id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Akses hasil juara berhasil dicabut dari peserta.',
+        ]);
     }
 
     public function unpublishResultsAll()
     {
         $pesertas = \App\Models\Peserta::whereNotNull('result_unlocked_at')->get();
+
         foreach ($pesertas as $p) {
             \Cache::forget('user_results_' . $p->user_id);
+            $p->update(['result_unlocked_at' => null]);
         }
-        \App\Models\Peserta::whereNotNull('result_unlocked_at')->update(['result_unlocked_at' => null]);
-        return response()->json(['success' => true, 'message' => 'Akses hasil juara berhasil dicabut dari semua peserta.']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Akses hasil juara berhasil dicabut dari semua peserta.',
+            'unpublished_count' => $pesertas->count(),
+        ]);
+    }
+
+    public function editKategoriKelas(Request $request)
+    {
+        $request->validate([
+            'ikan_id' => 'required|exists:ikans,id',
+            'kategori' => 'required|string|max:255',
+            'kelas'    => 'nullable|string|max:10',
+        ]);
+
+        $ikan = Ikan::find($request->ikan_id);
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 404);
+        }
+
+        $noKelasKategori = ['Bonsai', 'Jumbo'];
+        $kelas = in_array($request->kategori, $noKelasKategori) ? null : $request->kelas;
+
+        \DB::transaction(function () use ($ikan, $request, $kelas) {
+            $ikan->update([
+                'kategori' => $request->kategori,
+                'kelas'    => $kelas,
+                'diubah_oleh' => auth()->id(),
+            ]);
+
+            \App\Models\Scoring::where('ikan_id', $ikan->id)->update([
+                'kelas' => $kelas,
+            ]);
+        });
+
+        \Cache::forget('user_results_' . optional($ikan->peserta)->user_id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori & kelas berhasil diperbarui.',
+        ]);
     }
 }

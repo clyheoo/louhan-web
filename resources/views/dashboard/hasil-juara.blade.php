@@ -140,65 +140,198 @@
         </main>
     </div>
 
-    <script>
-        function escapeHtml(str){
-            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+<script>
+    function escapeHtml(str){
+        if(str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;');
+    }
+
+    function formatJuara(pos){
+        pos = parseInt(pos || 0, 10);
+
+        if(pos === 1){
+            return '<span class="result-juara j1"><i class="fas fa-medal" style="color:#FFD700;font-size:16px;"></i> 1</span>';
         }
 
-        function loadHasilJuara(){
-            var body = document.getElementById('hasilJuaraBody');
+        if(pos === 2){
+            return '<span class="result-juara j2"><i class="fas fa-medal" style="color:#C0C0C0;font-size:16px;"></i> 2</span>';
+        }
 
-            fetch('/api/user/my-ikans',{headers:{'Accept':'application/json'}})
-            .then(function(r){
-                if(r.status === 401){window.location.href='/login';return null;}
-                return r.json();
-            })
-            .then(function(data){
-                if(!data){body.innerHTML='<div class="empty-state"><i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i><p style="color:var(--danger);">Gagal memuat data.</p></div>';return;}
+        if(pos === 3){
+            return '<span class="result-juara j3"><i class="fas fa-medal" style="color:#CD7F32;font-size:16px;"></i> 3</span>';
+        }
 
-                var results = data.my_results || [];
+        return '<span class="result-juara j4plus">' + (pos > 0 ? pos : '-') + '</span>';
+    }
 
-                if(!results || results.length === 0){
-                    body.innerHTML='<div class="empty-state" style="padding:50px 20px;">'+
-                        '<div style="width:80px;height:80px;border-radius:50%;background:var(--glass-2);border:1px solid var(--bd-2);display:grid;place-items:center;margin:0 auto 16px;color:var(--text-low);font-size:32px;"><i class="fas fa-lock"></i></div>'+
-                        '<p style="font-size:14px;font-weight:700;color:var(--text-mid);margin-bottom:6px;">Hasil Belum Tersedia</p>'+
-                        '<p style="font-size:12px;color:var(--text-low);max-width:320px;margin:0 auto;line-height:1.6;">Hasil juara belum dibuka oleh panitia, atau Anda belum memiliki ikan yang dikunci oleh Grand Juri.</p>'+
-                    '</div>';
-                    return;
-                }
+    function formatBonusList(list){
+        list = Array.isArray(list) ? list : [];
 
-                var html = '';
+        if(list.length === 0){
+            return '<span style="color:var(--text-low);">Tidak ada bonus</span>';
+        }
 
-                results.forEach(function(r){
-                    var juaraClass = 'j4plus';
-                    var medalIcon = '';
-                    if(r.position === 1){juaraClass='j1';medalIcon='<i class="fas fa-medal" style="color:#FFD700;font-size:16px;"></i>';}
-                    else if(r.position === 2){juaraClass='j2';medalIcon='<i class="fas fa-medal" style="color:#C0C0C0;font-size:16px;"></i>';}
-                    else if(r.position === 3){juaraClass='j3';medalIcon='<i class="fas fa-medal" style="color:#CD7F32;font-size:16px;"></i>';}
-                    else{medalIcon='<i class="fas fa-award" style="color:#6EE7B7;font-size:16px;"></i>';}
+        var labels = {
+            best_of_the_best: 'BEST OF THE BEST',
+            best_of_show: 'BEST OF SHOW',
+            grand_champion: 'GRAND CHAMPION',
+            young_champion: 'YOUNG CHAMPION',
+            junior: 'JUNIOR',
+            baby_champion: 'BABY CHAMPION',
+            mini_champion: 'MINI CHAMPION'
+        };
 
-                    html += '<div class="result-item">';
-                    html += '<div class="result-header">';
-                    html += '<div class="result-kategori"><i class="fas fa-tag" style="font-size:10px;"></i> '+escapeHtml(r.kategori)+' - Kelas '+escapeHtml(r.kelas)+'</div>';
-                    html += '<div class="result-juara '+juaraClass+'">'+medalIcon+' Juara '+r.position+'</div>';
-                    html += '</div>';
-                    html += '<div class="result-grid">';
-                    html += '<div><div class="rg-label">Asal / Team</div><div class="rg-val">'+escapeHtml(r.detail_anggota||'-')+'</div></div>';
-                    html += '<div><div class="rg-label">No. Tank</div><div class="rg-val cyan">Tank '+(r.nomor_tank||'-')+'</div></div>';
-                    html += '<div><div class="rg-label">Point</div><div class="rg-val">'+(r.point||0)+'</div></div>';
-                    html += '<div><div class="rg-label">Rank Point</div><div class="rg-val gold">'+(r.rank_point||0)+'</div></div>';
-                    html += '</div>';
-                    html += '</div>';
+        return list.map(function(b){
+            return '<span style="display:inline-block;margin:2px 4px 2px 0;padding:3px 7px;border-radius:6px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);color:#6EE7B7;font-size:10px;font-weight:800;">'
+                + escapeHtml(labels[b] || b) +
+            '</span>';
+        }).join('');
+    }
+
+    function renderEmptyState(data){
+        var resultUnlocked = !!(data && data.result_unlocked);
+
+        if(resultUnlocked){
+            return '<div class="empty-state" style="padding:50px 20px;">'+
+                '<div style="width:80px;height:80px;border-radius:50%;background:var(--glass-2);border:1px solid var(--bd-2);display:grid;place-items:center;margin:0 auto 16px;color:var(--warning);font-size:32px;"><i class="fas fa-circle-exclamation"></i></div>'+
+                '<p style="font-size:14px;font-weight:700;color:var(--text-mid);margin-bottom:6px;">Akses Hasil Sudah Dibuka</p>'+
+                '<p style="font-size:12px;color:var(--text-low);max-width:360px;margin:0 auto;line-height:1.6;">Tetapi belum ada ikan Anda yang memenuhi syarat hasil juara. Pastikan ikan sudah memiliki nomor tank, sudah dinilai, dan sudah dikunci/final oleh Grand Juri.</p>'+
+            '</div>';
+        }
+
+        return '<div class="empty-state" style="padding:50px 20px;">'+
+            '<div style="width:80px;height:80px;border-radius:50%;background:var(--glass-2);border:1px solid var(--bd-2);display:grid;place-items:center;margin:0 auto 16px;color:var(--text-low);font-size:32px;"><i class="fas fa-lock"></i></div>'+
+            '<p style="font-size:14px;font-weight:700;color:var(--text-mid);margin-bottom:6px;">Hasil Belum Tersedia</p>'+
+            '<p style="font-size:12px;color:var(--text-low);max-width:360px;margin:0 auto;line-height:1.6;">Hasil juara belum dibuka oleh panitia, atau Anda belum memiliki ikan yang dikunci oleh Grand Juri.</p>'+
+        '</div>';
+    }
+
+    function renderHasilJuara(results){
+        var html = '';
+
+        results.forEach(function(r){
+            html += '<div class="result-item">';
+            html += '<div class="result-header">';
+            html += '<div class="result-kategori"><i class="fas fa-tag" style="font-size:10px;"></i> '+escapeHtml(r.kategori || '-')+' - Kelas '+escapeHtml(r.kelas || '-')+'</div>';
+            html += formatJuara(r.position);
+            html += '</div>';
+
+            html += '<div class="result-grid">';
+            html += '<div><div class="rg-label">Asal / Team</div><div class="rg-val">'+escapeHtml(r.detail_anggota || '-')+'</div></div>';
+            html += '<div><div class="rg-label">No. Tank</div><div class="rg-val cyan">Tank '+escapeHtml(r.nomor_tank || '-')+'</div></div>';
+            html += '<div><div class="rg-label">Point</div><div class="rg-val">'+escapeHtml(r.point || r.total_point || 0)+'</div></div>';
+            html += '<div><div class="rg-label">Rank Point</div><div class="rg-val gold">'+escapeHtml(r.rank_point || 0)+'</div></div>';
+            html += '</div>';
+
+            html += '</div>';
+        });
+
+        return html;
+    }
+
+    function renderMvpResults(mvpResults){
+        var html = '';
+
+        if(!mvpResults || mvpResults.length === 0){
+            return html;
+        }
+
+        html += '<div style="margin:24px 0 12px;padding-top:18px;border-top:1px solid var(--bd-2);">';
+        html += '<h3 style="font-size:14px;font-weight:900;color:var(--gold-300);display:flex;align-items:center;gap:8px;margin-bottom:8px;"><i class="fas fa-star"></i> Data MVP Team Anda</h3>';
+        html += '<p style="font-size:11px;color:var(--text-mid);margin-bottom:12px;">Data MVP ini hanya menampilkan ikan MVP yang didaftarkan oleh akun/team Anda sendiri.</p>';
+        html += '</div>';
+
+        mvpResults.forEach(function(m){
+            html += '<div class="result-item" style="background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.22);">';
+            html += '<div class="result-header">';
+            html += '<div class="result-kategori" style="color:var(--gold-300);"><i class="fas fa-fish"></i> MVP - '+escapeHtml(m.kategori || '-')+' - Kelas '+escapeHtml(m.kelas || '-')+'</div>';
+            html += formatJuara(m.position);
+            html += '</div>';
+
+            html += '<div class="result-grid">';
+            html += '<div><div class="rg-label">Nama Peserta</div><div class="rg-val">'+escapeHtml(m.nama_peserta || '-')+'</div></div>';
+            html += '<div><div class="rg-label">No. Tank</div><div class="rg-val cyan">Tank '+escapeHtml(m.nomor_tank || '-')+'</div></div>';
+            html += '<div><div class="rg-label">Rank Point</div><div class="rg-val gold">'+escapeHtml(m.rank_point || 0)+'</div></div>';
+            html += '<div><div class="rg-label">Bonus Point</div><div class="rg-val" style="color:#6EE7B7;">+'+escapeHtml(m.total_bonus || 0)+'</div></div>';
+            html += '<div><div class="rg-label">Final Rank Point</div><div class="rg-val gold">'+escapeHtml(m.final_rank_point || 0)+'</div></div>';
+            html += '<div><div class="rg-label">Detail Bonus</div><div class="rg-val">'+formatBonusList(m.bonus_list)+'</div></div>';
+            html += '</div>';
+
+            html += '</div>';
+        });
+
+        return html;
+    }
+
+    function loadHasilJuara(){
+        var body = document.getElementById('hasilJuaraBody');
+
+        fetch('/api/user/my-ikans?_t=' + Date.now(), {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(r){
+            if(r.status === 401){
+                window.location.href = '/login';
+                return null;
+            }
+
+            if(!r.ok){
+                return r.json().then(function(d){
+                    throw d;
                 });
+            }
 
-                body.innerHTML = html;
-            })
-            .catch(function(){
-                body.innerHTML='<div class="empty-state"><i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i><p style="color:var(--danger);">Gagal memuat data hasil.</p></div>';
-            });
-        }
+            return r.json();
+        })
+        .then(function(data){
+            if(!data){
+                body.innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i><p style="color:var(--danger);">Gagal memuat data.</p></div>';
+                return;
+            }
 
-        loadHasilJuara();
-    </script>
+            console.log('HASIL JUARA RESPONSE:', data);
+
+            var results = Array.isArray(data.my_results) ? data.my_results : [];
+            var mvpResults = Array.isArray(data.my_mvp_results) ? data.my_mvp_results : [];
+
+            if(results.length === 0 && mvpResults.length === 0){
+                body.innerHTML = renderEmptyState(data);
+                return;
+            }
+
+            var html = '';
+
+            if(results.length > 0){
+                html += renderHasilJuara(results);
+            }
+
+            if(mvpResults.length > 0){
+                html += renderMvpResults(mvpResults);
+            }
+
+            body.innerHTML = html;
+        })
+        .catch(function(e){
+            console.error('loadHasilJuara error:', e);
+
+            var msg = e && e.message ? e.message : 'Gagal memuat data hasil.';
+
+            body.innerHTML = '<div class="empty-state">'+
+                '<i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i>'+
+                '<p style="color:var(--danger);font-weight:700;">Gagal memuat data hasil.</p>'+
+                '<p style="font-size:11px;color:var(--text-low);margin-top:6px;">'+escapeHtml(msg)+'</p>'+
+            '</div>';
+        });
+    }
+
+    loadHasilJuara();
+</script>
 </body>
 </html>
