@@ -1552,38 +1552,87 @@
     </div>
 </div>
 
-<!-- ═══════════ MODAL: EDIT KATEGORI & KELAS ═══════════ -->
-<div class="modal-bg" id="modalEditKatKelas" style="--mw:460px;">
+<!-- ═══════════ MODAL: EDIT DATA PESERTA, KATEGORI & KELAS ═══════════ -->
+<div class="modal-bg" id="modalEditKatKelas" style="--mw:540px;">
     <div class="modal-box">
-        <div class="modal-head"><h3><i class="fas fa-tags" style="color:var(--gold-400);"></i> Edit Kategori & Kelas</h3><button class="modal-close" onclick="closeModal('modalEditKatKelas')"><i class="fas fa-xmark"></i></button></div>
+        <div class="modal-head">
+            <h3>
+                <i class="fas fa-user-pen" style="color:var(--gold-400);"></i>
+                Edit Peserta, Kategori & Kelas
+            </h3>
+            <button class="modal-close" onclick="closeModal('modalEditKatKelas')">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </div>
+
         <div class="modal-body">
             <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--gold-300);display:flex;gap:8px;align-items:flex-start;">
                 <i class="fas fa-circle-info" style="margin-top:2px;"></i>
-                <span>Mengubah kategori/kelas akan mempengaruhi perhitungan point dan ranking ikan ini.</span>
+                <span>
+                    Perubahan nama, jenis keanggotaan, asal/team, kategori, dan kelas akan disinkronkan ke data ikan peserta ini.
+                </span>
             </div>
+
             <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;">
-                <span id="editKKNama"></span> — <span id="editKKTank" style="color:var(--primary);"></span>
+                <span id="editKKNamaPreview"></span>
+                —
+                <span id="editKKTank" style="color:var(--primary);"></span>
             </div>
+
             <input type="hidden" id="editKKIdx">
+
+            <div class="form-group">
+                <label class="form-label">Nama Peserta</label>
+                <input type="text" id="editKKNamaInput" class="form-control" placeholder="Nama peserta" style="padding-left:14px;">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Jenis Keanggotaan</label>
+                <select id="editKKJenis" class="form-control" onchange="onEditKKJenisChange()" style="padding-left:14px;">
+                    <option value="perorangan">Perorangan</option>
+                    <option value="team">Team / Club</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" id="editKKDetailLabel">Kota Asal</label>
+                <input type="text" id="editKKDetail" class="form-control" placeholder="Kota asal / nama team / club" style="padding-left:14px;">
+            </div>
+
+            <div style="height:1px;background:var(--bd-1);margin:16px 0;"></div>
+
             <div class="form-group">
                 <label class="form-label">Kategori</label>
                 <select id="editKKKat" class="form-control" onchange="onEditKKKatChange()" style="padding-left:14px;">
                     <option value="">-- Pilih Kategori --</option>
-                    <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
-                    <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                    <option>Cencu</option>
+                    <option>Chingwa</option>
+                    <option>Freemarking</option>
+                    <option>Goldenbase</option>
+                    <option>Klasik</option>
+                    <option>Bonsai</option>
+                    <option>Jumbo</option>
                 </select>
             </div>
+
             <div class="form-group" id="editKKKelasWrap">
                 <label class="form-label">Kelas</label>
                 <select id="editKKKelas" class="form-control" style="padding-left:14px;">
                     <option value="">-- Pilih Kelas --</option>
-                    <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                    <option>A</option>
+                    <option>B</option>
+                    <option>C</option>
+                    <option>D</option>
+                    <option>E</option>
                 </select>
             </div>
         </div>
+
         <div class="modal-foot">
-            <button class="btn-cancel" onclick="closeModal('modalEditKatKelas')">Batal</button>
-            <button class="btn-primary" id="btnSaveKK" onclick="submitEditKatKelas()" style="background:linear-gradient(135deg,var(--gold-600),var(--gold-700));box-shadow:0 4px 14px -4px rgba(245,158,11,.5),inset 0 1px 0 rgba(255,255,255,.18);"><i class="fas fa-save"></i> Simpan</button>
+            <button type="button" class="btn-secondary" onclick="closeModal('modalEditKatKelas')">Batal</button>
+            <button type="button" class="btn-primary" id="btnSaveKK" onclick="submitEditKatKelas()">
+                <i class="fas fa-save"></i> Simpan Perubahan
+            </button>
         </div>
     </div>
 </div>

@@ -420,11 +420,12 @@ class AdminDashboardController extends Controller
             return [
                 'id'                 => $ikan->id,
                 'peserta_id'         => $ikan->peserta_id,
-                'nama_peserta'       => $ikan->nama_peserta ?? 'Unknown',
-                'kategori'           => $ikan->kategori,
-                'kelas'              => $latestKelas ?? $ikan->kelas ?? '-',
-                'nomor_tank'         => $ikan->nomor_tank,
-                'detail_anggota' => $ikan->detail_anggota ?? '-',
+                'nama_peserta'      => $ikan->nama_peserta ?? optional($peserta)->nama_peserta ?? 'Unknown',
+                'kategori'          => $ikan->kategori,
+                'kelas'             => $latestKelas ?? $ikan->kelas ?? '-',
+                'nomor_tank'        => $ikan->nomor_tank,
+                'detail_anggota'    => $ikan->detail_anggota ?? optional($peserta)->detail_anggota ?? '—',
+                'jenis_keanggotaan' => $ikan->jenis_keanggotaan ?? optional($peserta)->jenis_keanggotaan ?? 'perorangan',
                 'juri_list'          => $juriList,
                 'grand_juri_nama'    => $grandJuriName,
                 'total_nilai'        => $latestScoring?->total_nilai ?? 0,
@@ -2523,36 +2524,79 @@ class AdminDashboardController extends Controller
     public function editKategoriKelas(Request $request)
     {
         $request->validate([
-            'ikan_id' => 'required|exists:ikans,id',
-            'kategori' => 'required|string|max:255',
-            'kelas'    => 'nullable|string|max:10',
+            'ikan_id'           => 'required|exists:ikans,id',
+            'nama_peserta'      => 'required|string|max:255',
+            'jenis_keanggotaan' => 'required|in:perorangan,team',
+            'detail_anggota'    => 'required|string|max:255',
+            'kategori'          => 'required|string|max:255',
+            'kelas'             => 'nullable|string|max:10',
         ]);
 
-        $ikan = Ikan::find($request->ikan_id);
+        $ikan = Ikan::with('peserta')->find($request->ikan_id);
+
         if (!$ikan) {
-            return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Data ikan tidak ditemukan.',
+            ], 404);
         }
 
         $noKelasKategori = ['Bonsai', 'Jumbo'];
         $kelas = in_array($request->kategori, $noKelasKategori) ? null : $request->kelas;
 
-        \DB::transaction(function () use ($ikan, $request, $kelas) {
+        if (!in_array($request->kategori, $noKelasKategori) && !$kelas) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kelas wajib dipilih untuk kategori ini.',
+            ], 422);
+        }
+
+        \DB::transaction(function () use ($request, $ikan, $kelas) {
+            // PENTING:
+            // Hanya update ikan / nomor tank yang sedang diedit.
+            // Jangan update tabel pesertas, users, atau semua ikan dalam peserta yang sama.
             $ikan->update([
-                'kategori' => $request->kategori,
-                'kelas'    => $kelas,
-                'diubah_oleh' => auth()->id(),
+                'nama_peserta'      => $request->nama_peserta,
+                'jenis_keanggotaan' => $request->jenis_keanggotaan,
+                'detail_anggota'    => $request->detail_anggota,
+                'kategori'          => $request->kategori,
+                'kelas'             => $kelas,
+                'diubah_oleh'       => auth()->id(),
             ]);
 
-            \App\Models\Scoring::where('ikan_id', $ikan->id)->update([
+            // Kelas scoring hanya untuk ikan ini saja.
+            Scoring::where('ikan_id', $ikan->id)->update([
                 'kelas' => $kelas,
             ]);
         });
 
-        \Cache::forget('user_results_' . optional($ikan->peserta)->user_id);
+        if ($ikan->peserta && $ikan->peserta->user_id) {
+            \Cache::forget('user_results_' . $ikan->peserta->user_id);
+        }
+
+        try {
+            app()->terminating(function () {
+                try {
+                    $sync = app(\App\Services\SheetsSyncService::class);
+
+                    if (!$sync->isReady()) {
+                        return;
+                    }
+
+                    try { $sync->syncCnt(); } catch (\Throwable $e) { \Log::error('Async-sync CNT edit ikan: ' . $e->getMessage()); }
+                    try { $sync->syncHasilJuri(); } catch (\Throwable $e) { \Log::error('Async-sync HasilJuri edit ikan: ' . $e->getMessage()); }
+                    try { $sync->syncNilaiJuri(); } catch (\Throwable $e) { \Log::error('Async-sync NilaiJuri edit ikan: ' . $e->getMessage()); }
+                } catch (\Throwable $e) {
+                    \Log::error('Async-sync outer edit ikan: ' . $e->getMessage());
+                }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Gagal register async sync edit ikan: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Kategori & kelas berhasil diperbarui.',
+            'message' => 'Data pada nomor tank ini berhasil diperbarui.',
         ]);
     }
 }

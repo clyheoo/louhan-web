@@ -1326,18 +1326,51 @@ function renderTable(data){
 
 /* ═══ EDIT KATEGORI & KELAS ═══ */
 function openEditKatKelas(idx){
-    var p=allScoringData[idx];
+    var p = allScoringData[idx];
     if(!p) return;
-    document.getElementById('editKKIdx').value=idx;
-    document.getElementById('editKKNama').textContent=p.nama_peserta;
-    document.getElementById('editKKTank').textContent='Tank '+(p.nomor_tank||'—');
-    var katSel=document.getElementById('editKKKat');
-    katSel.value=p.kategori||'';
+
+    document.getElementById('editKKIdx').value = idx;
+
+    var nama = p.nama_peserta || '';
+    var jenis = p.jenis_keanggotaan || 'perorangan';
+    var detail = p.detail_anggota || '';
+
+    if(detail === '—') detail = '';
+
+    document.getElementById('editKKNamaPreview').textContent = nama || '-';
+    document.getElementById('editKKNamaInput').value = nama;
+    document.getElementById('editKKJenis').value = jenis === 'team' ? 'team' : 'perorangan';
+    document.getElementById('editKKDetail').value = detail;
+    document.getElementById('editKKTank').textContent = 'Tank ' + (p.nomor_tank || '—');
+
+    onEditKKJenisChange();
+
+    var katSel = document.getElementById('editKKKat');
+    katSel.value = p.kategori || '';
+
     onEditKKKatChange();
-    if(noKelasKategori.indexOf(p.kategori)===-1){
-        document.getElementById('editKKKelas').value=p.kelas||'';
+
+    if(noKelasKategori.indexOf(p.kategori) === -1){
+        document.getElementById('editKKKelas').value = p.kelas || '';
+    } else {
+        document.getElementById('editKKKelas').value = '';
     }
+
     openModal('modalEditKatKelas');
+}
+
+function onEditKKJenisChange(){
+    var jenis = document.getElementById('editKKJenis').value;
+    var label = document.getElementById('editKKDetailLabel');
+    var input = document.getElementById('editKKDetail');
+
+    if(jenis === 'team'){
+        label.textContent = 'Nama Team / Club';
+        input.placeholder = 'Contoh: LCI Team / Club Louhan';
+    } else {
+        label.textContent = 'Kota Asal';
+        input.placeholder = 'Contoh: Jakarta / Bandung / Surabaya';
+    }
 }
 
 function onEditKKKatChange(){
@@ -1353,45 +1386,104 @@ function onEditKKKatChange(){
 }
 
 function submitEditKatKelas(){
-    var idx=parseInt(document.getElementById('editKKIdx').value);
-    var p=allScoringData[idx];
+    var idx = parseInt(document.getElementById('editKKIdx').value, 10);
+    var p = allScoringData[idx];
+
     if(!p) return;
-    var kat=document.getElementById('editKKKat').value;
-    var kelas=document.getElementById('editKKKelas').value;
-    if(!kat){popupError('Kategori Wajib','Pilih kategori terlebih dahulu.');return;}
-    if(noKelasKategori.indexOf(kat)===-1&&!kelas){popupError('Kelas Wajib','Pilih kelas terlebih dahulu.');return;}
 
-    var btn=document.getElementById('btnSaveKK');
-    var orig=btn.innerHTML;
-    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    var nama = (document.getElementById('editKKNamaInput').value || '').trim();
+    var jenis = document.getElementById('editKKJenis').value;
+    var detail = (document.getElementById('editKKDetail').value || '').trim();
+    var kat = document.getElementById('editKKKat').value;
+    var kelas = document.getElementById('editKKKelas').value;
 
-    var fd=new FormData();
-    fd.append('_token',getCsrf());
-    fd.append('ikan_id',p.id);
-    fd.append('kategori',kat);
-    fd.append('kelas',kelas);
+    if(!nama){
+        popupError('Nama Wajib', 'Nama peserta tidak boleh kosong.');
+        return;
+    }
 
-    fetch('/api/admin/edit-kategori-kelas',{
-        method:'POST',
-        headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
-        body:fd
+    if(jenis !== 'perorangan' && jenis !== 'team'){
+        popupError('Jenis Keanggotaan Wajib', 'Pilih jenis keanggotaan yang valid.');
+        return;
+    }
+
+    if(!detail){
+        popupError(
+            jenis === 'team' ? 'Nama Team / Club Wajib' : 'Kota Asal Wajib',
+            jenis === 'team'
+                ? 'Isi nama team / club terlebih dahulu.'
+                : 'Isi kota asal terlebih dahulu.'
+        );
+        return;
+    }
+
+    if(!kat){
+        popupError('Kategori Wajib', 'Pilih kategori terlebih dahulu.');
+        return;
+    }
+
+    if(noKelasKategori.indexOf(kat) === -1 && !kelas){
+        popupError('Kelas Wajib', 'Pilih kelas terlebih dahulu.');
+        return;
+    }
+
+    var btn = document.getElementById('btnSaveKK');
+    var orig = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('ikan_id', p.id);
+    fd.append('nama_peserta', nama);
+    fd.append('jenis_keanggotaan', jenis);
+    fd.append('detail_anggota', detail);
+    fd.append('kategori', kat);
+    fd.append('kelas', kelas);
+
+    fetch('/api/admin/edit-kategori-kelas', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: fd
     })
-    .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
+    .then(function(r){
+        if(!r.ok){
+            return r.json().then(function(d){ throw d; });
+        }
+
+        return r.json();
+    })
     .then(function(d){
         if(d.success){
             closeModal('modalEditKatKelas');
+
             loadScoringData();
             loadDashboard();
-            popupSuccess('Berhasil','Kategori & kelas berhasil diperbarui.');
+
+            if(typeof loadAdminPointRanking === 'function'){
+                loadAdminPointRanking();
+            }
+
+            popupSuccess('Berhasil', d.message || 'Data peserta, kategori, dan kelas berhasil diperbarui.');
         } else {
-            popupError('Gagal',d.message||'Terjadi kesalahan.');
+            popupError('Gagal', d.message || 'Terjadi kesalahan.');
         }
     })
     .catch(function(e){
-        if(e.message)popupError('Gagal',esc(e.message));
-        else popupError('Kesalahan Jaringan','Gagal menghubungi server.');
+        if(e && e.message){
+            popupError('Gagal', esc(e.message));
+        } else {
+            popupError('Kesalahan Jaringan', 'Gagal menghubungi server.');
+        }
     })
-    .finally(function(){btn.disabled=false;btn.innerHTML=orig;});
+    .finally(function(){
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    });
 }
 
 var filterT;
