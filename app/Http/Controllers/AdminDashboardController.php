@@ -2404,13 +2404,10 @@ class AdminDashboardController extends Controller
             ];
         })->filter()->values();
 
-        $totalPublished = Peserta::whereNotNull('result_unlocked_at')->count();
-        $totalPeserta   = Peserta::whereHas('user')->count();
-
         return response()->json([
             'users'           => $users,
-            'total_published' => $totalPublished,
-            'total_peserta'   => $totalPeserta,
+            'total_published' => Peserta::whereNotNull('result_unlocked_at')->count(),
+            'total_peserta'   => Peserta::whereHas('user')->count(),
         ]);
     }
 
@@ -2425,7 +2422,7 @@ class AdminDashboardController extends Controller
 
     public function publishResultsAll()
     {
-        $pesertas = \App\Models\Peserta::whereHas('ikans', function ($q) {
+        $pesertas = Peserta::whereHas('ikans', function ($q) {
                 $q->where('is_locked', true)
                 ->whereNotNull('nomor_tank')
                 ->whereHas('scorings');
@@ -2451,7 +2448,7 @@ class AdminDashboardController extends Controller
             'user_id' => 'required|exists:users,id',
         ]);
 
-        $peserta = \App\Models\Peserta::where('user_id', $request->user_id)->first();
+        $peserta = Peserta::where('user_id', $request->user_id)->first();
 
         if (!$peserta) {
             return response()->json([
@@ -2460,16 +2457,16 @@ class AdminDashboardController extends Controller
             ], 404);
         }
 
-        $hasFinalResult = $peserta->ikans()
+        $finalCount = $peserta->ikans()
             ->where('is_locked', true)
             ->whereNotNull('nomor_tank')
             ->whereHas('scorings')
-            ->exists();
+            ->count();
 
-        if (!$hasFinalResult) {
+        if ($finalCount <= 0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Peserta ini belum memiliki ikan final/terkunci.',
+                'message' => 'Peserta ini belum memiliki ikan final. Pastikan ikan sudah punya nomor tank, sudah dinilai, dan sudah dikunci oleh Grand Juri/Admin.',
             ], 422);
         }
 
@@ -2479,6 +2476,7 @@ class AdminDashboardController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Hasil juara berhasil dikirim ke peserta.',
+            'final_ikan_count' => $finalCount,
         ]);
     }
 
@@ -2488,7 +2486,7 @@ class AdminDashboardController extends Controller
             'user_id' => 'required|exists:users,id',
         ]);
 
-        $peserta = \App\Models\Peserta::where('user_id', $request->user_id)->first();
+        $peserta = Peserta::where('user_id', $request->user_id)->first();
 
         if (!$peserta) {
             return response()->json([
@@ -2508,7 +2506,7 @@ class AdminDashboardController extends Controller
 
     public function unpublishResultsAll()
     {
-        $pesertas = \App\Models\Peserta::whereNotNull('result_unlocked_at')->get();
+        $pesertas = Peserta::whereNotNull('result_unlocked_at')->get();
 
         foreach ($pesertas as $p) {
             \Cache::forget('user_results_' . $p->user_id);

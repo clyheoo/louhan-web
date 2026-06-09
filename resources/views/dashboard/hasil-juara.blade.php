@@ -194,12 +194,20 @@
 
     function renderEmptyState(data){
         var resultUnlocked = !!(data && data.result_unlocked);
+        var debug = data && data.result_debug ? data.result_debug : {};
 
         if(resultUnlocked){
             return '<div class="empty-state" style="padding:50px 20px;">'+
                 '<div style="width:80px;height:80px;border-radius:50%;background:var(--glass-2);border:1px solid var(--bd-2);display:grid;place-items:center;margin:0 auto 16px;color:var(--warning);font-size:32px;"><i class="fas fa-circle-exclamation"></i></div>'+
                 '<p style="font-size:14px;font-weight:700;color:var(--text-mid);margin-bottom:6px;">Akses Hasil Sudah Dibuka</p>'+
-                '<p style="font-size:12px;color:var(--text-low);max-width:360px;margin:0 auto;line-height:1.6;">Tetapi belum ada ikan Anda yang memenuhi syarat hasil juara. Pastikan ikan sudah memiliki nomor tank, sudah dinilai, dan sudah dikunci/final oleh Grand Juri.</p>'+
+                '<p style="font-size:12px;color:var(--text-low);max-width:390px;margin:0 auto;line-height:1.6;">Tetapi belum ada ikan Anda yang memenuhi syarat hasil juara. Syaratnya: punya nomor tank, sudah dinilai, dan sudah dikunci/final oleh Grand Juri/Admin.</p>'+
+                '<div style="margin:16px auto 0;max-width:390px;text-align:left;background:rgba(255,255,255,.04);border:1px solid var(--bd-1);border-radius:12px;padding:12px 14px;font-size:11px;color:var(--text-mid);line-height:1.8;">'+
+                    '<div><b>Total ikan:</b> '+escapeHtml(debug.total_ikan_user || 0)+'</div>'+
+                    '<div><b>Ikan terkunci:</b> '+escapeHtml(debug.ikan_terkunci || 0)+'</div>'+
+                    '<div><b>Ikan punya nomor tank:</b> '+escapeHtml(debug.ikan_punya_nomor_tank || 0)+'</div>'+
+                    '<div><b>Ikan punya scoring:</b> '+escapeHtml(debug.ikan_punya_scoring || 0)+'</div>'+
+                    '<div><b>Ikan final layak tampil:</b> '+escapeHtml(debug.ikan_final_layak_tampil || 0)+'</div>'+
+                '</div>'+
             '</div>';
         }
 

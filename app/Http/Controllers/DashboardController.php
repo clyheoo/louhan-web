@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Peserta;
 use App\Models\Ikan;
 use App\Models\User;
+use App\Models\Scoring;
 use App\Helpers\PointCalculator;
 use App\Services\SheetsSyncService;
 
@@ -650,26 +651,45 @@ class DashboardController extends Controller
             ];
         });
 
-        $maxMvp = $peserta->jenis_keanggotaan === 'team' ? 35 : 15;
+        $maxMvp = $peserta ? ($peserta->jenis_keanggotaan === 'team' ? 35 : 15) : 15;
+
         $myResults = [];
         $myMvpResults = [];
-        $myMvpResults = [];
-        if ($peserta && $peserta->result_unlocked_at) {
-            $cacheKey = 'user_results_' . $userId;
 
-            $cached = \Cache::remember($cacheKey, 120, function() use ($peserta) {
-                $results = [];
-                $mvpResults = [];
-                $results = [];
-                $myLockedIkans = $peserta->ikans()->where('is_locked', true)->get();
+        $resultUnlocked = $peserta && $peserta->result_unlocked_at ? true : false;
 
-                if ($myLockedIkans->isEmpty()) return $results;
+        $resultDebug = [
+            'result_unlocked' => $resultUnlocked,
+            'peserta_id' => $peserta ? $peserta->id : null,
+            'total_ikan_user' => $peserta ? $peserta->ikans()->count() : 0,
+            'ikan_terkunci' => $peserta ? $peserta->ikans()->where('is_locked', true)->count() : 0,
+            'ikan_punya_nomor_tank' => $peserta ? $peserta->ikans()->whereNotNull('nomor_tank')->count() : 0,
+            'ikan_punya_scoring' => $peserta ? $peserta->ikans()->whereHas('scorings')->count() : 0,
+            'ikan_final_layak_tampil' => 0,
+        ];
 
-                // Group user's locked ikans by kategori+kelas
+        if ($peserta && $resultUnlocked) {
+            // Jangan cache hasil juara dulu, agar setelah admin kirim/lock hasil langsung tampil.
+            \Cache::forget('user_results_' . $userId);
+
+            $myFinalIkans = $peserta->ikans()
+                ->where('is_locked', true)
+                ->whereNotNull('nomor_tank')
+                ->whereHas('scorings')
+                ->with(['scorings', 'bonusPoints'])
+                ->get();
+
+            $resultDebug['ikan_final_layak_tampil'] = $myFinalIkans->count();
+
+            if ($myFinalIkans->isNotEmpty()) {
                 $groups = [];
-                foreach ($myLockedIkans as $ikan) {
+
+                foreach ($myFinalIkans as $ikan) {
                     $key = $ikan->kategori . '|' . ($ikan->kelas ?? '-');
-                    if (!isset($groups[$key])) $groups[$key] = [];
+                    if (!isset($groups[$key])) {
+                        $groups[$key] = [];
+                    }
+
                     $groups[$key][] = $ikan;
                 }
 
@@ -677,145 +697,49 @@ class DashboardController extends Controller
                     [$kat, $kls] = explode('|', $key, 2);
                     $kls = ($kls === '-') ? null : $kls;
 
-                    // Get ALL locked ikans in this kategori+kelas
-                    $q = Ikan::where('is_locked', true)
-                        ->whereNotNull('nomor_tank')
-                        ->where('kategori', $kat)
-                        ->whereHas('scorings');
-                    if ($kls !== null) $q->where('kelas', $kls);
-                    else $q->whereNull('kelas');
-
-                    $allIkans = $q->with(['scorings', 'bonusPoints'])->get();
-
-                    // Calculate points for ALL ikans in this group
-                    $allItems = [];
-                    foreach ($allIkans as $pi) {
-                        $scorings = $pi->scorings;
-                        if ($scorings->isEmpty()) continue;
-
-                        $avgDetail = [];
-                        $jumlahJuriYangNilai = 0;
-
-                        foreach ($scorings as $s) {
-                            if ($s->total_nilai) $jumlahJuriYangNilai++;
-                            if ($s->nilai_detail && is_array($s->nilai_detail)) {
-                                foreach ($s->nilai_detail as $kt => $fields) {
-                                    if (!is_array($fields)) continue;
-                                    foreach ($fields as $fid => $val) {
-                                        if (!isset($avgDetail[$kt][$fid])) {
-                                            $avgDetail[$kt][$fid] = ['sum' => 0, 'count' => 0];
-                                        }
-                                        $avgDetail[$kt][$fid]['sum'] += (float)($val ?? 0);
-                                        $avgDetail[$kt][$fid]['count']++;
-                                    }
-                                }
-                            }
-                        }
-
-                        $finalAvgDetail = [];
-                        if ($jumlahJuriYangNilai > 0) {
-                            foreach ($avgDetail as $kt => $fields) {
-                                $finalAvgDetail[$kt] = [];
-                                foreach ($fields as $fid => $d) {
-                                    $finalAvgDetail[$kt][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
-                                }
-                            }
-                        }
-
-                        $grandEdited = $scorings->first(function ($s) { return $s->edited_by_grand_juri; });
-                        $defectSource = $grandEdited ?: $scorings->sortByDesc('updated_at')->first();
-                        $merged = [
-                            'raw_head_penalty'    => ['0'],
-                            'raw_face_penalty'    => ['0'],
-                            'raw_body_penalty'    => ['0'],
-                            'raw_finnage_penalty' => ['0'],
-                        ];
-                        if ($defectSource) {
-                            $merged['raw_head_penalty']    = $defectSource->raw_head_penalty    ?: ['0'];
-                            $merged['raw_face_penalty']    = $defectSource->raw_face_penalty    ?: ['0'];
-                            $merged['raw_body_penalty']    = $defectSource->raw_body_penalty    ?: ['0'];
-                            $merged['raw_finnage_penalty'] = $defectSource->raw_finnage_penalty ?: ['0'];
-                        }
-
-                        $totalPoint = PointCalculator::hitungPoint($pi->kategori, $finalAvgDetail, $merged);
-                        $totalBonus = (int) $pi->bonusPoints->sum('points');
-
-                        $allItems[] = [
-                            'ikan_id'     => $pi->id,
-                            'total_point' => (float) $totalPoint,
-                            'total_bonus' => $totalBonus,
-                        ];
-                    }
-
-                    // Rank them using same logic as admin
-                    $ranked = PointCalculator::hitungRankPoints($allItems, 'total_point');
-
-                    // Find user's ikans in the ranking
-                    $userIkanIds = collect($userIkans)->pluck('id')->toArray();
-
-                    foreach ($ranked as $idx => $r) {
-                        if (in_array($r['ikan_id'], $userIkanIds)) {
-                            $ikan = $myLockedIkans->firstWhere('id', $r['ikan_id']);
-                            if ($ikan) {
-                                $results[] = [
-                                    'kategori'       => $ikan->kategori,
-                                    'kelas'          => $ikan->kelas,
-                                    'detail_anggota' => $ikan->detail_anggota,
-                                    'point'          => $r['total_point'],
-                                    'rank_point'     => $r['rank_point'],
-                                    'position'       => $idx + 1,
-                                    'nomor_tank'     => $ikan->nomor_tank,
-                                ];
-                            }
-                        }
-                    }
-                }
-
-                // MVP khusus milik peserta/team login saja.
-                // Tidak mengambil MVP dari team lain.
-                $myMvpIkans = $peserta->ikans()
-                    ->where('is_mvp', true)
-                    ->where('is_locked', true)
-                    ->whereNotNull('nomor_tank')
-                    ->with(['scorings', 'bonusPoints'])
-                    ->get();
-
-                foreach ($myMvpIkans as $mvpIkan) {
-                    $comboKat = $mvpIkan->kategori;
-                    $comboKls = $mvpIkan->kelas;
-
                     $poolQuery = Ikan::where('is_locked', true)
                         ->whereNotNull('nomor_tank')
-                        ->where('kategori', $comboKat)
+                        ->where('kategori', $kat)
                         ->whereHas('scorings')
                         ->with(['scorings', 'bonusPoints']);
 
-                    if ($comboKls !== null && $comboKls !== '-') {
-                        $poolQuery->where('kelas', $comboKls);
+                    if ($kls !== null && $kls !== '') {
+                        $poolQuery->where('kelas', $kls);
                     } else {
                         $poolQuery->whereNull('kelas');
                     }
 
-                    $pool = $poolQuery->get();
-                    $items = [];
+                    $allIkans = $poolQuery->get();
 
-                    foreach ($pool as $pi) {
+                    $allItems = [];
+
+                    foreach ($allIkans as $pi) {
                         $scorings = $pi->scorings;
-                        if ($scorings->isEmpty()) continue;
+
+                        if ($scorings->isEmpty()) {
+                            continue;
+                        }
 
                         $avgDetail = [];
                         $jumlahJuriYangNilai = 0;
 
                         foreach ($scorings as $s) {
-                            if ($s->total_nilai) $jumlahJuriYangNilai++;
+                            if ($s->total_nilai) {
+                                $jumlahJuriYangNilai++;
+                            }
 
                             if ($s->nilai_detail && is_array($s->nilai_detail)) {
                                 foreach ($s->nilai_detail as $kt => $fields) {
-                                    if (!is_array($fields)) continue;
+                                    if (!is_array($fields)) {
+                                        continue;
+                                    }
 
                                     foreach ($fields as $fid => $val) {
                                         if (!isset($avgDetail[$kt][$fid])) {
-                                            $avgDetail[$kt][$fid] = ['sum' => 0, 'count' => 0];
+                                            $avgDetail[$kt][$fid] = [
+                                                'sum' => 0,
+                                                'count' => 0,
+                                            ];
                                         }
 
                                         $avgDetail[$kt][$fid]['sum'] += (float)($val ?? 0);
@@ -826,9 +750,12 @@ class DashboardController extends Controller
                         }
 
                         $finalAvgDetail = [];
+
                         foreach ($avgDetail as $kt => $fields) {
                             foreach ($fields as $fid => $d) {
-                                $finalAvgDetail[$kt][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                                $finalAvgDetail[$kt][$fid] = $d['count'] > 0
+                                    ? $d['sum'] / $d['count']
+                                    : 0;
                             }
                         }
 
@@ -843,40 +770,69 @@ class DashboardController extends Controller
                             'raw_finnage_penalty' => $defectSource ? ($defectSource->raw_finnage_penalty ?: ['0']) : ['0'],
                         ];
 
-                        $items[] = [
-                            'ikan_id'     => $pi->id,
-                            'total_point' => (float) PointCalculator::hitungPoint($pi->kategori, $finalAvgDetail, $mergedDefect),
-                            'total_bonus' => (int) $pi->bonusPoints->sum('points'),
+                        $totalPoint = PointCalculator::hitungPoint($pi->kategori, $finalAvgDetail, $mergedDefect);
+                        $totalBonus = (int) $pi->bonusPoints->sum('points');
+
+                        $allItems[] = [
+                            'ikan_id' => $pi->id,
+                            'total_point' => (float) $totalPoint,
+                            'total_bonus' => $totalBonus,
                         ];
                     }
 
-                    $ranked = PointCalculator::hitungRankPoints($items, 'total_point');
-                    $rankInfo = collect($ranked)->firstWhere('ikan_id', $mvpIkan->id);
+                    $ranked = PointCalculator::hitungRankPoints($allItems, 'total_point');
 
-                    $rankPoint = (int)($rankInfo['rank_point'] ?? 0);
-                    $position  = $rankInfo ? ((int)array_search($rankInfo, $ranked, true) + 1) : 0;
-                    $bonus     = (int)$mvpIkan->bonusPoints->sum('points');
+                    $userIkanIds = collect($userIkans)->pluck('id')->toArray();
 
-                    $mvpResults[] = [
-                        'ikan_id'          => $mvpIkan->id,
-                        'nama_peserta'     => $mvpIkan->nama_peserta ?? '-',
-                        'detail_anggota'   => $mvpIkan->detail_anggota ?? '-',
-                        'kategori'         => $mvpIkan->kategori,
-                        'kelas'            => $mvpIkan->kelas ?? '-',
-                        'nomor_tank'       => $mvpIkan->nomor_tank ?? '-',
-                        'position'         => $position,
-                        'rank_point'       => $rankPoint,
-                        'bonus_list'       => $mvpIkan->bonusPoints->pluck('bonus_type')->toArray(),
-                        'total_bonus'      => $bonus,
-                        'final_rank_point' => $rankPoint + $bonus,
-                    ];
+                    foreach ($ranked as $idx => $r) {
+                        if (!in_array($r['ikan_id'], $userIkanIds)) {
+                            continue;
+                        }
+
+                        $ikan = $myFinalIkans->firstWhere('id', $r['ikan_id']);
+
+                        if (!$ikan) {
+                            continue;
+                        }
+
+                        $myResults[] = [
+                            'ikan_id'        => $ikan->id,
+                            'kategori'       => $ikan->kategori,
+                            'kelas'          => $ikan->kelas ?? '-',
+                            'detail_anggota' => $ikan->detail_anggota ?? '-',
+                            'point'          => $r['total_point'] ?? 0,
+                            'rank_point'     => $r['rank_point'] ?? 0,
+                            'position'       => $idx + 1,
+                            'nomor_tank'     => $ikan->nomor_tank,
+                            'total_bonus'    => (int) $ikan->bonusPoints->sum('points'),
+                            'bonus_list'     => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                        ];
+                    }
                 }
 
-                return [
-                    'my_results' => $results,
-                    'my_mvp_results' => $mvpResults,
-                ];
-            });
+                // Data MVP khusus ikan milik user/team login sendiri.
+                $myMvpResults = $myFinalIkans
+                    ->where('is_mvp', true)
+                    ->map(function ($ikan) use ($myResults) {
+                        $rankInfo = collect($myResults)->firstWhere('ikan_id', $ikan->id);
+
+                        return [
+                            'ikan_id'          => $ikan->id,
+                            'nama_peserta'     => $ikan->nama_peserta ?? '-',
+                            'detail_anggota'   => $ikan->detail_anggota ?? '-',
+                            'kategori'         => $ikan->kategori,
+                            'kelas'            => $ikan->kelas ?? '-',
+                            'nomor_tank'       => $ikan->nomor_tank ?? '-',
+                            'position'         => $rankInfo['position'] ?? 0,
+                            'rank_point'       => $rankInfo['rank_point'] ?? 0,
+                            'bonus_list'       => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                            'total_bonus'      => (int) $ikan->bonusPoints->sum('points'),
+                            'final_rank_point' => (int)($rankInfo['rank_point'] ?? 0) + (int)$ikan->bonusPoints->sum('points'),
+                        ];
+                    })
+                    ->values()
+                    ->toArray();
+            }
         }
 
         return response()->json([
@@ -887,9 +843,14 @@ class DashboardController extends Controller
             'undian_open' => $undianOpen,
             'tank_range_max' => $maxTankRange,
             'max_mvp' => $maxMvp,
-            'result_unlocked' => $peserta && $peserta->result_unlocked_at ? true : false,
+
+            // Untuk halaman hasil juara
+            'result_unlocked' => $resultUnlocked,
             'my_results' => $myResults,
-            'my_mvp_results' => $myMvpResults ?? [],
+            'my_mvp_results' => $myMvpResults,
+
+            // Untuk debugging di browser console
+            'result_debug' => $resultDebug,
         ]);
     }
 
