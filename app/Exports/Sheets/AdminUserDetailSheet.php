@@ -59,19 +59,19 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                 // ═══════════════════════════════════════════════════════
                 // SECTION 1: DAFTAR LENGKAP SEMUA AKUN
                 // ═══════════════════════════════════════════════════════
-                $sheet->mergeCells("A{$row}:J{$row}");
+                $sheet->mergeCells("A{$row}:L{$row}");
                 $sheet->setCellValue("A{$row}", 'DAFTAR LENGKAP SEMUA AKUN');
-                $sheet->getStyle("A{$row}:J{$row}")->applyFromArray($styleTitle);
+                $sheet->getStyle("A{$row}:L{$row}")->applyFromArray($styleTitle);
                 $row++;
 
-                $sheet->mergeCells("A{$row}:J{$row}");
+                $sheet->mergeCells("A{$row}:L{$row}");
                 $sheet->setCellValue("A{$row}", 'Semua akun yang terdaftar dalam sistem termasuk Admin, Grand Juri, Juri, dan Peserta');
-                $sheet->getStyle("A{$row}:J{$row}")->applyFromArray($styleSubTitle);
+                $sheet->getStyle("A{$row}:L{$row}")->applyFromArray($styleSubTitle);
                 $row += 2;
 
-                $headers1 = ['NO', 'NAMA LENGKAP', 'EMAIL', 'ROLE', 'PASSWORD AKTIF', 'STATUS PESERTA', 'JML IKAN', 'JML PASSWORD DIUBAH', 'TGL DIBUAT', 'TERAKHIR UPDATE'];
+                $headers1 = ['NO', 'NAMA PESERTA', 'JENIS KEANGGOTAAN', 'ASAL / TEAM / KOTA', 'EMAIL', 'ROLE', 'PASSWORD AKTIF', 'STATUS PESERTA', 'JML IKAN', 'JML PASSWORD DIUBAH', 'TGL DIBUAT', 'TERAKHIR UPDATE'];
                 $sheet->fromArray([$headers1], null, "A{$row}");
-                $sheet->getStyle("A{$row}:J{$row}")->applyFromArray($styleHeader);
+                $sheet->getStyle("A{$row}:L{$row}")->applyFromArray($styleHeader);
                 $row++;
 
                 $allUsers = User::orderByRaw("FIELD(role, 'admin', 'grand_juri', 'juri', 'user')")->orderBy('name')->get();
@@ -90,32 +90,34 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                     $pwdCount = $pwdCountMap[$u->id] ?? 0;
 
                     $sheet->setCellValue("A{$row}", $no++);
-                    $sheet->setCellValue("B{$row}", $u->name);
-                    $sheet->setCellValue("C{$row}", $u->email);
-                    $sheet->setCellValue("D{$row}", strtoupper(str_replace('_', ' ', $u->role)));
-                    $sheet->setCellValue("E{$row}", $u->plain_password ?? '—');
-                    $sheet->setCellValue("F{$row}", $peserta ? 'Terdaftar' : 'Belum Registrasi');
-                    $sheet->setCellValue("G{$row}", $jumlahIkan);
-                    $sheet->setCellValue("H{$row}", $pwdCount);
-                    $sheet->setCellValue("I{$row}", $u->created_at->format('d-m-Y H:i:s'));
-                    $sheet->setCellValue("J{$row}", $u->updated_at->format('d-m-Y H:i:s'));
+                    $sheet->setCellValue("B{$row}", $peserta ? ($peserta->nama_peserta ?? $u->name) : $u->name);
+                    $sheet->setCellValue("C{$row}", $peserta ? ($peserta->jenis_keanggotaan ?? '-') : '-');
+                    $sheet->setCellValue("D{$row}", $peserta ? ($peserta->detail_anggota ?? '-') : '-');
+                    $sheet->setCellValue("E{$row}", $u->email);
+                    $sheet->setCellValue("F{$row}", strtoupper(str_replace('_', ' ', $u->role)));
+                    $sheet->setCellValue("G{$row}", $u->plain_password ?? '—');
+                    $sheet->setCellValue("H{$row}", $peserta ? 'Terdaftar' : 'Belum Registrasi');
+                    $sheet->setCellValue("I{$row}", $jumlahIkan);
+                    $sheet->setCellValue("J{$row}", $pwdCount);
+                    $sheet->setCellValue("K{$row}", $u->created_at->format('d-m-Y H:i:s'));
+                    $sheet->setCellValue("L{$row}", $u->updated_at->format('d-m-Y H:i:s'));
                     $row++;
                 }
                 $endData = $row - 1;
 
                 // Styling: border + alternating
-                $sheet->getStyle("A{$startData}:J{$endData}")->applyFromArray($styleBorder);
+                $sheet->getStyle("A{$startData}:L{$endData}")->applyFromArray($styleBorder);
                 for ($r = $startData; $r <= $endData; $r++) {
                     if (($r - $startData) % 2 === 1) {
-                        $sheet->getStyle("A{$r}:J{$r}")->applyFromArray([
+                        $sheet->getStyle("A{$r}:L{$r}")->applyFromArray([
                             'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F8FAFC']],
                         ]);
                     }
                 }
 
-                // Warna role
+                // Warna role (Pindah ke kolom F)
                 for ($r = $startData; $r <= $endData; $r++) {
-                    $v = $sheet->getCell("D{$r}")->getValue();
+                    $v = $sheet->getCell("F{$r}")->getValue();
                     $map = [
                         'ADMIN'      => ['FFFFFF', '2563EB'],
                         'GRAND JURI' => ['FFFFFF', '7C3AED'],
@@ -135,14 +137,14 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                 // ═══════════════════════════════════════════════════════
                 // SECTION 2: RIWAYAT PERUBAHAN PASSWORD
                 // ═══════════════════════════════════════════════════════
-                $sheet->mergeCells("A{$row}:J{$row}");
+                $sheet->mergeCells("A{$row}:L{$row}");
                 $sheet->setCellValue("A{$row}", 'RIWAYAT PERUBAHAN PASSWORD');
-                $sheet->getStyle("A{$row}:J{$row}")->applyFromArray($styleTitle);
+                $sheet->getStyle("A{$row}:L{$row}")->applyFromArray($styleTitle);
                 $row++;
 
-                $sheet->mergeCells("A{$row}:J{$row}");
+                $sheet->mergeCells("A{$row}:L{$row}");
                 $sheet->setCellValue("A{$row}", 'Password awal saat pembuatan akun ditandai sebagai "PASSWORD AWAL". Perubahan password dicatat lengkap beserta siapa yang mengubah.');
-                $sheet->getStyle("A{$row}:J{$row}")->applyFromArray($styleSubTitle);
+                $sheet->getStyle("A{$row}:L{$row}")->applyFromArray($styleSubTitle);
                 $row += 2;
 
                 $headers2 = ['NO', 'NAMA USER', 'EMAIL', 'ROLE USER', 'PASSWORD LAMA', 'PASSWORD BARU', 'DIUBAH OLEH', 'ROLE PENGUBAH', 'TANGGAL & WAKTU', 'SELISIH DARI SEBELUMNYA'];
@@ -252,14 +254,14 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                 $row += 2;
 
                 foreach ($juris as $juri) {
-                    $sheet->mergeCells("A{$row}:J{$row}");
+                    $sheet->mergeCells("A{$row}:L{$row}");
                     $sheet->setCellValue("A{$row}", 'JURI: ' . $juri->name . ' (' . $juri->email . ')');
-                    $sheet->getStyle("A{$row}:J{$row}")->applyFromArray($styleBlockHeader);
+                    $sheet->getStyle("A{$row}:L{$row}")->applyFromArray($styleBlockHeader);
                     $row++;
 
-                    $headers3 = ['NO', 'PESERTA', 'KATEGORI', 'KELAS', 'NO TANK', 'TOTAL NILAI', 'SUBMITTED GRAND', 'DIKUNCI', 'WAKTU PENILAIAN', 'WAKTU SUBMIT'];
+                    $headers3 = ['NO', 'PESERTA', 'JENIS KEANGGOTAAN', 'ASAL / TEAM', 'KATEGORI', 'KELAS', 'NO TANK', 'TOTAL NILAI', 'SUBMITTED GRAND', 'DIKUNCI', 'WAKTU PENILAIAN', 'WAKTU SUBMIT'];
                     $sheet->fromArray([$headers3], null, "A{$row}");
-                    $sheet->getStyle("A{$row}:J{$row}")->applyFromArray($styleHeader);
+                    $sheet->getStyle("A{$row}:L{$row}")->applyFromArray($styleHeader);
                     $row++;
 
                     $scorings = Scoring::where('juri_id', $juri->id)
@@ -284,27 +286,29 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                             $sheet->setCellValue("A{$row}", $no++);
                             // ★ snapshot ikan, bukan Peserta terkini
                             $sheet->setCellValue("B{$row}", $ikan?->nama_peserta ?? $peserta?->nama_peserta ?? '-');
-                            $sheet->setCellValue("C{$row}", $ikan->kategori ?? '-');
-                            $sheet->setCellValue("D{$row}", $s->kelas ?? ($ikan->kelas ?? '-'));
-                            $sheet->setCellValue("E{$row}", $ikan->nomor_tank ? 'Tank ' . $ikan->nomor_tank : '-');
-                            $sheet->setCellValue("F{$row}", $s->total_nilai ?? 0);
-                            $sheet->setCellValue("G{$row}", 'Ya');
-                            $sheet->setCellValue("H{$row}", $isLocked ? 'Ya (FINAL)' : 'Belum');
-                            $sheet->setCellValue("I{$row}", $s->created_at ? $s->created_at->format('d-m-Y H:i:s') : '-');
-                            $sheet->setCellValue("J{$row}", $s->updated_at ? $s->updated_at->format('d-m-Y H:i:s') : '-');
+                            $sheet->setCellValue("C{$row}", $ikan?->jenis_keanggotaan ?? $peserta?->jenis_keanggotaan ?? '-');
+                            $sheet->setCellValue("D{$row}", $ikan?->detail_anggota ?? $peserta?->detail_anggota ?? '-');
+                            $sheet->setCellValue("E{$row}", $ikan->kategori ?? '-');
+                            $sheet->setCellValue("F{$row}", $s->kelas ?? ($ikan->kelas ?? '-'));
+                            $sheet->setCellValue("G{$row}", $ikan->nomor_tank ? 'Tank ' . $ikan->nomor_tank : '-');
+                            $sheet->setCellValue("H{$row}", $s->total_nilai ?? 0);
+                            $sheet->setCellValue("I{$row}", 'Ya');
+                            $sheet->setCellValue("J{$row}", $isLocked ? 'Ya (FINAL)' : 'Belum');
+                            $sheet->setCellValue("K{$row}", $s->created_at ? $s->created_at->format('d-m-Y H:i:s') : '-');
+                            $sheet->setCellValue("L{$row}", $s->updated_at ? $s->updated_at->format('d-m-Y H:i:s') : '-');
                             $row++;
                         }
                         $endData = $row - 1;
-                        $sheet->getStyle("A{$startData}:J{$endData}")->applyFromArray($styleBorder);
+                        $sheet->getStyle("A{$startData}:L{$endData}")->applyFromArray($styleBorder);
 
                         for ($r = $startData; $r <= $endData; $r++) {
                             if (($r - $startData) % 2 === 1) {
-                                $sheet->getStyle("A{$r}:J{$r}")->applyFromArray([
+                                $sheet->getStyle("A{$r}:L{$r}")->applyFromArray([
                                     'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F8FAFC']],
                                 ]);
                             }
-                            // Warna kolom DIKUNCI
-                            $lockVal = $sheet->getCell("H{$r}")->getValue();
+                            // Warna kolom DIKUNCI (Pindah ke kolom J)
+                            $lockVal = $sheet->getCell("J{$r}")->getValue();
                             if ($lockVal && str_contains($lockVal, 'Ya')) {
                                 $sheet->getStyle("H{$r}")->applyFromArray([
                                     'font' => ['bold' => true, 'color' => ['rgb' => '15803D']],
@@ -332,12 +336,12 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                 $row += 2;
 
                 foreach ($grandJuris as $gj) {
-                    $sheet->mergeCells("A{$row}:J{$row}");
+                    $sheet->mergeCells("A{$row}:L{$row}");
                     $sheet->setCellValue("A{$row}", 'GRAND JURI: ' . $gj->name . ' (' . $gj->email . ')');
-                    $sheet->getStyle("A{$row}:J{$row}")->applyFromArray($styleBlockHeader);
+                    $sheet->getStyle("A{$row}:L{$row}")->applyFromArray($styleBlockHeader);
                     $row++;
 
-                    $headers4 = ['NO', 'PESERTA', 'NILAI SEBELUM', 'NILAI SESUDAH', 'SELISIH (+/-)', 'KOMPONEN YANG DIUBAH', 'WAKTU EDIT', 'STATUS KUNCI', '', ''];
+                    $headers4 = ['NO', 'PESERTA', 'JENIS KEANGGOTAAN', 'ASAL / TEAM', 'NILAI SEBELUM', 'NILAI SESUDAH', 'SELISIH (+/-)', 'KOMPONEN YANG DIUBAH', 'WAKTU EDIT', 'STATUS KUNCI'];
                     $sheet->fromArray([$headers4], null, "A{$row}");
                     $sheet->getStyle("A{$row}:J{$row}")->applyFromArray($styleHeader);
                     $row++;
@@ -385,25 +389,28 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                                          ?? $e->peserta?->nama_peserta
                                          ?? '-';
                             $sheet->setCellValue("B{$row}", $snapshotName);
-                            $sheet->setCellValue("C{$row}", $e->total_sebelum ?? 0);
-                            $sheet->setCellValue("D{$row}", $e->total_sesudah ?? 0);
-                            $sheet->setCellValue("E{$row}", $selisihStr);
-                            $sheet->setCellValue("F{$row}", $changedStr);
-                            $sheet->setCellValue("G{$row}", $e->created_at->format('d-m-Y H:i:s'));
-                            $sheet->setCellValue("H{$row}", $isLocked);
+                            $sheet->setCellValue("C{$row}", $e->scoring?->ikan?->jenis_keanggotaan ?? $e->peserta?->jenis_keanggotaan ?? '-');
+                            $sheet->setCellValue("D{$row}", $e->scoring?->ikan?->detail_anggota ?? $e->peserta?->detail_anggota ?? '-');
+                            $sheet->setCellValue("E{$row}", $e->total_sebelum ?? 0);
+                            $sheet->setCellValue("F{$row}", $e->total_sesudah ?? 0);
+                            $sheet->setCellValue("G{$row}", $selisihStr);
+                            $sheet->setCellValue("H{$row}", $changedStr);
+                            $sheet->setCellValue("I{$row}", $e->created_at->format('d-m-Y H:i:s'));
+                            $sheet->setCellValue("J{$row}", $isLocked);
                             $row++;
                         }
                         $endData = $row - 1;
-                        $sheet->getStyle("A{$startData}:H{$endData}")->applyFromArray($styleBorder);
+                        $sheet->getStyle("A{$startData}:J{$endData}")->applyFromArray($styleBorder);
 
                         // Alternating + warna selisih
                         for ($r = $startData; $r <= $endData; $r++) {
                             if (($r - $startData) % 2 === 1) {
-                                $sheet->getStyle("A{$r}:H{$r}")->applyFromArray([
+                                $sheet->getStyle("A{$r}:J{$r}")->applyFromArray([
                                     'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F8FAFC']],
                                 ]);
                             }
-                            $selisihVal = $sheet->getCell("E{$r}")->getValue();
+                            // Warna selisih (Pindah ke kolom G)
+                            $selisihVal = $sheet->getCell("G{$r}")->getValue();
                             if (is_numeric($selisihVal)) {
                                 if ($selisihVal > 0) {
                                     $sheet->getStyle("E{$r}")->applyFromArray([
@@ -417,8 +424,8 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                                     ]);
                                 }
                             }
-                            // Warna status kunci
-                            $lockVal = $sheet->getCell("H{$r}")->getValue();
+                            // Warna status kunci (Pindah ke kolom J)
+                            $lockVal = $sheet->getCell("J{$r}")->getValue();
                             if ($lockVal === 'Terkunci') {
                                 $sheet->getStyle("H{$r}")->applyFromArray([
                                     'font' => ['bold' => true, 'color' => ['rgb' => '15803D']],
@@ -435,15 +442,17 @@ class AdminUserDetailSheet implements WithTitle, WithEvents
                 // ═══════════════════════════════════════════════════════
                 $widths = [
                     'A' => 6,   // NO
-                    'B' => 24,  // NAMA
-                    'C' => 30,  // EMAIL
-                    'D' => 16,  // ROLE
-                    'E' => 30,  // PASSWORD LAMA / NILAI SEBELUM
-                    'F' => 30,  // PASSWORD BARU / NILAI SESUDAH
-                    'G' => 24,  // DIUBAH OLEH / KOMPONEN
-                    'H' => 18,  // ROLE PENGUBAH / WAKTU
-                    'I' => 22,  // TANGGAL
-                    'J' => 24,  // SELISIH / STATUS
+                    'B' => 24,  // NAMA PESERTA
+                    'C' => 20,  // JENIS KEANGGOTAAN / EMAIL
+                    'D' => 24,  // ASAL TEAM / ROLE
+                    'E' => 30,  // EMAIL / PASSWORD LAMA / NILAI SEBELUM
+                    'F' => 16,  // ROLE / PASSWORD BARU / NILAI SESUDAH
+                    'G' => 30,  // PASSWORD AKTIF / DIUBAH OLEH / SELISIH
+                    'H' => 18,  // STATUS PESERTA / ROLE PENGUBAH / KOMPONEN
+                    'I' => 12,  // JML IKAN / TANGGAL / WAKTU EDIT
+                    'J' => 18,  // JML PWD DIUBAH / SELISIH / STATUS KUNCI
+                    'K' => 22,  // TGL DIBUAT / WAKTU PENILAIAN
+                    'L' => 22,  // TERAKHIR UPDATE / WAKTU SUBMIT
                 ];
                 foreach ($widths as $col => $w) {
                     $sheet->getColumnDimension($col)->setAutoSize(false)->setWidth($w);
