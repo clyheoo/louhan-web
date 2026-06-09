@@ -454,7 +454,76 @@ class AdminDashboardController extends Controller
                 'total_juri_all'        => $totalJuriAll,
                 'submitted_juri_count'  => $scorings->count(),
             ];
-        })->toArray();
+        })->values();
+
+        // ═══════════════════════════════════════════════
+        // HITUNG RANK POINT UNTUK DATA PENILAIAN ADMIN
+        // Dipakai oleh modal Kelola Bonus Point.
+        // Bonus TIDAK menambah total_point, bonus menambah rank_point.
+        // ═══════════════════════════════════════════════
+        $rankMap = [];
+
+        $rankGroups = $data
+            ->filter(function ($item) {
+                return !empty($item['is_locked'])
+                    && !empty($item['nomor_tank'])
+                    && isset($item['total_point'])
+                    && (float) $item['total_point'] > 0;
+            })
+            ->groupBy(function ($item) {
+                return ($item['kategori'] ?? '-') . '|' . ($item['kelas'] ?? '-');
+            });
+
+        foreach ($rankGroups as $groupKey => $items) {
+            $rankItems = $items
+                ->map(function ($item) {
+                    return [
+                        'ikan_id'     => (int) $item['id'],
+                        'total_point' => (float) $item['total_point'],
+                        'total_bonus' => (int) ($item['total_bonus'] ?? 0),
+                    ];
+                })
+                ->values()
+                ->toArray();
+
+            $ranked = PointCalculator::hitungRankPoints($rankItems, 'total_point');
+
+            foreach ($ranked as $idx => $r) {
+                $ikanId = (int) $r['ikan_id'];
+                $rankPoint = (int) ($r['rank_point'] ?? 0);
+                $bonus = (int) ($r['total_bonus'] ?? 0);
+
+                $rankMap[$ikanId] = [
+                    'position'         => $idx + 1,
+                    'rank_point'       => $rankPoint,
+                    'final_rank_point' => $rankPoint + $bonus,
+                ];
+            }
+        }
+
+        $data = $data
+            ->map(function ($item) use ($rankMap) {
+                $ikanId = (int) $item['id'];
+                $bonus = (int) ($item['total_bonus'] ?? 0);
+
+                $rankInfo = $rankMap[$ikanId] ?? [
+                    'position'         => 0,
+                    'rank_point'       => 0,
+                    'final_rank_point' => $bonus,
+                ];
+
+                $item['position'] = $rankInfo['position'];
+                $item['rank_point'] = $rankInfo['rank_point'];
+                $item['final_rank_point'] = $rankInfo['final_rank_point'];
+
+                // Jangan pakai final_point untuk bonus lagi.
+                // Dipertahankan agar kode lama tidak error, tapi nilainya disamakan dengan total_point.
+                $item['final_point'] = (float) ($item['total_point'] ?? 0);
+
+                return $item;
+            })
+            ->values()
+            ->toArray();
 
         if ($request->filled('status')) {
             $filter = $request->status;
@@ -754,17 +823,38 @@ class AdminDashboardController extends Controller
             'added_by'   => auth()->id(),
         ]);
 
-        // ★ AUTO-SYNC NILAI JURI & MVP
+        $ikan = Ikan::with('bonusPoints')->find($request->ikan_id);
+
+        if ($ikan && $ikan->peserta && $ikan->peserta->user_id) {
+            \Cache::forget('user_results_' . $ikan->peserta->user_id);
+        }
+
         $sync = $this->sheetsSync;
-        app()->terminating(function () use ($sync) {
-            if (!$sync->isReady()) return;
-            try { $sync->syncNilaiJuri(); } catch (\Exception $e) { \Log::error('Async-sync NilaiJuri (add bonus): ' . $e->getMessage()); }
-            try { $sync->syncMvp();       } catch (\Exception $e) { \Log::error('Async-sync MVP (add bonus): '       . $e->getMessage()); }
-        });
+
+        try {
+            app()->terminating(function () use ($sync) {
+                try {
+                    if (!$sync->isReady()) return;
+
+                    try { $sync->syncNilaiJuri(); } catch (\Throwable $e) { \Log::error('Async-sync NilaiJuri (add bonus): ' . $e->getMessage()); }
+                    try { $sync->syncMvp(); } catch (\Throwable $e) { \Log::error('Async-sync MVP (add bonus): ' . $e->getMessage()); }
+                    try { $sync->syncHasilJuri(); } catch (\Throwable $e) { \Log::error('Async-sync HasilJuri (add bonus): ' . $e->getMessage()); }
+                } catch (\Throwable $e) {
+                    \Log::error('Async-sync outer add bonus: ' . $e->getMessage());
+                }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Gagal register async add bonus: ' . $e->getMessage());
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" (+100) berhasil ditambahkan.',
+            'success'     => true,
+            'message'     => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" (+100 rank point) berhasil ditambahkan.',
+            'ikan_id'     => (int) $request->ikan_id,
+            'bonus_type'  => $request->bonus_type,
+            'bonus_label' => self::BONUS_TYPES[$request->bonus_type],
+            'bonus_list'  => $ikan ? $ikan->bonusPoints->pluck('bonus_type')->toArray() : [],
+            'total_bonus' => $ikan ? (int) $ikan->bonusPoints->sum('points') : 0,
         ]);
     }
 
@@ -788,17 +878,38 @@ class AdminDashboardController extends Controller
 
         $bonus->delete();
 
-        // ★ AUTO-SYNC NILAI JURI & MVP
+        $ikan = Ikan::with('bonusPoints')->find($request->ikan_id);
+
+        if ($ikan && $ikan->peserta && $ikan->peserta->user_id) {
+            \Cache::forget('user_results_' . $ikan->peserta->user_id);
+        }
+
         $sync = $this->sheetsSync;
-        app()->terminating(function () use ($sync) {
-            if (!$sync->isReady()) return;
-            try { $sync->syncNilaiJuri(); } catch (\Exception $e) { \Log::error('Async-sync NilaiJuri (remove bonus): ' . $e->getMessage()); }
-            try { $sync->syncMvp();       } catch (\Exception $e) { \Log::error('Async-sync MVP (remove bonus): '       . $e->getMessage()); }
-        });
+
+        try {
+            app()->terminating(function () use ($sync) {
+                try {
+                    if (!$sync->isReady()) return;
+
+                    try { $sync->syncNilaiJuri(); } catch (\Throwable $e) { \Log::error('Async-sync NilaiJuri (remove bonus): ' . $e->getMessage()); }
+                    try { $sync->syncMvp(); } catch (\Throwable $e) { \Log::error('Async-sync MVP (remove bonus): ' . $e->getMessage()); }
+                    try { $sync->syncHasilJuri(); } catch (\Throwable $e) { \Log::error('Async-sync HasilJuri (remove bonus): ' . $e->getMessage()); }
+                } catch (\Throwable $e) {
+                    \Log::error('Async-sync outer remove bonus: ' . $e->getMessage());
+                }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Gagal register async remove bonus: ' . $e->getMessage());
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" berhasil dihapus.',
+            'success'     => true,
+            'message'     => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" berhasil dihapus.',
+            'ikan_id'     => (int) $request->ikan_id,
+            'bonus_type'  => $request->bonus_type,
+            'bonus_label' => self::BONUS_TYPES[$request->bonus_type],
+            'bonus_list'  => $ikan ? $ikan->bonusPoints->pluck('bonus_type')->toArray() : [],
+            'total_bonus' => $ikan ? (int) $ikan->bonusPoints->sum('points') : 0,
         ]);
     }
 

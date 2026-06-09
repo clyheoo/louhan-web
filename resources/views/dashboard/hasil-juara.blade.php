@@ -489,11 +489,23 @@
     }
 
     function renderResultCard(r){
+        var totalBonus = parseFloat(r.total_bonus || 0);
+        var bonusHtml = '';
+
+        if(totalBonus > 0 || (Array.isArray(r.bonus_list) && r.bonus_list.length > 0)){
+            bonusHtml =
+                '<div class="bonus-line">' +
+                    '<b style="color:var(--text-hi);">Keterangan Bonus:</b> ' +
+                    formatBonusList(r.bonus_list) +
+                    '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);color:var(--gold-300);font-size:10px;font-weight:900;">+' + formatNumber(totalBonus) + ' point</span>' +
+                '</div>';
+        }
+
         return '<div class="simple-result-card">' +
             '<div class="simple-result-top">' +
                 '<div class="simple-result-title">' +
                     '<h4>Tank ' + escapeHtml(r.nomor_tank || '-') + ' · ' + escapeHtml(groupLabel(r)) + '</h4>' +
-                    '<p>' + escapeHtml(r.detail_anggota || '-') + '</p>' +
+                    '<p>' + escapeHtml(r.nama_peserta || '-') + ' · ' + escapeHtml(r.detail_anggota || '-') + '</p>' +
                 '</div>' +
                 '<div class="rank-badge">' +
                     '<span class="small">Juara</span>' +
@@ -504,11 +516,12 @@
             '<div class="score-row">' +
                 '<div class="score-box"><div class="label">Total Point</div><div class="value cyan">'+formatNumber(r.point || 0)+'</div></div>' +
                 '<div class="score-box"><div class="label">Rank Point</div><div class="value gold">'+formatNumber(r.rank_point || 0)+'</div></div>' +
-                '<div class="score-box"><div class="label">Bonus</div><div class="value">'+formatNumber(r.total_bonus || 0)+'</div></div>' +
-                '<div class="score-box"><div class="label">Final</div><div class="value gold">'+formatNumber((parseFloat(r.rank_point || 0) + parseFloat(r.total_bonus || 0)))+'</div></div>' +
+                '<div class="score-box"><div class="label">Bonus</div><div class="value">'+formatNumber(totalBonus)+'</div></div>' +
+                '<div class="score-box"><div class="label">Final</div><div class="value gold">'+formatNumber((parseFloat(r.rank_point || 0) + totalBonus))+'</div></div>' +
             '</div>' +
 
             renderComponentSubtotals(r.component_subtotals) +
+            bonusHtml +
         '</div>';
     }
 

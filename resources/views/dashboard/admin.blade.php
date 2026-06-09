@@ -636,6 +636,9 @@
         letter-spacing: 0.1em;
         margin-top: 3px;
     }
+    @keyframes spin{
+        to{transform:rotate(360deg);}
+    }
     </style>
 </head>
 

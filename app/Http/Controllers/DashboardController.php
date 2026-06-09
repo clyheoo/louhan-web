@@ -810,6 +810,7 @@ class DashboardController extends Controller
 
                         $myResults[] = [
                             'ikan_id'             => $ikan->id,
+                            'nama_peserta' => $ikan->nama_peserta ?? '-',
                             'kategori'            => $ikan->kategori,
                             'kelas'               => $ikan->kelas ?? '-',
                             'group_key'           => $ikan->kategori . '|' . ($ikan->kelas ?? '-'),

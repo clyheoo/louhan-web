@@ -592,96 +592,304 @@ var bonusTypes = [
 ];
 
 function openBonusModal(idx){
-    var p=allScoringData[idx];
-    if(!p)return;
-    currentBonusIkanId=p.id;
+    var p = allScoringData[idx];
+    if(!p) return;
 
-    var html='';
-    html+='<div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">';
-    html+='<div><h4 style="font-size:14px;font-weight:800;color:#92400e;">'+esc(p.nama_peserta)+'</h4>';
-    html+='<div style="font-size:11px;color:#d97706;margin-top:3px;display:flex;gap:12px;"><span><i class="fas fa-tag"></i> '+esc(p.kategori)+' - '+esc(p.kelas)+'</span><span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span></div></div>';
-    html+='<div style="text-align:center;flex-shrink:0;">';
-    html+='<div style="font-size:9px;color:#92400e;font-weight:800;letter-spacing:.5px;">POINT DASAR</div>';
-    html+='<div style="font-size:22px;font-weight:900;color:#92400e;">'+(p.total_point||0)+'</div>';
-    if(p.total_bonus>0){
-        html+='<div style="font-size:9px;color:#16a34a;font-weight:800;margin-top:2px;">+ '+p.total_bonus+' BONUS</div>';
-        html+='<div style="font-size:26px;font-weight:900;color:#16a34a;">'+(p.final_point||0)+'</div>';
+    currentBonusIkanId = p.id;
+
+    var totalBonus = parseInt(p.total_bonus || 0, 10);
+    var rankPoint = parseInt(p.rank_point || 0, 10);
+    var finalRankPoint = rankPoint + totalBonus;
+
+    var html = '';
+
+    html += '<div style="background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(17,30,54,.92));border:1px solid rgba(34,211,238,.22);border-radius:14px;padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);">';
+    html += '<div style="min-width:0;">';
+    html += '<h4 style="font-size:14px;font-weight:900;color:var(--text-hi);margin-bottom:5px;">'+esc(p.nama_peserta || '-')+'</h4>';
+    html += '<div style="font-size:11px;color:var(--text-mid);display:flex;gap:12px;flex-wrap:wrap;">';
+    html += '<span><i class="fas fa-tag" style="color:var(--cyan-400);"></i> '+esc(p.kategori || '-')+' - '+esc(p.kelas || '-')+'</span>';
+    html += '<span><i class="fas fa-hashtag" style="color:var(--gold-400);"></i> Tank '+(p.nomor_tank || '—')+'</span>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div style="display:grid;grid-template-columns:repeat(3,minmax(90px,1fr));gap:8px;min-width:310px;">';
+
+    html += '<div style="background:rgba(255,255,255,.04);border:1px solid var(--bd-1);border-radius:12px;padding:10px 12px;text-align:center;">';
+    html += '<div style="font-size:9px;color:var(--text-low);font-weight:900;letter-spacing:.08em;text-transform:uppercase;">Total Point</div>';
+    html += '<div style="font-size:18px;font-weight:900;color:var(--cyan-300);margin-top:3px;">'+(p.total_point || 0)+'</div>';
+    html += '</div>';
+
+    html += '<div style="background:rgba(255,255,255,.04);border:1px solid var(--bd-1);border-radius:12px;padding:10px 12px;text-align:center;">';
+    html += '<div style="font-size:9px;color:var(--text-low);font-weight:900;letter-spacing:.08em;text-transform:uppercase;">Rank Point</div>';
+    html += '<div style="font-size:18px;font-weight:900;color:var(--gold-300);margin-top:3px;">'+rankPoint+'</div>';
+    html += '</div>';
+
+    html += '<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:12px;padding:10px 12px;text-align:center;">';
+    html += '<div style="font-size:9px;color:#6EE7B7;font-weight:900;letter-spacing:.08em;text-transform:uppercase;">Final Rank</div>';
+    html += '<div style="font-size:18px;font-weight:900;color:#6EE7B7;margin-top:3px;">'+finalRankPoint+'</div>';
+    if(totalBonus > 0){
+        html += '<div style="font-size:9px;color:#6EE7B7;font-weight:800;margin-top:2px;">Rank '+rankPoint+' + Bonus '+totalBonus+'</div>';
+    } else {
+        html += '<div style="font-size:9px;color:var(--text-low);font-weight:800;margin-top:2px;">Belum ada bonus</div>';
     }
-    html+='</div></div>';
+    html += '</div>';
 
-    html+='<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Pilih Bonus Point (+100 per jenis)</div>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div style="font-size:10px;font-weight:800;color:var(--text-low);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;">';
+    html += '<i class="fas fa-circle-info" style="color:var(--gold-400);"></i> Pilih Bonus Rank Point (+100 per jenis)';
+    html += '</div>';
 
     bonusTypes.forEach(function(bt){
-        var applied=p.bonus_list&&p.bonus_list.indexOf(bt.key)!==-1;
+        var applied = p.bonus_list && p.bonus_list.indexOf(bt.key) !== -1;
+
         if(applied){
-            html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid #bbf7d0;border-radius:10px;margin-bottom:5px;background:#f0fdf4;">';
-            html+='<div style="display:flex;align-items:center;gap:10px;">';
-            html+='<i class="fas fa-check-circle" style="color:#16a34a;font-size:15px;"></i>';
-            html+='<div><div style="font-size:12px;font-weight:800;color:#16a34a;">'+bt.label+'</div><div style="font-size:10px;color:#15803d;">+100 point</div></div></div>';
-            html+='<button class="btn-xs red" onclick="removeBonus(\''+bt.key+'\')" style="padding:5px 10px;"><i class="fas fa-times"></i> Hapus</button>';
-            html+='</div>';
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid rgba(16,185,129,.28);border-radius:12px;margin-bottom:7px;background:rgba(16,185,129,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.04);">';
+            html += '<div style="display:flex;align-items:center;gap:10px;">';
+            html += '<i class="fas fa-check-circle" style="color:#6EE7B7;font-size:15px;"></i>';
+            html += '<div>';
+            html += '<div style="font-size:12px;font-weight:900;color:#6EE7B7;">'+esc(bt.label)+'</div>';
+            html += '<div style="font-size:10px;color:rgba(110,231,183,.78);font-weight:700;">+100 rank point</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '<button class="btn-xs red" onclick="removeBonus(\''+bt.key+'\')" style="padding:5px 10px;"><i class="fas fa-times"></i> Hapus</button>';
+            html += '</div>';
         } else {
-            html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:all .2s;" onclick="addBonus(\''+bt.key+'\',this)" onmouseover="this.style.borderColor=\'rgba(245,158,11,.30)\';this.style.background=\'rgba(245,158,11,.06)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'transparent\'">';
-            html+='<div style="display:flex;align-items:center;gap:10px;">';
-            html+='<i class="fas '+bt.icon+'" style="color:var(--light);font-size:15px;"></i>';
-            html+='<div><div style="font-size:12px;font-weight:700;color:var(--text);">'+bt.label+'</div><div style="font-size:10px;color:var(--light);">+100 point</div></div></div>';
-            html+='<i class="fas fa-plus-circle" style="color:var(--light);font-size:17px;"></i>';
-            html+='</div>';
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--bd-2);border-radius:12px;margin-bottom:7px;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.025);" onclick="addBonus(\''+bt.key+'\',this)" onmouseover="this.style.borderColor=\'rgba(245,158,11,.35)\';this.style.background=\'rgba(245,158,11,.07)\'" onmouseout="this.style.borderColor=\'var(--bd-2)\';this.style.background=\'rgba(255,255,255,.025)\'">';
+            html += '<div style="display:flex;align-items:center;gap:10px;">';
+            html += '<i class="fas '+bt.icon+'" style="color:var(--text-low);font-size:15px;"></i>';
+            html += '<div>';
+            html += '<div style="font-size:12px;font-weight:800;color:var(--text);">'+esc(bt.label)+'</div>';
+            html += '<div style="font-size:10px;color:var(--text-low);font-weight:700;">+100 rank point</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '<i class="fas fa-plus-circle" style="color:var(--text-low);font-size:17px;"></i>';
+            html += '</div>';
         }
     });
 
-    document.getElementById('bonusModalBody').innerHTML=html;
+    document.getElementById('bonusModalBody').innerHTML = html;
     openModal('modalBonus');
 }
 
+function getBonusLabel(type){
+    var found = bonusTypes.find(function(b){ return b.key === type; });
+    return found ? found.label : type;
+}
+
+function updateCurrentBonusDataFromResponse(d){
+    if(!d || !currentBonusIkanId) return;
+
+    for(var i = 0; i < allScoringData.length; i++){
+        if(parseInt(allScoringData[i].id, 10) === parseInt(currentBonusIkanId, 10)){
+            var totalBonus = parseInt(d.total_bonus || 0, 10);
+            var rankPoint = parseInt(allScoringData[i].rank_point || 0, 10);
+
+            allScoringData[i].bonus_list = Array.isArray(d.bonus_list) ? d.bonus_list : [];
+            allScoringData[i].total_bonus = totalBonus;
+
+            // Bonus hanya menambah rank point.
+            allScoringData[i].final_rank_point = rankPoint + totalBonus;
+
+            // Jangan biarkan kode lama membaca total_point + bonus.
+            allScoringData[i].final_point = parseFloat(allScoringData[i].total_point || 0);
+
+            break;
+        }
+    }
+}
+
+function setBonusModalBusy(isBusy, msg){
+    var body = document.getElementById('bonusModalBody');
+    var modal = document.getElementById('modalBonus');
+
+    if(!body) return;
+
+    if(isBusy){
+        body.setAttribute('data-prev-html', body.innerHTML);
+        body.innerHTML =
+            '<div style="padding:32px 18px;text-align:center;">' +
+                '<div style="width:42px;height:42px;border:4px solid rgba(255,255,255,.12);border-top-color:var(--gold-400);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px;"></div>' +
+                '<div style="font-size:13px;font-weight:900;color:var(--text-hi);margin-bottom:5px;">' + esc(msg || 'Memproses bonus...') + '</div>' +
+                '<div style="font-size:11px;color:var(--text-mid);">Mohon tunggu sampai proses selesai.</div>' +
+            '</div>';
+
+        if(modal){
+            modal.classList.add('is-busy');
+        }
+    } else {
+        if(modal){
+            modal.classList.remove('is-busy');
+        }
+    }
+}
+
+function rerenderBonusModalAfterChange(d){
+    updateCurrentBonusDataFromResponse(d);
+
+    var reopenFromCurrentData = function(){
+        var idx = -1;
+
+        for(var i = 0; i < allScoringData.length; i++){
+            if(parseInt(allScoringData[i].id, 10) === parseInt(currentBonusIkanId, 10)){
+                idx = i;
+                break;
+            }
+        }
+
+        if(idx >= 0){
+            openBonusModal(idx);
+        } else {
+            setBonusModalBusy(false);
+        }
+    };
+
+    // Tampilkan ulang modal segera dari data lokal,
+    // supaya loading tidak menggantung walaupun refresh data lambat.
+    reopenFromCurrentData();
+
+    // Refresh data tabel di background.
+    // Tidak menunggu callback supaya modal tidak stuck loading.
+    try {
+        if(typeof loadScoringData === 'function'){
+            loadScoringData();
+        }
+    } catch(e) {
+        console.warn('loadScoringData background gagal:', e);
+    }
+
+    try {
+        if(typeof loadMvpIkanData === 'function'){
+            loadMvpIkanData();
+        }
+    } catch(e) {
+        console.warn('loadMvpIkanData background gagal:', e);
+    }
+
+    try {
+        if(typeof loadAdminPointRanking === 'function'){
+            loadAdminPointRanking();
+        }
+    } catch(e) {
+        console.warn('loadAdminPointRanking background gagal:', e);
+    }
+}
+
 function addBonus(type, el){
-    if(!currentBonusIkanId)return;
-    var fd=new FormData();
-    fd.append('_token',getCsrf());
-    fd.append('ikan_id',currentBonusIkanId);
-    fd.append('bonus_type',type);
-    fetch('/api/admin/add-bonus',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-    .then(function(r){if(!r.ok)return r.json().then(function(d){throw d;});return r.json();})
+    if(!currentBonusIkanId) return;
+
+    var label = getBonusLabel(type);
+
+    if(el){
+        el.style.pointerEvents = 'none';
+        el.style.opacity = '.55';
+    }
+
+    setBonusModalBusy(true, 'Menambahkan bonus ' + label + '...');
+
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('ikan_id', currentBonusIkanId);
+    fd.append('bonus_type', type);
+
+    fetch('/api/admin/add-bonus', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: fd
+    })
+    .then(function(r){
+        if(!r.ok){
+            return r.json().then(function(d){ throw d; });
+        }
+        return r.json();
+    })
     .then(function(d){
         if(d.success){
-            popupSuccess('Bonus Ditambahkan','<b>'+esc(bonusTypes.find(function(b){return b.key===type;}).label)+'</b> (+100) berhasil ditambahkan.');
-            closeModal('modalBonus');
-            loadScoringData();
-            loadMvpIkanData();
+            popupSuccess(
+                'Bonus Ditambahkan',
+                '<b>' + esc(label) + '</b> (+100 rank point) berhasil ditambahkan.'
+            );
+
+            rerenderBonusModalAfterChange(d);
+
         } else {
-            popupError('Gagal',d.message||'Terjadi kesalahan.');
+            popupError('Gagal', d.message || 'Terjadi kesalahan.');
+            setBonusModalBusy(false);
         }
     })
     .catch(function(e){
-        if(e.message)popupError('Gagal',esc(e.message));
-        else popupError('Kesalahan Jaringan','Gagal menghubungi server.');
+        popupError('Gagal', e && e.message ? esc(e.message) : 'Gagal menghubungi server.');
+        setBonusModalBusy(false);
+
+        if(el){
+            el.style.pointerEvents = '';
+            el.style.opacity = '';
+        }
+
+        var body = document.getElementById('bonusModalBody');
+        if(body && body.getAttribute('data-prev-html')){
+            body.innerHTML = body.getAttribute('data-prev-html');
+            body.removeAttribute('data-prev-html');
+        }
     });
 }
 
 function removeBonus(type){
-    if(!currentBonusIkanId)return;
+    if(!currentBonusIkanId) return;
+
+    var label = getBonusLabel(type);
+
     popupConfirm(
         'Hapus Bonus',
-        'Yakin ingin menghapus bonus ini? Point yang sudah ditambahkan akan dikurangi kembali.',
+        'Yakin ingin menghapus bonus <strong>' + esc(label) + '</strong>? Rank point bonus akan dikurangi kembali.',
         'Ya, Hapus',
         function(){
-            var fd=new FormData();
-            fd.append('_token',getCsrf());
-            fd.append('ikan_id',currentBonusIkanId);
-            fd.append('bonus_type',type);
-            fetch('/api/admin/remove-bonus',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
-            .then(function(r){return r.json();})
+            setBonusModalBusy(true, 'Menghapus bonus ' + label + '...');
+
+            var fd = new FormData();
+            fd.append('_token', getCsrf());
+            fd.append('ikan_id', currentBonusIkanId);
+            fd.append('bonus_type', type);
+
+            fetch('/api/admin/remove-bonus', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: fd
+            })
+            .then(function(r){
+                if(!r.ok){
+                    return r.json().then(function(d){ throw d; });
+                }
+                return r.json();
+            })
             .then(function(d){
                 if(d.success){
-                    popupSuccess('Bonus Dihapus','Bonus berhasil dihapus.');
-                    closeModal('modalBonus');
-                    loadScoringData();
-                    loadMvpIkanData();
+                    popupSuccess('Bonus Dihapus', 'Bonus <b>' + esc(label) + '</b> berhasil dihapus.');
+
+                    rerenderBonusModalAfterChange(d);
+
                 } else {
-                    popupError('Gagal',d.message||'Terjadi kesalahan.');
+                    popupError('Gagal', d.message || 'Terjadi kesalahan.');
+                    setBonusModalBusy(false);
                 }
             })
-            .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');});
+            .catch(function(e){
+                popupError('Gagal', e && e.message ? esc(e.message) : 'Gagal menghubungi server.');
+                setBonusModalBusy(false);
+
+                var body = document.getElementById('bonusModalBody');
+                if(body && body.getAttribute('data-prev-html')){
+                    body.innerHTML = body.getAttribute('data-prev-html');
+                    body.removeAttribute('data-prev-html');
+                }
+            });
         }
     );
 }
@@ -1230,7 +1438,7 @@ function renderChartTop(data){
 /* ═══════════════════════════════════════════════
    LOAD DATA PENILAIAN
    ═══════════════════════════════════════════════ */
-function loadScoringData(){
+function loadScoringData(callback){
     var params=new URLSearchParams();
     var s=document.getElementById('filterSearch').value;
     var k=document.getElementById('filterKategori').value;
@@ -1240,7 +1448,11 @@ function loadScoringData(){
     if(tn)params.set('tank',tn);
     fetch('/api/admin/scoring-data?'+params.toString(),{headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
-    .then(function(data){allScoringData=data;renderTable(data);})
+    .then(function(data){allScoringData=data;renderTable(data);
+        if(typeof callback === 'function'){
+            callback();
+        }
+    })
     .catch(function(){});
 }
 
