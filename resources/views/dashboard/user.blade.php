@@ -417,10 +417,12 @@
             .user-shell{
                 display:block;
             }
+
             .user-main{
-                padding:18px 16px;
+                padding:92px 16px 18px;
                 max-width:none;
             }
+
             .user-sidebar{
                 position:fixed;
                 left:0;
@@ -428,10 +430,15 @@
                 transform:translateX(-102%);
                 transition:transform .25s;
             }
+
             body.user-sidebar-open .user-sidebar{
                 transform:translateX(0);
             }
-            .user-mobile-toggle{display:grid;place-items:center;}
+
+            .user-mobile-toggle{
+                display:grid;
+                place-items:center;
+            }
         }
         /* ====================================================
            TOP NAVIGATION
@@ -1852,7 +1859,7 @@
             </aside>
 
             <header class="user-mobile-topbar">
-                <button type="button" class="user-mobile-toggle" onclick="openUserSidebar()">
+                <button type="button" class="user-mobile-toggle" onclick="toggleUserSidebar()">
                     <i class="fas fa-bars"></i>
                 </button>
 
@@ -2507,10 +2514,28 @@
 
         function openUserSidebar(){
             document.body.classList.add('user-sidebar-open');
+            updateSidebarToggleIcon();
         }
 
         function closeUserSidebar(){
             document.body.classList.remove('user-sidebar-open');
+            updateSidebarToggleIcon();
+        }
+
+        function toggleUserSidebar(){
+            document.body.classList.toggle('user-sidebar-open');
+            updateSidebarToggleIcon();
+        }
+
+        function updateSidebarToggleIcon(){
+            var btnIcon = document.querySelector('.user-mobile-toggle i');
+            if (!btnIcon) return;
+
+            if (document.body.classList.contains('user-sidebar-open')) {
+                btnIcon.className = 'fas fa-xmark';
+            } else {
+                btnIcon.className = 'fas fa-bars';
+            }
         }
 
         function showUserPage(page){
@@ -2697,20 +2722,74 @@
         function userPopupSuccess(title, desc){
             var modalTitle = document.getElementById('successModalTitle');
             var modalDesc = document.getElementById('successModalDesc');
+            var modal = document.getElementById('successModal');
+
             if (modalTitle) modalTitle.textContent = title || 'Berhasil';
             if (modalDesc) modalDesc.innerHTML = desc || '';
-            var modal = document.getElementById('successModal');
-            if (modal) modal.classList.add('show');
-            else alert((title || 'Berhasil') + '\n' + (desc || ''));
+
+            if (modal) {
+                modal.classList.add('show');
+                return;
+            }
+
+            console.log((title || 'Berhasil') + ': ' + (desc || ''));
         }
 
         function userPopupError(title, desc){
-            alert((title || 'Gagal') + '\n' + (desc || 'Terjadi kesalahan.'));
+            var modalTitle = document.getElementById('successModalTitle');
+            var modalDesc = document.getElementById('successModalDesc');
+            var modal = document.getElementById('successModal');
+
+            if (modalTitle) modalTitle.textContent = title || 'Gagal';
+            if (modalDesc) {
+                modalDesc.innerHTML =
+                    '<span style="color:#fca5a5;font-weight:800;">' +
+                    escapeHtml(desc || 'Terjadi kesalahan.') +
+                    '</span>';
+            }
+
+            if (modal) {
+                modal.classList.add('show');
+                return;
+            }
+
+            console.error((title || 'Gagal') + ': ' + (desc || 'Terjadi kesalahan.'));
         }
 
         function userPopupConfirm(title, desc, yesText, callback){
-            var ok = confirm((title || 'Konfirmasi') + '\n\n' + (desc || ''));
-            if (ok && typeof callback === 'function') callback();
+            var oldModal = document.getElementById('userConfirmModal');
+            if (oldModal) oldModal.remove();
+
+            var modal = document.createElement('div');
+            modal.id = 'userConfirmModal';
+            modal.className = 'modal-overlay show';
+            modal.innerHTML =
+                '<div class="success-modal" style="max-width:420px;">' +
+                    '<div class="success-icon" style="background:linear-gradient(135deg,var(--gold-500),var(--gold-700));">' +
+                        '<i class="fas fa-paper-plane"></i>' +
+                    '</div>' +
+                    '<h3>' + escapeHtml(title || 'Konfirmasi') + '</h3>' +
+                    '<p style="line-height:1.65;">' + escapeHtml(desc || '') + '</p>' +
+                    '<div style="display:flex;gap:10px;margin-top:18px;">' +
+                        '<button type="button" id="btnCancelUserConfirm" class="btn-logout" style="flex:1;justify-content:center;">Batal</button>' +
+                        '<button type="button" id="btnOkUserConfirm" class="submit-btn" style="flex:1;margin-top:0;">' + escapeHtml(yesText || 'Ya') + '</button>' +
+                    '</div>' +
+                '</div>';
+
+            document.body.appendChild(modal);
+
+            document.getElementById('btnCancelUserConfirm').onclick = function(){
+                modal.remove();
+            };
+
+            document.getElementById('btnOkUserConfirm').onclick = function(){
+                modal.remove();
+                if (typeof callback === 'function') callback();
+            };
+
+            modal.addEventListener('click', function(e){
+                if (e.target === modal) modal.remove();
+            });
         }
 
         // ★ FUNGSI: Update visual lock pada card Mesin Undian & Daftar Ikan
@@ -3578,7 +3657,16 @@
             if (empty) empty.style.display = count > 0 ? 'none' : 'block';
 
             if (submitBtn) {
-                submitBtn.disabled = isTeamChampionSubmitted || count !== maxTeamChampion;
+                var canSubmitTeamChampion =
+                    isTeamChampionOpen &&
+                    !isTeamChampionSubmitted &&
+                    count >= 1 &&
+                    count <= maxTeamChampion;
+
+                submitBtn.disabled = !canSubmitTeamChampion;
+                submitBtn.style.opacity = canSubmitTeamChampion ? '1' : '0.55';
+                submitBtn.style.cursor = canSubmitTeamChampion ? 'pointer' : 'not-allowed';
+
                 submitBtn.innerHTML = isTeamChampionSubmitted
                     ? '<i class="fas fa-lock"></i> TEAM CHAMPION TERKIRIM'
                     : '<i class="fas fa-paper-plane"></i> KIRIM TEAM CHAMPION (' + count + '/' + maxTeamChampion + ')';
