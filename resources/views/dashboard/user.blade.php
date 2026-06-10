@@ -14,6 +14,8 @@
     $maxMvp = $maxMvp ?? 15;
     $initial = strtoupper(mb_substr(trim($user->name), 0, 1));
     $undianOpen = $undianOpen ?? true; // ★ Dari controller, default true
+    $teamChampionOpen = $teamChampionOpen ?? false;
+    $mvpOpen = $mvpOpen ?? false;
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -1299,6 +1301,43 @@
             content: '\f023'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
             margin-left: 8px; color: var(--gold-500);
         }
+        .mvp-locked-state{
+            min-height:170px;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            text-align:center;
+            color:var(--text-mid);
+            gap:8px;
+            padding:26px 16px;
+        }
+
+        .mvp-locked-state .lock-icon{
+            width:56px;
+            height:56px;
+            border-radius:50%;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:rgba(255,255,255,.06);
+            border:1px solid rgba(255,255,255,.10);
+            color:var(--text-mid);
+            font-size:22px;
+            margin-bottom:8px;
+        }
+
+        .mvp-locked-state strong{
+            color:var(--text-hi);
+            font-size:14px;
+            font-weight:900;
+        }
+
+        .mvp-locked-state span{
+            color:var(--text-mid);
+            font-size:12px;
+            font-weight:600;
+        }
 
         .btn-submit-mvp {
             width: 100%;
@@ -2106,105 +2145,104 @@
                         </div>
                     </section>
 
-                <section class="user-page-section js-page-mvp" data-user-page-section="mvp">
-                    <!-- CARD: MVP REGISTRATION -->
-                    <div class="glass-card mvp-card" id="mvpCard">
-                        <div class="card-header">
-                            <div>
-                                <h2 class="card-title">
-                                    <span class="title-icon"><i class="fas fa-star"></i></span>
-                                    Pendaftaran MVP
-                                </h2>
-                                <p class="card-subtitle">Pilih maksimal {{ $maxMvp }} ikan terbaik Anda untuk MVP.</p>
-                            </div>
-                            <div class="mvp-badge" id="mvpCountBadge">{{ $mvpCount }}/{{ $maxMvp }} MVP</div>
-                        </div>
-                        <div class="card-body" id="mvpCardBody" style="padding-top:12px;">
+                    <section class="user-page-section js-page-mvp" data-user-page-section="mvp">
 
-                            <div class="mvp-progress-bar" aria-hidden="true">
-                                <div class="mvp-progress-fill" id="mvpProgressFill" style="width: {{ min(100, ($mvpCount / max(1, $maxMvp)) * 100) }}%"></div>
+                        <!-- CARD: MVP REGISTRATION -->
+                        <div class="glass-card mvp-card" id="mvpCard">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">
+                                        <span class="title-icon"><i class="fas fa-star"></i></span>
+                                        Pendaftaran MVP
+                                    </h2>
+                                    <p class="card-subtitle">Pilih maksimal {{ $maxMvp }} ikan terbaik Anda untuk MVP.</p>
+                                </div>
+                                <div class="mvp-badge" id="mvpCountBadge">{{ $mvpCount }}/{{ $maxMvp }} MVP</div>
                             </div>
 
-                            <div id="mvpLockedState">
-                                <div class="lock-icon"><i class="fas fa-lock"></i></div>
-                                <strong style="color:var(--text);">Pendaftaran MVP Belum Dibuka</strong><br>
-                                <span style="font-size:12px;">Tunggu panitia membuka periode pendaftaran MVP.</span>
-                            </div>
-
-                            <div id="mvpUnlockedState" style="display:none;">
-                                <div id="mvpListContainer" style="max-height:240px; overflow-y:auto; margin-bottom:8px; padding-right:4px;"></div>
-
-                                <div id="mvpEmptyList">
-                                    <div class="unlock-icon"><i class="fas fa-lock-open"></i></div>
-                                    <strong style="color:var(--gold-300);">Pendaftaran MVP DIBUKA!</strong><br>
-                                    <span style="font-size:12px;">Klik <i class="fas fa-star" style="color:var(--gold-400);"></i> pada ikan Anda di kolom kanan.</span>
+                            <div class="card-body" id="mvpCardBody" style="padding-top:12px;">
+                                <div class="mvp-progress-bar" aria-hidden="true">
+                                    <div class="mvp-progress-fill" id="mvpProgressFill" style="width: {{ min(100, ($mvpCount / max(1, $maxMvp)) * 100) }}%"></div>
                                 </div>
 
-                                <button class="btn-submit-mvp" id="btnSubmitMvp" onclick="confirmSubmitMvp()" style="display:none;">
-                                    <i class="fas fa-paper-plane"></i> KIRIM IKAN MVP
-                                </button>
+                                <div id="mvpLockedState" class="mvp-locked-state">
+                                    <div class="lock-icon"><i class="fas fa-lock"></i></div>
+                                    <strong>Pendaftaran MVP Belum Dibuka</strong>
+                                    <span>Tunggu panitia membuka periode pendaftaran MVP.</span>
+                                </div>
 
-                                <div id="mvpSubmittedBadge">
-                                    <i class="fas fa-circle-check"></i> Data MVP telah dikirim & terkunci permanen
+                                <div id="mvpUnlockedState" style="display:none;">
+                                    <div id="mvpListContainer" style="max-height:240px; overflow-y:auto; margin-bottom:8px; padding-right:4px;"></div>
+
+                                    <div id="mvpEmptyList">
+                                        <div class="unlock-icon"><i class="fas fa-lock-open"></i></div>
+                                        <strong style="color:var(--gold-300);">Pendaftaran MVP DIBUKA!</strong><br>
+                                        <span style="font-size:12px;">Klik <i class="fas fa-star" style="color:var(--gold-400);"></i> pada ikan Anda di kolom kanan.</span>
+                                    </div>
+
+                                    <button class="btn-submit-mvp" id="btnSubmitMvp" onclick="confirmSubmitMvp()" style="display:none;">
+                                        <i class="fas fa-paper-plane"></i> KIRIM IKAN MVP
+                                    </button>
+
+                                    <div id="mvpSubmittedBadge">
+                                        <i class="fas fa-circle-check"></i> Data MVP telah dikirim & terkunci permanen
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CARD: TEAM CHAMPION -->
+                        <div class="glass-card mvp-card" id="teamChampionCard" style="margin-top:20px;">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">
+                                        <span class="title-icon"><i class="fas fa-people-group"></i></span>
+                                        Team Champion
+                                    </h2>
+                                    <p class="card-subtitle">
+                                        Pilih maksimal 35 ikan untuk Team Champion. Setelah dikirim, ikan-ikan ini dapat dipilih lagi untuk MVP maksimal 15 ikan.
+                                    </p>
+                                </div>
+                                <div class="mvp-badge" id="teamChampionCountBadge">
+                                    {{ $teamChampionCount }}/{{ $maxTeamChampion }} TC
                                 </div>
                             </div>
 
-                        </div>
-                    </div>
+                            <div class="card-body">
+                                <div class="mvp-progress-bar">
+                                    <div class="mvp-progress-fill" id="teamChampionProgressFill" style="width: {{ min(100, ($teamChampionCount / max(1, $maxTeamChampion)) * 100) }}%"></div>
+                                </div>
 
-                </div>
-                </section>          
+                                <div id="teamChampionLockedState" class="mvp-locked-state">
+                                    <div class="lock-icon"><i class="fas fa-lock"></i></div>
+                                    <strong>Pendaftaran Team Champion Belum Dibuka</strong>
+                                    <span>Tunggu panitia membuka periode pendaftaran Team Champion.</span>
+                                </div>
+
+                                <div id="teamChampionUnlockedState" style="display:none;">
+                                    <div id="teamChampionListContainer"></div>
+
+                                    <div id="teamChampionEmptyList">
+                                        <div class="unlock-icon"><i class="fas fa-people-group"></i></div>
+                                        <strong style="color:var(--gold-300);">Pendaftaran Team Champion DIBUKA!</strong><br>
+                                        <span style="font-size:12px;">Pilih 1 sampai 35 ikan dari daftar ikan Anda.</span>
+                                    </div>
+
+                                    <button type="button" class="btn-submit-mvp" id="btnSubmitTeamChampion" onclick="confirmSubmitTeamChampion()">
+                                        <i class="fas fa-paper-plane"></i>
+                                        KIRIM TEAM CHAMPION
+                                    </button>
+
+                                    <div id="teamChampionSubmittedBadge">
+                                        <i class="fas fa-check-circle"></i>
+                                        Team Champion sudah dikirim.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </section>
                 <!-- ========== END KOLOM KIRI ========== -->
-
-                <section class="user-page-section js-page-team-champion" data-user-page-section="team_champion">
-                    <div class="glass-card mvp-card" id="teamChampionCard">
-                        <div class="card-header">
-                            <div>
-                                <h2 class="card-title">
-                                    <span class="title-icon"><i class="fas fa-people-group"></i></span>
-                                    Team Champion
-                                </h2>
-                                <p class="card-subtitle">
-                                    Pilih maksimal 35 ikan untuk Team Champion. Setelah dikirim, ikan-ikan ini dapat dipilih lagi untuk MVP maksimal 15 ikan.
-                                </p>
-                            </div>
-                            <div class="mvp-badge" id="teamChampionCountBadge">
-                                {{ $teamChampionCount }}/{{ $maxTeamChampion }} TC
-                            </div>
-                        </div>
-
-                        <div class="card-body">
-                            <div class="mvp-progress-bar">
-                                <div class="mvp-progress-fill" id="teamChampionProgressFill" style="width: {{ min(100, ($teamChampionCount / max(1, $maxTeamChampion)) * 100) }}%"></div>
-                            </div>
-
-                            <div id="teamChampionLockedState">
-                                <div class="lock-icon"><i class="fas fa-lock"></i></div>
-                                <strong>Pendaftaran Team Champion Belum Dibuka</strong><br>
-                                Tunggu panitia membuka halaman Team Champion.
-                            </div>
-
-                            <div id="teamChampionUnlockedState" style="display:none;">
-                                <div id="teamChampionListContainer"></div>
-
-                                <div id="teamChampionEmptyList">
-                                    <div class="unlock-icon"><i class="fas fa-people-group"></i></div>
-                                    Pendaftaran Team Champion dibuka. Pilih 1 sampai 35 ikan dari daftar ikan Anda.
-                                </div>
-
-                                <button type="button" class="btn-submit-mvp" id="btnSubmitTeamChampion" onclick="confirmSubmitTeamChampion()">
-                                    <i class="fas fa-paper-plane"></i>
-                                    KIRIM TEAM CHAMPION
-                                </button>
-
-                                <div id="teamChampionSubmittedBadge">
-                                    <i class="fas fa-check-circle"></i>
-                                    Team Champion sudah dikirim.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
 
                 <!-- ========== KOLOM KANAN: MESIN + DAFTAR IKAN ========== -->
                 <div class="col-stack">
@@ -2572,10 +2610,7 @@
 
         function showUserPage(page){
             var allowedPages = ['overview', 'profile', 'ikan', 'mvp', 'results'];
-
-            if (allowedPages.indexOf(page) === -1) {
-                page = 'overview';
-            }
+            if (allowedPages.indexOf(page) === -1) page = 'overview';
 
             document.body.classList.remove(
                 'user-page-overview',
@@ -2587,8 +2622,15 @@
 
             document.body.classList.add('user-page-' + page);
 
-            document.querySelectorAll('.user-sidebar-item').forEach(function(btn){
-                btn.classList.toggle('active', btn.getAttribute('data-user-page') === page);
+            document.querySelectorAll('[data-user-page-section]').forEach(function(section){
+                section.classList.toggle(
+                    'active',
+                    section.getAttribute('data-user-page-section') === page
+                );
+            });
+
+            document.querySelectorAll('.user-sidebar-item').forEach(function(item){
+                item.classList.toggle('active', item.dataset.userPage === page);
             });
 
             var titleMap = {
@@ -2599,16 +2641,10 @@
                 results: 'Hasil Juara'
             };
 
-            var mobileTitle = document.getElementById('userPageTitleMobile');
-            if (mobileTitle) {
-                mobileTitle.textContent = titleMap[page] || 'My Contest';
-            }
+            var titleEl = document.getElementById('userMobilePageTitle');
+            if (titleEl) titleEl.textContent = titleMap[page] || 'Ringkasan';
 
             closeUserSidebar();
-
-            setTimeout(function(){
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }, 80);
         }
 
         // ★ HELPER: Reset HANYA field ikan (profil TETAP terisi untuk tambah ikan berikutnya)
@@ -2736,10 +2772,10 @@
 
         // --- REAL-TIME POLLING ---
         let currentIkans = {};
-        let isMvpOpen = false;          
+        let isMvpOpen = @json($mvpOpen);
         let currentMvpSubmitted = false;
 
-        let isTeamChampionOpen = false;
+        var isTeamChampionOpen = @json($teamChampionOpen);
         let isTeamChampionSubmitted = false;
         let maxTeamChampion = {{ $maxTeamChampion ?? 35 }};
 
@@ -2969,7 +3005,7 @@
             var locked = document.getElementById('teamChampionLockedState');
             var unlocked = document.getElementById('teamChampionUnlockedState');
 
-            if (locked) locked.style.display = isTeamChampionOpen ? 'none' : 'block';
+            if (locked) locked.style.display = isTeamChampionOpen ? 'none' : 'flex';
             if (unlocked) unlocked.style.display = isTeamChampionOpen ? 'block' : 'none';
 
             updateTeamChampionUI();
@@ -2982,7 +3018,7 @@
 
             var canUseMvp = isMvpOpen;
 
-            if (locked) locked.style.display = canUseMvp ? 'none' : 'block';
+            if (locked) locked.style.display = canUseMvp ? 'none' : 'flex';
             if (unlocked) unlocked.style.display = canUseMvp ? 'block' : 'none';
 
             updateMvpUI();

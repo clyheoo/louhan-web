@@ -27,6 +27,8 @@ class DashboardController extends Controller
         $ikansSaya = $pesertaSaya ? $pesertaSaya->ikans()->orderBy('created_at', 'desc')->get() : collect();
 
         $undianOpen = (bool)(\DB::table('settings')->where('key', 'undian_registration_open')->value('value') ?? true);
+        $teamChampionOpen = (bool)(\DB::table('settings')->where('key', 'team_champion_registration_open')->value('value') ?? false);
+        $mvpOpen = (bool)(\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
 
         // ★ DAFTAR KOTA & TEAM PER-USER (TIDAK lintas user)
         $daftarKota = collect();
@@ -69,6 +71,8 @@ class DashboardController extends Controller
             'pesertaSaya'  => $pesertaSaya,
             'ikansSaya'    => $ikansSaya,
             'undianOpen'   => $undianOpen,
+            'teamChampionOpen' => $teamChampionOpen,
+            'mvpOpen'          => $mvpOpen,
             'daftarKota'   => $daftarKota,
             'daftarTeam'   => $daftarTeam,
             'teamChampionCount' => $teamChampionCount,

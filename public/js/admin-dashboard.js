@@ -3341,36 +3341,57 @@ function updateTeamChampionToggleUI(isOpen) {
     } else {
         btn.className = 'btn-primary';
         btn.innerHTML = '<i class="fas fa-lock-open"></i> Buka Team Champion';
-        txt.innerHTML = '<span style="color:#FCA5A5;"><i class="fas fa-lock"></i> Pendaftaran Team Champion sedang DITUTUP.</span>';
+        txt.innerHTML = '<span style="color:#FCA5A5;"><i class="fas fa-lock"></i> Pendaftaran Team Champion sedang DITUTUP untuk user.</span>';
     }
 }
 
 function toggleTeamChampionRegistration() {
     var btn = document.getElementById('btnToggleTeamChampion');
+
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
     }
 
     fetch('/api/admin/toggle-team-champion-registration', {
-        method:'POST',
-        headers:{
-            'X-Requested-With':'XMLHttpRequest',
-            'Accept':'application/json',
-            'X-CSRF-TOKEN':getCsrf()
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': getCsrf()
         }
     })
-    .then(function(r){ return r.json(); })
+    .then(function(r){
+        return r.json().then(function(d){
+            if (!r.ok) throw d;
+            return d;
+        });
+    })
     .then(function(d){
-        if (d.success) {
-            updateTeamChampionToggleUI(!!d.is_open);
-            popupSuccess('Status Team Champion Diperbarui', d.message);
-        } else {
-            popupError('Gagal', d.message || 'Terjadi kesalahan.');
-        }
+        if (!d.success) throw d;
+
+        var isOpen = !!d.is_open;
+
+        updateTeamChampionToggleUI(isOpen);
+
+        popupSuccess(
+            isOpen ? 'Team Champion Dibuka' : 'Team Champion Ditutup',
+            d.message || (
+                isOpen
+                    ? 'Halaman Team Champion di panel user sudah dibuka.'
+                    : 'Halaman Team Champion di panel user sudah ditutup.'
+            )
+        );
+
+        if (typeof loadTeamChampionStatus === 'function') loadTeamChampionStatus();
     })
-    .catch(function(){
-        popupError('Error', 'Gagal menghubungi server.');
+    .catch(function(e){
+        popupError(
+            'Gagal',
+            e.message || 'Gagal mengubah status pendaftaran Team Champion.'
+        );
+
+        if (typeof loadTeamChampionStatus === 'function') loadTeamChampionStatus();
     })
     .finally(function(){
         if (btn) btn.disabled = false;
