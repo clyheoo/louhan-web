@@ -968,13 +968,67 @@ var formFields = {
 var formFieldsLegacy = {
     face:[{id:'pipi',label:'Pipi'},{id:'mata',label:'Mata'},{id:'bibir',label:'Bibir'},{id:'kondisi',label:'Kondisi Mata & Insang'}]
 };
-var MINOR_DEFECTS=['Kutil','Bibir Miring','Bibir Miring (kasat mata)','Katarak','Abses / Luka','Fintail Bleaching','Fintail Bleaching / Transparan','Pangkal Ekor Naik/Trn','Pangkal Ekor Naik atau Turun','Dayung Tdk Seimbang','Sirip Dayung Tidak Seimbang'];
-var MAYOR_DEFECTS=['Bagian Bibir Hilang','Mulut Terbuka Terus','Bibir Tidak Menutup Sempurna & Selaput Bergerak','Muka Miring','Pangkal Bengkok/Patah','Pangkal Bengkok / Melintir','Fin/Tulang Hilang 1 Ruas'];
+var MINOR_DEFECTS=[
+    'Kutil',
+    'Bibir Miring',
+    'Bibir Miring (kasat mata)',
+    'Katarak',
+    'Bibir Tidak Menutup Sempurna & Selaput Bergerak',
+    'Abses / Luka',
+    'Fintail Bleaching',
+    'Fintail Bleaching / Transparan',
+    'Pangkal Ekor Naik/Trn',
+    'Pangkal Ekor Naik atau Turun',
+    'Dayung Tdk Seimbang',
+    'Sirip Dayung Tidak Seimbang'
+];
+
+var MAYOR_DEFECTS=[
+    'Bagian Bibir Hilang',
+    'Mulut Terbuka Terus',
+    'Muka Miring',
+    'Pangkal Bengkok/Patah',
+    'Pangkal Bengkok / Melintir',
+    'Fin/Tulang Hilang 1 Ruas'
+];
+
 var DEFECT_OPTIONS={
-    raw_head_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'}]}],
-    raw_face_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Bibir Miring (kasat mata)',label:'Bibir Miring (kasat mata)'},{value:'Katarak',label:'Katarak'}]},{label:'--- MAYOR ---',options:[{value:'Bagian Bibir Hilang',label:'Bagian Bibir Hilang'},{value:'Bibir Tidak Menutup Sempurna & Selaput Bergerak',label:'Bibir Tidak Menutup Sempurna & Selaput Bergerak'},{value:'Muka Miring',label:'Muka Miring'}]}],
-    raw_body_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Abses / Luka',label:'Abses / Luka'}]}],
-    raw_finnage_penalty:[{label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},{label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'},{value:'Fintail Bleaching / Transparan',label:'Fintail Bleaching / Transparan'},{value:'Pangkal Ekor Naik atau Turun',label:'Pangkal Ekor Naik atau Turun'},{value:'Sirip Dayung Tidak Seimbang',label:'Sirip Dayung Tidak Seimbang'}]},{label:'--- MAYOR ---',options:[{value:'Fin/Tulang Hilang 1 Ruas',label:'Fin/Tulang Hilang 1 Ruas'},{value:'Pangkal Bengkok / Melintir',label:'Pangkal Bengkok / Melintir'}]}]
+    raw_head_penalty:[
+        {label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},
+        {label:'--- MINOR ---',options:[{value:'Kutil',label:'Kutil'}]}
+    ],
+    raw_face_penalty:[
+        {label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},
+        {label:'--- MINOR ---',options:[
+            {value:'Bibir Miring (kasat mata)',label:'Bibir Miring (kasat mata)'},
+            {value:'Katarak',label:'Katarak'},
+            {value:'Bibir Tidak Menutup Sempurna & Selaput Bergerak',label:'Bibir Tidak Menutup Sempurna & Selaput Bergerak'}
+        ]},
+        {label:'--- MAYOR ---',options:[
+            {value:'Bagian Bibir Hilang',label:'Bagian Bibir Hilang'},
+            {value:'Muka Miring',label:'Muka Miring'}
+        ]}
+    ],
+    raw_body_penalty:[
+        {label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},
+        {label:'--- MINOR ---',options:[
+            {value:'Kutil',label:'Kutil'},
+            {value:'Abses / Luka',label:'Abses / Luka'}
+        ]}
+    ],
+    raw_finnage_penalty:[
+        {label:'--- AMAN ---',options:[{value:'0',label:'Aman (0)'}]},
+        {label:'--- MINOR ---',options:[
+            {value:'Kutil',label:'Kutil'},
+            {value:'Fintail Bleaching / Transparan',label:'Fintail Bleaching / Transparan'},
+            {value:'Pangkal Ekor Naik atau Turun',label:'Pangkal Ekor Naik atau Turun'},
+            {value:'Sirip Dayung Tidak Seimbang',label:'Sirip Dayung Tidak Seimbang'}
+        ]},
+        {label:'--- MAYOR ---',options:[
+            {value:'Fin/Tulang Hilang 1 Ruas',label:'Fin/Tulang Hilang 1 Ruas'},
+            {value:'Pangkal Bengkok / Melintir',label:'Pangkal Bengkok / Melintir'}
+        ]}
+    ]
 };
 function getStandardOptionsGJ(){var o=[];for(var i=90;i>=10;i-=5)o.push({value:i.toString(),label:i.toString()});return o;}
 var DEFECT_LEGACY_MAP={'Bibir Miring':'Bibir Miring (kasat mata)','Fintail Bleaching':'Fintail Bleaching / Transparan','Pangkal Ekor Naik/Trn':'Pangkal Ekor Naik atau Turun','Dayung Tdk Seimbang':'Sirip Dayung Tidak Seimbang','Mulut Terbuka Terus':'Bibir Tidak Menutup Sempurna & Selaput Bergerak','Pangkal Bengkok/Patah':'Pangkal Bengkok / Melintir'};

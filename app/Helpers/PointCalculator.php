@@ -6,29 +6,27 @@ use App\Models\ScoringPointConfig;
 
 class PointCalculator
 {
-    // ★ DAFTAR DEFECT MINOR (gabungan label LAMA + BARU untuk backward-compat data lama)
     const MINOR_DEFECTS = [
         'Kutil',
-        'Bibir Miring',                      // legacy
-        'Bibir Miring (kasat mata)',         // baru
+        'Bibir Miring',                                      // legacy
+        'Bibir Miring (kasat mata)',                         // baru
         'Katarak',
+        'Bibir Tidak Menutup Sempurna & Selaput Bergerak',   // dipindah dari mayor ke minor
         'Abses / Luka',
-        'Fintail Bleaching',                 // legacy
-        'Fintail Bleaching / Transparan',    // baru
-        'Pangkal Ekor Naik/Trn',             // legacy
-        'Pangkal Ekor Naik atau Turun',      // baru
-        'Dayung Tdk Seimbang',               // legacy
-        'Sirip Dayung Tidak Seimbang',       // baru
+        'Fintail Bleaching',                                 // legacy
+        'Fintail Bleaching / Transparan',                    // baru
+        'Pangkal Ekor Naik/Trn',                             // legacy
+        'Pangkal Ekor Naik atau Turun',                      // baru
+        'Dayung Tdk Seimbang',                               // legacy
+        'Sirip Dayung Tidak Seimbang',                       // baru
     ];
 
-    // ★ DAFTAR DEFECT MAYOR (gabungan label LAMA + BARU untuk backward-compat data lama)
     const MAYOR_DEFECTS = [
         'Bagian Bibir Hilang',
-        'Mulut Terbuka Terus',                                       // legacy
-        'Bibir Tidak Menutup Sempurna & Selaput Bergerak',           // baru
+        'Mulut Terbuka Terus',                               // legacy
         'Muka Miring',
-        'Pangkal Bengkok/Patah',                                     // legacy
-        'Pangkal Bengkok / Melintir',                                // baru
+        'Pangkal Bengkok/Patah',                             // legacy
+        'Pangkal Bengkok / Melintir',                        // baru
         'Fin/Tulang Hilang 1 Ruas',
     ];
 

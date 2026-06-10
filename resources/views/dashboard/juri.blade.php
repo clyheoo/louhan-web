@@ -1602,6 +1602,7 @@ const MINOR_DEFECTS = [
     "Bibir Miring",                      // legacy
     "Bibir Miring (kasat mata)",
     "Katarak",
+    "Bibir Tidak Menutup Sempurna & Selaput Bergerak",
     "Abses / Luka",
     "Fintail Bleaching",                 // legacy
     "Fintail Bleaching / Transparan",
@@ -1610,10 +1611,10 @@ const MINOR_DEFECTS = [
     "Dayung Tdk Seimbang",               // legacy
     "Sirip Dayung Tidak Seimbang"
 ];
+
 const MAYOR_DEFECTS = [
     "Bagian Bibir Hilang",
     "Mulut Terbuka Terus",                                  // legacy
-    "Bibir Tidak Menutup Sempurna & Selaput Bergerak",
     "Muka Miring",
     "Pangkal Bengkok/Patah",                                // legacy
     "Pangkal Bengkok / Melintir",
@@ -1623,7 +1624,7 @@ const MAYOR_DEFECTS = [
 // ★ Hanya label BARU yang dimunculkan ke juri saat memilih defect
 const DEFECT_MAP = {
     head:    { label:'Head',    minor:['Kutil'], mayor:[] },
-    face:    { label:'Face',    minor:['Bibir Miring (kasat mata)','Katarak'], mayor:['Bagian Bibir Hilang','Bibir Tidak Menutup Sempurna & Selaput Bergerak','Muka Miring'] },
+    face:    { label:'Face',    minor:['Bibir Miring (kasat mata)','Katarak','Bibir Tidak Menutup Sempurna & Selaput Bergerak'], mayor:['Bagian Bibir Hilang','Muka Miring'] },
     body:    { label:'Body',    minor:['Kutil','Abses / Luka'], mayor:[] },
     finnage: { label:'Finnage', minor:['Kutil','Fintail Bleaching / Transparan','Pangkal Ekor Naik atau Turun','Sirip Dayung Tidak Seimbang'], mayor:['Fin/Tulang Hilang 1 Ruas','Pangkal Bengkok / Melintir'] },
 };
