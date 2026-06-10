@@ -1851,6 +1851,9 @@ class AdminDashboardController extends Controller
             'ranking_kk',
             'ranking_k',
             'ranking_global',
+            'ranking_subtotal_kk',
+            'ranking_subtotal_k',
+            'ranking_subtotal_global',
             'users',
             'nominasi',
             'nilai_murni',
@@ -1861,16 +1864,19 @@ class AdminDashboardController extends Controller
         }
 
         $label = match ($sheets) {
-            'daftar'         => 'Daftar_Ikan',
-            'team_champion'  => 'Team_Champion',
-            'mvp'            => 'Data_MVP',
-            'ranking_kk'     => 'Ranking_Per_Kat_Kelas',
-            'ranking_k'      => 'Ranking_Per_Kategori',
-            'ranking_global' => 'Rank_Global',
-            'users'          => 'Detail_Pengguna',
-            'nominasi'       => 'Nominasi',
-            'nilai_murni'    => 'Nilai_Murni_Juri',
-            default          => 'Semua_Data',
+            'daftar'                   => 'Daftar_Ikan',
+            'team_champion'            => 'Team_Champion',
+            'mvp'                      => 'Data_MVP',
+            'ranking_kk'               => 'Ranking_Per_Kat_Kelas',
+            'ranking_k'                => 'Ranking_Per_Kategori',
+            'ranking_global'           => 'Rank_Global',
+            'ranking_subtotal_kk'      => 'Subtotal_Per_Kat_Kelas',
+            'ranking_subtotal_k'       => 'Subtotal_Per_Kategori',
+            'ranking_subtotal_global'  => 'Subtotal_Global',
+            'users'                    => 'Detail_Pengguna',
+            'nominasi'                 => 'Nominasi',
+            'nilai_murni'              => 'Nilai_Murni_Juri',
+            default                    => 'Semua_Data',
         };
 
         $fileName = 'LCI_Admin_' . $label . '_' . now()->format('Y-m-d_His') . '.xlsx';

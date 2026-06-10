@@ -11,6 +11,7 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use App\Exports\Sheets\NominasiSheet;
 use App\Exports\Sheets\NilaiMurniJuriSheet;
 use App\Exports\Sheets\TeamChampionSheet;
+use App\Exports\Sheets\PointRankingSubtotalSheet;
 
 class AdminExport implements WithMultipleSheets
 {
@@ -36,6 +37,7 @@ class AdminExport implements WithMultipleSheets
             $result[] = new RumusPenilaianSheet();
             $result[] = new NominasiSheet();
             $result[] = new NilaiMurniJuriSheet();
+            $result[] = new PointRankingSubtotalSheet($rankingScope);
         } elseif ($this->sheets === 'daftar') {
             $result[] = new AdminDaftarIkanSheet();
         } elseif ($this->sheets === 'users') {
@@ -55,7 +57,16 @@ class AdminExport implements WithMultipleSheets
             $result[] = new NominasiSheet();
         } elseif ($this->sheets === 'nilai_murni') {
             $result[] = new NilaiMurniJuriSheet();
+        } elseif ($this->sheets === 'ranking_subtotal_global') {
+            $result[] = new PointRankingSubtotalSheet('global');
+        } elseif ($this->sheets === 'ranking_subtotal_kk') {
+            $result[] = new PointRankingSubtotalSheet('per_kategori_kelas');
+        } elseif ($this->sheets === 'ranking_subtotal_k') {
+            $result[] = new PointRankingSubtotalSheet('per_kategori');
+        } elseif ($this->sheets === 'ranking_subtotal_global') {
+            $result[] = new PointRankingSubtotalSheet('global');
         }
+
 
         return $result;
     }
