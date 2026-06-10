@@ -1623,6 +1623,128 @@ class AdminDashboardController extends Controller
         return response()->json(['is_open' => $isOpen]);
     }
 
+    public function toggleTeamChampionRegistration()
+    {
+        $current = \DB::table('settings')->where('key', 'team_champion_registration_open')->value('value');
+        $newVal = ($current === '1') ? '0' : '1';
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'team_champion_registration_open'],
+            ['value' => $newVal, 'updated_at' => now()]
+        );
+
+        return response()->json([
+            'success' => true,
+            'is_open' => (bool) $newVal,
+            'message' => $newVal === '1'
+                ? 'Pendaftaran Team Champion DIBUKA untuk user.'
+                : 'Pendaftaran Team Champion DITUTUP untuk user.',
+        ]);
+    }
+
+    public function getTeamChampionStatus()
+    {
+        $isOpen = (bool)(\DB::table('settings')->where('key', 'team_champion_registration_open')->value('value') ?? false);
+        return response()->json(['is_open' => $isOpen]);
+    }
+
+    public function getTeamChampionIkan()
+    {
+        $ikans = Ikan::where('is_team_champion', true)
+            ->with('peserta')
+            ->orderBy('detail_anggota')
+            ->orderBy('kategori')
+            ->orderBy('kelas')
+            ->get()
+            ->map(function ($ikan) {
+                return [
+                    'id' => $ikan->id,
+                    'nama_peserta' => $ikan->nama_peserta ?? '-',
+                    'detail_anggota' => $ikan->detail_anggota ?? optional($ikan->peserta)->detail_anggota ?? '-',
+                    'kategori' => $ikan->kategori,
+                    'kelas' => $ikan->kelas,
+                    'nomor_tank' => $ikan->nomor_tank ?? '-',
+                    'is_mvp' => (bool) $ikan->is_mvp,
+                ];
+            });
+
+        return response()->json($ikans);
+    }
+
+    public function getTeamChampionSubmittedPeserta()
+    {
+        $pesertas = Peserta::where('is_team_champion_submitted', true)
+            ->with(['user', 'ikans'])
+            ->orderBy('nama_peserta')
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'peserta_id' => $p->id,
+                    'nama_peserta' => $p->nama_peserta,
+                    'detail_anggota' => $p->detail_anggota ?? '-',
+                    'email' => $p->user->email ?? '-',
+                    'jumlah_team_champion' => $p->ikans->where('is_team_champion', true)->count(),
+                    'jumlah_mvp' => $p->ikans->where('is_mvp', true)->count(),
+                ];
+            });
+
+        return response()->json($pesertas);
+    }
+
+    public function unlockTeamChampionPeserta(Request $request)
+    {
+        $request->validate([
+            'peserta_id' => 'required|exists:pesertas,id',
+        ]);
+
+        $peserta = Peserta::find($request->peserta_id);
+
+        if (!$peserta->is_team_champion_submitted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Peserta ini belum mengirim data Team Champion.',
+            ], 422);
+        }
+
+        $peserta->is_team_champion_submitted = false;
+
+        // Saat Team Champion dibuka ulang, MVP juga dibuka ulang agar konsisten.
+        $peserta->is_mvp_submitted = false;
+        $peserta->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Peserta "' . $peserta->nama_peserta . '" dapat kembali mengubah Team Champion.',
+        ]);
+    }
+
+    public function deleteTeamChampionIkan(Request $request)
+    {
+        $request->validate([
+            'ikan_id' => 'required|exists:ikans,id',
+        ]);
+
+        $ikan = Ikan::find($request->ikan_id);
+
+        if (!$ikan->is_team_champion) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ikan ini tidak terdaftar sebagai Team Champion.',
+            ], 422);
+        }
+
+        $ikan->is_team_champion = false;
+
+        // MVP wajib dari Team Champion, jadi saat dicabut dari Team Champion, cabut MVP juga.
+        $ikan->is_mvp = false;
+        $ikan->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ikan berhasil dihapus dari Team Champion.',
+        ]);
+    }
+
     public function toggleUndianRegistration()
     {
         $current = \DB::table('settings')->where('key', 'undian_registration_open')->value('value');

@@ -21,11 +21,13 @@ class Ikan extends Model
         'diubah_oleh',
         'is_locked',
         'is_mvp',
+        'is_team_champion',
     ];
 
     protected $casts = [
         'is_locked' => 'boolean',
-        'is_mvp' => 'boolean', // ★ TAMBAHKAN INI
+        'is_mvp' => 'boolean',
+        'is_team_champion' => 'boolean',
     ];
 
     public function peserta()

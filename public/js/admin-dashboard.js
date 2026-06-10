@@ -3317,6 +3317,219 @@ function toggleMvpRegistration() {
     .finally(() => { btn.disabled = false; });
 }
 
+function loadTeamChampionStatus() {
+    fetch('/api/admin/team-champion-status', {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        updateTeamChampionToggleUI(!!d.is_open);
+    })
+    .catch(function(){
+        updateTeamChampionToggleUI(false);
+    });
+}
+
+function updateTeamChampionToggleUI(isOpen) {
+    var btn = document.getElementById('btnToggleTeamChampion');
+    var txt = document.getElementById('teamChampionStatusText');
+
+    if (!btn || !txt) return;
+
+    if (isOpen) {
+        btn.className = 'btn-primary';
+        btn.innerHTML = '<i class="fas fa-lock"></i> Tutup Team Champion';
+        txt.innerHTML = '<span style="color:#6EE7B7;"><i class="fas fa-check-circle"></i> Pendaftaran Team Champion sedang DIBUKA untuk user.</span>';
+    } else {
+        btn.className = 'btn-primary';
+        btn.innerHTML = '<i class="fas fa-lock-open"></i> Buka Team Champion';
+        txt.innerHTML = '<span style="color:#FCA5A5;"><i class="fas fa-lock"></i> Pendaftaran Team Champion sedang DITUTUP.</span>';
+    }
+}
+
+function toggleTeamChampionRegistration() {
+    var btn = document.getElementById('btnToggleTeamChampion');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    }
+
+    fetch('/api/admin/toggle-team-champion-registration', {
+        method:'POST',
+        headers:{
+            'X-Requested-With':'XMLHttpRequest',
+            'Accept':'application/json',
+            'X-CSRF-TOKEN':getCsrf()
+        }
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if (d.success) {
+            updateTeamChampionToggleUI(!!d.is_open);
+            popupSuccess('Status Team Champion Diperbarui', d.message);
+        } else {
+            popupError('Gagal', d.message || 'Terjadi kesalahan.');
+        }
+    })
+    .catch(function(){
+        popupError('Error', 'Gagal menghubungi server.');
+    })
+    .finally(function(){
+        if (btn) btn.disabled = false;
+    });
+}
+
+function loadTeamChampionPeserta() {
+    var tb = document.getElementById('teamChampionPesertaBody');
+    var countEl = document.getElementById('teamChampionPesertaCount');
+
+    if (!tb) return;
+
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--text-mid);">Memuat data...</td></tr>';
+
+    fetch('/api/admin/team-champion-submitted-peserta', {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+        if (countEl) countEl.textContent = data.length + ' peserta';
+
+        if (!data.length) {
+            tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--text-mid);">Belum ada peserta yang mengirim Team Champion.</td></tr>';
+            return;
+        }
+
+        tb.innerHTML = '';
+
+        data.forEach(function(d, idx){
+            var safeName = esc(d.nama_peserta || '-').replace(/'/g, "\\'");
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td>' + (idx + 1) + '</td>' +
+                '<td style="font-weight:800;">' + esc(d.nama_peserta || '-') + '</td>' +
+                '<td>' + esc(d.detail_anggota || '-') + '</td>' +
+                '<td>' + esc(d.email || '-') + '</td>' +
+                '<td style="text-align:center;font-weight:900;color:var(--gold-300);">' + d.jumlah_team_champion + '</td>' +
+                '<td style="text-align:center;font-weight:900;color:var(--cyan-300);">' + d.jumlah_mvp + '</td>' +
+                '<td style="text-align:center;">' +
+                    '<button class="btn-xs green" onclick="unlockTeamChampionPeserta(' + d.peserta_id + ',\'' + safeName + '\')">' +
+                        '<i class="fas fa-lock-open"></i> Buka' +
+                    '</button>' +
+                '</td>';
+            tb.appendChild(tr);
+        });
+    })
+    .catch(function(){
+        tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:16px;">Gagal memuat data.</td></tr>';
+    });
+}
+
+function unlockTeamChampionPeserta(pesertaId, nama) {
+    popupConfirm(
+        'Buka Kunci Team Champion',
+        'Yakin ingin membuka kembali Team Champion untuk <strong>' + esc(nama) + '</strong>? MVP peserta ini juga akan dibuka ulang agar data tetap konsisten.',
+        'Ya, Buka Kunci',
+        function(){
+            var fd = new FormData();
+            fd.append('_token', getCsrf());
+            fd.append('peserta_id', pesertaId);
+
+            fetch('/api/admin/unlock-team-champion-peserta', {
+                method:'POST',
+                headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
+                body:fd
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if (d.success) {
+                    loadTeamChampionPeserta();
+                    loadTeamChampionIkan();
+                    if (typeof loadMvpPeserta === 'function') loadMvpPeserta();
+                    popupSuccess('Berhasil Dibuka', d.message);
+                } else {
+                    popupError('Gagal', d.message || 'Terjadi kesalahan.');
+                }
+            })
+            .catch(function(){
+                popupError('Kesalahan Jaringan', 'Gagal menghubungi server.');
+            });
+        }
+    );
+}
+
+function loadTeamChampionIkan() {
+    var tb = document.getElementById('teamChampionIkanBody');
+    var countEl = document.getElementById('teamChampionIkanCount');
+
+    if (!tb) return;
+
+    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--text-mid);">Memuat data...</td></tr>';
+
+    fetch('/api/admin/team-champion-ikan', {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+        if (countEl) countEl.textContent = data.length + ' ikan';
+
+        if (!data.length) {
+            tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--text-mid);">Belum ada ikan Team Champion.</td></tr>';
+            return;
+        }
+
+        tb.innerHTML = '';
+
+        data.forEach(function(d, idx){
+            var safeName = esc(d.nama_peserta || '-').replace(/'/g, "\\'");
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td>' + (idx + 1) + '</td>' +
+                '<td style="font-weight:800;">' + esc(d.nama_peserta || '-') + '</td>' +
+                '<td>' + esc(d.detail_anggota || '-') + '</td>' +
+                '<td>' + esc(d.kategori || '-') + '</td>' +
+                '<td>' + esc(d.kelas || '-') + '</td>' +
+                '<td>' + esc(d.nomor_tank || '-') + '</td>' +
+                '<td>' + (d.is_mvp ? '<span class="status-badge s-dinilai">MVP</span>' : '<span style="color:var(--text-low);">-</span>') + '</td>' +
+                '<td style="text-align:center;">' +
+                    '<button class="btn-xs red" onclick="deleteTeamChampionIkan(' + d.id + ',\'' + safeName + '\')">' +
+                        '<i class="fas fa-trash"></i> Hapus' +
+                    '</button>' +
+                '</td>';
+            tb.appendChild(tr);
+        });
+    })
+    .catch(function(){
+        tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:16px;">Gagal memuat data.</td></tr>';
+    });
+}
+
+function deleteTeamChampionIkan(ikanId, nama) {
+    popupConfirm(
+        'Hapus dari Team Champion',
+        'Yakin ingin menghapus ikan milik <strong>' + esc(nama) + '</strong> dari Team Champion? Jika ikan ini juga MVP, status MVP ikut dicabut.',
+        'Ya, Hapus',
+        function(){
+            var fd = new FormData();
+            fd.append('_token', getCsrf());
+            fd.append('ikan_id', ikanId);
+
+            fetch('/api/admin/delete-team-champion-ikan', {
+                method:'POST',
+                headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
+                body:fd
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if (d.success) {
+                    loadTeamChampionIkan();
+                    loadTeamChampionPeserta();
+                    if (typeof loadMvpData === 'function') loadMvpData();
+                    popupSuccess('Berhasil', d.message);
+                } else {
+                    popupError('Gagal', d.message || 'Terjadi kesalahan.');
+                }
+            })
+            .catch(function(){
+                popupError('Kesalahan Jaringan', 'Gagal menghubungi server.');
+            });
+        }
+    );
+}
+
 /* ═══ KELOLA MESIN UNDIAN ═══ */
 function loadUndianStatus() {
     fetch('/api/admin/undian-status', {headers:{'Accept':'application/json'}})
@@ -3415,7 +3628,7 @@ function loadMvpPeserta() {
 function unlockMvpPeserta(pesertaId, nama) {
     popupConfirm(
         'Buka Kunci MVP Peserta',
-        'Yakin ingin membuka kembali pendaftaran MVP untuk <strong>' + esc(nama) + '</strong>?<br><div style="text-align:left;margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;font-size:11px;line-height:1.6;color:var(--muted);"><i class="fas fa-circle-info" style="color:var(--primary);"></i> Peserta dapat menambah/hapus pilihan ikan MVP mereka (maks. 30 ikan). Setelah mereka kirim ulang, akan terkunci otomatis.</div>',
+        'Yakin ingin membuka kembali pendaftaran MVP untuk <strong>' + esc(nama) + '</strong>?<br><div style="text-align:left;margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;font-size:11px;line-height:1.6;color:var(--muted);"><i class="fas fa-circle-info" style="color:var(--primary);"></i> Peserta dapat menambah/hapus pilihan ikan MVP mereka (maks. 15 ikan). Setelah mereka kirim ulang, akan terkunci otomatis.</div>',
         'Ya, Buka Kunci',
         function() {
             var fd = new FormData();
@@ -4099,7 +4312,8 @@ loadJuriScoringLockStatus();
         mvp:          { title:'Kelola MVP',                      sub:'Manajemen pendaftaran ikan MVP', icon:'fa-star' },
         ranking:      { title:'Point Ranking',                   sub:'Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)', icon:'fa-trophy' },
         undian:       { title:'Kelola Mesin Undian',             sub:'Membuka dan mengunci mesin undian tank untuk peserta', icon:'fa-dice' },
-        jumbo_calc:   { title:'Hitung Point Jumbo',              sub:'Kalkulasi point Jumbo berdasarkan rumus kategori lain', icon:'fa-calculator' }
+        jumbo_calc:   { title:'Hitung Point Jumbo',              sub:'Kalkulasi point Jumbo berdasarkan rumus kategori lain', icon:'fa-calculator' },
+        team_champion:{ title:'Team Champion',                   sub:'Kelola pendaftaran Team Champion, status buka/tutup, dan data peserta', icon:'fa-users-crown' }
     };
     var loaded = { dashboard:true }; // dashboard loaded by initial loadDashboard()
 
@@ -4128,21 +4342,26 @@ loadJuriScoringLockStatus();
         // Lazy-load data per page (cuma sekali)
         if(!loaded[pageId]){
             loaded[pageId] = true;
+
             if(pageId === 'penilaian'){ loadScoringData(); }
             if(pageId === 'users'){ /* loadUsers sudah jalan di init */ }
             if(pageId === 'registrasi'){ loadPesertaOld(); loadTankRange(); loadGlobalRangeDisplay(); }
             if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
             if(pageId === 'mvp'){ loadMvpData(); loadMvpStatus(); loadMvpPeserta(); loadMvpIkanData(); }
+            if(pageId === 'team_champion'){ loadTeamChampionStatus(); loadTeamChampionPeserta(); loadTeamChampionIkan(); }
             if(pageId === 'results'){ loadResultsStatus(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
             if(pageId === 'undian'){ loadUndianStatus(); }
             if(pageId === 'jumbo_calc'){ loadJumboCalcFish(); }
+
         } else {
-            // Refresh ringan saat dibuka ulang (opsional)
+            // Refresh ringan saat dibuka ulang
             if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
             if(pageId === 'mvp'){ loadMvpStatus(); }
+            if(pageId === 'team_champion'){ loadTeamChampionStatus(); loadTeamChampionPeserta(); loadTeamChampionIkan(); }
             if(pageId === 'results'){ loadResultsStatus(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
+            if(pageId === 'undian'){ loadUndianStatus(); }
         }
 
         // ★ START auto-polling kalau halaman nominasi aktif

@@ -29,6 +29,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/acak-nomor-tank-admin', [DashboardController::class, 'acakNomorTankAdmin'])->name('api.acak.tank.admin');
     Route::post('/api/acak-nomor-tank-user', [DashboardController::class, 'acakNomorTankUser'])->name('api.acak.tank.user');
     Route::get('/api/user/my-ikans', [DashboardController::class, 'getMyIkans']);
+    Route::post('/api/toggle-team-champion-ikan', [DashboardController::class, 'toggleTeamChampionIkan'])->name('api.toggle.team_champion');
+    Route::post('/api/submit-team-champion-ikan', [DashboardController::class, 'submitTeamChampionIkan'])->name('api.submit.team_champion');
+
     Route::post('/api/toggle-mvp-ikan', [DashboardController::class, 'toggleMvpIkan'])->name('api.toggle.mvp');
     Route::post('/api/submit-mvp-ikan', [DashboardController::class, 'submitMvpIkan'])->name('api.submit.mvp');
 });
@@ -114,6 +117,12 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/toggle-role', [DashboardController::class, 'toggleRoleUser'])->name('api.toggle.role');
     Route::get('/api/tank-range-global', [AdminDashboardController::class, 'getTankRangeGlobal']);
     Route::post('/api/admin/tank-range-global', [AdminDashboardController::class, 'setTankRangeGlobal']);
+    Route::get('/api/admin/team-champion-ikan', [AdminDashboardController::class, 'getTeamChampionIkan']);
+    Route::post('/api/admin/toggle-team-champion-registration', [AdminDashboardController::class, 'toggleTeamChampionRegistration']);
+    Route::get('/api/admin/team-champion-status', [AdminDashboardController::class, 'getTeamChampionStatus']);
+    Route::get('/api/admin/team-champion-submitted-peserta', [AdminDashboardController::class, 'getTeamChampionSubmittedPeserta']);
+    Route::post('/api/admin/unlock-team-champion-peserta', [AdminDashboardController::class, 'unlockTeamChampionPeserta']);
+    Route::post('/api/admin/delete-team-champion-ikan', [AdminDashboardController::class, 'deleteTeamChampionIkan']);
     Route::get('/api/admin/mvp-ikan', [AdminDashboardController::class, 'getMvpIkan']);
     Route::get('/api/admin/mvp-ikan-data', [AdminDashboardController::class, 'getMvpIkanData']);
     Route::post('/api/admin/toggle-mvp-registration', [AdminDashboardController::class, 'toggleMvpRegistration']);

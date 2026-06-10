@@ -15,11 +15,13 @@ class Peserta extends Model
         'jenis_keanggotaan',
         'detail_anggota',
         'is_mvp_submitted',
+        'is_team_champion_submitted',
         'result_unlocked_at',
     ];
 
     protected $casts = [
         'is_mvp_submitted' => 'boolean',
+        'is_team_champion_submitted' => 'boolean',
         'result_unlocked_at' => 'datetime',
     ];
 

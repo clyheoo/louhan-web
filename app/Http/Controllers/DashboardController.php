@@ -55,9 +55,14 @@ class DashboardController extends Controller
             $daftarTeam = $daftarTeam->unique()->sort()->values();
         }
 
+        $teamChampionCount = 0;
         $mvpCount = 0;
+
+        try { $teamChampionCount = $ikansSaya->where('is_team_champion', true)->count(); } catch (\Throwable $e) { $teamChampionCount = 0; }
         try { $mvpCount = $ikansSaya->where('is_mvp', true)->count(); } catch (\Throwable $e) { $mvpCount = 0; }
-        $maxMvp = $pesertaSaya ? ($pesertaSaya->jenis_keanggotaan === 'team' ? 35 : 15) : 15;
+
+        $maxTeamChampion = 35;
+        $maxMvp = 15;
 
         return view('dashboard.user', [
             'user'         => $user, 
@@ -66,7 +71,9 @@ class DashboardController extends Controller
             'undianOpen'   => $undianOpen,
             'daftarKota'   => $daftarKota,
             'daftarTeam'   => $daftarTeam,
-            'maxMvp'       => $maxMvp,
+            'teamChampionCount' => $teamChampionCount,
+            'maxTeamChampion'   => $maxTeamChampion,
+            'maxMvp'            => $maxMvp,
         ]);
     }
 
@@ -535,33 +542,167 @@ class DashboardController extends Controller
         return response()->json(['success' => true, 'message' => "Role {$user->name} diubah menjadi " . ($user->is_admin ? 'Admin' : 'User Biasa') . ".", 'new_role' => $user->is_admin]);
     }
 
-    public function toggleMvpIkan(Request $request)
+    public function toggleTeamChampionIkan(Request $request)
     {
-        $request->validate(['ikan_id' => 'required|exists:ikans,id']);
+        $request->validate([
+            'ikan_id' => 'required|exists:ikans,id',
+        ]);
 
-        $isOpen = \DB::table('settings')->where('key', 'mvp_registration_open')->value('value');
+        $isOpen = \DB::table('settings')->where('key', 'team_champion_registration_open')->value('value');
         if (!$isOpen || $isOpen === '0') {
-            return response()->json(['success' => false, 'message' => 'Pendaftaran MVP belum dibuka oleh panitia.'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'Pendaftaran Team Champion belum dibuka oleh panitia.',
+            ], 403);
         }
 
         $ikan = Ikan::where('id', $request->ikan_id)
             ->whereHas('peserta', fn($q) => $q->where('user_id', Auth::id()))
+            ->with('peserta')
             ->first();
 
         if (!$ikan) {
-            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan atau bukan milik Anda.'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Ikan tidak ditemukan atau bukan milik Anda.',
+            ], 404);
         }
 
-        // ★ GUARD: Cegah edit jika sudah dikirim
+        if ($ikan->peserta->is_team_champion_submitted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data Team Champion sudah dikirim dan tidak dapat diubah.',
+            ], 403);
+        }
+
+        if (!$ikan->is_team_champion) {
+            $count = Ikan::where('peserta_id', $ikan->peserta_id)
+                ->where('is_team_champion', true)
+                ->count();
+
+            if ($count >= 35) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Batas maksimal 35 ikan Team Champion sudah tercapai.',
+                ], 422);
+            }
+        }
+
+        $ikan->is_team_champion = !$ikan->is_team_champion;
+
+        // Jika ikan dihapus dari Team Champion, otomatis hapus dari MVP juga
+        // karena MVP hanya boleh dari ikan Team Champion.
+        if (!$ikan->is_team_champion) {
+            $ikan->is_mvp = false;
+        }
+
+        $ikan->save();
+
+        return response()->json([
+            'success' => true,
+            'is_team_champion' => (bool) $ikan->is_team_champion,
+            'is_mvp' => (bool) $ikan->is_mvp,
+            'message' => $ikan->is_team_champion
+                ? 'Ikan ditambahkan ke Team Champion.'
+                : 'Ikan dihapus dari Team Champion.',
+        ]);
+    }
+
+    public function submitTeamChampionIkan()
+    {
+        $peserta = Peserta::where('user_id', Auth::id())->first();
+
+        if (!$peserta) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Profil peserta tidak ditemukan.',
+            ], 404);
+        }
+
+        if ($peserta->is_team_champion_submitted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda sudah mengirimkan data Team Champion sebelumnya.',
+            ], 400);
+        }
+
+        $count = Ikan::where('peserta_id', $peserta->id)
+            ->where('is_team_champion', true)
+            ->count();
+
+        if ($count !== 35) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Team Champion wajib berisi tepat 35 ikan. Saat ini terpilih ' . $count . ' ikan.',
+            ], 422);
+        }
+
+        $peserta->is_team_champion_submitted = true;
+        $peserta->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data Team Champion berhasil dikirim. Sekarang Anda dapat memilih maksimal 15 ikan untuk MVP.',
+        ]);
+    }
+
+    public function toggleMvpIkan(Request $request)
+    {
+        $request->validate([
+            'ikan_id' => 'required|exists:ikans,id',
+        ]);
+
+        $isOpen = \DB::table('settings')->where('key', 'mvp_registration_open')->value('value');
+        if (!$isOpen || $isOpen === '0') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pendaftaran MVP belum dibuka oleh panitia.',
+            ], 403);
+        }
+
+        $ikan = Ikan::where('id', $request->ikan_id)
+            ->whereHas('peserta', fn($q) => $q->where('user_id', Auth::id()))
+            ->with('peserta')
+            ->first();
+
+        if (!$ikan) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ikan tidak ditemukan atau bukan milik Anda.',
+            ], 404);
+        }
+
+        if (!$ikan->peserta->is_team_champion_submitted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kirim Team Champion terlebih dahulu sebelum memilih MVP.',
+            ], 403);
+        }
+
+        if (!$ikan->is_team_champion) {
+            return response()->json([
+                'success' => false,
+                'message' => 'MVP hanya bisa dipilih dari ikan yang sudah masuk Team Champion.',
+            ], 422);
+        }
+
         if ($ikan->peserta->is_mvp_submitted) {
-            return response()->json(['success' => false, 'message' => 'Data MVP sudah dikirim dan tidak dapat diubah.'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'Data MVP sudah dikirim dan tidak dapat diubah.',
+            ], 403);
         }
 
         if (!$ikan->is_mvp) {
-            $mvpCount = Ikan::where('peserta_id', $ikan->peserta_id)->where('is_mvp', true)->count();
-            $maxMvp = $ikan->peserta->jenis_keanggotaan === 'team' ? 35 : 15;
-            if ($mvpCount >= $maxMvp) {
-                return response()->json(['success' => false, 'message' => 'Gagal! Batas maksimal ' . $maxMvp . ' ikan untuk MVP sudah tercapai.'], 422);
+            $mvpCount = Ikan::where('peserta_id', $ikan->peserta_id)
+                ->where('is_mvp', true)
+                ->count();
+
+            if ($mvpCount >= 15) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Batas maksimal 15 ikan untuk MVP sudah tercapai.',
+                ], 422);
             }
         }
 
@@ -569,9 +710,11 @@ class DashboardController extends Controller
         $ikan->save();
 
         return response()->json([
-            'success' => true, 
-            'is_mvp' => $ikan->is_mvp,
-            'message' => $ikan->is_mvp ? 'Ikan ditambahkan ke daftar MVP.' : 'Ikan dihapus dari daftar MVP.'
+            'success' => true,
+            'is_mvp' => (bool) $ikan->is_mvp,
+            'message' => $ikan->is_mvp
+                ? 'Ikan ditambahkan ke daftar MVP.'
+                : 'Ikan dihapus dari daftar MVP.',
         ]);
     }
 
@@ -585,9 +728,30 @@ class DashboardController extends Controller
             return response()->json(['success' => false, 'message' => 'Anda sudah mengirimkan data MVP sebelumnya.'], 400);
         }
 
-        $mvpCount = Ikan::where('peserta_id', $peserta->id)->where('is_mvp', true)->count();
+        if (!$peserta->is_team_champion_submitted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kirim Team Champion terlebih dahulu sebelum mengirim MVP.',
+            ], 403);
+        }
+
+        $mvpCount = Ikan::where('peserta_id', $peserta->id)
+            ->where('is_mvp', true)
+            ->where('is_team_champion', true)
+            ->count();
+
         if ($mvpCount === 0) {
-            return response()->json(['success' => false, 'message' => 'Belum ada ikan yang dipilih sebagai MVP.'], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Belum ada ikan yang dipilih sebagai MVP.',
+            ], 422);
+        }
+
+        if ($mvpCount > 15) {
+            return response()->json([
+                'success' => false,
+                'message' => 'MVP maksimal 15 ikan.',
+            ], 422);
         }
 
         $peserta->is_mvp_submitted = true;
@@ -619,9 +783,12 @@ class DashboardController extends Controller
         }
 
         $mvpOpen = (bool)(\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
-        $mvpSubmitted = $peserta ? $peserta->is_mvp_submitted : false;
-        $undianOpen = (bool)(\DB::table('settings')->where('key', 'undian_registration_open')->value('value') ?? true);
+        $mvpSubmitted = $peserta ? (bool) $peserta->is_mvp_submitted : false;
 
+        $teamChampionOpen = (bool)(\DB::table('settings')->where('key', 'team_champion_registration_open')->value('value') ?? false);
+        $teamChampionSubmitted = $peserta ? (bool) $peserta->is_team_champion_submitted : false;
+
+        $undianOpen = (bool)(\DB::table('settings')->where('key', 'undian_registration_open')->value('value') ?? true);
         // ★ TAMBAHKAN INI (taruh di atas if (!$peserta))
         $maxTankRange = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
 
@@ -634,6 +801,9 @@ class DashboardController extends Controller
                 'undian_open' => $undianOpen,
                 'tank_range_max' => $maxTankRange,
                 'max_mvp' => 15,
+                'team_champion_open' => (bool)(\DB::table('settings')->where('key', 'team_champion_registration_open')->value('value') ?? false),
+                'team_champion_submitted' => (bool)($peserta->is_team_champion_submitted ?? false),
+                'max_team_champion' => 35,
             ]);
         }
 
@@ -646,12 +816,14 @@ class DashboardController extends Controller
                 'kategori' => $ikan->kategori,
                 'kelas' => $ikan->kelas,
                 'nomor_tank' => $ikan->nomor_tank,
-                'is_mvp' => $ikan->is_mvp ?? false,
+                'is_team_champion' => (bool) ($ikan->is_team_champion ?? false),
+                'is_mvp' => (bool) ($ikan->is_mvp ?? false),
                 'dibuat_oleh' => $ikan->dibuat_oleh ?? 'user',
             ];
         });
 
-        $maxMvp = $peserta ? ($peserta->jenis_keanggotaan === 'team' ? 35 : 15) : 15;
+        $maxMvp = 15;
+        $maxTeamChampion = 35;
 
         $myResults = [];
         $myMvpResults = [];
@@ -808,19 +980,25 @@ class DashboardController extends Controller
                             $groupLabel .= ' - Kelas ' . $ikan->kelas;
                         }
 
+                        $bonusTotal = (int) $ikan->bonusPoints->sum('points');
+                        $rankPoint = (int) ($r['rank_point'] ?? 0);
+
                         $myResults[] = [
                             'ikan_id'             => $ikan->id,
-                            'nama_peserta' => $ikan->nama_peserta ?? '-',
+                            'nama_peserta'        => $ikan->nama_peserta ?? '-',
+                            'jenis_keanggotaan'   => $ikan->jenis_keanggotaan ?? '-',
+                            'asal_label'          => $ikan->detail_anggota ?? '-',
                             'kategori'            => $ikan->kategori,
                             'kelas'               => $ikan->kelas ?? '-',
                             'group_key'           => $ikan->kategori . '|' . ($ikan->kelas ?? '-'),
                             'group_label'         => $groupLabel,
                             'detail_anggota'      => $ikan->detail_anggota ?? '-',
-                            'point'               => $r['total_point'] ?? 0,
-                            'rank_point'          => $r['rank_point'] ?? 0,
+                            'point'               => round((float)($r['total_point'] ?? 0), 2),
+                            'rank_point'          => $rankPoint,
                             'position'            => $idx + 1,
                             'nomor_tank'          => $ikan->nomor_tank,
-                            'total_bonus'         => (int) $ikan->bonusPoints->sum('points'),
+                            'total_bonus'         => $bonusTotal,
+                            'final_rank_point'    => $rankPoint + $bonusTotal,
                             'bonus_list'          => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
                             'component_subtotals' => $r['component_subtotals'] ?? [
                                 'overall' => ['label' => 'Overall', 'value' => 0],
@@ -850,6 +1028,8 @@ class DashboardController extends Controller
                         return [
                             'ikan_id'             => $ikan->id,
                             'nama_peserta'        => $ikan->nama_peserta ?? '-',
+                            'jenis_keanggotaan'   => $ikan->jenis_keanggotaan ?? '-',
+                            'asal_label'          => $ikan->detail_anggota ?? '-',
                             'detail_anggota'      => $ikan->detail_anggota ?? '-',
                             'kategori'            => $ikan->kategori,
                             'kelas'               => $ikan->kelas ?? '-',
@@ -881,11 +1061,17 @@ class DashboardController extends Controller
         return response()->json([
             'ikans' => $ikans,
             'reset_info' => $resetInfo,
+
             'mvp_open' => $mvpOpen,
             'mvp_submitted' => $mvpSubmitted,
+            'max_mvp' => 15,
+
+            'team_champion_open' => $teamChampionOpen,
+            'team_champion_submitted' => $teamChampionSubmitted,
+            'max_team_champion' => 35,
+
             'undian_open' => $undianOpen,
             'tank_range_max' => $maxTankRange,
-            'max_mvp' => $maxMvp,
 
             // Untuk halaman hasil juara
             'result_unlocked' => $resultUnlocked,

@@ -4,8 +4,13 @@
     $totalDiundi = $ikansSaya->whereNotNull('nomor_tank')->count();
     $totalBelumDiundi = $totalIkan - $totalDiundi;
     $progressUndian = $totalIkan > 0 ? round(($totalDiundi / $totalIkan) * 100) : 0;
+    $teamChampionCount = $teamChampionCount ?? 0;
+    try { $teamChampionCount = $ikansSaya->where('is_team_champion', true)->count(); } catch (\Throwable $e) { $teamChampionCount = 0; }
+
     $mvpCount = 0;
     try { $mvpCount = $ikansSaya->where('is_mvp', true)->count(); } catch (\Throwable $e) { $mvpCount = 0; }
+
+    $maxTeamChampion = $maxTeamChampion ?? 35;
     $maxMvp = $maxMvp ?? 15;
     $initial = strtoupper(mb_substr(trim($user->name), 0, 1));
     $undianOpen = $undianOpen ?? true; // ★ Dari controller, default true
@@ -179,8 +184,225 @@
         /* ====================================================
            APP SHELL
            ==================================================== */
-        .app-shell { position: relative; z-index: 10; min-height: 100vh; display: flex; flex-direction: column; }
+        .app-shell { position: relative; z-index: 10; min-height: 100vh; display: flex; flex-direction: column; 
+        }
+        /* ====================================================
+        USER SIDEBAR LAYOUT
+        ==================================================== */
+        .user-shell{
+            position:relative;
+            min-height:100vh;
+            display:grid;
+            grid-template-columns:240px 1fr;
+        }
 
+        .user-sidebar{
+            position:sticky;
+            top:0;
+            height:100vh;
+            background:rgba(11,18,32,.92);
+            backdrop-filter:blur(18px);
+            -webkit-backdrop-filter:blur(18px);
+            border-right:1px solid var(--bd-1);
+            display:flex;
+            flex-direction:column;
+            z-index:140;
+        }
+
+        .user-sidebar-brand{
+            padding:18px;
+            border-bottom:1px solid var(--bd-1);
+            display:flex;
+            align-items:center;
+            gap:12px;
+        }
+
+        .user-sidebar-brand .brand-mark{
+            width:40px;
+            height:40px;
+            border-radius:12px;
+        }
+
+        .user-sidebar-brand h1{
+            font-family:'Fraunces',serif;
+            font-size:16px;
+            font-weight:600;
+            color:var(--text-hi);
+            line-height:1.05;
+        }
+
+        .user-sidebar-brand p{
+            font-size:9px;
+            color:var(--cyan-300);
+            text-transform:uppercase;
+            letter-spacing:.12em;
+            font-weight:800;
+            margin-top:3px;
+        }
+
+        .user-sidebar-nav{
+            flex:1;
+            overflow-y:auto;
+            padding:14px 12px;
+            display:flex;
+            flex-direction:column;
+            gap:5px;
+        }
+
+        .user-sidebar-item{
+            display:flex;
+            align-items:center;
+            gap:11px;
+            padding:11px 12px;
+            border-radius:12px;
+            border:1px solid transparent;
+            color:var(--text-mid);
+            background:transparent;
+            font-family:inherit;
+            font-size:13px;
+            font-weight:700;
+            cursor:pointer;
+            text-align:left;
+            transition:all .2s;
+        }
+
+        .user-sidebar-item i{
+            width:18px;
+            text-align:center;
+            color:var(--text-low);
+        }
+
+        .user-sidebar-item:hover{
+            background:var(--glass-2);
+            color:var(--text-hi);
+        }
+
+        .user-sidebar-item.active{
+            background:linear-gradient(135deg, rgba(34,211,238,.18), rgba(37,99,235,.12));
+            border-color:var(--bd-cyan);
+            color:var(--text-hi);
+        }
+
+        .user-sidebar-item.active i{
+            color:var(--cyan-300);
+        }
+
+        .user-sidebar-foot{
+            padding:14px;
+            border-top:1px solid var(--bd-1);
+        }
+
+        .user-main{
+            min-width:0;
+            display:flex;
+            flex-direction:column;
+            width:100%;
+            max-width:1500px;
+            margin:0 auto;
+            padding:28px 32px;
+        }
+
+        .user-page-section{
+            display:none;
+            animation:cardEntry .35s cubic-bezier(.16,1,.3,1) both;
+        }
+
+        .user-page-section.active{
+            display:block;
+        }
+
+        .user-mobile-toggle{
+            display:none;
+            width:38px;
+            height:38px;
+            border-radius:11px;
+            background:var(--glass-2);
+            border:1px solid var(--bd-2);
+            color:var(--text-hi);
+            cursor:pointer;
+        }
+
+        .user-mobile-topbar{
+            display:none;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            margin-bottom:18px;
+            padding:12px 14px;
+            border:1px solid var(--bd-1);
+            border-radius:16px;
+            background:rgba(11,18,32,.78);
+            backdrop-filter:blur(14px);
+        }
+
+        .user-mobile-topbar-title{
+            min-width:0;
+        }
+
+        .user-mobile-topbar-title h2{
+            font-size:15px;
+            font-weight:900;
+            color:var(--text-hi);
+            line-height:1.1;
+        }
+
+        .user-mobile-topbar-title p{
+            font-size:10px;
+            color:var(--cyan-300);
+            font-weight:800;
+            text-transform:uppercase;
+            letter-spacing:.12em;
+            margin-top:3px;
+        }
+
+        @media(max-width:900px){
+            .user-mobile-topbar{
+                display:flex;
+            }
+
+            .user-sidebar{
+                width:260px;
+                max-width:82vw;
+            }
+        }
+
+        .user-sidebar-overlay{
+            position:fixed;
+            inset:0;
+            background:rgba(2,6,14,.62);
+            backdrop-filter:blur(4px);
+            -webkit-backdrop-filter:blur(4px);
+            z-index:130;
+            opacity:0;
+            pointer-events:none;
+            transition:opacity .25s ease;
+        }
+
+        body.user-sidebar-open .user-sidebar-overlay{
+            opacity:1;
+            pointer-events:all;
+        }
+
+        @media(max-width:900px){
+            .user-shell{
+                display:block;
+            }
+            .user-main{
+                padding:18px 16px;
+                max-width:none;
+            }
+            .user-sidebar{
+                position:fixed;
+                left:0;
+                top:0;
+                transform:translateX(-102%);
+                transition:transform .25s;
+            }
+            body.user-sidebar-open .user-sidebar{
+                transform:translateX(0);
+            }
+            .user-mobile-toggle{display:grid;place-items:center;}
+        }
         /* ====================================================
            TOP NAVIGATION
            ==================================================== */
@@ -194,7 +416,9 @@
             position: sticky; top: 0; z-index: 100;
             animation: navIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
         }
-        @keyframes navIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        
+        @keyframes navIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } 
+        }
 
         .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
         .brand-mark {
@@ -1421,9 +1645,125 @@
             *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.1s !important; }
             .bubbles { display: none; }
         }
+        /* ====================================================
+        PAGE VISIBILITY — USER DASHBOARD FIX
+        Ringkasan TIDAK menampilkan Hasil Juara.
+        Hasil Juara hanya muncul saat menu sidebar diklik.
+        ==================================================== */
+
+        .user-page-section,
+        .js-page-profile,
+        .js-page-ikan,
+        .js-page-mvp,
+        .js-page-team-champion,
+        .js-page-results{
+            display:none !important;
+        }
+
+        /* Ringkasan: hanya hero, statistik, profil, daftar ikan, undian, MVP/TC */
+        body.user-page-overview .js-page-overview,
+        body.user-page-overview .js-page-profile,
+        body.user-page-overview .js-page-ikan,
+        body.user-page-overview .js-page-mvp,
+        body.user-page-overview .js-page-team-champion{
+            display:block !important;
+        }
+
+        /* Menu Profil */
+        body.user-page-profile .js-page-profile{
+            display:block !important;
+        }
+
+        /* Menu Daftar Ikan */
+        body.user-page-ikan .js-page-ikan{
+            display:block !important;
+        }
+
+        /* Menu MVP & Team Champion */
+        body.user-page-mvp .js-page-mvp,
+        body.user-page-mvp .js-page-team-champion{
+            display:block !important;
+        }
+
+        /* Menu Hasil Juara */
+        body.user-page-results .js-page-results{
+            display:block !important;
+        }
+
+        /* Layout utama tetap modern, full width, tidak kosong kanan-kiri */
+        .dash-grid{
+            display:flex !important;
+            flex-direction:column !important;
+            gap:24px !important;
+        }
+
+        .col-stack{
+            display:contents !important;
+        }
+
+        .js-page-profile,
+        .js-page-ikan,
+        .js-page-mvp,
+        .js-page-team-champion,
+        .js-page-results{
+            width:100%;
+        }
+
+        /* Jarak hero Selamat Datang dengan statistik */
+        .js-page-overview > .hero-welcome{
+            margin-bottom:20px;
+        }
+
+        /* Statistik tetap rapi responsive */
+        .stat-row{
+            grid-template-columns:repeat(4,minmax(0,1fr));
+        }
+
+        @media(max-width:1100px){
+            .stat-row{
+                grid-template-columns:repeat(2,minmax(0,1fr));
+            }
+        }
+
+        @media(max-width:520px){
+            .stat-row{
+                grid-template-columns:repeat(2,minmax(0,1fr));
+                gap:10px;
+            }
+
+            .stat-card{
+                padding:16px 14px;
+                border-radius:18px;
+            }
+
+            .stat-value{
+                font-size:30px;
+            }
+
+            .hero-welcome{
+                padding:26px 22px;
+                border-radius:22px;
+            }
+
+            .hero-h2{
+                font-size:28px;
+                line-height:1.12;
+            }
+
+            .hero-sub{
+                font-size:12.5px;
+                max-width:100%;
+            }
+        }
+
+        @media(max-width:768px){
+            .result-summary-grid{
+                grid-template-columns:1fr !important;
+            }
+        }
     </style>
 </head>
-<body>
+<body class="user-page-overview">
 
     <!-- ATMOSPHERIC BACKGROUND -->
     <div class="ocean-bg"></div>
@@ -1431,51 +1771,75 @@
         <span></span><span></span><span></span><span></span><span></span><span></span>
     </div>
 
-    <div class="app-shell">
+        <div class="user-sidebar-overlay" onclick="closeUserSidebar()"></div>
 
-        <!-- ==================== TOP NAVIGATION ==================== -->
-        <nav class="topnav">
-            <div class="brand">
-                <div class="brand-mark" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2 12c0-3 4-7 10-7 5 0 7.5 3 8.5 5l1.5-1v6l-1.5-1c-1 2-3.5 5-8.5 5-6 0-10-4-10-7z" stroke="white" stroke-width="1.5" stroke-linejoin="round" fill="rgba(255,255,255,0.15)"/>
-                        <circle cx="16" cy="10.5" r="1" fill="white"/>
-                        <path d="M2 12c1.5-1 3-1 4 0M2 12c1.5 1 3 1 4 0" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
-                    </svg>
-                </div>
-                <div class="brand-text">
-                    <h1>LCI <em>Suite</em></h1>
-                    <p>Louhan Club Indonesia</p>
-                </div>
-            </div>
-
-            <div class="nav-center">
-                <div class="nav-pill"><span class="live-dot"></span>Kontes Aktif</div>
-                <div class="nav-pill" style="color: var(--cyan-300);"><i class="fas fa-water" style="font-size:10px;"></i>Sistem Online</div>
-            </div>
-
-            <div class="nav-user">
-                <div class="user-card">
-                    <div class="avatar">{{ $initial ?: 'P' }}</div>
-                    <div class="user-info">
-                        <h4>{{ $user->name }}</h4>
-                        <span>Peserta Kontes</span>
+        <div class="user-shell">
+            <aside class="user-sidebar">
+                <div class="user-sidebar-brand">
+                    <div class="brand-mark">
+                        <i class="fas fa-fish" style="color:white;"></i>
+                    </div>
+                    <div>
+                        <h1>LCI Suite</h1>
+                        <p>My Contest</p>
                     </div>
                 </div>
-                <div class="nav-actions">
-                    <a href="{{ route('hasil-juara') }}" class="btn-logout" style="background:rgba(245,158,11,.12);color:var(--gold-300);border-color:rgba(245,158,11,.35);text-decoration:none;" onmouseover="this.style.background='var(--warning)';this.style.color='#fff'" onmouseout="this.style.background='rgba(245,158,11,.12)';this.style.color='var(--gold-300)'" title="Lihat Hasil Juara"><i class="fas fa-trophy"></i> Hasil Juara</a>
-                    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+
+                <nav class="user-sidebar-nav">
+                    <button type="button" class="user-sidebar-item active" data-user-page="overview" onclick="showUserPage('overview')">
+                        <i class="fas fa-chart-line"></i> Ringkasan
+                    </button>
+                    <button type="button" class="user-sidebar-item" data-user-page="profile" onclick="showUserPage('profile')">
+                        <i class="fas fa-id-card"></i> Profil Peserta
+                    </button>
+                    <button type="button" class="user-sidebar-item" data-user-page="ikan" onclick="showUserPage('ikan')">
+                        <i class="fas fa-fish"></i> Daftar Ikan
+                    </button>
+                    <button type="button" class="user-sidebar-item" data-user-page="mvp" onclick="showUserPage('mvp')">
+                        <i class="fas fa-star"></i> MVP & Team Champion
+                    </button>
+
+                    <button type="button" class="user-sidebar-item" data-user-page="results" onclick="showUserPage('results')">
+                        <i class="fas fa-trophy"></i> Hasil Juara
+                    </button>
+                </nav>
+
+                <div class="user-sidebar-foot">
+                    <div class="user-card" style="border-radius:14px;margin-bottom:10px;">
+                        <div class="avatar">{{ $initial }}</div>
+                        <div class="user-info">
+                            <h4>{{ $user->name }}</h4>
+                            <span>Peserta</span>
+                        </div>
+                    </div>
+                    <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="btn-logout"><i class="fas fa-right-from-bracket"></i> Keluar</button>
+                        <button type="submit" class="btn-logout" style="width:100%;justify-content:center;">
+                            <i class="fas fa-right-from-bracket"></i> Logout
+                        </button>
                     </form>
                 </div>
-            </div>
-        </nav>
+            </aside>
 
-        <main class="main-wrap">
+            <header class="user-mobile-topbar">
+                <button type="button" class="user-mobile-toggle" onclick="openUserSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div class="user-mobile-topbar-title">
+                    <h2 id="userPageTitleMobile">Ringkasan</h2>
+                    <p>My Contest</p>
+                </div>
+
+                <div class="avatar" style="width:34px;height:34px;font-size:12px;">
+                    {{ $initial }}
+                </div>
+            </header>
+
+            <main class="user-main">
 
             <!-- ==================== HERO + STATS ==================== -->
-            <section class="hero">
+            <section class="user-page-section active js-page-overview" data-user-page-section="overview">    
                 <div class="hero-welcome">
                     <span class="hero-eyebrow"><i class="fas fa-sparkles" style="font-size:9px;"></i> Dashboard Peserta</span>
                     <h2 class="hero-h2">Selamat datang, <em>{{ explode(' ', trim($user->name))[0] }}</em></h2>
@@ -1516,7 +1880,6 @@
                         <div class="stat-meta" id="heroMvpStatus"><i class="fas fa-crown"></i>Status MVP</div>
                     </div>
                 </div>
-            </section>
 
             <!-- ==================== WORKFLOW STEPPER ==================== -->
             <section class="stepper" aria-label="Alur pendaftaran">
@@ -1540,6 +1903,7 @@
                     <div class="step-label">Pilih MVP</div>
                 </div>
             </section>
+            </section>
 
             <!-- ==================== DASHBOARD GRID ==================== -->
             <div class="dash-grid">
@@ -1548,7 +1912,7 @@
                 <div class="col-stack">
 
                     <!-- CARD: PROFIL PESERTA -->
-                    <div class="glass-card">
+                    <div class="glass-card js-page-profile">
                         <div class="card-header">
                             <div>
                                 <h2 class="card-title">
@@ -1644,6 +2008,68 @@
                         </div>
                     </div>
 
+                    <section class="user-page-section js-page-results" data-user-page-section="results">
+                        <div class="glass-card" id="hasilJuaraCard">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">
+                                        <span class="title-icon"><i class="fas fa-trophy"></i></span>
+                                        Hasil Juara
+                                    </h2>
+                                    <p class="card-subtitle">
+                                        Hasil juara akan tampil setelah panitia membuka akses hasil untuk akun Anda.
+                                    </p>
+                                </div>
+                                <span class="status-badge" id="hasilJuaraStatusBadge">MENUNGGU</span>
+                            </div>
+
+                            <div class="card-body">
+                                <div id="hasilJuaraLockedState" style="text-align:center;padding:34px 18px;color:var(--text-mid);">
+                                    <div style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 14px;background:var(--glass-2);border:1px solid var(--bd-2);color:var(--gold-400);font-size:24px;">
+                                        <i class="fas fa-lock"></i>
+                                    </div>
+                                    <strong style="display:block;color:var(--text-hi);margin-bottom:6px;">Hasil Juara Belum Dibuka</strong>
+                                    <span style="font-size:13px;line-height:1.6;">
+                                        Panitia belum membuka akses hasil juara untuk akun Anda.
+                                    </span>
+                                </div>
+
+                                <div id="hasilJuaraUnlockedState" style="display:none;">
+                                    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px;" class="result-summary-grid">
+                                        <div class="stat-card">
+                                            <div class="stat-label">Ikan Final</div>
+                                            <div class="stat-value" id="hasilTotalIkan">0</div>
+                                            <div class="stat-meta">Ikan terkunci & dinilai</div>
+                                        </div>
+                                        <div class="stat-card is-gold">
+                                            <div class="stat-label">MVP Final</div>
+                                            <div class="stat-value" id="hasilTotalMvp">0</div>
+                                            <div class="stat-meta">Data MVP Anda</div>
+                                        </div>
+                                        <div class="stat-card is-success">
+                                            <div class="stat-label">Status</div>
+                                            <div class="stat-value" style="font-size:26px;">Dibuka</div>
+                                            <div class="stat-meta">Akses aktif</div>
+                                        </div>
+                                    </div>
+
+                                    <h3 style="font-size:14px;font-weight:900;color:var(--text-hi);margin-bottom:10px;">
+                                        <i class="fas fa-medal" style="color:var(--gold-400);margin-right:6px;"></i>
+                                        Ranking Ikan Anda
+                                    </h3>
+                                    <div id="hasilJuaraList" style="display:grid;gap:10px;margin-bottom:20px;"></div>
+
+                                    <h3 style="font-size:14px;font-weight:900;color:var(--text-hi);margin-bottom:10px;">
+                                        <i class="fas fa-star" style="color:var(--gold-400);margin-right:6px;"></i>
+                                        Hasil MVP Anda
+                                    </h3>
+                                    <div id="hasilMvpList" style="display:grid;gap:10px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                <section class="user-page-section js-page-mvp" data-user-page-section="mvp">
                     <!-- CARD: MVP REGISTRATION -->
                     <div class="glass-card mvp-card" id="mvpCard">
                         <div class="card-header">
@@ -1690,13 +2116,64 @@
                     </div>
 
                 </div>
+                </section>          
                 <!-- ========== END KOLOM KIRI ========== -->
+
+                <section class="user-page-section js-page-team-champion" data-user-page-section="team_champion">
+                    <div class="glass-card mvp-card" id="teamChampionCard">
+                        <div class="card-header">
+                            <div>
+                                <h2 class="card-title">
+                                    <span class="title-icon"><i class="fas fa-people-group"></i></span>
+                                    Team Champion
+                                </h2>
+                                <p class="card-subtitle">
+                                    Pilih tepat 35 ikan untuk Team Champion. Setelah dikirim, ikan-ikan ini dapat dipilih lagi untuk MVP maksimal 15 ikan.
+                                </p>
+                            </div>
+                            <div class="mvp-badge" id="teamChampionCountBadge">
+                                {{ $teamChampionCount }}/{{ $maxTeamChampion }} TC
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="mvp-progress-bar">
+                                <div class="mvp-progress-fill" id="teamChampionProgressFill" style="width: {{ min(100, ($teamChampionCount / max(1, $maxTeamChampion)) * 100) }}%"></div>
+                            </div>
+
+                            <div id="teamChampionLockedState">
+                                <div class="lock-icon"><i class="fas fa-lock"></i></div>
+                                <strong>Pendaftaran Team Champion Belum Dibuka</strong><br>
+                                Tunggu panitia membuka halaman Team Champion.
+                            </div>
+
+                            <div id="teamChampionUnlockedState" style="display:none;">
+                                <div id="teamChampionListContainer"></div>
+
+                                <div id="teamChampionEmptyList">
+                                    <div class="unlock-icon"><i class="fas fa-people-group"></i></div>
+                                    Pendaftaran Team Champion dibuka. Pilih 35 ikan dari daftar ikan Anda.
+                                </div>
+
+                                <button type="button" class="btn-submit-mvp" id="btnSubmitTeamChampion" onclick="confirmSubmitTeamChampion()">
+                                    <i class="fas fa-paper-plane"></i>
+                                    KIRIM TEAM CHAMPION
+                                </button>
+
+                                <div id="teamChampionSubmittedBadge">
+                                    <i class="fas fa-check-circle"></i>
+                                    Team Champion sudah dikirim.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
                 <!-- ========== KOLOM KANAN: MESIN + DAFTAR IKAN ========== -->
                 <div class="col-stack">
 
                     <!-- CARD: MESIN UNDIAN -->
-                    <div class="glass-card machine-card" id="cardMesinUndian">
+                    <div class="glass-card machine-card js-page-ikan" id="cardMesinUndian">
                         <div class="undian-lock-overlay {{ !$undianOpen ? 'show' : '' }}" id="lockMesinUndian">
                             <div class="lock-visual"><i class="fas fa-lock"></i></div>
                             <div class="lock-title">Mesin Undian Dikunci</div>
@@ -1740,7 +2217,7 @@
                     </div>
 
                     <!-- CARD: DAFTAR IKAN -->
-                    <div class="glass-card machine-card" id="cardDaftarIkan">
+                    <div class="glass-card machine-card js-page-ikan" id="cardDaftarIkan">
                         <div class="card-header">
                             <h2 class="card-title">
                                 <span class="title-icon"><i class="fas fa-list"></i></span>
@@ -1908,6 +2385,10 @@
                 .replace(/>/g, '&gt;');
         }
 
+        function esc(str) {
+            return escapeHtml(str);
+        }
+
         function renderComboPanel(filter) {
             var list = getCurrentList() || [];
             var q = (filter || '').toLowerCase().trim();
@@ -1994,7 +2475,54 @@
             if (btn) btn.style.display = 'none';
         }
 
+        function openUserSidebar(){
+            document.body.classList.add('user-sidebar-open');
+        }
 
+        function closeUserSidebar(){
+            document.body.classList.remove('user-sidebar-open');
+        }
+
+        function showUserPage(page){
+            var allowedPages = ['overview', 'profile', 'ikan', 'mvp', 'results'];
+
+            if (allowedPages.indexOf(page) === -1) {
+                page = 'overview';
+            }
+
+            document.body.classList.remove(
+                'user-page-overview',
+                'user-page-profile',
+                'user-page-ikan',
+                'user-page-mvp',
+                'user-page-results'
+            );
+
+            document.body.classList.add('user-page-' + page);
+
+            document.querySelectorAll('.user-sidebar-item').forEach(function(btn){
+                btn.classList.toggle('active', btn.getAttribute('data-user-page') === page);
+            });
+
+            var titleMap = {
+                overview: 'Ringkasan',
+                profile: 'Profil Peserta',
+                ikan: 'Daftar Ikan',
+                mvp: 'MVP & Team Champion',
+                results: 'Hasil Juara'
+            };
+
+            var mobileTitle = document.getElementById('userPageTitleMobile');
+            if (mobileTitle) {
+                mobileTitle.textContent = titleMap[page] || 'My Contest';
+            }
+
+            closeUserSidebar();
+
+            setTimeout(function(){
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 80);
+        }
 
         // ★ HELPER: Reset HANYA field ikan (profil TETAP terisi untuk tambah ikan berikutnya)
         function resetIkanFields() {
@@ -2121,10 +2649,39 @@
 
         // --- REAL-TIME POLLING ---
         let currentIkans = {};
-        let isMvpOpen = false;
+        let isMvpOpen = false;          
         let currentMvpSubmitted = false;
+
+        let isTeamChampionOpen = false;
+        let isTeamChampionSubmitted = false;
+        let maxTeamChampion = {{ $maxTeamChampion ?? 35 }};
+
         let isUndianOpen = {{ $undianOpen ? 'true' : 'false' }};
-        let maxMvp = {{ $maxMvp ?? 15 }}; // ★ Dari server, tanpa delay
+        let maxMvp = 15;
+
+        function getCsrf(){
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? meta.getAttribute('content') : '';
+        }
+
+        function userPopupSuccess(title, desc){
+            var modalTitle = document.getElementById('successModalTitle');
+            var modalDesc = document.getElementById('successModalDesc');
+            if (modalTitle) modalTitle.textContent = title || 'Berhasil';
+            if (modalDesc) modalDesc.innerHTML = desc || '';
+            var modal = document.getElementById('successModal');
+            if (modal) modal.classList.add('show');
+            else alert((title || 'Berhasil') + '\n' + (desc || ''));
+        }
+
+        function userPopupError(title, desc){
+            alert((title || 'Gagal') + '\n' + (desc || 'Terjadi kesalahan.'));
+        }
+
+        function userPopupConfirm(title, desc, yesText, callback){
+            var ok = confirm((title || 'Konfirmasi') + '\n\n' + (desc || ''));
+            if (ok && typeof callback === 'function') callback();
+        }
 
         // ★ FUNGSI: Update visual lock pada card Mesin Undian & Daftar Ikan
         function updateUndianLockUI(isOpen) {
@@ -2154,9 +2711,291 @@
             const pEl = el.querySelector('.ikan-item-info p');
             const tankEl = el.querySelector('.tank-num');
             if (id && tankEl) {
-                currentIkans[id] = { kategori: pEl ? pEl.textContent.trim() : '', nomor_tank: tankEl.textContent.trim(), is_mvp: false };
+                currentIkans[id] = {
+                    id: parseInt(id, 10),
+                    nama_peserta: el.querySelector('.ikan-item-info h4') ? el.querySelector('.ikan-item-info h4').textContent.trim() : '-',
+                    kategori: pEl ? pEl.textContent.trim() : '',
+                    nomor_tank: tankEl ? tankEl.textContent.trim() : '',
+                    is_team_champion: false,
+                    is_mvp: false
+                };         
             }
         });
+
+        function canShowTeamChampionButton(ikan){
+            return isTeamChampionOpen && !isTeamChampionSubmitted && ikan;
+        }
+
+        function canShowMvpButton(ikan){
+            return isMvpOpen
+                && !currentMvpSubmitted
+                && isTeamChampionSubmitted
+                && ikan
+                && !!ikan.is_team_champion;
+        }
+
+        function buildTeamChampionButtonHtml(ikan){
+            if (!canShowTeamChampionButton(ikan)) {
+                if (isTeamChampionSubmitted && ikan && ikan.is_team_champion) {
+                    return '<button class="btn-mvp-star btn-team-champion active" disabled title="Team Champion terkirim"><i class="fas fa-users"></i></button>';
+                }
+                return '';
+            }
+
+            return '<button class="btn-mvp-star btn-team-champion ' + (ikan.is_team_champion ? 'active' : '') + '" onclick="toggleTeamChampionIkan(' + ikan.id + ', this)" title="Pilih Team Champion"><i class="fas fa-users"></i></button>';
+        }
+
+        function buildMvpButtonHtml(ikan){
+            if (!canShowMvpButton(ikan)) {
+                if (currentMvpSubmitted && ikan && ikan.is_mvp) {
+                    return '<button class="btn-mvp-star active" disabled style="opacity:0.5;cursor:not-allowed;" title="MVP terkirim"><i class="fas fa-star"></i></button>';
+                }
+                return '';
+            }
+
+            return '<button class="btn-mvp-star ' + (ikan.is_mvp ? 'active' : '') + '" onclick="toggleMvp(' + ikan.id + ', this)" title="Daftarkan MVP"><i class="fas fa-star"></i></button>';
+        }
+
+        function renderFishActionButtons(){
+            Object.keys(currentIkans || {}).forEach(function(id){
+                var ikan = currentIkans[id];
+                if (!ikan) return;
+
+                var el = document.getElementById('ikan-item-' + id);
+                if (!el) return;
+
+                var rightDiv = el.querySelector('.ikan-item-right');
+                if (!rightDiv) return;
+
+                rightDiv.querySelectorAll('.btn-team-champion, .btn-mvp-star').forEach(function(btn){
+                    btn.remove();
+                });
+
+                var wrap = document.createElement('span');
+                wrap.innerHTML = buildTeamChampionButtonHtml(ikan) + buildMvpButtonHtml(ikan);
+
+                while (wrap.firstChild) {
+                    rightDiv.insertBefore(wrap.firstChild, rightDiv.firstChild);
+                }
+            });
+        }
+
+        function updateTeamChampionUI(){
+            var selected = Object.values(currentIkans || {}).filter(function(i){
+                return i && i.is_team_champion;
+            });
+
+            var count = selected.length;
+            var badge = document.getElementById('teamChampionCountBadge');
+            var fill = document.getElementById('teamChampionProgressFill');
+            var list = document.getElementById('teamChampionListContainer');
+            var empty = document.getElementById('teamChampionEmptyList');
+            var submitBtn = document.getElementById('btnSubmitTeamChampion');
+            var submittedBadge = document.getElementById('teamChampionSubmittedBadge');
+
+            if (badge) badge.textContent = count + '/' + maxTeamChampion + ' TC';
+            if (fill) fill.style.width = Math.min(100, (count / Math.max(1, maxTeamChampion)) * 100) + '%';
+
+            if (list) {
+                list.innerHTML = '';
+                selected.forEach(function(ikan){
+                    var row = document.createElement('div');
+                    row.className = 'mvp-list-item' + (isTeamChampionSubmitted ? ' locked' : '');
+                    row.innerHTML =
+                        '<span><i class="fas fa-fish"></i> ' + (ikan.nama_peserta || '-') + ' — ' + (ikan.kategori || '-') + '</span>' +
+                        (isTeamChampionSubmitted ? '' : '<button class="mvp-remove" onclick="toggleTeamChampionIkan(' + ikan.id + ')"><i class="fas fa-times"></i></button>');
+                    list.appendChild(row);
+                });
+            }
+
+            if (empty) empty.style.display = count > 0 ? 'none' : 'block';
+
+            if (submitBtn) {
+                submitBtn.disabled = isTeamChampionSubmitted || count !== maxTeamChampion;
+                submitBtn.innerHTML = isTeamChampionSubmitted
+                    ? '<i class="fas fa-lock"></i> TEAM CHAMPION TERKIRIM'
+                    : '<i class="fas fa-paper-plane"></i> KIRIM TEAM CHAMPION (' + count + '/' + maxTeamChampion + ')';
+            }
+
+            if (submittedBadge) submittedBadge.style.display = isTeamChampionSubmitted ? 'block' : 'none';
+        }
+
+        function updateTeamChampionOpenState(){
+            var locked = document.getElementById('teamChampionLockedState');
+            var unlocked = document.getElementById('teamChampionUnlockedState');
+
+            if (locked) locked.style.display = isTeamChampionOpen ? 'none' : 'block';
+            if (unlocked) unlocked.style.display = isTeamChampionOpen ? 'block' : 'none';
+
+            updateTeamChampionUI();
+            renderFishActionButtons();
+        }
+
+        function updateMvpUI(){
+            var selected = Object.values(currentIkans || {}).filter(function(i){
+                return i && i.is_mvp;
+            });
+
+            var count = selected.length;
+            var badge = document.getElementById('mvpCountBadge');
+            var fill = document.getElementById('mvpProgressFill');
+            var list = document.getElementById('mvpListContainer');
+            var empty = document.getElementById('mvpEmptyList');
+            var btn = document.getElementById('btnSubmitMvp');
+            var submittedBadge = document.getElementById('mvpSubmittedBadge');
+
+            if (badge) badge.textContent = count + '/' + maxMvp + ' MVP';
+            if (fill) fill.style.width = Math.min(100, (count / Math.max(1, maxMvp)) * 100) + '%';
+
+            if (list) {
+                list.innerHTML = '';
+                selected.forEach(function(ikan){
+                    var row = document.createElement('div');
+                    row.className = 'mvp-list-item' + (currentMvpSubmitted ? ' locked' : '');
+                    row.innerHTML =
+                        '<span><i class="fas fa-star" style="color:var(--gold-400);margin-right:6px;"></i>' + (ikan.kategori || '-') + ' (Tank ' + (ikan.nomor_tank || '--') + ')</span>' +
+                        (currentMvpSubmitted ? '' : '<button class="mvp-remove" onclick="toggleMvp(' + ikan.id + ')"><i class="fas fa-times"></i></button>');
+                    list.appendChild(row);
+                });
+            }
+
+            if (empty) empty.style.display = count > 0 ? 'none' : 'block';
+            if (btn) btn.style.display = count > 0 && !currentMvpSubmitted ? 'flex' : 'none';
+            if (submittedBadge) submittedBadge.style.display = currentMvpSubmitted ? 'block' : 'none';
+
+            renderFishActionButtons();
+        }
+
+        function renderComponentSubtotals(items){
+            if (!items) return '';
+
+            var order = ['overall', 'head', 'face', 'body', 'marking', 'pearl', 'color', 'finnage'];
+
+            return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin-top:12px;">' +
+                order.map(function(key){
+                    var row = items[key];
+                    if (!row) return '';
+
+                    return '<div style="padding:8px 10px;border:1px solid var(--bd-2);border-radius:10px;background:rgba(255,255,255,.035);">' +
+                        '<div style="font-size:9px;color:var(--text-low);font-weight:900;text-transform:uppercase;letter-spacing:.08em;">' + escapeHtml(row.label || key) + '</div>' +
+                        '<div style="font-family:JetBrains Mono,monospace;font-size:15px;color:var(--cyan-300);font-weight:900;margin-top:3px;">' + escapeHtml(String(row.value ?? 0)) + '</div>' +
+                    '</div>';
+                }).join('') +
+            '</div>';
+        }
+
+        function renderHasilJuara(response){
+            var unlocked = !!response.result_unlocked;
+            var results = Array.isArray(response.my_results) ? response.my_results : [];
+            var mvpResults = Array.isArray(response.my_mvp_results) ? response.my_mvp_results : [];
+
+            var badge = document.getElementById('hasilJuaraStatusBadge');
+            var locked = document.getElementById('hasilJuaraLockedState');
+            var unlockedBox = document.getElementById('hasilJuaraUnlockedState');
+            var totalIkan = document.getElementById('hasilTotalIkan');
+            var totalMvp = document.getElementById('hasilTotalMvp');
+            var list = document.getElementById('hasilJuaraList');
+            var mvpList = document.getElementById('hasilMvpList');
+
+            if (!badge || !locked || !unlockedBox) return;
+
+            if (!unlocked) {
+                badge.textContent = 'TERKUNCI';
+                badge.className = 'status-badge';
+                locked.style.display = 'block';
+                unlockedBox.style.display = 'none';
+                return;
+            }
+
+            badge.textContent = 'DIBUKA';
+            badge.className = 'status-badge success';
+            locked.style.display = 'none';
+            unlockedBox.style.display = 'block';
+
+            if (totalIkan) totalIkan.textContent = results.length;
+            if (totalMvp) totalMvp.textContent = mvpResults.length;
+
+            if (list) {
+                if (!results.length) {
+                    list.innerHTML =
+                        '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">Belum ada data hasil juara yang bisa ditampilkan.</div>';
+                } else {
+                    list.innerHTML = results.map(function(r){
+                        var asalText = r.asal_label || r.detail_anggota || '-';
+                        var jenisText = r.jenis_keanggotaan === 'team' ? 'Team/Club' : 'Kota Asal';
+                        var finalPoint = r.final_rank_point || r.rank_point || 0;
+
+                        return '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:16px;background:var(--glass-2);margin-bottom:12px;">' +
+                            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">' +
+                                '<div style="min-width:0;">' +
+                                    '<div style="font-size:13px;font-weight:900;color:var(--text-hi);">' + escapeHtml(r.nama_peserta || '-') + '</div>' +
+                                    '<div style="font-size:11px;color:var(--text-mid);font-weight:700;margin-top:4px;">' +
+                                        escapeHtml(jenisText) + ': ' + escapeHtml(asalText) +
+                                    '</div>' +
+                                    '<div style="font-size:11px;color:var(--text-mid);font-weight:700;margin-top:4px;">' +
+                                        escapeHtml(r.group_label || r.kategori || '-') + ' • Tank ' + escapeHtml(String(r.nomor_tank || '-')) +
+                                    '</div>' +
+                                '</div>' +
+                                '<div style="text-align:right;flex-shrink:0;">' +
+                                    '<div style="font-size:10px;color:var(--text-low);font-weight:900;text-transform:uppercase;">Juara</div>' +
+                                    '<div style="font-family:JetBrains Mono,monospace;font-size:24px;font-weight:900;color:var(--gold-300);">' + escapeHtml(String(r.position || '-')) + '</div>' +
+                                    '<div style="font-size:10px;color:var(--cyan-300);font-weight:800;">' + escapeHtml(String(finalPoint)) + ' pts</div>' +
+                                '</div>' +
+                            '</div>' +
+                            renderComponentSubtotals(r.component_subtotals) +
+                        '</div>';
+                    }).join('');
+                }
+            }
+
+            if (mvpList) {
+                if (!mvpResults.length) {
+                    mvpList.innerHTML =
+                        '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">Belum ada data MVP yang bisa ditampilkan.</div>';
+                } else {
+                    var totalRankPoint = mvpResults.reduce(function(sum, r){
+                        return sum + Number(r.final_rank_point || r.rank_point || 0);
+                    }, 0);
+
+                    mvpList.innerHTML =
+                        '<div style="overflow-x:auto;border:1px solid var(--bd-2);border-radius:16px;background:var(--glass-2);">' +
+                            '<table style="width:100%;border-collapse:collapse;min-width:760px;font-size:12px;">' +
+                                '<thead>' +
+                                    '<tr style="background:rgba(255,255,255,.04);color:var(--text-hi);">' +
+                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:center;">NO</th>' +
+                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:left;">NAMA PESERTA</th>' +
+                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:left;">TEAM/CLUB / KOTA</th>' +
+                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:left;">KATEGORI</th>' +
+                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:center;">NO TANK</th>' +
+                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:center;">JUARA</th>' +
+                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:center;">RANK POINT</th>' +
+                                    '</tr>' +
+                                '</thead>' +
+                                '<tbody>' +
+                                    mvpResults.map(function(r, idx){
+                                        var asalText = r.asal_label || r.detail_anggota || '-';
+                                        var finalPoint = r.final_rank_point || r.rank_point || 0;
+
+                                        return '<tr>' +
+                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;font-weight:900;color:var(--text-hi);">' + (idx + 1) + '</td>' +
+                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);font-weight:800;color:var(--text-hi);">' + escapeHtml(r.nama_peserta || '-') + '</td>' +
+                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);color:var(--text-mid);font-weight:700;">' + escapeHtml(asalText) + '</td>' +
+                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);color:var(--cyan-300);font-weight:800;">' + escapeHtml(r.group_label || r.kategori || '-') + '</td>' +
+                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;font-family:JetBrains Mono,monospace;color:var(--text-hi);font-weight:900;">' + escapeHtml(String(r.nomor_tank || '-')) + '</td>' +
+                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;color:var(--gold-300);font-weight:900;">' + escapeHtml(String(r.position || '-')) + '</td>' +
+                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;color:var(--text-hi);font-weight:900;">' + escapeHtml(String(finalPoint)) + '</td>' +
+                                        '</tr>';
+                                    }).join('') +
+                                    '<tr>' +
+                                        '<td colspan="6" style="padding:11px 10px;text-align:right;color:var(--text-hi);font-weight:900;">TOTAL</td>' +
+                                        '<td style="padding:11px 10px;text-align:center;color:var(--gold-300);font-weight:900;">' + totalRankPoint + '</td>' +
+                                    '</tr>' +
+                                '</tbody>' +
+                            '</table>' +
+                        '</div>';
+                }
+            }
+        }
 
         function pollIkans() {
             if (auth401Count >= MAX_401_RETRY) return;
@@ -2184,12 +3023,21 @@
             .then(function(response) {
                 if (!response) return;
 
+                renderHasilJuara(response);
+
                 const data = response.ikans || [];
                 const resetInfo = response.reset_info;
                 const mvpOpen = response.mvp_open || false;
                 const mvpSubmitted = response.mvp_submitted || false;
 
-                if (response.max_mvp) maxMvp = response.max_mvp;                
+                const teamChampionOpen = response.team_champion_open || false;
+                const teamChampionSubmitted = response.team_champion_submitted || false;
+
+                if (response.max_mvp) maxMvp = response.max_mvp;
+                if (response.max_team_champion) maxTeamChampion = response.max_team_champion;
+
+                isTeamChampionOpen = teamChampionOpen;
+                isTeamChampionSubmitted = teamChampionSubmitted;             
 
                 if (response.tank_range_max) tankDrawMax = response.tank_range_max;
 
@@ -2199,6 +3047,11 @@
                     isUndianOpen = undianOpen;
                     updateUndianLockUI(isUndianOpen);
                 }
+
+                updateTeamChampionOpenState();
+                updateTeamChampionUI();
+                updateMvpUI();
+                renderFishActionButtons();
 
                 if (mvpOpen !== isMvpOpen || mvpSubmitted !== currentMvpSubmitted) {
                     isMvpOpen = mvpOpen;
@@ -2264,17 +3117,43 @@
                     if (!existingEl) {
                         if (!listContainer) return;
                         const badge = ikan.dibuat_oleh === 'admin' ? '<span class="badge-admin"><i class="fas fa-shield-halved"></i> Admin</span>' : '';
-                        const mvpBtnHtml = (isMvpOpen && !currentMvpSubmitted) ? `<button class="btn-mvp-star ${ikan.is_mvp ? 'active' : ''}" onclick="toggleMvp(${ikan.id}, this)" title="Daftarkan MVP"><i class="fas fa-star"></i></button>` : (currentMvpSubmitted && ikan.is_mvp ? `<button class="btn-mvp-star active" disabled style="opacity:0.5; cursor:not-allowed;"><i class="fas fa-star"></i></button>` : '');
+                        const tempIkanForButton = {
+                            id: ikan.id,
+                            nama_peserta: ikan.nama_peserta,
+                            kategori: formatKategoriKelas(ikan.kategori, ikan.kelas),
+                            nomor_tank: ikan.nomor_tank ?? '--',
+                            is_team_champion: !!ikan.is_team_champion,
+                            is_mvp: !!ikan.is_mvp
+                        };
+
+                        const teamChampionBtnHtml = buildTeamChampionButtonHtml(tempIkanForButton);
+                        const mvpBtnHtml = buildMvpButtonHtml(tempIkanForButton);
                         const newEl = document.createElement('div');
                         newEl.className = 'ikan-item';
                         newEl.id = `ikan-item-${ikan.id}`;
                         newEl.style.animation = 'cardEntry 0.5s ease both';
                         const acakBtnHtml = !ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)" style="${isUndianOpen ? '' : 'display:none;'}"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`;
-                        newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${ikan.nama_peserta || document.getElementById('namaPeserta').value} ${badge}</h4>${kategoriKelasLineHtml(ikan.kategori, ikan.kelas)}</div><div class="ikan-item-right">${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${acakBtnHtml}</div>`;
+                        newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${ikan.nama_peserta || document.getElementById('namaPeserta').value} ${badge}</h4>${kategoriKelasLineHtml(ikan.kategori, ikan.kelas)}</div><div class="ikan-item-right">${teamChampionBtnHtml}${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${acakBtnHtml}</div>`;
                         listContainer.prepend(newEl);
-                        currentIkans[ikan.id] = { kategori: ikan.kelas ? 'Kelas ' + ikan.kelas : '', nomor_tank: ikan.nomor_tank ?? '--', is_mvp: ikan.is_mvp };
+                        currentIkans[ikan.id] = {
+                            id: ikan.id,
+                            nama_peserta: ikan.nama_peserta,
+                            kategori: formatKategoriKelas(ikan.kategori, ikan.kelas),
+                            nomor_tank: ikan.nomor_tank ?? '--',
+                            is_team_champion: !!ikan.is_team_champion,
+                            is_mvp: !!ikan.is_mvp
+                        };
                     } else {
-                        if (!currentIkans[ikan.id]) currentIkans[ikan.id] = { kategori: '', nomor_tank: '--', is_mvp: false };
+                        if (!currentIkans[ikan.id]) {
+                            currentIkans[ikan.id] = {
+                                id: ikan.id,
+                                nama_peserta: ikan.nama_peserta,
+                                kategori: '',
+                                nomor_tank: '--',
+                                is_team_champion: false,
+                                is_mvp: false
+                            };
+                        }
                         const currentTank = ikan.nomor_tank ?? '--';
 
                         var infoDiv = existingEl.querySelector('.ikan-item-info');
@@ -2295,6 +3174,11 @@
                             infoDiv.appendChild(newP);
                         }
                         currentIkans[ikan.id].kategori = kategoriKelasText;
+
+                        currentIkans[ikan.id].id = ikan.id;
+                        currentIkans[ikan.id].nama_peserta = ikan.nama_peserta;
+                        currentIkans[ikan.id].is_team_champion = !!ikan.is_team_champion;
+                        currentIkans[ikan.id].is_mvp = !!ikan.is_mvp;
 
                         if (currentIkans[ikan.id].is_mvp !== ikan.is_mvp && isMvpOpen) {
                             let mvpBtn = existingEl.querySelector('.btn-mvp-star');
@@ -2599,6 +3483,7 @@
                 el.style.display = (matchSearch && matchKat && matchSts) ? '' : 'none';
             });
         }
+
         (function initFishFilter(){
             var s = document.getElementById('fishSearchInput');
             var k = document.getElementById('fishFilterKategori');
@@ -2607,6 +3492,211 @@
             if (k) k.addEventListener('change', applyFishFilter);
             if (st) st.addEventListener('change', applyFishFilter);
         })();
+
+        function updateTeamChampionUI(){
+            var selected = Object.values(currentIkans || {}).filter(function(i){
+                return i.is_team_champion;
+            });
+
+            var count = selected.length;
+            var badge = document.getElementById('teamChampionCountBadge');
+            var fill = document.getElementById('teamChampionProgressFill');
+            var list = document.getElementById('teamChampionListContainer');
+            var empty = document.getElementById('teamChampionEmptyList');
+            var submitBtn = document.getElementById('btnSubmitTeamChampion');
+
+            if (badge) badge.textContent = count + '/' + maxTeamChampion + ' TC';
+            if (fill) fill.style.width = Math.min(100, (count / Math.max(1, maxTeamChampion)) * 100) + '%';
+
+            if (list) {
+                list.innerHTML = '';
+                selected.forEach(function(ikan){
+                    var row = document.createElement('div');
+                    row.className = 'mvp-list-item' + (isTeamChampionSubmitted ? ' locked' : '');
+                    row.innerHTML =
+                        '<span><i class="fas fa-fish"></i> ' + escapeHtml(ikan.nama_peserta || '-') + ' — ' + escapeHtml(ikan.kategori || '-') + '</span>' +
+                        (isTeamChampionSubmitted ? '' : '<button class="mvp-remove" onclick="toggleTeamChampionIkan(' + ikan.id + ')"><i class="fas fa-times"></i></button>');
+                    list.appendChild(row);
+                });
+            }
+
+            if (empty) empty.style.display = count > 0 ? 'none' : 'block';
+
+            if (submitBtn) {
+                submitBtn.disabled = isTeamChampionSubmitted || count !== maxTeamChampion;
+                submitBtn.innerHTML = isTeamChampionSubmitted
+                    ? '<i class="fas fa-lock"></i> TEAM CHAMPION TERKIRIM'
+                    : '<i class="fas fa-paper-plane"></i> KIRIM TEAM CHAMPION (' + count + '/' + maxTeamChampion + ')';
+            }
+
+            var badgeSubmitted = document.getElementById('teamChampionSubmittedBadge');
+            if (badgeSubmitted) badgeSubmitted.style.display = isTeamChampionSubmitted ? 'block' : 'none';
+        }
+
+        function updateTeamChampionOpenState(){
+            var locked = document.getElementById('teamChampionLockedState');
+            var unlocked = document.getElementById('teamChampionUnlockedState');
+
+            if (locked) locked.style.display = isTeamChampionOpen ? 'none' : 'block';
+            if (unlocked) unlocked.style.display = isTeamChampionOpen ? 'block' : 'none';
+
+            updateTeamChampionUI();
+        }
+
+        function normalizeApiJson(r){
+            if (!r) {
+                return Promise.reject({ message: 'Response server kosong.' });
+            }
+
+            if (typeof r.json === 'function') {
+                try {
+                    var jsonResult = r.json();
+
+                    if (jsonResult && typeof jsonResult.then === 'function') {
+                        return jsonResult.then(function(d){
+                            if (r.ok === false) throw d;
+                            return d;
+                        });
+                    }
+
+                    if (r.ok === false) throw jsonResult;
+                    return Promise.resolve(jsonResult);
+                } catch (err) {
+                    return Promise.reject(err);
+                }
+            }
+
+            return Promise.resolve(r);
+        }
+
+        function readApiJsonResponse(r){
+            return new Promise(function(resolve, reject){
+                try {
+                    if (!r || typeof r.json !== 'function') {
+                        resolve(r || {});
+                        return;
+                    }
+
+                    var data = r.json();
+
+                    if (r.ok === false) {
+                        reject(data || { message: 'Request gagal.' });
+                        return;
+                    }
+
+                    resolve(data || {});
+                } catch (err) {
+                    reject({ message: err.message || 'Gagal membaca response server.' });
+                }
+            });
+        }
+
+        function readApiJsonResponse(r){
+                return new Promise(function(resolve, reject){
+                    try {
+                        if (!r || typeof r.json !== 'function') {
+                            resolve(r || {});
+                            return;
+                        }
+
+                        var data = r.json();
+
+                        if (r.ok === false) {
+                            reject(data || { message: 'Request gagal.' });
+                            return;
+                        }
+
+                        resolve(data || {});
+                    } catch (err) {
+                        reject({ message: err.message || 'Gagal membaca response server.' });
+                    }
+                });
+            }
+
+        function toggleTeamChampionIkan(ikanId, btn){
+            if (btn && btn.disabled) return;
+            if (btn) btn.disabled = true;
+
+            var fd = new FormData();
+            fd.append('_token', getCsrf());
+            fd.append('ikan_id', ikanId);
+
+            apiFetch('/api/toggle-team-champion-ikan', {
+                method: 'POST',
+                body: fd
+            })
+            .then(readApiJsonResponse)
+            .then(function(d){
+                if (!d.success) throw d;
+
+                if (!currentIkans[ikanId]) currentIkans[ikanId] = { id: parseInt(ikanId, 10) };
+
+                currentIkans[ikanId].id = parseInt(ikanId, 10);
+                currentIkans[ikanId].is_team_champion = !!d.is_team_champion;
+                currentIkans[ikanId].is_mvp = !!d.is_mvp;
+
+                updateTeamChampionOpenState();
+                updateTeamChampionUI();
+                updateMvpUI();
+                renderFishActionButtons();
+
+                userPopupSuccess('Berhasil', d.message || 'Data Team Champion diperbarui.');
+                pollIkans();
+            })
+            .catch(function(e){
+                userPopupError('Gagal', e.message || 'Gagal mengubah Team Champion.');
+            })
+            .finally(function(){
+                if (btn) btn.disabled = false;
+            });
+        }
+
+        function confirmSubmitTeamChampion(){
+            var count = Object.values(currentIkans || {}).filter(function(i){
+                return i && i.is_team_champion;
+            }).length;
+
+            if (count !== maxTeamChampion) {
+                userPopupError('Belum Lengkap', 'Team Champion wajib tepat 35 ikan. Saat ini terpilih ' + count + ' ikan.');
+                return;
+            }
+
+            userPopupConfirm(
+                'Kirim Team Champion?',
+                'Pastikan pilihan 35 ikan Team Champion sudah benar. Setelah dikirim, Anda dapat lanjut memilih MVP maksimal 15 ikan dari daftar ini.',
+                'Ya, Kirim',
+                submitTeamChampion
+            );
+        }
+
+        function submitTeamChampion(){
+            var fd = new FormData();
+            fd.append('_token', getCsrf());
+
+            apiFetch('/api/submit-team-champion-ikan', {
+                method: 'POST',
+                body: fd
+            })
+            .then(normalizeApiJson)
+            .then(function(d){
+                if (!d.success) throw d;
+
+                isTeamChampionSubmitted = true;
+
+                updateTeamChampionOpenState();
+                updateTeamChampionUI();
+                updateMvpUI();
+                renderFishActionButtons();
+
+                userPopupSuccess('Team Champion Terkirim', d.message || 'Data Team Champion berhasil dikirim.');
+                pollIkans();
+            })
+            .catch(function(e){
+                userPopupError('Gagal', e.message || 'Gagal mengirim Team Champion.');
+            });
+        }
     </script>
+    </main>
+</div>
 </body>
 </html>

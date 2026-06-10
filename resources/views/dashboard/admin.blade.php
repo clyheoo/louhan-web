@@ -666,6 +666,10 @@
             <a class="sidebar-item" data-page="registrasi"><i class="fas fa-database"></i> Registrasi & Undian</a>
             <a class="sidebar-item" data-page="nominasi"><i class="fas fa-award"></i> Nominasi</a>
             <a class="sidebar-item" data-page="mvp"><i class="fas fa-star"></i> Kelola MVP</a>
+            <a class="sidebar-item" data-page="team_champion">
+                <span class="title-icon"><i class="fas fa-people-group"></i></span>
+                <span>Team Champion</span>
+            </a>
             <a class="sidebar-item" data-page="jumbo_calc">
                 <i class="fas fa-calculator"></i> Hitung Point Jumbo
             </a>
@@ -1102,7 +1106,104 @@
 
             </section>
 
-                        <!-- ═══════════ PAGE: KIRIM HASIL JUARA ═══════════ -->
+            <section class="page-section" data-page="team_champion" style="display:none;">
+                <div class="glass-card" style="margin-bottom:18px;">
+                    <div class="card-head">
+                        <div>
+                            <h3>
+                                <span class="title-icon"><i class="fas fa-people-group"></i></span>
+                                Status Pendaftaran Team Champion
+                            </h3>
+                            <div class="card-sub">Buka atau kunci halaman Team Champion untuk user.</div>
+                        </div>
+                        <button class="btn-primary" id="btnToggleTeamChampion" onclick="toggleTeamChampionRegistration()">
+                            <i class="fas fa-spinner fa-spin"></i> Memuat...
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="teamChampionStatusText" style="font-size:13px;color:var(--text-mid);font-weight:700;">
+                            Memuat status...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="margin-bottom:18px;">
+                    <div class="card-head">
+                        <div>
+                            <h3>
+                                <span class="ti"><i class="fas fa-lock"></i></span>
+                                Peserta Sudah Kirim Team Champion
+                            </h3>
+                            <div class="card-sub">Admin dapat membuka kunci agar peserta bisa revisi.</div>
+                        </div>
+                        <span class="tb-pill" id="teamChampionPesertaCount">0 peserta</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Peserta</th>
+                                        <th>Kota/Team</th>
+                                        <th>Email</th>
+                                        <th style="text-align:center;">TC</th>
+                                        <th style="text-align:center;">MVP</th>
+                                        <th style="text-align:center;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teamChampionPesertaBody">
+                                    <tr>
+                                        <td colspan="7" style="text-align:center;padding:16px;color:var(--text-mid);">
+                                            Memuat data...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-head">
+                        <div>
+                            <h3>
+                                <span class="ti"><i class="fas fa-fish"></i></span>
+                                Data Ikan Team Champion
+                            </h3>
+                            <div class="card-sub">Daftar semua ikan yang masuk Team Champion.</div>
+                        </div>
+                        <span class="tb-pill" id="teamChampionIkanCount">0 ikan</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Peserta</th>
+                                        <th>Kota/Team</th>
+                                        <th>Kategori</th>
+                                        <th>Kelas</th>
+                                        <th>Tank</th>
+                                        <th>MVP</th>
+                                        <th style="text-align:center;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teamChampionIkanBody">
+                                    <tr>
+                                        <td colspan="8" style="text-align:center;padding:16px;color:var(--text-mid);">
+                                            Memuat data...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ PAGE: KIRIM HASIL JUARA ═══════════ -->
             <section class="page-section" data-page="results" style="display:none;">
                 <div class="glass-card" style="margin-bottom:16px;">
                     <div class="card-head">
