@@ -630,10 +630,17 @@ class DashboardController extends Controller
             ->where('is_team_champion', true)
             ->count();
 
-        if ($count !== 35) {
+        if ($count < 1) {
             return response()->json([
                 'success' => false,
-                'message' => 'Team Champion wajib berisi tepat 35 ikan. Saat ini terpilih ' . $count . ' ikan.',
+                'message' => 'Pilih minimal 1 ikan Team Champion sebelum mengirim.',
+            ], 422);
+        }
+
+        if ($count > 35) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Team Champion maksimal 35 ikan. Saat ini terpilih ' . $count . ' ikan.',
             ], 422);
         }
 

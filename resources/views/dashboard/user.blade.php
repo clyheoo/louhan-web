@@ -331,8 +331,10 @@
             padding:12px 14px;
             border:1px solid var(--bd-1);
             border-radius:16px;
-            background:rgba(11,18,32,.78);
-            backdrop-filter:blur(14px);
+            background:rgba(11,18,32,.92);
+            backdrop-filter:blur(18px);
+            -webkit-backdrop-filter:blur(18px);
+            box-shadow:0 12px 30px -22px rgba(0,0,0,.85);
         }
 
         .user-mobile-topbar-title{
@@ -356,16 +358,44 @@
         }
 
         @media(max-width:900px){
+            .user-main{
+                padding:86px 16px 18px;
+            }
+
             .user-mobile-topbar{
                 display:flex;
+                position:fixed;
+                top:0;
+                left:0;
+                right:0;
+                z-index:160;
+                height:72px;
+                margin:0;
+                padding:14px 18px;
+                border-radius:0 0 18px 18px;
+                border-top:0;
+                border-left:0;
+                border-right:0;
+                background:rgba(11,18,32,.96);
+                backdrop-filter:blur(18px);
+                -webkit-backdrop-filter:blur(18px);
+                box-shadow:0 14px 34px -22px rgba(0,0,0,.9);
+            }
+
+            .user-mobile-toggle{
+                margin-left:4px;
+            }
+
+            .user-mobile-topbar .avatar{
+                margin-right:4px;
             }
 
             .user-sidebar{
                 width:260px;
                 max-width:82vw;
+                padding-top:72px;
             }
         }
-
         .user-sidebar-overlay{
             position:fixed;
             inset:0;
@@ -2128,7 +2158,7 @@
                                     Team Champion
                                 </h2>
                                 <p class="card-subtitle">
-                                    Pilih tepat 35 ikan untuk Team Champion. Setelah dikirim, ikan-ikan ini dapat dipilih lagi untuk MVP maksimal 15 ikan.
+                                    Pilih maksimal 35 ikan untuk Team Champion. Setelah dikirim, ikan-ikan ini dapat dipilih lagi untuk MVP maksimal 15 ikan.
                                 </p>
                             </div>
                             <div class="mvp-badge" id="teamChampionCountBadge">
@@ -2152,7 +2182,7 @@
 
                                 <div id="teamChampionEmptyList">
                                     <div class="unlock-icon"><i class="fas fa-people-group"></i></div>
-                                    Pendaftaran Team Champion dibuka. Pilih 35 ikan dari daftar ikan Anda.
+                                    Pendaftaran Team Champion dibuka. Pilih 1 sampai 35 ikan dari daftar ikan Anda.
                                 </div>
 
                                 <button type="button" class="btn-submit-mvp" id="btnSubmitTeamChampion" onclick="confirmSubmitTeamChampion()">
@@ -2811,7 +2841,12 @@
             if (empty) empty.style.display = count > 0 ? 'none' : 'block';
 
             if (submitBtn) {
-                submitBtn.disabled = isTeamChampionSubmitted || count !== maxTeamChampion;
+                var canSubmitTeamChampion = isTeamChampionOpen && !isTeamChampionSubmitted && count >= 1 && count <= maxTeamChampion;
+
+                submitBtn.disabled = !canSubmitTeamChampion;
+                submitBtn.style.opacity = canSubmitTeamChampion ? '1' : '0.55';
+                submitBtn.style.cursor = canSubmitTeamChampion ? 'pointer' : 'not-allowed';
+
                 submitBtn.innerHTML = isTeamChampionSubmitted
                     ? '<i class="fas fa-lock"></i> TEAM CHAMPION TERKIRIM'
                     : '<i class="fas fa-paper-plane"></i> KIRIM TEAM CHAMPION (' + count + '/' + maxTeamChampion + ')';
@@ -2975,12 +3010,32 @@
                                     mvpResults.map(function(r, idx){
                                         var asalText = r.asal_label || r.detail_anggota || '-';
                                         var finalPoint = r.final_rank_point || r.rank_point || 0;
+                                        var bonusList = Array.isArray(r.bonus_list) ? r.bonus_list : [];
+                                        var totalBonus = Number(r.total_bonus || 0);
+                                        var bonusHtml = '';
+
+                                        if (bonusList.length || totalBonus > 0) {
+                                            bonusHtml =
+                                                '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px;">' +
+                                                    bonusList.map(function(bonus){
+                                                        return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.28);color:var(--gold-300);font-size:10px;font-weight:900;">' +
+                                                            '<i class="fas fa-award"></i>' + escapeHtml(bonus) +
+                                                        '</span>';
+                                                    }).join('') +
+                                                    (totalBonus > 0
+                                                        ? '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;background:rgba(34,211,238,.10);border:1px solid rgba(34,211,238,.22);color:var(--cyan-300);font-size:10px;font-weight:900;">+' + totalBonus + ' Bonus</span>'
+                                                        : '') +
+                                                '</div>';
+                                        }
 
                                         return '<tr>' +
                                             '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;font-weight:900;color:var(--text-hi);">' + (idx + 1) + '</td>' +
                                             '<td style="padding:10px;border-bottom:1px solid var(--bd-1);font-weight:800;color:var(--text-hi);">' + escapeHtml(r.nama_peserta || '-') + '</td>' +
                                             '<td style="padding:10px;border-bottom:1px solid var(--bd-1);color:var(--text-mid);font-weight:700;">' + escapeHtml(asalText) + '</td>' +
-                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);color:var(--cyan-300);font-weight:800;">' + escapeHtml(r.group_label || r.kategori || '-') + '</td>' +
+                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);color:var(--cyan-300);font-weight:800;">' +
+                                                escapeHtml(r.group_label || r.kategori || '-') +
+                                                bonusHtml +
+                                            '</td>' +
                                             '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;font-family:JetBrains Mono,monospace;color:var(--text-hi);font-weight:900;">' + escapeHtml(String(r.nomor_tank || '-')) + '</td>' +
                                             '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;color:var(--gold-300);font-weight:900;">' + escapeHtml(String(r.position || '-')) + '</td>' +
                                             '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;color:var(--text-hi);font-weight:900;">' + escapeHtml(String(finalPoint)) + '</td>' +
@@ -3656,14 +3711,19 @@
                 return i && i.is_team_champion;
             }).length;
 
-            if (count !== maxTeamChampion) {
-                userPopupError('Belum Lengkap', 'Team Champion wajib tepat 35 ikan. Saat ini terpilih ' + count + ' ikan.');
+            if (count < 1) {
+                userPopupError('Belum Ada Ikan', 'Pilih minimal 1 ikan Team Champion sebelum mengirim.');
+                return;
+            }
+
+            if (count > maxTeamChampion) {
+                userPopupError('Melebihi Batas', 'Team Champion maksimal ' + maxTeamChampion + ' ikan. Saat ini terpilih ' + count + ' ikan.');
                 return;
             }
 
             userPopupConfirm(
                 'Kirim Team Champion?',
-                'Pastikan pilihan 35 ikan Team Champion sudah benar. Setelah dikirim, Anda dapat lanjut memilih MVP maksimal 15 ikan dari daftar ini.',
+                'Anda akan mengirim ' + count + ' ikan Team Champion. Setelah dikirim, pilihan tidak dapat diubah dan Anda dapat lanjut memilih MVP maksimal 15 ikan dari daftar ini.',
                 'Ya, Kirim',
                 submitTeamChampion
             );
