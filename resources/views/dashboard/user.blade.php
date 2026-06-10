@@ -1468,8 +1468,10 @@
             flex-shrink: 0;
         }
 
-        /* MVP locked / unlocked state inside card */
-        #mvpLockedState, #mvpEmptyList {
+        #mvpLockedState,
+        #mvpEmptyList,
+        #teamChampionLockedState,
+        #teamChampionEmptyList {
             text-align: center;
             padding: 28px 16px;
             color: var(--text-mid);
@@ -1477,24 +1479,77 @@
             font-weight: 500;
             line-height: 1.55;
         }
-        #mvpLockedState .lock-icon, #mvpEmptyList .unlock-icon {
-            width: 56px; height: 56px;
+
+        #mvpLockedState,
+        #teamChampionLockedState {
+            min-height: 170px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #mvpLockedState .lock-icon,
+        #mvpEmptyList .unlock-icon,
+        #teamChampionLockedState .lock-icon,
+        #teamChampionEmptyList .unlock-icon {
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
-            display: grid; place-items: center;
+            display: grid;
+            place-items: center;
             margin: 0 auto 12px;
             background: var(--glass-2);
             border: 1px solid var(--bd-2);
             font-size: 22px;
         }
-        #mvpLockedState .lock-icon { color: var(--text-low); }
-        #mvpEmptyList .unlock-icon {
+
+        #mvpLockedState .lock-icon,
+        #teamChampionLockedState .lock-icon {
+            color: var(--text-low);
+        }
+
+        #mvpEmptyList .unlock-icon,
+        #teamChampionEmptyList .unlock-icon {
             color: var(--gold-400);
             background: rgba(245,158,11,0.10);
             border-color: rgba(245,158,11,0.25);
             box-shadow: 0 0 24px -8px rgba(245,158,11,0.5);
         }
-        #mvpEmptyList { color: var(--gold-300); }
-        #mvpEmptyList .fa-star { color: var(--gold-400) !important; }
+
+        #mvpEmptyList,
+        #teamChampionEmptyList {
+            color: var(--gold-300);
+        }
+
+        #mvpEmptyList strong,
+        #teamChampionEmptyList strong {
+            color: var(--gold-300);
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        #mvpEmptyList span,
+        #teamChampionEmptyList span {
+            display: inline-block;
+            margin-top: 2px;
+            color: var(--text-hi);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        #mvpEmptyList .fa-star,
+        #teamChampionEmptyList .fa-star,
+        #teamChampionEmptyList .fa-lock-open {
+            color: var(--gold-400) !important;
+        }
+
+        #teamChampionListContainer {
+            max-height: 240px;
+            overflow-y: auto;
+            margin-bottom: 8px;
+            padding-right: 4px;
+        }
 
         #mvpSubmittedBadge {
             display: none;
@@ -2155,7 +2210,7 @@
                                         <span class="title-icon"><i class="fas fa-star"></i></span>
                                         Pendaftaran MVP
                                     </h2>
-                                    <p class="card-subtitle">Pilih maksimal {{ $maxMvp }} ikan terbaik Anda untuk MVP.</p>
+                                    <p class="card-subtitle">Pilih maksimal {{ $maxMvp }} ikan terbaik Anda untuk MVP. Pilihan MVP tidak harus dari Team Champion.</p>
                                 </div>
                                 <div class="mvp-badge" id="mvpCountBadge">{{ $mvpCount }}/{{ $maxMvp }} MVP</div>
                             </div>
@@ -2200,7 +2255,7 @@
                                         Team Champion
                                     </h2>
                                     <p class="card-subtitle">
-                                        Pilih maksimal 35 ikan untuk Team Champion. Setelah dikirim, ikan-ikan ini dapat dipilih lagi untuk MVP maksimal 15 ikan.
+                                        Pilih maksimal 35 ikan untuk Team Champion. Pilihan ini terpisah dari MVP.
                                     </p>
                                 </div>
                                 <div class="mvp-badge" id="teamChampionCountBadge">
@@ -2223,9 +2278,9 @@
                                     <div id="teamChampionListContainer"></div>
 
                                     <div id="teamChampionEmptyList">
-                                        <div class="unlock-icon"><i class="fas fa-people-group"></i></div>
-                                        <strong style="color:var(--gold-300);">Pendaftaran Team Champion DIBUKA!</strong><br>
-                                        <span style="font-size:12px;">Pilih 1 sampai 35 ikan dari daftar ikan Anda.</span>
+                                        <div class="unlock-icon"><i class="fas fa-lock-open"></i></div>
+                                        <strong>Pendaftaran Team Champion DIBUKA!</strong><br>
+                                        <span>Klik ikon Team Champion pada ikan Anda di daftar ikan.</span>
                                     </div>
 
                                     <button type="button" class="btn-submit-mvp" id="btnSubmitTeamChampion" onclick="confirmSubmitTeamChampion()">
@@ -2906,8 +2961,7 @@
         function canShowMvpButton(ikan){
             return isMvpOpen
                 && !currentMvpSubmitted
-                && ikan
-                && !!ikan.is_team_champion;
+                && ikan;
         }
 
         function buildTeamChampionButtonHtml(ikan){
@@ -3795,28 +3849,6 @@
             });
         }
 
-        function readApiJsonResponse(r){
-                return new Promise(function(resolve, reject){
-                    try {
-                        if (!r || typeof r.json !== 'function') {
-                            resolve(r || {});
-                            return;
-                        }
-
-                        var data = r.json();
-
-                        if (r.ok === false) {
-                            reject(data || { message: 'Request gagal.' });
-                            return;
-                        }
-
-                        resolve(data || {});
-                    } catch (err) {
-                        reject({ message: err.message || 'Gagal membaca response server.' });
-                    }
-                });
-            }
-
         function toggleTeamChampionIkan(ikanId, btn){
             if (btn && btn.disabled) return;
             if (btn) btn.disabled = true;
@@ -3871,9 +3903,9 @@
 
             var desc = document.getElementById('teamChampionConfirmDesc');
             if (desc) {
-                desc.innerHTML =
-                    'Anda akan mengirim <b style="color:var(--gold-300);">' + count + ' ikan Team Champion</b>. ' +
-                    'Setelah dikirim, pilihan tidak dapat diubah dan Anda dapat lanjut memilih MVP maksimal 15 ikan dari daftar ini.';
+            desc.innerHTML =
+                'Anda akan mengirim <b style="color:var(--gold-300);">' + count + ' ikan Team Champion</b>. ' +
+                'Setelah dikirim, pilihan Team Champion tidak dapat diubah. Pilihan MVP tetap terpisah dan bisa dipilih dari daftar ikan Anda.';
             }
 
             var agree = document.getElementById('teamChampionAgree');
@@ -3915,10 +3947,10 @@
                 updateMvpOpenState();
                 renderFishActionButtons();
 
-                userPopupSuccess(
-                    'Team Champion Terkirim!',
-                    'Data Team Champion berhasil dikirim dan sudah <b style="color:var(--gold-300);">TERKUNCI</b>. Sekarang Anda dapat memilih ikan MVP.'
-                );
+            userPopupSuccess(
+                'Team Champion Terkirim!',
+                'Data Team Champion berhasil dikirim dan sudah <b style="color:var(--gold-300);">TERKUNCI</b>. Pilihan MVP tetap terpisah dan bisa dipilih dari daftar ikan Anda.'
+            );
 
                 pollIkans();
             })

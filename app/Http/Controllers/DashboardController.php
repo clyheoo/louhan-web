@@ -594,12 +594,6 @@ class DashboardController extends Controller
 
         $ikan->is_team_champion = !$ikan->is_team_champion;
 
-        // Jika ikan dihapus dari Team Champion, otomatis hapus dari MVP juga
-        // karena MVP hanya boleh dari ikan Team Champion.
-        if (!$ikan->is_team_champion) {
-            $ikan->is_mvp = false;
-        }
-
         $ikan->save();
 
         return response()->json([
@@ -653,7 +647,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Data Team Champion berhasil dikirim. Sekarang Anda dapat memilih maksimal 15 ikan untuk MVP.',
+            'message' => 'Data Team Champion berhasil dikirim. Pilihan MVP tetap terpisah dan dapat dipilih dari daftar ikan Anda.',
         ]);
     }
 
@@ -681,13 +675,6 @@ class DashboardController extends Controller
                 'success' => false,
                 'message' => 'Ikan tidak ditemukan atau bukan milik Anda.',
             ], 404);
-        }
-
-        if (!$ikan->is_team_champion) {
-            return response()->json([
-                'success' => false,
-                'message' => 'MVP hanya bisa dipilih dari ikan yang sudah masuk Team Champion.',
-            ], 422);
         }
 
         if ($ikan->peserta->is_mvp_submitted) {
@@ -734,7 +721,6 @@ class DashboardController extends Controller
 
         $mvpCount = Ikan::where('peserta_id', $peserta->id)
             ->where('is_mvp', true)
-            ->where('is_team_champion', true)
             ->count();
 
         if ($mvpCount === 0) {
