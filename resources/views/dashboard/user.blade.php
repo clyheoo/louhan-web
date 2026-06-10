@@ -1551,19 +1551,25 @@
             padding-right: 4px;
         }
 
-        #mvpSubmittedBadge {
+        #mvpSubmittedBadge,
+        #teamChampionSubmittedBadge {
             display: none;
-            text-align: center;
             margin-top: 14px;
-            background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.06));
-            border: 1px solid rgba(16,185,129,0.30);
+            padding: 13px 16px;
             border-radius: 14px;
-            padding: 12px;
-            color: #6EE7B7;
-            font-size: 12.5px;
-            font-weight: 700;
-            letter-spacing: 0.02em;
+            background: rgba(16,185,129,0.12);
+            border: 1px solid rgba(16,185,129,0.35);
+            color: #6ee7b7;
+            font-size: 13px;
+            font-weight: 800;
+            text-align: center;
         }
+
+        #mvpSubmittedBadge i,
+        #teamChampionSubmittedBadge i {
+            margin-right: 6px;
+        }
+
         #mvpSubmittedBadge i { margin-right: 6px; }
 
         /* Aquatic separator (decorative wave) */
@@ -1891,6 +1897,20 @@
             .result-summary-grid{
                 grid-template-columns:1fr !important;
             }
+        }
+        #teamChampionLockedState strong {
+            display: block;
+            color: var(--text-hi);
+            font-size: 14px;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        #teamChampionLockedState span {
+            display: block;
+            color: var(--text-mid);
+            font-size: 12px;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -2268,7 +2288,7 @@
                                     <div class="mvp-progress-fill" id="teamChampionProgressFill" style="width: {{ min(100, ($teamChampionCount / max(1, $maxTeamChampion)) * 100) }}%"></div>
                                 </div>
 
-                                <div id="teamChampionLockedState" class="mvp-locked-state">
+                                <div id="teamChampionLockedState">
                                     <div class="lock-icon"><i class="fas fa-lock"></i></div>
                                     <strong>Pendaftaran Team Champion Belum Dibuka</strong>
                                     <span>Tunggu panitia membuka periode pendaftaran Team Champion.</span>
@@ -2289,8 +2309,7 @@
                                     </button>
 
                                     <div id="teamChampionSubmittedBadge">
-                                        <i class="fas fa-check-circle"></i>
-                                        Team Champion sudah dikirim.
+                                        <i class="fas fa-circle-check"></i> Data Team Champion telah dikirim & terkunci permanen
                                     </div>
                                 </div>
                             </div>
