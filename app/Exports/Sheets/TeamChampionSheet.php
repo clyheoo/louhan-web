@@ -40,6 +40,16 @@ class TeamChampionSheet implements WithTitle, WithEvents
                     ],
                 ];
 
+                $bonusLabels = [
+                    'best_of_the_best' => 'BEST OF THE BEST',
+                    'best_of_show'     => 'BEST OF SHOW',
+                    'grand_champion'   => 'GRAND CHAMPION',
+                    'young_champion'   => 'YOUNG CHAMPION',
+                    'junior'           => 'JUNIOR',
+                    'baby_champion'    => 'BABY CHAMPION',
+                    'mini_champion'    => 'MINI CHAMPION',
+                ];
+
                 $teamChampionIkans = Ikan::where('is_team_champion', true)
                     ->whereHas('peserta', function ($q) {
                         $q->where('is_team_champion_submitted', true);
@@ -175,7 +185,8 @@ class TeamChampionSheet implements WithTitle, WithEvents
 
                 foreach ($groups as $detailAnggota => $items) {
                     $rows = [];
-                    $sumRankPoint = 0;
+                    $sumFinalRankPoint = 0;
+                    $bonusDescParts = [];
                     $no = 1;
 
                     $sorted = $items->sortBy(fn ($ikan) => $ikan->nomor_tank ?? 999999);
@@ -191,7 +202,10 @@ class TeamChampionSheet implements WithTitle, WithEvents
                         $rankPoint = (int) $rankInfo['rank_point'];
                         $position = (int) $rankInfo['position'];
 
-                        $sumRankPoint += $rankPoint;
+                        $bonus = (int) $ikan->bonusPoints->sum('points');
+                        $finalRankPoint = $rankPoint + $bonus;
+
+                        $sumFinalRankPoint += $finalRankPoint;
 
                         $kelasDisp = in_array($ikan->kategori, ['Bonsai', 'Jumbo'])
                             ? ''
@@ -211,7 +225,21 @@ class TeamChampionSheet implements WithTitle, WithEvents
                             $ikan->nomor_tank ?? '',
                             $juaraText,
                             $rankPoint,
+                            $bonus,
+                            $finalRankPoint,
                         ];
+
+                        $bonusTypes = $ikan->bonusPoints->pluck('bonus_type')->toArray();
+
+                        if (!empty($bonusTypes)) {
+                            $labels = array_map(function ($type) use ($bonusLabels) {
+                                return $bonusLabels[$type] ?? strtoupper(str_replace('_', ' ', $type));
+                            }, $bonusTypes);
+
+                            $bonusDescParts[] = '[Tank ' . ($ikan->nomor_tank ?? '?') . '] '
+                                . implode(', ', $labels)
+                                . ' (+' . $bonus . ')';
+                        }
 
                         $no++;
                     }
@@ -219,8 +247,9 @@ class TeamChampionSheet implements WithTitle, WithEvents
                     $teamData[] = [
                         'header' => 'Team/Club - ' . $detailAnggota,
                         'rows' => $rows,
-                        'sumRankPoint' => $sumRankPoint,
-                        'height' => 2 + count($rows) + 1,
+                        'sumFinalRankPoint' => $sumFinalRankPoint,
+                        'bonusDesc' => empty($bonusDescParts) ? '—' : implode(' | ', $bonusDescParts),
+                        'height' => 2 + count($rows) + 1 + 1,
                     ];
                 }
 
@@ -231,9 +260,9 @@ class TeamChampionSheet implements WithTitle, WithEvents
                 | RENDER HORIZONTAL LAYOUT
                 |--------------------------------------------------------------------------
                 */
-                $COLS_PER_TABLE = 6;
+                $COLS_PER_TABLE = 8;
                 $COL_GAP = 1;
-                $TABLES_PER_ROW = 3;
+                $TABLES_PER_ROW = 2;
 
                 $tableColStarts = [];
                 $col = 0;
@@ -303,29 +332,46 @@ class TeamChampionSheet implements WithTitle, WithEvents
                             $dataRow++;
                         }
 
-                        $totalRow = $dataRow;
+                            $totalRow = $dataRow;
 
-                        $labelStart = Coordinate::stringFromColumnIndex($cs + 1);
-                        $labelEnd = Coordinate::stringFromColumnIndex($cs + 5);
-                        $rankPointCol = Coordinate::stringFromColumnIndex($cs + 6);
+                            $labelStart = Coordinate::stringFromColumnIndex($cs + 1);
+                            $labelEnd = Coordinate::stringFromColumnIndex($cs + 7);
+                            $finalRankPointCol = Coordinate::stringFromColumnIndex($cs + 8);
 
-                        $sheet->mergeCells("{$labelStart}{$totalRow}:{$labelEnd}{$totalRow}");
-                        $sheet->setCellValue("{$labelStart}{$totalRow}", 'TOTAL RANK POINT');
-                        $sheet->setCellValue("{$rankPointCol}{$totalRow}", (int) $data['sumRankPoint']);
+                            $sheet->mergeCells("{$labelStart}{$totalRow}:{$labelEnd}{$totalRow}");
+                            $sheet->setCellValue("{$labelStart}{$totalRow}", 'TOTAL FINAL RANK POINT');
+                            $sheet->setCellValue("{$finalRankPointCol}{$totalRow}", (int) ($data['sumFinalRankPoint'] ?? 0));
 
-                        $sheet->getStyle("{$labelStart}{$totalRow}:{$rankPointCol}{$totalRow}")
-                            ->applyFromArray([
-                                'font' => ['bold' => true, 'size' => 10],
-                                'alignment' => ['horizontal' => 'right', 'vertical' => 'center'],
-                            ]);
+                            $sheet->getStyle("{$labelStart}{$totalRow}:{$finalRankPointCol}{$totalRow}")
+                                ->applyFromArray([
+                                    'font' => ['bold' => true, 'size' => 10],
+                                    'alignment' => ['horizontal' => 'right', 'vertical' => 'center'],
+                                ]);
 
-                        $sheet->getStyle("{$rankPointCol}{$totalRow}")
-                            ->getAlignment()
-                            ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                            $sheet->getStyle("{$finalRankPointCol}{$totalRow}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-                        $sheet->getStyle("{$colLetterStart}{$currentRow}:{$colLetterEnd}{$totalRow}")
-                            ->applyFromArray($styleBorder);
-                    }
+                            // Baris KETERANGAN BONUS
+                            $bonusRow = $totalRow + 1;
+
+                            $bonusLabelCol = Coordinate::stringFromColumnIndex($cs + 1);
+                            $bonusTextStartCol = Coordinate::stringFromColumnIndex($cs + 2);
+                            $bonusTextEndCol = Coordinate::stringFromColumnIndex($cs + 8);
+
+                            $sheet->setCellValue("{$bonusLabelCol}{$bonusRow}", 'KETERANGAN BONUS');
+                            $sheet->setCellValue("{$bonusTextStartCol}{$bonusRow}", $data['bonusDesc'] ?? '—');
+                            $sheet->mergeCells("{$bonusTextStartCol}{$bonusRow}:{$bonusTextEndCol}{$bonusRow}");
+
+                            $sheet->getStyle("{$bonusLabelCol}{$bonusRow}:{$bonusTextEndCol}{$bonusRow}")
+                                ->applyFromArray([
+                                    'font' => ['bold' => true, 'size' => 9, 'color' => ['rgb' => '3B82F6']],
+                                    'alignment' => ['wrapText' => true, 'vertical' => 'center'],
+                                ]);
+
+                            $sheet->getStyle("{$colLetterStart}{$currentRow}:{$colLetterEnd}{$bonusRow}")
+                                ->applyFromArray($styleBorder);
+                         }
 
                     $currentRow += $maxHeight + 2;
                 }
