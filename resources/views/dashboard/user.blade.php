@@ -2870,7 +2870,6 @@
         function canShowMvpButton(ikan){
             return isMvpOpen
                 && !currentMvpSubmitted
-                && isTeamChampionSubmitted
                 && ikan
                 && !!ikan.is_team_champion;
         }
@@ -2981,7 +2980,7 @@
             var locked = document.getElementById('mvpLockedState');
             var unlocked = document.getElementById('mvpUnlockedState');
 
-            var canUseMvp = isMvpOpen && isTeamChampionSubmitted;
+            var canUseMvp = isMvpOpen;
 
             if (locked) locked.style.display = canUseMvp ? 'none' : 'block';
             if (unlocked) unlocked.style.display = canUseMvp ? 'block' : 'none';
@@ -3805,8 +3804,7 @@
                 currentIkans[ikanId].is_mvp = !!d.is_mvp;
 
                 updateTeamChampionOpenState();
-                updateTeamChampionUI();
-                updateMvpUI();
+                updateMvpOpenState();
                 renderFishActionButtons();
 
                 userPopupSuccess('Berhasil', d.message || 'Data Team Champion diperbarui.');

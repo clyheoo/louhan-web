@@ -679,13 +679,6 @@ class DashboardController extends Controller
             ], 404);
         }
 
-        if (!$ikan->peserta->is_team_champion_submitted) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Kirim Team Champion terlebih dahulu sebelum memilih MVP.',
-            ], 403);
-        }
-
         if (!$ikan->is_team_champion) {
             return response()->json([
                 'success' => false,
@@ -733,13 +726,6 @@ class DashboardController extends Controller
 
         if ($peserta->is_mvp_submitted) {
             return response()->json(['success' => false, 'message' => 'Anda sudah mengirimkan data MVP sebelumnya.'], 400);
-        }
-
-        if (!$peserta->is_team_champion_submitted) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Kirim Team Champion terlebih dahulu sebelum mengirim MVP.',
-            ], 403);
         }
 
         $mvpCount = Ikan::where('peserta_id', $peserta->id)
