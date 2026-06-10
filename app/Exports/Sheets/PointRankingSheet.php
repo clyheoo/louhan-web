@@ -382,6 +382,7 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                 $row[] = $d['final_rank_point'] ?? 0;
                 // ★ JUARA column
                 $pos = $d['position'] ?? 0;
+
                 if ($pos === 1) {
                     $row[] = '🥇 JUARA 1';
                 } elseif ($pos === 2) {
@@ -389,7 +390,7 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                 } elseif ($pos === 3) {
                     $row[] = '🥉 JUARA 3';
                 } elseif ($pos >= 4 && $pos <= 10) {
-                    $row[] = 'Top 10 (#' . $pos . ')';
+                    $row[] = (string) $pos;
                 } else {
                     $row[] = '-';
                 }
@@ -640,8 +641,7 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents, ShouldAutoS
                             ]);
                         } else {
                             $sheet->getStyle("{$juaraColLetter}{$r}")->applyFromArray([
-                                'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '6D28D9']],
-                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F5F3FF']],
+                                'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '000000']],
                                 'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
                             ]);
                         }
