@@ -307,7 +307,16 @@ class TeamChampionSheet implements WithTitle, WithEvents
                             ]);
 
                         $subRow = $currentRow + 1;
-                        $subHeaders = ['NO', 'NAMA PESERTA', 'KATEGORI', 'NO TANK', 'JUARA', 'RANK POINT'];
+                        $subHeaders = [
+                            'NO',
+                            'NAMA PESERTA',
+                            'KATEGORI',
+                            'NO TANK',
+                            'JUARA',
+                            'RANK POINT',
+                            'BONUS',
+                            'FINAL RANK POINT',
+                        ];
 
                         foreach ($subHeaders as $ci => $val) {
                             $colLetter = Coordinate::stringFromColumnIndex($cs + $ci + 1);
