@@ -2365,6 +2365,38 @@
         </div>
     </div>
 
+    <!-- ==================== MODAL: KONFIRMASI TEAM CHAMPION ==================== -->
+    <div class="modal-overlay" id="modalConfirmTeamChampion">
+        <div class="modal-card">
+            <div class="modal-icon" style="background:linear-gradient(135deg,var(--gold-500),var(--gold-700)); box-shadow:0 12px 30px -8px rgba(245,158,11,.55), inset 0 1px 0 rgba(255,255,255,0.25);">
+                <i class="fas fa-paper-plane"></i>
+            </div>
+
+            <h2 class="modal-title">Kirim Team Champion?</h2>
+
+            <p class="modal-desc" id="teamChampionConfirmDesc">
+                Pastikan pilihan Team Champion Anda sudah benar.
+            </p>
+
+            <div class="agree-box">
+                <input type="checkbox" id="teamChampionAgree">
+                <label for="teamChampionAgree">
+                    Saya mengerti dan menyetujui bahwa data Team Champion tidak dapat diubah setelah dikirim.
+                </label>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-close-btn" onclick="document.getElementById('modalConfirmTeamChampion').classList.remove('show')">
+                    Batal
+                </button>
+
+                <button class="btn-submit-mvp" id="btnConfirmSubmitTeamChampion" onclick="submitTeamChampion()" disabled style="width:auto; margin-top:0;">
+                    <i class="fas fa-paper-plane"></i> Ya, Kirim
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         /* ============================================================
            BUSINESS LOGIC — TIDAK DIUBAH dari versi asli.
@@ -2945,6 +2977,18 @@
             renderFishActionButtons();
         }
 
+        function updateMvpOpenState(){
+            var locked = document.getElementById('mvpLockedState');
+            var unlocked = document.getElementById('mvpUnlockedState');
+
+            var canUseMvp = isMvpOpen && isTeamChampionSubmitted;
+
+            if (locked) locked.style.display = canUseMvp ? 'none' : 'block';
+            if (unlocked) unlocked.style.display = canUseMvp ? 'block' : 'none';
+
+            updateMvpUI();
+        }
+
         function updateMvpUI(){
             var selected = Object.values(currentIkans || {}).filter(function(i){
                 return i && i.is_mvp;
@@ -3161,17 +3205,20 @@
 
                 const data = response.ikans || [];
                 const resetInfo = response.reset_info;
-                const mvpOpen = response.mvp_open || false;
-                const mvpSubmitted = response.mvp_submitted || false;
+                const mvpOpen = !!response.mvp_open;
+                const mvpSubmitted = !!response.mvp_submitted;
 
-                const teamChampionOpen = response.team_champion_open || false;
-                const teamChampionSubmitted = response.team_champion_submitted || false;
+                const teamChampionOpen = !!response.team_champion_open;
+                const teamChampionSubmitted = !!response.team_champion_submitted;
 
                 if (response.max_mvp) maxMvp = response.max_mvp;
                 if (response.max_team_champion) maxTeamChampion = response.max_team_champion;
 
+                isMvpOpen = mvpOpen;
+                currentMvpSubmitted = mvpSubmitted;
+
                 isTeamChampionOpen = teamChampionOpen;
-                isTeamChampionSubmitted = teamChampionSubmitted;             
+                isTeamChampionSubmitted = teamChampionSubmitted;            
 
                 if (response.tank_range_max) tankDrawMax = response.tank_range_max;
 
@@ -3183,45 +3230,8 @@
                 }
 
                 updateTeamChampionOpenState();
-                updateTeamChampionUI();
-                updateMvpUI();
+                updateMvpOpenState();
                 renderFishActionButtons();
-
-                if (mvpOpen !== isMvpOpen || mvpSubmitted !== currentMvpSubmitted) {
-                    isMvpOpen = mvpOpen;
-                    currentMvpSubmitted = mvpSubmitted;
-
-                    if(isMvpOpen) {
-                        document.getElementById('mvpLockedState').style.display = 'none';
-                        document.getElementById('mvpUnlockedState').style.display = 'block';
-                    } else {
-                        document.getElementById('mvpLockedState').style.display = 'block';
-                        document.getElementById('mvpUnlockedState').style.display = 'none';
-                    }
-
-                    document.querySelectorAll('.ikan-item').forEach(el => {
-                        const rightDiv = el.querySelector('.ikan-item-right');
-                        if(!rightDiv) return;
-                        let mvpBtn = rightDiv.querySelector('.btn-mvp-star');
-
-                        if(currentMvpSubmitted) {
-                            if(mvpBtn) { mvpBtn.disabled = true; mvpBtn.style.opacity = '0.5'; mvpBtn.style.cursor = 'not-allowed'; }
-                        } else {
-                            if(isMvpOpen && !mvpBtn) {
-                                const id = el.id.replace('ikan-item-', '');
-                                const isMvp = currentIkans[id] ? currentIkans[id].is_mvp : false;
-                                const btn = document.createElement('button');
-                                btn.className = 'btn-mvp-star' + (isMvp ? ' active' : '');
-                                btn.setAttribute('onclick', 'toggleMvp('+id+', this)');
-                                btn.setAttribute('title', 'Daftarkan MVP');
-                                btn.innerHTML = '<i class="fas fa-star"></i>';
-                                rightDiv.insertBefore(btn, rightDiv.firstChild);
-                            } else if(!isMvpOpen && mvpBtn) {
-                                mvpBtn.remove();
-                            }
-                        }
-                    });
-                }
 
                 let mvpCount = 0;
                 let mvpListHtml = '';
@@ -3410,22 +3420,38 @@
             btnElement.disabled = true;
 
             const formData = new FormData();
-            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+            formData.append('_token', getCsrf());
             formData.append('ikan_id', ikanId);
 
-            apiFetch('/api/toggle-mvp-ikan', { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    if(data.is_mvp) { btnElement.classList.add('active'); } else { btnElement.classList.remove('active'); }
-                    currentIkans[ikanId].is_mvp = data.is_mvp;
-                    pollIkans();
-                } else {
-                    alert(data.message || 'Gagal mengubah status MVP.');
-                }
+            apiFetch('/api/toggle-mvp-ikan', {
+                method: 'POST',
+                body: formData
             })
-            .catch(() => alert('Terjadi kesalahan jaringan.'))
-            .finally(() => { btnElement.disabled = false; });
+            .then(normalizeApiJson)
+            .then(function(data){
+                if (!data.success) throw data;
+
+                if (!currentIkans[ikanId]) currentIkans[ikanId] = { id: parseInt(ikanId, 10) };
+
+                currentIkans[ikanId].id = parseInt(ikanId, 10);
+                currentIkans[ikanId].is_mvp = !!data.is_mvp;
+
+                updateMvpOpenState();
+                renderFishActionButtons();
+
+                userPopupSuccess(
+                    data.is_mvp ? 'MVP Ditambahkan' : 'MVP Dihapus',
+                    data.message || 'Data MVP berhasil diperbarui.'
+                );
+
+                pollIkans();
+            })
+            .catch(function(e){
+                userPopupError('Gagal', e.message || 'Gagal mengubah status MVP.');
+            })
+            .finally(function(){
+                btnElement.disabled = false;
+            });
         }
 
         // --- RANGE UNDIAN (DEFAULT) ---
@@ -3809,15 +3835,33 @@
                 return;
             }
 
-            userPopupConfirm(
-                'Kirim Team Champion?',
-                'Anda akan mengirim ' + count + ' ikan Team Champion. Setelah dikirim, pilihan tidak dapat diubah dan Anda dapat lanjut memilih MVP maksimal 15 ikan dari daftar ini.',
-                'Ya, Kirim',
-                submitTeamChampion
-            );
+            var desc = document.getElementById('teamChampionConfirmDesc');
+            if (desc) {
+                desc.innerHTML =
+                    'Anda akan mengirim <b style="color:var(--gold-300);">' + count + ' ikan Team Champion</b>. ' +
+                    'Setelah dikirim, pilihan tidak dapat diubah dan Anda dapat lanjut memilih MVP maksimal 15 ikan dari daftar ini.';
+            }
+
+            var agree = document.getElementById('teamChampionAgree');
+            var btn = document.getElementById('btnConfirmSubmitTeamChampion');
+
+            if (agree) agree.checked = false;
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Ya, Kirim';
+            }
+
+            document.getElementById('modalConfirmTeamChampion').classList.add('show');
         }
 
         function submitTeamChampion(){
+            var btn = document.getElementById('btnConfirmSubmitTeamChampion');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
+            }
+
             var fd = new FormData();
             fd.append('_token', getCsrf());
 
@@ -3829,18 +3873,36 @@
             .then(function(d){
                 if (!d.success) throw d;
 
+                document.getElementById('modalConfirmTeamChampion').classList.remove('show');
+
                 isTeamChampionSubmitted = true;
 
                 updateTeamChampionOpenState();
-                updateTeamChampionUI();
-                updateMvpUI();
+                updateMvpOpenState();
                 renderFishActionButtons();
 
-                userPopupSuccess('Team Champion Terkirim', d.message || 'Data Team Champion berhasil dikirim.');
+                userPopupSuccess(
+                    'Team Champion Terkirim!',
+                    'Data Team Champion berhasil dikirim dan sudah <b style="color:var(--gold-300);">TERKUNCI</b>. Sekarang Anda dapat memilih ikan MVP.'
+                );
+
                 pollIkans();
             })
             .catch(function(e){
                 userPopupError('Gagal', e.message || 'Gagal mengirim Team Champion.');
+            })
+            .finally(function(){
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Ya, Kirim';
+                }
+            });
+        }
+        var teamChampionAgree = document.getElementById('teamChampionAgree');
+        if (teamChampionAgree) {
+            teamChampionAgree.addEventListener('change', function() {
+                var btn = document.getElementById('btnConfirmSubmitTeamChampion');
+                if (btn) btn.disabled = !this.checked;
             });
         }
     </script>
