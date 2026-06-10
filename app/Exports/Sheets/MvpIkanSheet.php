@@ -206,8 +206,8 @@ class MvpIkanSheet implements WithTitle, WithEvents
                         $no++;
                     }
 
-                    // Table Height = Header + SubHeader + MaxDataRows + Total + Keterangan
-                    $tableHeight = 2 + $maxDataRows + 1 + 1;
+                    // Table Height = Header + SubHeader + jumlah data aktual + Total + Keterangan
+                    $tableHeight = 2 + count($rows) + 1 + 1;
 
                     $teamData[] = [
                         'header'       => $headerText,
@@ -276,20 +276,25 @@ class MvpIkanSheet implements WithTitle, WithEvents
                         }
                         $sheet->getStyle("{$colLetterStart}{$subRow}:{$colLetterEnd}{$subRow}")->applyFromArray($styleHeader);
 
-                        // Baris 3+: Data Ikan (Fixed height sesuai $maxDataRows)
+                        // Baris 3+: Data Ikan sesuai jumlah data aktual
                         $dataRow = $subRow + 1;
-                        for ($i = 0; $i < $maxDataRows; $i++) {
-                            $rowArr = $data['rows'][$i] ?? [null, null, null, null, null]; // Pad with nulls
+
+                        foreach ($data['rows'] as $rowArr) {
                             foreach ($rowArr as $ci => $val) {
                                 $colLetter = Coordinate::stringFromColumnIndex($cs + $ci + 1);
                                 $sheet->setCellValue("{$colLetter}{$dataRow}", $val);
                             }
-                            
+
                             // Wrap text untuk kolom NO TANK
                             $tankColLetter = Coordinate::stringFromColumnIndex($cs + 3 + 1);
                             $sheet->getStyle("{$tankColLetter}{$dataRow}")->applyFromArray([
-                                'alignment' => ['wrapText' => true, 'horizontal' => 'center', 'vertical' => 'center'],
+                                'alignment' => [
+                                    'wrapText' => true,
+                                    'horizontal' => 'center',
+                                    'vertical' => 'center',
+                                ],
                             ]);
+
                             $dataRow++;
                         }
 
@@ -297,7 +302,7 @@ class MvpIkanSheet implements WithTitle, WithEvents
                         $totalRow = $dataRow;
                         $totalColLetter = Coordinate::stringFromColumnIndex($cs + 3 + 1);
                         $rankPointColLetter = Coordinate::stringFromColumnIndex($cs + 5);
-                        $sheet->setCellValue("{$totalColLetter}{$totalRow}", 'TOTAL');
+                        $sheet->setCellValue("{$totalColLetter}{$totalRow}", 'TOTAL RANK POINT');
                         $sheet->setCellValue("{$rankPointColLetter}{$totalRow}", (int) $data['sumFinalRank']);
                         $sheet->getStyle("{$colLetterStart}{$totalRow}:{$colLetterEnd}{$totalRow}")->applyFromArray([
                             'font' => ['bold' => true, 'size' => 10],

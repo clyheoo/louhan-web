@@ -1842,7 +1842,19 @@ class AdminDashboardController extends Controller
     public function exportExcel(Request $request)
     {
         $sheets = $request->query('sheets', 'all');
-        $valid  = ['all', 'daftar', 'mvp', 'ranking_kk', 'ranking_k', 'ranking_global', 'users'];
+
+        $valid = [
+            'all',
+            'daftar',
+            'team_champion',
+            'mvp',
+            'ranking_kk',
+            'ranking_k',
+            'ranking_global',
+            'users',
+            'nominasi',
+            'nilai_murni',
+        ];
 
         if (!in_array($sheets, $valid)) {
             $sheets = 'all';
@@ -1850,11 +1862,14 @@ class AdminDashboardController extends Controller
 
         $label = match ($sheets) {
             'daftar'         => 'Daftar_Ikan',
+            'team_champion'  => 'Team_Champion',
             'mvp'            => 'Data_MVP',
             'ranking_kk'     => 'Ranking_Per_Kat_Kelas',
             'ranking_k'      => 'Ranking_Per_Kategori',
             'ranking_global' => 'Rank_Global',
             'users'          => 'Detail_Pengguna',
+            'nominasi'       => 'Nominasi',
+            'nilai_murni'    => 'Nilai_Murni_Juri',
             default          => 'Semua_Data',
         };
 

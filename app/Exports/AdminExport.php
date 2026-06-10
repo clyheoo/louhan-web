@@ -10,6 +10,7 @@ use App\Exports\Sheets\RumusPenilaianSheet;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use App\Exports\Sheets\NominasiSheet;
 use App\Exports\Sheets\NilaiMurniJuriSheet;
+use App\Exports\Sheets\TeamChampionSheet;
 
 class AdminExport implements WithMultipleSheets
 {
@@ -28,6 +29,7 @@ class AdminExport implements WithMultipleSheets
         if ($this->sheets === 'all') {
             $result[] = new AdminDaftarIkanSheet();
             $result[] = new AdminUserDetailSheet();
+            $result[] = new TeamChampionSheet();
             $result[] = new MvpIkanSheet('team');
             $result[] = new MvpIkanSheet('perorangan');
             $result[] = new PointRankingSheet($rankingScope);
@@ -38,6 +40,8 @@ class AdminExport implements WithMultipleSheets
             $result[] = new AdminDaftarIkanSheet();
         } elseif ($this->sheets === 'users') {
             $result[] = new AdminUserDetailSheet();
+        } elseif ($this->sheets === 'team_champion') {
+            $result[] = new TeamChampionSheet();
         } elseif ($this->sheets === 'mvp') {
             $result[] = new MvpIkanSheet('team');
             $result[] = new MvpIkanSheet('perorangan');
