@@ -185,12 +185,12 @@ class AdminDaftarIkanSheet implements FromArray, WithTitle, WithStyles, ShouldAu
                 $rankPoint = $ri['final_rank_point'] ?? 0; // Base rank point + bonus
                 $position = $ri['position'] ?? 0;
 
-                // ★ JUARA (Tanpa icon medali)
+                // ★ JUARA: tampilkan angka 1-10 saja, tanpa icon dan tanpa teks JUARA / Top 10
                 $juaraText = '-';
-                if ($position === 1) $juaraText = 'JUARA 1';
-                elseif ($position === 2) $juaraText = 'JUARA 2';
-                elseif ($position === 3) $juaraText = 'JUARA 3';
-                elseif ($position >= 4 && $position <= 10) $juaraText = 'Top 10 (#' . $position . ')';
+
+                if ($position >= 1 && $position <= 10) {
+                    $juaraText = (string) $position;
+                }
 
                 $d = $item['data'];
                 $rows[] = [
@@ -272,29 +272,16 @@ class AdminDaftarIkanSheet implements FromArray, WithTitle, WithStyles, ShouldAu
             'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF9C3']], // Warna emas muda
         ]);
 
-        // ★ TAMBAHKAN: Juara column styling (kolom N = ke-14)
+        // ★ Juara column styling: angka 1-10 saja, tanpa icon medal
         $juaraCol = 'N';
+
         for ($r = 2; $r <= $lastRow; $r++) {
             $val = $sheet->getCell("{$juaraCol}{$r}")->getValue();
-            if ($val === 'JUARA 1') {
+
+            if (is_numeric($val) && (int) $val >= 1 && (int) $val <= 10) {
                 $sheet->getStyle("{$juaraCol}{$r}")->applyFromArray([
-                    'font' => ['bold' => true, 'color' => ['rgb' => '92400E']],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF3C7']],
-                ]);
-            } elseif ($val === 'JUARA 2') {
-                $sheet->getStyle("{$juaraCol}{$r}")->applyFromArray([
-                    'font' => ['bold' => true, 'color' => ['rgb' => '57534E']],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'E7E5E4']],
-                ]);
-            } elseif ($val === 'JUARA 3') {
-                $sheet->getStyle("{$juaraCol}{$r}")->applyFromArray([
-                    'font' => ['bold' => true, 'color' => ['rgb' => '9A3412']],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FED7AA']],
-                ]);
-            } elseif (str_contains($val, 'Top 10')) {
-                $sheet->getStyle("{$juaraCol}{$r}")->applyFromArray([
-                    'font' => ['bold' => true, 'color' => ['rgb' => '6D28D9']],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F5F3FF']],
+                    'font' => ['bold' => true, 'color' => ['rgb' => '000000']],
+                    'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
                 ]);
             }
         }
