@@ -14,6 +14,42 @@ use App\Services\SheetsSyncService;
 
 class DashboardController extends Controller
 {
+    private function cleanExcelDisplayValue($value, $emptyValue = '')
+    {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '') {
+            return $emptyValue;
+        }
+
+        $looksLikeExcelFormula =
+            substr($value, 0, 1) === '=' ||
+            stripos($value, '__xludf') !== false ||
+            stripos($value, 'DUMMYFUNCTION') !== false ||
+            stripos($value, 'COMPUTED_VALUE') !== false;
+
+        if (!$looksLikeExcelFormula) {
+            return $value;
+        }
+
+        // Contoh:
+        // =IFERROR(__xludf.DUMMYFUNCTION("""COMPUTED_VALUE"""),"Adi")
+        // akan tampil sebagai: Adi
+        //
+        // Kalau fallback kosong:
+        // =IFERROR(...,"")
+        // akan tampil kosong.
+        if (preg_match('/,\s*"((?:[^"]|"")*)"\s*\)\s*$/u', $value, $match)) {
+            $fallback = trim(str_replace('""', '"', $match[1]));
+
+            if ($fallback !== '' && stripos($fallback, 'COMPUTED_VALUE') === false) {
+                return $fallback;
+            }
+        }
+
+        return $emptyValue;
+}
+
     public function index()
     {
         $user = Auth::user()->fresh();
@@ -23,8 +59,33 @@ class DashboardController extends Controller
         if ($user->role === 'grand_juri') return view('dashboard.grand-juri', ['user' => $user]);
         if ($user->role === 'juri') return view('dashboard.juri', ['user' => $user]);
 
+        $user->name = $this->cleanExcelDisplayValue($user->name, '');
+
         $pesertaSaya = Peserta::where('user_id', $user->id)->first();
-        $ikansSaya = $pesertaSaya ? $pesertaSaya->ikans()->orderBy('created_at', 'desc')->get() : collect();
+
+        if ($pesertaSaya) {
+            $pesertaSaya->nama_peserta = $this->cleanExcelDisplayValue($pesertaSaya->nama_peserta, '');
+
+            $jenisPeserta = $this->cleanExcelDisplayValue($pesertaSaya->jenis_keanggotaan, 'perorangan');
+            $pesertaSaya->jenis_keanggotaan = in_array($jenisPeserta, ['perorangan', 'team'])
+                ? $jenisPeserta
+                : 'perorangan';
+
+            $pesertaSaya->detail_anggota = $this->cleanExcelDisplayValue($pesertaSaya->detail_anggota, '');
+        }
+
+        $ikansSaya = $pesertaSaya
+            ? $pesertaSaya->ikans()
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($ikan) {
+                    $ikan->nama_peserta = $this->cleanExcelDisplayValue($ikan->nama_peserta, '');
+                    $ikan->detail_anggota = $this->cleanExcelDisplayValue($ikan->detail_anggota, '');
+                    $ikan->jenis_keanggotaan = $this->cleanExcelDisplayValue($ikan->jenis_keanggotaan, '-');
+
+                    return $ikan;
+                })
+            : collect();
 
         $undianOpen = (bool)(\DB::table('settings')->where('key', 'undian_registration_open')->value('value') ?? true);
         $teamChampionOpen = (bool)(\DB::table('settings')->where('key', 'team_champion_registration_open')->value('value') ?? false);
@@ -40,10 +101,32 @@ class DashboardController extends Controller
                 ->where('detail_anggota', '!=', '')
                 ->select('detail_anggota', 'jenis_keanggotaan')
                 ->distinct()
-                ->get();
+                ->get()
+                ->map(function ($ikan) {
+                    $jenis = $this->cleanExcelDisplayValue($ikan->jenis_keanggotaan, '');
+                    $detail = $this->cleanExcelDisplayValue($ikan->detail_anggota, '');
 
-            $daftarKota = $snapshots->where('jenis_keanggotaan', 'perorangan')->pluck('detail_anggota');
-            $daftarTeam = $snapshots->where('jenis_keanggotaan', 'team')->pluck('detail_anggota');
+                    return [
+                        'jenis_keanggotaan' => $jenis,
+                        'detail_anggota'    => $detail,
+                    ];
+                })
+                ->filter(function ($row) {
+                    return trim($row['detail_anggota']) !== '';
+                })
+                ->values();
+
+            $daftarKota = $snapshots
+                ->where('jenis_keanggotaan', 'perorangan')
+                ->pluck('detail_anggota')
+                ->filter()
+                ->values();
+
+            $daftarTeam = $snapshots
+                ->where('jenis_keanggotaan', 'team')
+                ->pluck('detail_anggota')
+                ->filter()
+                ->values();
 
             if (!empty($pesertaSaya->detail_anggota)) {
                 if ($pesertaSaya->jenis_keanggotaan === 'perorangan') {
@@ -127,9 +210,9 @@ class DashboardController extends Controller
 
         $ikan = Ikan::create([
             'peserta_id' => $peserta->id,
-            'nama_peserta' => $peserta->nama_peserta, // ★ SNAPSHOT NAMA SAAT ITU
-            'detail_anggota' => $peserta->detail_anggota, // ★ SNAPSHOT TEAM/CLUB SAAT ITU
-            'jenis_keanggotaan' => $peserta->jenis_keanggotaan, // ★ SNAPSHOT JENIS KEANGGOTAAN SAAT ITU
+            'nama_peserta' => $this->cleanExcelDisplayValue($peserta->nama_peserta, ''),
+            'detail_anggota' => $this->cleanExcelDisplayValue($peserta->detail_anggota, ''),
+            'jenis_keanggotaan' => $this->cleanExcelDisplayValue($peserta->jenis_keanggotaan, 'perorangan'),
             'kategori'   => $request->kategori,
             'kelas'      => $kelas,
             'dibuat_oleh' => 'user',
@@ -793,9 +876,9 @@ class DashboardController extends Controller
         $ikans = $peserta->ikans()->orderBy('created_at', 'desc')->get()->map(function($ikan) {
             return [
                 'id' => $ikan->id,
-                'nama_peserta' => $ikan->nama_peserta,
-                'detail_anggota' => $ikan->detail_anggota,
-                'jenis_keanggotaan' => $ikan->jenis_keanggotaan, // ★ KIRIM JENIS KEANGGOTAAN HISTORIS
+                'nama_peserta' => $this->cleanExcelDisplayValue($ikan->nama_peserta, ''),
+                'detail_anggota' => $this->cleanExcelDisplayValue($ikan->detail_anggota, ''),
+                'jenis_keanggotaan' => $this->cleanExcelDisplayValue($ikan->jenis_keanggotaan, '-'),
                 'kategori' => $ikan->kategori,
                 'kelas' => $ikan->kelas,
                 'nomor_tank' => $ikan->nomor_tank,
@@ -968,14 +1051,14 @@ class DashboardController extends Controller
 
                         $myResults[] = [
                             'ikan_id'             => $ikan->id,
-                            'nama_peserta'        => $ikan->nama_peserta ?? '-',
-                            'jenis_keanggotaan'   => $ikan->jenis_keanggotaan ?? '-',
-                            'asal_label'          => $ikan->detail_anggota ?? '-',
+                            'nama_peserta'        => $this->cleanExcelDisplayValue($ikan->nama_peserta, ''),
+                            'jenis_keanggotaan'   => $this->cleanExcelDisplayValue($ikan->jenis_keanggotaan, '-'),
+                            'asal_label'          => $this->cleanExcelDisplayValue($ikan->detail_anggota, ''),
                             'kategori'            => $ikan->kategori,
                             'kelas'               => $ikan->kelas ?? '-',
                             'group_key'           => $ikan->kategori . '|' . ($ikan->kelas ?? '-'),
                             'group_label'         => $groupLabel,
-                            'detail_anggota'      => $ikan->detail_anggota ?? '-',
+                            'detail_anggota'      => $this->cleanExcelDisplayValue($ikan->detail_anggota, ''), 
                             'point'               => round((float)($r['total_point'] ?? 0), 2),
                             'rank_point'          => $rankPoint,
                             'position'            => $idx + 1,
@@ -1010,10 +1093,10 @@ class DashboardController extends Controller
 
                         return [
                             'ikan_id'             => $ikan->id,
-                            'nama_peserta'        => $ikan->nama_peserta ?? '-',
-                            'jenis_keanggotaan'   => $ikan->jenis_keanggotaan ?? '-',
-                            'asal_label'          => $ikan->detail_anggota ?? '-',
-                            'detail_anggota'      => $ikan->detail_anggota ?? '-',
+                            'nama_peserta'        => $this->cleanExcelDisplayValue($ikan->nama_peserta, ''),
+                            'jenis_keanggotaan'   => $this->cleanExcelDisplayValue($ikan->jenis_keanggotaan, '-'),
+                            'asal_label'          => $this->cleanExcelDisplayValue($ikan->detail_anggota, ''),
+                            'detail_anggota'      => $this->cleanExcelDisplayValue($ikan->detail_anggota, ''),
                             'kategori'            => $ikan->kategori,
                             'kelas'               => $ikan->kelas ?? '-',
                             'group_key'           => $ikan->kategori . '|' . ($ikan->kelas ?? '-'),
