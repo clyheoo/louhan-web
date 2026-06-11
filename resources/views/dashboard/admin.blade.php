@@ -1030,6 +1030,7 @@
                                 <option value="dinilai">Sudah Dinilai</option>
                                 <option value="grand">Grand Juri Edit</option>
                                 <option value="belum">Belum Dinilai</option>
+                                <option value="no_tank">Belum Dapat Nomor Tank</option>
                             </select>
                         </div>
                         <div class="table-wrap">
@@ -2010,7 +2011,15 @@
         </div>
 
         <div class="modal-foot">
-            <button type="button" class="btn-secondary" onclick="closeModal('modalEditKatKelas')">Batal</button>
+            <button
+                type="button"
+                class="btn-cancel"
+                onclick="closeModal('modalEditKatKelas')"
+                style="background:linear-gradient(135deg,var(--danger),#DC2626);color:#fff;border:1px solid rgba(239,68,68,.45);box-shadow:0 6px 16px -6px rgba(239,68,68,.55),inset 0 1px 0 rgba(255,255,255,.18);"
+            >
+                <i class="fas fa-xmark"></i> Batal
+            </button>
+
             <button type="button" class="btn-primary" id="btnSaveKK" onclick="submitEditKatKelas()">
                 <i class="fas fa-save"></i> Simpan Perubahan
             </button>

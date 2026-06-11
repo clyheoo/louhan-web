@@ -1557,11 +1557,28 @@ function renderTable(data){
         }
 
         /* Status */
-        var sc,st;
-        if(p.is_locked){sc='s-grand';st='<i class="fas fa-lock" style="margin-right:3px;font-size:8px;"></i>TERKUNCI';}
-        else if(p.grand_juri_nama){sc='s-grand';st='GRAND EDIT';}
-        else if(p.status==='Sudah Dinilai'){sc='s-dinilai';st='DINILAI';}
-        else{sc='s-belum';st='BELUM DINILAI';}
+        var sc, st;
+
+        if(!p.nomor_tank || p.status === 'Belum Dapat Tank'){
+            sc = 's-belum';
+            st = 'BELUM TANK';
+        }
+        else if(p.is_locked){
+            sc = 's-grand';
+            st = '<i class="fas fa-lock" style="margin-right:3px;font-size:8px;"></i>TERKUNCI';
+        }
+        else if(p.grand_juri_nama || p.status === 'Grand Juri Edit'){
+            sc = 's-grand';
+            st = 'GRAND EDIT';
+        }
+        else if(p.status === 'Sudah Dinilai'){
+            sc = 's-dinilai';
+            st = 'DINILAI';
+        }
+        else{
+            sc = 's-belum';
+            st = 'BELUM DINILAI';
+        }
 
         /* ★ FIX: TOTAL NILAI — dari semua juri */
         var tv=p.total_nilai_semua>0

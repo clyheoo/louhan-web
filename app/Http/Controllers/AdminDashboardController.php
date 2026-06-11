@@ -453,11 +453,19 @@ class AdminDashboardController extends Controller
         }, 'scorings.juri', 'scorings.grandJuri', 'bonusPoints']);
 
         if ($request->filled('search')) {
-            $s = $request->search;
+            $s = trim($request->search);
+
             $query->where(function ($q) use ($s) {
-                $q->whereHas('peserta', function ($q2) use ($s) {
-                    $q2->where('nama_peserta', 'LIKE', '%' . $s . '%');
-                })->orWhere('nomor_tank', 'LIKE', '%' . $s . '%');
+                // Cari dari snapshot ikan
+                $q->where('nama_peserta', 'LIKE', '%' . $s . '%')
+                ->orWhere('detail_anggota', 'LIKE', '%' . $s . '%')
+                ->orWhere('nomor_tank', 'LIKE', '%' . $s . '%')
+
+                // Cari juga dari profil peserta
+                ->orWhereHas('peserta', function ($q2) use ($s) {
+                    $q2->where('nama_peserta', 'LIKE', '%' . $s . '%')
+                        ->orWhere('detail_anggota', 'LIKE', '%' . $s . '%');
+                });
             });
         }
 
@@ -466,6 +474,30 @@ class AdminDashboardController extends Controller
         }
         if ($request->filled('tank')) {
             $query->where('nomor_tank', $request->tank);
+        }
+        if ($request->filled('status')) {
+            switch ($request->status) {
+                case 'dinilai':
+                    $query->whereHas('scorings');
+                    break;
+
+                case 'grand':
+                    $query->whereHas('scorings', function ($q) {
+                        $q->where('edited_by_grand_juri', true);
+                    });
+                    break;
+
+                case 'belum':
+                    // Belum dinilai, tapi sudah punya nomor tank.
+                    $query->whereNotNull('nomor_tank')
+                        ->whereDoesntHave('scorings');
+                    break;
+
+                case 'no_tank':
+                    // Ikan yang belum dapat nomor tank.
+                    $query->whereNull('nomor_tank');
+                    break;
+            }
         }
 
         $totalJuriAll = \App\Models\User::where('role', 'juri')->count();
@@ -617,7 +649,11 @@ class AdminDashboardController extends Controller
                 'total_nilai_semua'  => $totalNilaiSemua,
                 'jumlah_juri'        => $jumlahJuriYangNilai,
                 'nilai_detail'       => $latestNilai,
-                'status'             => $latestScoring ? ($latestScoring->edited_by_grand_juri ? 'Grand Juri Edit' : 'Sudah Dinilai') : 'Belum Dinilai',
+                'status'             => !$ikan->nomor_tank
+                ? 'Belum Dapat Tank'
+                : ($latestScoring
+                    ? ($latestScoring->edited_by_grand_juri ? 'Grand Juri Edit' : 'Sudah Dinilai')
+                    : 'Belum Dinilai'),
                 'total_point'        => (float) $totalPoint,
                 'bonus_list'         => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
                 'total_bonus'        => (int) $ikan->bonusPoints->sum('points'),
