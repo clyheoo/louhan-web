@@ -1361,6 +1361,19 @@ function loadDashboard(){
         document.getElementById('sAvg').innerText=d.rata_rata||0;
         document.getElementById('sSisaTank').innerText=d.sisa_tank||0;
         document.getElementById('sPesertaUnik').innerText=d.total_peserta_unik||0;
+
+        var pesertaBelumTankEl = document.getElementById('sPesertaBelumTank');
+        if(pesertaBelumTankEl){
+            var belumTank = parseInt(d.peserta_belum_tank || 0, 10);
+            if(belumTank > 0){
+                pesertaBelumTankEl.innerHTML = '<i class="fas fa-circle-exclamation"></i> ' + belumTank + ' belum mengacak nomor tank';
+                pesertaBelumTankEl.style.color = 'var(--gold-300)';
+            } else {
+                pesertaBelumTankEl.innerHTML = '<i class="fas fa-circle-check"></i> Semua sudah mengacak nomor tank';
+                pesertaBelumTankEl.style.color = '#6EE7B7';
+            }
+        }
+
         document.getElementById('sSisaTankLabel').innerText='Sisa Tank ('+ (d.global_range_min||1) +' \u2013 '+ (d.global_range_max||1000) +')';
         renderChartKategori(d.per_kategori||{});
         renderChartStatus(d.sudah_dinilai||0,d.grand_edited||0,d.belum_dinilai||0);
@@ -2768,6 +2781,136 @@ function submitResetTank() {
             });
         }
     );
+}
+
+/* ═══════════════════════════════════════════════
+   RESET DATA PESERTA (JS)
+   ═══════════════════════════════════════════════ */
+function openResetPesertaModal(){
+    var mode = document.getElementById('resetPesertaMode');
+    var txt = document.getElementById('resetPesertaConfirmText');
+    var chk = document.getElementById('resetPesertaCheck');
+
+    if(mode) mode.value = '';
+    if(txt) txt.value = '';
+    if(chk) chk.checked = false;
+
+    openModal('modalResetPeserta');
+}
+
+function getResetPesertaModeLabel(mode){
+    var labels = {
+        scores_only: 'Hapus nilai user',
+        users_only: 'Hapus user dengan role user',
+        all: 'Hapus nilai beserta usernya'
+    };
+    return labels[mode] || '-';
+}
+
+function submitResetPeserta(){
+    var mode = document.getElementById('resetPesertaMode').value;
+    var confirmText = document.getElementById('resetPesertaConfirmText').value.trim();
+    var checked = document.getElementById('resetPesertaCheck').checked;
+
+    if(!mode){
+        popupError('Aksi Belum Dipilih', 'Pilih salah satu aksi reset terlebih dahulu.');
+        return;
+    }
+
+    if(confirmText !== 'RESET PESERTA'){
+        popupError('Verifikasi Salah', 'Ketik <b>RESET PESERTA</b> dengan huruf besar semua.');
+        return;
+    }
+
+    if(!checked){
+        popupError('Persetujuan Wajib', 'Centang pernyataan bahwa Anda memahami risiko reset data.');
+        return;
+    }
+
+    var label = getResetPesertaModeLabel(mode);
+
+    popupConfirm(
+        'Verifikasi 2: ' + label,
+        'Anda benar-benar yakin ingin menjalankan aksi <b>' + esc(label) + '</b>?<br>' +
+        '<span style="font-size:11px;color:var(--danger);font-weight:800;">Tindakan ini tidak dapat dibatalkan dari aplikasi.</span>',
+        'Ya, Jalankan Reset',
+        function(){
+            executeResetPeserta(mode, confirmText);
+        }
+    );
+}
+
+function executeResetPeserta(mode, confirmText){
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('mode', mode);
+    fd.append('confirm_text', confirmText);
+    fd.append('confirm_check', '1');
+
+    var btn = document.getElementById('btnSubmitResetPeserta');
+    var oldHtml = btn ? btn.innerHTML : '';
+
+    if(btn){
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.style.cursor = 'wait';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    }
+
+    showLoader('Mereset data peserta. Mohon tunggu...');
+
+    fetch('/api/admin/reset-participants', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: fd
+    })
+    .then(function(r){
+        if(!r.ok){
+            return r.json().then(function(d){ throw d; });
+        }
+        return r.json();
+    })
+    .then(function(d){
+        if(d.success){
+            closeModal('modalResetPeserta');
+
+            if(typeof loadDashboard === 'function') loadDashboard();
+            if(typeof loadScoringData === 'function') loadScoringData();
+            if(typeof loadUsers === 'function') loadUsers();
+            if(typeof loadPesertaOld === 'function') loadPesertaOld();
+
+            var detail = '';
+            if(d.data){
+                detail =
+                    '<br><span style="font-size:11px;color:var(--text-mid);line-height:1.5;display:block;margin-top:6px;">' +
+                    'User target: <b>' + (d.data.users_target || 0) + '</b>, ' +
+                    'Peserta target: <b>' + (d.data.peserta_target || 0) + '</b>, ' +
+                    'Ikan target: <b>' + (d.data.ikan_target || 0) + '</b>, ' +
+                    'Nilai terhapus: <b>' + (d.data.deleted_scoring || 0) + '</b>.' +
+                    '</span>';
+            }
+
+            popupSuccess('Reset Berhasil', (d.message || 'Reset data peserta berhasil.') + detail);
+        } else {
+            popupError('Reset Gagal', d.message || 'Terjadi kesalahan.');
+        }
+    })
+    .catch(function(e){
+        popupError('Reset Gagal', e && e.message ? e.message : 'Gagal menghubungi server.');
+    })
+    .finally(function(){
+        hideLoader();
+
+        if(btn){
+            btn.disabled = false;
+            btn.style.opacity = '';
+            btn.style.cursor = '';
+            btn.innerHTML = oldHtml || '<i class="fas fa-triangle-exclamation"></i> Lanjutkan';
+        }
+    });
 }
 
 // ── SEARCHABLE DROPDOWN PESERTA (modalOld) ──

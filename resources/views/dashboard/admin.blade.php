@@ -415,6 +415,127 @@
     .popup-btn.cancel{ background:var(--glass-2); color:var(--text); border:1px solid var(--bd-2); }
     .popup-btn-row{ display:flex; gap:9px; justify-content:center; flex-wrap:wrap; }
 
+    /* ===== DASHBOARD ACTION CARDS ===== */
+    .dashboard-action-row{
+        display:grid;
+        grid-template-columns:repeat(3,1fr);
+        gap:12px;
+        margin:0 0 18px;
+    }
+
+    .dashboard-action-card{
+        position:relative;
+        min-height:118px;
+        padding:16px 16px;
+        border-radius:18px;
+        background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.018));
+        border:1px solid var(--bd-2);
+        overflow:hidden;
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:14px;
+        transition:all .25s ease;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+    }
+
+    .dashboard-action-card::before{
+        content:'';
+        position:absolute;
+        left:0;
+        top:0;
+        bottom:0;
+        width:3px;
+        background:linear-gradient(180deg, var(--gold-400), var(--danger));
+        opacity:.9;
+    }
+
+    .dashboard-action-card:hover{
+        transform:translateY(-3px);
+        border-color:rgba(245,158,11,.35);
+        background:var(--glass-3);
+    }
+
+    .dashboard-action-icon{
+        width:38px;
+        height:38px;
+        border-radius:12px;
+        display:grid;
+        place-items:center;
+        flex-shrink:0;
+        background:rgba(245,158,11,.12);
+        color:var(--gold-300);
+        border:1px solid rgba(245,158,11,.28);
+        font-size:15px;
+    }
+
+    .dashboard-action-main{
+        display:flex;
+        gap:12px;
+        min-width:0;
+        flex:1;
+    }
+
+    .dashboard-action-title{
+        font-size:13px;
+        font-weight:900;
+        color:var(--text-hi);
+        letter-spacing:-.01em;
+        margin-bottom:5px;
+    }
+
+    .dashboard-action-desc{
+        font-size:10.5px;
+        font-weight:600;
+        color:var(--text-mid);
+        line-height:1.45;
+        max-width:520px;
+    }
+
+    .dashboard-action-btn{
+        align-self:center;
+        flex-shrink:0;
+        padding:10px 14px;
+        border-radius:11px;
+        border:1px solid rgba(245,158,11,.38);
+        background:linear-gradient(135deg, rgba(245,158,11,.20), rgba(239,68,68,.14));
+        color:#FCD34D;
+        font-family:inherit;
+        font-size:11px;
+        font-weight:900;
+        cursor:pointer;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:7px;
+        transition:all .2s;
+    }
+
+    .dashboard-action-btn:hover{
+        background:linear-gradient(135deg, var(--gold-600), var(--danger));
+        color:#fff;
+        border-color:rgba(255,255,255,.18);
+        transform:translateY(-1px);
+    }
+
+    @media(max-width:1100px){
+        .dashboard-action-row{
+            grid-template-columns:1fr;
+        }
+        .dashboard-action-card{
+            min-height:auto;
+        }
+    }
+
+    @media(max-width:640px){
+        .dashboard-action-card{
+            flex-direction:column;
+        }
+        .dashboard-action-btn{
+            width:100%;
+        }
+    }
+
     /* ===== STAT DETAIL POPUP ===== */
     .stat-detail-popup{ background:linear-gradient(180deg, var(--ocean-800), var(--ocean-900)); border:1px solid var(--bd-2); border-radius:22px; width:100%; max-width:760px; max-height:84vh; overflow:hidden; display:grid; grid-template-rows:auto 1fr; box-shadow:0 25px 60px -15px rgba(0,0,0,.7); transform:scale(.9); transition:transform .3s; }
     .popup-overlay.show .stat-detail-popup{ transform:scale(1); }
@@ -744,6 +865,9 @@
                         <div class="stat-icon teal"><i class="fas fa-users"></i></div>
                         <div class="stat-num" id="sPesertaUnik">0</div>
                         <div class="stat-lbl">Total Peserta</div>
+                        <div id="sPesertaBelumTank" style="margin-top:6px;font-size:10px;font-weight:800;color:var(--gold-300);line-height:1.35;">
+                            <i class="fas fa-spinner fa-spin"></i> Memuat status tank
+                        </div>
                     </div>
                     <div class="stat-card c-green" onclick="openStatPopup('sudah_dinilai','Sudah Dinilai Juri')">
                         <div class="stat-icon green"><i class="fas fa-check-double"></i></div>
@@ -777,6 +901,28 @@
                         <div class="stat-icon amber"><i class="fas fa-boxes-stacked"></i></div>
                         <div class="stat-num" id="sSisaTank">0</div>
                         <div class="stat-lbl" id="sSisaTankLabel">Sisa Tank (1-1000)</div>
+                    </div>
+                </div>
+
+                <!-- ═══════════ DASHBOARD ACTIONS ═══════════ -->
+                <div class="dashboard-action-row">
+                    <div class="dashboard-action-card">
+                        <div class="dashboard-action-main">
+                            <div class="dashboard-action-icon">
+                                <i class="fas fa-user-slash"></i>
+                            </div>
+                            <div style="min-width:0;">
+                                <div class="dashboard-action-title">Reset Data Peserta</div>
+                                <div class="dashboard-action-desc">
+                                    Hapus nilai user, hapus user role peserta, atau hapus nilai beserta usernya.
+                                    Aksi ini tetap memakai 2 kali verifikasi agar tidak terpencet tanpa sengaja.
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="dashboard-action-btn" onclick="openResetPesertaModal()">
+                            <i class="fas fa-triangle-exclamation"></i> Buka Reset
+                        </button>
                     </div>
                 </div>
 
@@ -1555,6 +1701,58 @@
         <div class="modal-foot">
             <button class="btn-cancel" onclick="closeModal('modalResetTank')">Batal</button>
             <button class="btn-primary" id="btnSubmitReset" style="background:linear-gradient(135deg,var(--danger),#DC2626);box-shadow:0 6px 16px -6px rgba(239,68,68,.5),inset 0 1px 0 rgba(255,255,255,.18);" onclick="submitResetTank()"><i class="fas fa-rotate-left"></i> Ya, Reset</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ MODAL: RESET PESERTA ═══════════ -->
+<div class="modal-bg" id="modalResetPeserta" style="--mw:520px;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-user-slash" style="color:#FCD34D;"></i> Reset Data Peserta</h3>
+            <button class="modal-close" onclick="closeModal('modalResetPeserta')"><i class="fas fa-xmark"></i></button>
+        </div>
+
+        <div class="modal-body">
+            <div style="background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.35);border-radius:12px;padding:14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;">
+                <i class="fas fa-triangle-exclamation" style="color:#FCA5A5;margin-top:2px;font-size:16px;"></i>
+                <div style="font-size:12px;color:#FCA5A5;line-height:1.5;">
+                    <b>Peringatan keras!</b> Fitur ini memproses data banyak peserta sekaligus. Ada 2 verifikasi: ketik teks verifikasi di modal ini, lalu konfirmasi sekali lagi di popup.
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Pilih Aksi Reset *</label>
+                <select id="resetPesertaMode" class="form-control">
+                    <option value="">-- Pilih aksi --</option>
+                    <option value="scores_only">Hapus nilai user</option>
+                    <option value="users_only">Hapus user dengan role user</option>
+                    <option value="all">Hapus nilai beserta usernya</option>
+                </select>
+                <div style="font-size:10px;color:var(--text-mid);margin-top:6px;line-height:1.5;">
+                    Role admin, juri, dan grand juri tidak ikut dihapus.
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Verifikasi 1 *</label>
+                <input type="text" id="resetPesertaConfirmText" class="form-control" placeholder="Ketik: RESET PESERTA">
+                <div style="font-size:10px;color:var(--gold-300);margin-top:6px;font-weight:700;">
+                    Harus persis: RESET PESERTA
+                </div>
+            </div>
+
+            <label style="display:flex;gap:9px;align-items:flex-start;font-size:11px;color:var(--text);line-height:1.5;cursor:pointer;">
+                <input type="checkbox" id="resetPesertaCheck" style="margin-top:3px;">
+                <span>Saya paham tindakan ini berisiko dan data yang dihapus tidak bisa dikembalikan dari aplikasi.</span>
+            </label>
+        </div>
+
+        <div class="modal-foot">
+            <button class="btn-cancel" onclick="closeModal('modalResetPeserta')">Batal</button>
+            <button class="btn-primary" id="btnSubmitResetPeserta" style="background:linear-gradient(135deg,var(--danger),#DC2626);box-shadow:0 6px 16px -6px rgba(239,68,68,.5),inset 0 1px 0 rgba(255,255,255,.18);" onclick="submitResetPeserta()">
+                <i class="fas fa-triangle-exclamation"></i> Lanjutkan
+            </button>
         </div>
     </div>
 </div>

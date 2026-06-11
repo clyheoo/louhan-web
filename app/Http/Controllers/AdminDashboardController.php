@@ -131,6 +131,12 @@ class AdminDashboardController extends Controller
     public function getDashboardStats()
     {
         $totalIkan = Ikan::whereNotNull('nomor_tank')->count();
+        $totalIkanBelumTank = Ikan::whereNull('nomor_tank')->count();
+        $totalIkanSemua = $totalIkan + $totalIkanBelumTank;
+
+        $pesertaBelumTank = Peserta::whereHas('ikans', function ($q) {
+            $q->whereNull('nomor_tank');
+        })->count();
 
         $juriAktif = Scoring::whereNotNull('juri_id')->distinct('juri_id')->count('juri_id');
 
@@ -238,9 +244,7 @@ class AdminDashboardController extends Controller
         $maxGlobal = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
         $maxTankTotal = $maxGlobal - $minGlobal + 1;
 
-        $totalPesertaUnik = Ikan::whereNotNull('nomor_tank')
-            ->distinct('nama_peserta')
-            ->count('nama_peserta');
+        $totalPesertaUnik = Peserta::whereHas('ikans')->count();
 
         $sisaTank = max(0, $maxTankTotal - $totalIkan);
 
@@ -252,8 +256,11 @@ class AdminDashboardController extends Controller
             'juri_aktif'     => $juriAktif,
             'rata_rata'      => $avgScore,
             'total_peserta_unik' => $totalPesertaUnik,
+            'peserta_belum_tank' => $pesertaBelumTank,
+            'ikan_belum_tank'    => $totalIkanBelumTank,
+            'total_ikan_semua'   => $totalIkanSemua,
             'sisa_tank'          => $sisaTank,
-            'max_tank'       => $maxTankTotal,
+            'max_tank'           => $maxTankTotal,
             'global_range_min' => $minGlobal,
             'global_range_max' => $maxGlobal,
             'per_kategori'   => $perKategori,
@@ -651,15 +658,37 @@ class AdminDashboardController extends Controller
                 return response()->json(['title' => 'Total Ikan Terdaftar', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS'], 'rows' => $rows]);
 
             case 'total_peserta':
-                $rows = Ikan::whereNotNull('nomor_tank')
-                    ->selectRaw('nama_peserta, COUNT(*) as jml')
-                    ->groupBy('nama_peserta')
-                    ->orderByDesc('jml')
+                $rows = Peserta::whereHas('ikans')
+                    ->withCount([
+                        'ikans as total_ikan',
+                        'ikans as ikan_sudah_tank_count' => function ($q) {
+                            $q->whereNotNull('nomor_tank');
+                        },
+                        'ikans as ikan_belum_tank_count' => function ($q) {
+                            $q->whereNull('nomor_tank');
+                        },
+                    ])
+                    ->orderByDesc('total_ikan')
                     ->get()
-                    ->map(function ($i, $idx) {
-                        return [$idx + 1, $i->nama_peserta ?? 'Unknown', $i->jml];
+                    ->map(function ($p, $idx) {
+                        $ket = ((int) $p->ikan_belum_tank_count > 0)
+                            ? 'belum mengacak nomor tank'
+                            : 'sudah mengacak nomor tank';
+
+                        return [
+                            $idx + 1,
+                            $p->nama_peserta ?? 'Unknown',
+                            (int) $p->total_ikan,
+                            (int) $p->ikan_belum_tank_count,
+                            $ket,
+                        ];
                     })->toArray();
-                return response()->json(['title' => 'Total Peserta', 'columns' => ['#', 'PESERTA', 'JUMLAH IKAN'], 'rows' => $rows]);
+
+                return response()->json([
+                    'title'   => 'Total Peserta',
+                    'columns' => ['#', 'PESERTA', 'JUMLAH IKAN', 'BELUM TANK', 'KETERANGAN'],
+                    'rows'    => $rows,
+                ]);
 
             case 'sudah_dinilai':
                 $sudahIds = $latestRows->keys()->toArray();
@@ -795,6 +824,166 @@ class AdminDashboardController extends Controller
             'success'       => true,
             'message'       => $deletedCount . ' data ikan beserta nilai penilaiannya berhasil dihapus.',
             'deleted_count' => $deletedCount,
+        ]);
+    }
+
+    public function resetAllParticipants(Request $request)
+    {
+        $request->validate([
+            'mode'          => 'required|in:scores_only,users_only,all',
+            'confirm_text'  => 'required|string',
+            'confirm_check' => 'required|accepted',
+        ]);
+
+        if (trim($request->confirm_text) !== 'RESET PESERTA') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Teks verifikasi tidak sesuai. Ketik RESET PESERTA untuk melanjutkan.',
+            ], 422);
+        }
+
+        $mode = $request->mode;
+        $now = now();
+
+        $result = \DB::transaction(function () use ($mode, $now) {
+            $userIds = User::where('role', 'user')
+                ->where('id', '!=', auth()->id())
+                ->pluck('id');
+
+            $pesertaIds = Peserta::whereIn('user_id', $userIds)->pluck('id');
+            $ikanIds = Ikan::whereIn('peserta_id', $pesertaIds)->pluck('id');
+
+            $deletedScorings = 0;
+            $deletedBonus = 0;
+            $deletedNominasi = 0;
+            $updatedIkan = 0;
+            $updatedPeserta = 0;
+            $deletedIkan = 0;
+            $deletedPeserta = 0;
+            $deletedUsers = 0;
+
+            if ($ikanIds->isNotEmpty()) {
+                $deletedScorings += Scoring::whereIn('ikan_id', $ikanIds)->delete();
+                $deletedBonus += \App\Models\IkanBonusPoint::whereIn('ikan_id', $ikanIds)->delete();
+                $deletedNominasi += Nominasi::whereIn('ikan_id', $ikanIds)->delete();
+            }
+
+            if ($mode === 'users_only' || $mode === 'all') {
+                if ($userIds->isNotEmpty()) {
+                    $deletedScorings += Scoring::whereIn('juri_id', $userIds)
+                        ->orWhereIn('grand_juri_id', $userIds)
+                        ->delete();
+
+                    $deletedNominasi += Nominasi::whereIn('juri_id', $userIds)->delete();
+
+                    $deletedBonus += \App\Models\IkanBonusPoint::whereIn('added_by', $userIds)->delete();
+                }
+
+                if ($ikanIds->isNotEmpty()) {
+                    $deletedIkan = Ikan::whereIn('id', $ikanIds)->delete();
+                }
+
+                if ($pesertaIds->isNotEmpty()) {
+                    $deletedPeserta = Peserta::whereIn('id', $pesertaIds)->delete();
+                }
+
+                if ($userIds->isNotEmpty()) {
+                    $deletedUsers = User::whereIn('id', $userIds)->delete();
+                }
+            }
+
+            if ($mode === 'scores_only') {
+                if ($ikanIds->isNotEmpty()) {
+                    $updatedIkan = Ikan::whereIn('id', $ikanIds)->update([
+                        'is_locked'         => false,
+                        'is_mvp'            => false,
+                        'is_team_champion'  => false,
+                        'updated_at'        => $now,
+                    ]);
+                }
+
+                if ($pesertaIds->isNotEmpty()) {
+                    $updatedPeserta = Peserta::whereIn('id', $pesertaIds)->update([
+                        'result_unlocked_at'          => null,
+                        'is_mvp_submitted'            => false,
+                        'is_team_champion_submitted'  => false,
+                        'updated_at'                  => $now,
+                    ]);
+                }
+            }
+
+            \DB::table('settings')->updateOrInsert(
+                ['key' => 'participants_reset_info'],
+                [
+                    'value' => json_encode([
+                        'mode'      => $mode,
+                        'reset_by'  => auth()->id(),
+                        'reset_at'  => $now->toDateTimeString(),
+                    ]),
+                    'updated_at' => $now,
+                ]
+            );
+
+            return [
+                'mode'             => $mode,
+                'users_target'     => $userIds->count(),
+                'peserta_target'   => $pesertaIds->count(),
+                'ikan_target'      => $ikanIds->count(),
+                'deleted_scoring'  => $deletedScorings,
+                'deleted_bonus'    => $deletedBonus,
+                'deleted_nominasi' => $deletedNominasi,
+                'updated_ikan'     => $updatedIkan,
+                'updated_peserta'  => $updatedPeserta,
+                'deleted_ikan'     => $deletedIkan,
+                'deleted_peserta'  => $deletedPeserta,
+                'deleted_users'    => $deletedUsers,
+            ];
+        });
+
+        $sync = $this->sheetsSync;
+
+        try {
+            app()->terminating(function () use ($sync) {
+                try {
+                    if (!$sync->isReady()) return;
+
+                    $methods = [
+                        'syncSemuaPeserta',
+                        'syncPlotingTank',
+                        'syncSemuaNominasi',
+                        'syncSemuaPilNom',
+                        'syncHasilJuri',
+                        'syncHasilNominasi',
+                        'syncMvp',
+                    ];
+
+                    foreach ($methods as $method) {
+                        if (method_exists($sync, $method)) {
+                            try {
+                                $sync->{$method}();
+                            } catch (\Throwable $e) {
+                                \Log::warning('Sync gagal setelah reset peserta [' . $method . ']: ' . $e->getMessage());
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    \Log::error('Sync reset peserta gagal: ' . $e->getMessage());
+                }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Gagal register sync reset peserta: ' . $e->getMessage());
+        }
+
+        $modeLabel = [
+            'scores_only' => 'Hapus nilai user',
+            'users_only'  => 'Hapus user role user',
+            'all'         => 'Hapus nilai beserta usernya',
+        ][$mode];
+
+        return response()->json([
+            'success' => true,
+            'message' => $modeLabel . ' berhasil diproses.',
+            'data'    => $result,
         ]);
     }
 
