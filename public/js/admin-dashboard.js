@@ -1360,17 +1360,21 @@ function loadDashboard(){
         document.getElementById('sJuri').innerText=d.juri_aktif||0;
         document.getElementById('sAvg').innerText=d.rata_rata||0;
         document.getElementById('sSisaTank').innerText=d.sisa_tank||0;
-        document.getElementById('sPesertaUnik').innerText=d.total_peserta_unik||0;
+        var totalPesertaUnik = parseInt(d.total_peserta_unik || 0, 10);
+        document.getElementById('sPesertaUnik').innerText = totalPesertaUnik;
 
         var pesertaBelumTankEl = document.getElementById('sPesertaBelumTank');
         if(pesertaBelumTankEl){
             var belumTank = parseInt(d.peserta_belum_tank || 0, 10);
-            if(belumTank > 0){
-                pesertaBelumTankEl.innerHTML = '<i class="fas fa-circle-exclamation"></i> ' + belumTank + ' belum mengacak nomor tank';
-                pesertaBelumTankEl.style.color = 'var(--gold-300)';
+            var sudahTank = Math.max(0, totalPesertaUnik - belumTank);
+
+            if(totalPesertaUnik <= 0){
+                pesertaBelumTankEl.innerHTML =
+                    '<span class="tank-status-muted"><i class="fas fa-circle-info"></i> Belum ada peserta</span>';
             } else {
-                pesertaBelumTankEl.innerHTML = '<i class="fas fa-circle-check"></i> Semua sudah mengacak nomor tank';
-                pesertaBelumTankEl.style.color = '#6EE7B7';
+                pesertaBelumTankEl.innerHTML =
+                    '<span class="tank-status-ok"><i class="fas fa-circle-check"></i> ' + sudahTank + ' sudah mengacak nomor tank</span>' +
+                    '<span class="tank-status-warn"><i class="fas fa-circle-exclamation"></i> ' + belumTank + ' belum mengacak nomor tank</span>';
             }
         }
 
@@ -2546,7 +2550,7 @@ function openStatPopup(type, title){
         document.getElementById('statDetailCount').innerHTML='Menampilkan <b style="color:'+(statTypeColors[type]||'var(--primary)')+';">'+d.rows.length+'</b> data';
         var numCols={};
         d.columns.forEach(function(c,i){
-            if(['JURI','TOTAL NILAI','JUMLAH IKAN','PESERTA DINILAI'].indexOf(c)!==-1)numCols[i]=true;
+            if(['JURI','TOTAL NILAI','JUMLAH IKAN','PESERTA DINILAI','BELUM TANK'].indexOf(c)!==-1)numCols[i]=true;
         });
         var valColor={};
         if(type==='sudah_dinilai')valColor={5:'success'};
@@ -2571,6 +2575,14 @@ function openStatPopup(type, title){
                     } else if(type==='juri_aktif'&&ci===2){
                         var roleColors={Juri:'blue',GrandJuri:'purple',Admin:'blue'};
                         h+='<td><span class="sd-badge '+(roleColors[cell]||'blue')+'">'+esc(String(cell))+'</span></td>';
+                    } else if(type === 'total_peserta' && ci === 3){
+                        var belumNum = parseInt(cell || 0, 10);
+                        h+='<td class="td-val" style="color:'+(belumNum > 0 ? 'var(--gold-300)' : '#6EE7B7')+';">'+esc(String(cell))+'</td>';
+                    } else if(type === 'total_peserta' && ci === 4){
+                        var isBelum = String(cell).toLowerCase().indexOf('belum') !== -1;
+                        h+='<td><span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:900;color:'+(isBelum ? 'var(--gold-300)' : '#6EE7B7')+';">' +
+                            '<i class="fas '+(isBelum ? 'fa-circle-exclamation' : 'fa-circle-check')+'"></i> ' + esc(String(cell)) +
+                        '</span></td>';
                     } else if(numCols[ci]){
                         var vc=valColor[ci]||'';
                         h+='<td class="td-val '+(vc?' '+vc:'')+'">'+esc(String(cell))+'</td>';

@@ -197,6 +197,82 @@
     .stat-icon.teal{ background:rgba(20,184,166,.12); color:#5EEAD4; border:1px solid rgba(20,184,166,.25); }
     .stat-num{ font-size:24px; font-weight:900; line-height:1; color:var(--text-hi); margin-bottom:4px; letter-spacing:-.02em; }
     .stat-lbl{ font-size:9.5px; font-weight:700; color:var(--text-mid); text-transform:uppercase; letter-spacing:.12em; }
+    /* ===== DASHBOARD SECOND ROW: AVG, SISA TANK, RESET ===== */
+    .stats-row.dashboard-second-row{
+        grid-template-columns:repeat(3,1fr);
+    }
+
+    .stats-row.dashboard-second-row .stat-card{
+        min-height:118px;
+    }
+
+    .stat-card.stat-static{
+        cursor:default;
+    }
+
+    .stat-card.stat-action-reset{
+        cursor:pointer;
+    }
+
+    .stat-card.stat-action-reset::before{
+        background:linear-gradient(180deg, var(--gold-400), var(--danger));
+    }
+
+    .reset-action-title{
+        font-size:18px;
+        margin-bottom:5px;
+    }
+
+    .reset-action-desc{
+        margin-top:7px;
+        font-size:10px;
+        font-weight:700;
+        color:#FCD34D;
+        line-height:1.35;
+        display:flex;
+        align-items:center;
+        gap:5px;
+    }
+
+    .tank-status-lines{
+        margin-top:6px;
+        display:flex;
+        flex-direction:column;
+        gap:2px;
+        font-size:9.5px;
+        font-weight:800;
+        line-height:1.25;
+    }
+
+    .tank-status-ok{
+        color:#6EE7B7;
+    }
+
+    .tank-status-warn{
+        color:var(--gold-300);
+    }
+
+    .tank-status-muted{
+        color:var(--text-low);
+    }
+
+    @media (max-width:900px){
+        .stats-row.dashboard-second-row{
+            grid-template-columns:1fr 1fr;
+        }
+        .stats-row.dashboard-second-row .stat-action-reset{
+            grid-column:1 / -1;
+        }
+    }
+
+    @media (max-width:520px){
+        .stats-row.dashboard-second-row{
+            grid-template-columns:1fr;
+        }
+        .stats-row.dashboard-second-row .stat-action-reset{
+            grid-column:auto;
+        }
+    }
 
     /* ===== CHARTS ===== */
     .charts-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:18px; }
@@ -865,9 +941,9 @@
                         <div class="stat-icon teal"><i class="fas fa-users"></i></div>
                         <div class="stat-num" id="sPesertaUnik">0</div>
                         <div class="stat-lbl">Total Peserta</div>
-                        <div id="sPesertaBelumTank" style="margin-top:6px;font-size:10px;font-weight:800;color:var(--gold-300);line-height:1.35;">
-                            <i class="fas fa-spinner fa-spin"></i> Memuat status tank
-                        </div>
+                    <div id="sPesertaBelumTank" class="tank-status-lines">
+                        <span class="tank-status-muted"><i class="fas fa-spinner fa-spin"></i> Memuat status tank</span>
+                    </div>
                     </div>
                     <div class="stat-card c-green" onclick="openStatPopup('sudah_dinilai','Sudah Dinilai Juri')">
                         <div class="stat-icon green"><i class="fas fa-check-double"></i></div>
@@ -890,39 +966,26 @@
                         <div class="stat-lbl">Juri Aktif</div>
                     </div>
                 </div>
-
-                <div class="stats-row" style="grid-template-columns:1fr 1fr;">
-                    <div class="stat-card c-teal" style="cursor:default;">
+                <div class="stats-row dashboard-second-row">
+                    <div class="stat-card c-teal stat-static">
                         <div class="stat-icon teal"><i class="fas fa-chart-line"></i></div>
                         <div class="stat-num" id="sAvg">0</div>
                         <div class="stat-lbl">Rata-rata Nilai</div>
                     </div>
-                    <div class="stat-card c-gold" style="cursor:default;">
+
+                    <div class="stat-card c-gold stat-static">
                         <div class="stat-icon amber"><i class="fas fa-boxes-stacked"></i></div>
                         <div class="stat-num" id="sSisaTank">0</div>
                         <div class="stat-lbl" id="sSisaTankLabel">Sisa Tank (1-1000)</div>
                     </div>
-                </div>
 
-                <!-- ═══════════ DASHBOARD ACTIONS ═══════════ -->
-                <div class="dashboard-action-row">
-                    <div class="dashboard-action-card">
-                        <div class="dashboard-action-main">
-                            <div class="dashboard-action-icon">
-                                <i class="fas fa-user-slash"></i>
-                            </div>
-                            <div style="min-width:0;">
-                                <div class="dashboard-action-title">Reset Data Peserta</div>
-                                <div class="dashboard-action-desc">
-                                    Hapus nilai user, hapus user role peserta, atau hapus nilai beserta usernya.
-                                    Aksi ini tetap memakai 2 kali verifikasi agar tidak terpencet tanpa sengaja.
-                                </div>
-                            </div>
+                    <div class="stat-card c-red stat-action-reset" onclick="openResetPesertaModal()">
+                        <div class="stat-icon amber"><i class="fas fa-user-slash"></i></div>
+                        <div class="stat-num reset-action-title">Reset</div>
+                        <div class="stat-lbl">Data Peserta</div>
+                        <div class="reset-action-desc">
+                            <i class="fas fa-shield-halved"></i> 2x verifikasi sebelum proses
                         </div>
-
-                        <button type="button" class="dashboard-action-btn" onclick="openResetPesertaModal()">
-                            <i class="fas fa-triangle-exclamation"></i> Buka Reset
-                        </button>
                     </div>
                 </div>
 
