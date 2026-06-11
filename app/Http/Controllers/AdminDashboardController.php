@@ -3251,16 +3251,23 @@ class AdminDashboardController extends Controller
         try {
             \DB::transaction(function () use ($request, $ikan, $kelas, $nomorTank) {
                 if ($nomorTank !== null) {
-                    [$availableRanges, $rangeLabel] = $this->getManualTankAllowedRanges(
-                        $request->kategori,
-                        $kelas
-                    );
+                    // EDIT MANUAL ADMIN:
+                    // Boleh masuk ke rentang kategori/kelas mana pun.
+                    // Syaratnya hanya:
+                    // 1. Tidak melewati batas global.
+                    // 2. Tidak dipakai ikan/peserta lain.
+                    $globalMin = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
+                    $globalMax = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
 
-                    if (!$this->tankNumberInsideRanges($nomorTank, $availableRanges)) {
+                    if ($globalMin > $globalMax) {
+                        throw new \Exception('Rentang global nomor tank tidak valid.');
+                    }
+
+                    if ($nomorTank < $globalMin || $nomorTank > $globalMax) {
                         throw new \Exception(
                             'Nomor tank ' . $nomorTank .
-                            ' tidak masuk rentang yang tersedia untuk ' . $rangeLabel .
-                            '. Rentang tersedia: ' . $this->formatTankRanges($availableRanges) . '.'
+                            ' di luar batas global. Rentang global yang diperbolehkan: ' .
+                            $globalMin . '–' . $globalMax . '.'
                         );
                     }
 
