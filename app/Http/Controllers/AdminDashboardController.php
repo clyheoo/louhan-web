@@ -128,6 +128,42 @@ class AdminDashboardController extends Controller
         ]);
     }
 
+    private function cleanExcelDisplayValue($value, $emptyValue = '')
+    {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '') {
+            return $emptyValue;
+        }
+
+        $looksLikeExcelFormula =
+            substr($value, 0, 1) === '=' ||
+            stripos($value, '__xludf') !== false ||
+            stripos($value, 'DUMMYFUNCTION') !== false ||
+            stripos($value, 'COMPUTED_VALUE') !== false;
+
+        if (!$looksLikeExcelFormula) {
+            return $value;
+        }
+
+        // Contoh:
+        // =IFERROR(__xludf.DUMMYFUNCTION("""COMPUTED_VALUE"""),"Adi")
+        // akan ditampilkan sebagai: Adi
+        //
+        // Kalau fallback-nya kosong:
+        // =IFERROR(...,"")
+        // akan ditampilkan kosong.
+        if (preg_match('/,\s*"((?:[^"]|"")*)"\s*\)\s*$/u', $value, $match)) {
+            $fallback = trim(str_replace('""', '"', $match[1]));
+
+            if ($fallback !== '' && stripos($fallback, 'COMPUTED_VALUE') === false) {
+                return $fallback;
+            }
+        }
+
+        return $emptyValue;
+    }
+
     public function getDashboardStats()
     {
         $totalIkan = Ikan::whereNotNull('nomor_tank')->count();
@@ -247,11 +283,13 @@ class AdminDashboardController extends Controller
         $pesertaGroups = Ikan::select('nama_peserta', 'jenis_keanggotaan', 'detail_anggota', 'nomor_tank')
             ->get()
             ->groupBy(function ($ikan) {
-                $nama   = trim($ikan->nama_peserta ?: 'Unknown');
-                $jenis  = trim($ikan->jenis_keanggotaan ?: '-');
-                $detail = trim($ikan->detail_anggota ?: '-');
+                $nama   = $this->cleanExcelDisplayValue($ikan->nama_peserta, '');
+                $jenis  = $this->cleanExcelDisplayValue($ikan->jenis_keanggotaan, '-');
+                $detail = $this->cleanExcelDisplayValue($ikan->detail_anggota, '-');
 
-                return mb_strtolower($nama) . '|' . mb_strtolower($jenis) . '|' . mb_strtolower($detail);
+                return mb_strtolower($nama ?: '__kosong__') . '|' .
+                    mb_strtolower($jenis ?: '-') . '|' .
+                    mb_strtolower($detail ?: '-');
             });
 
         $totalPesertaUnik = $pesertaGroups->count();
@@ -674,61 +712,67 @@ class AdminDashboardController extends Controller
                 })->toArray();
                 return response()->json(['title' => 'Total Ikan Terdaftar', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS'], 'rows' => $rows]);
 
-            case 'total_peserta':
-                $groups = Ikan::select('nama_peserta', 'jenis_keanggotaan', 'detail_anggota', 'nomor_tank')
-                    ->get()
-                    ->groupBy(function ($ikan) {
-                        $nama   = trim($ikan->nama_peserta ?: 'Unknown');
-                        $jenis  = trim($ikan->jenis_keanggotaan ?: '-');
-                        $detail = trim($ikan->detail_anggota ?: '-');
+                case 'total_peserta':
+                    $groups = Ikan::select('nama_peserta', 'jenis_keanggotaan', 'detail_anggota', 'nomor_tank')
+                        ->get()
+                        ->groupBy(function ($ikan) {
+                            $nama   = $this->cleanExcelDisplayValue($ikan->nama_peserta, '');
+                            $jenis  = $this->cleanExcelDisplayValue($ikan->jenis_keanggotaan, '-');
+                            $detail = $this->cleanExcelDisplayValue($ikan->detail_anggota, '-');
 
-                        return mb_strtolower($nama) . '|' . mb_strtolower($jenis) . '|' . mb_strtolower($detail);
-                    });
+                            return mb_strtolower($nama ?: '__kosong__') . '|' .
+                                mb_strtolower($jenis ?: '-') . '|' .
+                                mb_strtolower($detail ?: '-');
+                        });
 
-                $rows = $groups->map(function ($items) {
-                        $first = $items->first();
+                    $rows = $groups->map(function ($items) {
+                            $first = $items->first();
 
-                        $totalIkan = $items->count();
-                        $belumTank = $items->whereNull('nomor_tank')->count();
-                        $sudahTank = max(0, $totalIkan - $belumTank);
+                            $namaPeserta = $this->cleanExcelDisplayValue($first->nama_peserta, '');
+                            $jenis       = $this->cleanExcelDisplayValue($first->jenis_keanggotaan, '-');
+                            $detail      = $this->cleanExcelDisplayValue($first->detail_anggota, '-');
 
-                        $keterangan = $belumTank > 0
-                            ? 'belum mengacak nomor tank'
-                            : 'sudah mengacak nomor tank';
+                            $totalIkan = $items->count();
+                            $belumTank = $items->whereNull('nomor_tank')->count();
+                            $sudahTank = max(0, $totalIkan - $belumTank);
 
-                        return [
-                            'nama_peserta'      => $first->nama_peserta ?: 'Unknown',
-                            'jenis_keanggotaan' => $first->jenis_keanggotaan ?: '-',
-                            'detail_anggota'    => $first->detail_anggota ?: '-',
-                            'total_ikan'        => $totalIkan,
-                            'sudah_tank'        => $sudahTank,
-                            'belum_tank'        => $belumTank,
-                            'keterangan'        => $keterangan,
-                        ];
-                    })
-                    ->sortBy(function ($row) {
-                        return mb_strtolower($row['nama_peserta']);
-                    })
-                    ->values()
-                    ->map(function ($row, $idx) {
-                        return [
-                            $idx + 1,
-                            $row['nama_peserta'],
-                            $row['jenis_keanggotaan'],
-                            $row['detail_anggota'],
-                            $row['total_ikan'],
-                            $row['sudah_tank'],
-                            $row['belum_tank'],
-                            $row['keterangan'],
-                        ];
-                    })
-                    ->toArray();
+                            $keterangan = $belumTank > 0
+                                ? 'belum mengacak nomor tank'
+                                : 'sudah mengacak nomor tank';
 
-                return response()->json([
-                    'title'   => 'Total Peserta',
-                    'columns' => ['#', 'NAMA PESERTA', 'JENIS', 'DETAIL', 'JUMLAH IKAN', 'SUDAH TANK', 'BELUM TANK', 'KETERANGAN'],
-                    'rows'    => $rows,
-                ]);
+                            return [
+                                'nama_peserta'      => $namaPeserta,
+                                'jenis_keanggotaan' => $jenis ?: '-',
+                                'detail_anggota'    => $detail ?: '-',
+                                'total_ikan'        => $totalIkan,
+                                'sudah_tank'        => $sudahTank,
+                                'belum_tank'        => $belumTank,
+                                'keterangan'        => $keterangan,
+                            ];
+                        })
+                        ->sortBy(function ($row) {
+                            return mb_strtolower($row['nama_peserta'] ?: '');
+                        })
+                        ->values()
+                        ->map(function ($row, $idx) {
+                            return [
+                                $idx + 1,
+                                $row['nama_peserta'],
+                                $row['jenis_keanggotaan'],
+                                $row['detail_anggota'],
+                                $row['total_ikan'],
+                                $row['sudah_tank'],
+                                $row['belum_tank'],
+                                $row['keterangan'],
+                            ];
+                        })
+                        ->toArray();
+
+                    return response()->json([
+                        'title'   => 'Total Peserta',
+                        'columns' => ['#', 'NAMA PESERTA', 'JENIS', 'DETAIL', 'JUMLAH IKAN', 'SUDAH TANK', 'BELUM TANK', 'KETERANGAN'],
+                        'rows'    => $rows,
+                    ]);
 
             case 'sudah_dinilai':
                 $sudahIds = $latestRows->keys()->toArray();
