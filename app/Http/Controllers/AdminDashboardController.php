@@ -3207,6 +3207,104 @@ class AdminDashboardController extends Controller
         ]);
     }
 
+    public function getAvailableTankBlock(Request $request)
+    {
+        $blockSize = 100;
+
+        $globalMin = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
+        $globalMax = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+
+        if ($globalMin < 1) {
+            $globalMin = 1;
+        }
+
+        if ($globalMax < $globalMin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Rentang global nomor tank tidak valid.',
+            ], 422);
+        }
+
+        // Ambil semua nomor tank yang sudah dipakai.
+        $usedSet = Ikan::whereNotNull('nomor_tank')
+            ->pluck('nomor_tank')
+            ->map(function ($n) {
+                return (int) $n;
+            })
+            ->filter(function ($n) use ($globalMin, $globalMax) {
+                return $n >= $globalMin && $n <= $globalMax;
+            })
+            ->flip()
+            ->toArray();
+
+        // Mulai dari blok 1–100, 101–200, 201–300, dst.
+        // Kalau globalMin bukan 1, blok tetap mengikuti pola 1–100 tapi dicek hanya yang masuk batas global.
+        $firstBlockStart = floor(($globalMin - 1) / $blockSize) * $blockSize + 1;
+
+        $checkedBlocks = [];
+
+        for ($blockStart = $firstBlockStart; $blockStart <= $globalMax; $blockStart += $blockSize) {
+            $blockEnd = $blockStart + $blockSize - 1;
+
+            $from = max($blockStart, $globalMin);
+            $to   = min($blockEnd, $globalMax);
+
+            if ($from > $to) {
+                continue;
+            }
+
+            $availableNumbers = [];
+            $usedCount = 0;
+
+            for ($n = $from; $n <= $to; $n++) {
+                if (isset($usedSet[$n])) {
+                    $usedCount++;
+                } else {
+                    $availableNumbers[] = $n;
+                }
+            }
+
+            $checkedBlocks[] = [
+                'range' => $blockStart . '-' . $blockEnd,
+                'checked_from' => $from,
+                'checked_to' => $to,
+                'used_count' => $usedCount,
+                'available_count' => count($availableNumbers),
+            ];
+
+            // Jika blok ini masih punya nomor kosong, langsung return.
+            // Jadi 101–200 hanya dicek kalau 1–100 sudah penuh.
+            if (count($availableNumbers) > 0) {
+                return response()->json([
+                    'success' => true,
+                    'range_label' => $blockStart . '-' . $blockEnd,
+                    'checked_from' => $from,
+                    'checked_to' => $to,
+                    'global_min' => $globalMin,
+                    'global_max' => $globalMax,
+                    'used_count' => $usedCount,
+                    'available_count' => count($availableNumbers),
+                    'available_numbers' => $availableNumbers,
+                    'checked_blocks' => $checkedBlocks,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'range_label' => null,
+            'checked_from' => null,
+            'checked_to' => null,
+            'global_min' => $globalMin,
+            'global_max' => $globalMax,
+            'used_count' => count($usedSet),
+            'available_count' => 0,
+            'available_numbers' => [],
+            'checked_blocks' => $checkedBlocks,
+            'message' => 'Semua nomor tank dalam batas global sudah terisi.',
+        ]);
+    }
+
     public function editKategoriKelas(Request $request)
     {
         $request->validate([

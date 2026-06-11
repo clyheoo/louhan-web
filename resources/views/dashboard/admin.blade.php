@@ -836,6 +836,113 @@
     @keyframes spin{
         to{transform:rotate(360deg);}
     }
+    /* ═══════════ AVAILABLE TANK UI ═══════════ */
+    #availableTankInfo{
+        margin-top:10px;
+    }
+
+    .available-tank-box{
+        border-radius:14px;
+        background:linear-gradient(180deg, rgba(6,182,212,.13), rgba(6,182,212,.07));
+        border:1px solid rgba(34,211,238,.28);
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+        overflow:hidden;
+    }
+
+    .available-tank-head{
+        padding:11px 13px;
+        border-bottom:1px solid rgba(34,211,238,.18);
+    }
+
+    .available-tank-title{
+        color:#6EE7B7;
+        font-size:11.5px;
+        font-weight:900;
+        display:flex;
+        align-items:center;
+        gap:6px;
+        margin-bottom:4px;
+    }
+
+    .available-tank-desc{
+        color:var(--text-mid);
+        font-size:10.5px;
+        font-weight:650;
+        line-height:1.5;
+    }
+
+    .available-tank-scroll{
+        max-height:168px;
+        overflow-y:auto;
+        overflow-x:hidden;
+        padding:12px 10px 12px 12px;
+        overscroll-behavior:contain;
+        scrollbar-width:thin;
+        scrollbar-color:rgba(34,211,238,.65) rgba(15,23,42,.8);
+    }
+
+    .available-tank-scroll::-webkit-scrollbar{
+        width:8px;
+    }
+
+    .available-tank-scroll::-webkit-scrollbar-track{
+        background:rgba(15,23,42,.75);
+        border-radius:999px;
+        margin:8px 0;
+    }
+
+    .available-tank-scroll::-webkit-scrollbar-thumb{
+        background:linear-gradient(180deg, rgba(34,211,238,.85), rgba(37,99,235,.75));
+        border-radius:999px;
+        border:2px solid rgba(15,23,42,.95);
+    }
+
+    .available-tank-scroll::-webkit-scrollbar-thumb:hover{
+        background:linear-gradient(180deg, rgba(103,232,249,.95), rgba(59,130,246,.9));
+    }
+
+    .available-tank-grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fill, minmax(52px, 1fr));
+        gap:8px;
+    }
+
+    .available-tank-num{
+        height:34px;
+        border-radius:10px;
+        border:1px solid rgba(34,211,238,.32);
+        background:rgba(6,182,212,.12);
+        color:#A5F3FC;
+        font-family:inherit;
+        font-size:12px;
+        font-weight:900;
+        cursor:pointer;
+        transition:all .18s ease;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+    }
+
+    .available-tank-num:hover{
+        transform:translateY(-1px);
+        background:rgba(34,211,238,.24);
+        border-color:rgba(103,232,249,.65);
+        color:#FFFFFF;
+        box-shadow:0 8px 18px -10px rgba(34,211,238,.65), inset 0 1px 0 rgba(255,255,255,.10);
+    }
+
+    .available-tank-num:active{
+        transform:translateY(0);
+    }
+
+    .available-tank-error{
+        padding:11px 13px;
+        border-radius:12px;
+        background:rgba(239,68,68,.10);
+        border:1px solid rgba(239,68,68,.35);
+        color:#FCA5A5;
+        font-size:11px;
+        font-weight:800;
+        line-height:1.5;
+    }
     </style>
 </head>
 
@@ -1962,6 +2069,18 @@
                     Jika ikan belum punya nomor tank, boleh dikosongkan.
                 </div>
             </div>
+
+            <div style="margin-top:10px;">
+                <button
+                    type="button"
+                    onclick="loadAvailableTankBlock()"
+                    style="padding:8px 12px;border-radius:10px;border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.12);color:#67E8F9;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer;"
+                >
+                    <i class="fas fa-magnifying-glass"></i> Cek Nomor Kosong
+                </button>
+            </div>
+
+            <div id="availableTankInfo" style="display:none;margin-top:10px;"></div>
 
             <div class="form-group">
                 <label class="form-label">Nama Peserta</label>

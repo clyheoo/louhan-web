@@ -1665,6 +1665,12 @@ function openEditKatKelas(idx){
     }
 
     openModal('modalEditKatKelas');
+
+    var availableBox = document.getElementById('availableTankInfo');
+    if(availableBox){
+        availableBox.style.display = 'none';
+        availableBox.innerHTML = '';
+    }
 }
 
 function onEditKKJenisChange(){
@@ -1690,6 +1696,106 @@ function onEditKKKatChange(){
         kelasWrap.style.display='none';
     } else {
         kelasWrap.style.display='';
+    }
+}
+
+function loadAvailableTankBlock(){
+    var box = document.getElementById('availableTankInfo');
+
+    if(!box){
+        return;
+    }
+
+    box.style.display = 'block';
+    box.innerHTML =
+        '<div style="padding:10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);color:#94A3B8;font-size:11px;font-weight:700;">' +
+            '<i class="fas fa-spinner fa-spin"></i> Mengecek nomor kosong...' +
+        '</div>';
+
+    fetch('/api/admin/available-tank-block?_t=' + Date.now(), {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(function(r){
+        return r.json();
+    })
+    .then(function(d){
+        if(!d.success){
+            box.innerHTML =
+                '<div style="padding:10px;border-radius:10px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.35);color:#FCA5A5;font-size:11px;font-weight:700;">' +
+                    esc(d.message || 'Gagal mengecek nomor kosong.') +
+                '</div>';
+            return;
+        }
+
+        if(!d.available_numbers || d.available_numbers.length === 0){
+        box.innerHTML =
+            '<div class="available-tank-error">' +
+                esc(d.message || 'Semua nomor tank sudah terisi.') +
+            '</div>';
+            return;
+        }
+
+        var html = '';
+
+        html +=
+            '<div style="padding:10px;border-radius:10px;background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.30);margin-bottom:8px;">' +
+                '<div style="color:#6EE7B7;font-size:11px;font-weight:900;margin-bottom:4px;">' +
+                    '<i class="fas fa-circle-check"></i> Nomor kosong ditemukan di rentang ' + esc(d.range_label) +
+                '</div>' +
+                '<div style="color:#94A3B8;font-size:10.5px;font-weight:600;line-height:1.5;">' +
+                    'Kosong: <b style="color:#fff;">' + d.available_count + '</b> nomor. ' +
+                    'Klik salah satu nomor untuk mengisi field Nomor Tank.' +
+                '</div>' +
+            '</div>';
+
+        html += '<div class="available-tank-box">';
+
+        html +=
+            '<div class="available-tank-head">' +
+                '<div class="available-tank-title">' +
+                    '<i class="fas fa-circle-check"></i> Nomor kosong ditemukan di rentang ' + esc(d.range_label) +
+                '</div>' +
+                '<div class="available-tank-desc">' +
+                    'Kosong: <b style="color:#fff;">' + d.available_count + '</b> nomor. ' +
+                    'Klik salah satu nomor untuk mengisi field Nomor Tank.' +
+                '</div>' +
+            '</div>';
+
+        html += '<div class="available-tank-scroll">';
+        html += '<div class="available-tank-grid">';
+
+        for(var i = 0; i < d.available_numbers.length; i++){
+            var n = d.available_numbers[i];
+
+            html +=
+                '<button type="button" class="available-tank-num" onclick="setEditTankNumber(' + n + ')">' +
+                    n +
+                '</button>';
+        }
+
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+
+        box.innerHTML = html;
+    })
+    .catch(function(){
+    box.innerHTML =
+        '<div class="available-tank-error">' +
+            esc(d.message || 'Gagal mengecek nomor kosong.') +
+        '</div>';
+    });
+}
+
+function setEditTankNumber(n){
+    var input = document.getElementById('editKKTankInput');
+
+    if(input){
+        input.value = n;
+        input.focus();
     }
 }
 
