@@ -2230,7 +2230,9 @@
                                         <span class="title-icon"><i class="fas fa-star"></i></span>
                                         Pendaftaran MVP
                                     </h2>
-                                    <p class="card-subtitle">Pilih maksimal {{ $maxMvp }} ikan terbaik Anda untuk MVP. Pilihan MVP tidak harus dari Team Champion.</p>
+                                    <p class="card-subtitle" id="mvpLimitText">
+                                        Pilih maksimal {{ $maxMvp }} ikan terbaik Anda untuk MVP. Pilihan MVP tidak harus dari Team Champion.
+                                    </p>
                                 </div>
                                 <div class="mvp-badge" id="mvpCountBadge">{{ $mvpCount }}/{{ $maxMvp }} MVP</div>
                             </div>
@@ -3294,6 +3296,20 @@
             }
         }
 
+        function updateRegistrationLimitTexts() {
+            var mvpText = document.getElementById('mvpLimitText');
+            if (mvpText) {
+                mvpText.textContent =
+                    'Pilih maksimal ' + maxMvp + ' ikan terbaik Anda untuk MVP. Pilihan MVP tidak harus dari Team Champion.';
+            }
+
+            var teamText = document.getElementById('teamChampionLimitText');
+            if (teamText) {
+                teamText.textContent =
+                    'Pilih maksimal ' + maxTeamChampion + ' ikan untuk Team Champion. Pilihan ini terpisah dari MVP.';
+            }
+        }
+
         function pollIkans() {
             if (auth401Count >= MAX_401_RETRY) return;
 
@@ -3330,8 +3346,10 @@
                 const teamChampionOpen = !!response.team_champion_open;
                 const teamChampionSubmitted = !!response.team_champion_submitted;
 
-                if (response.max_mvp) maxMvp = response.max_mvp;
-                if (response.max_team_champion) maxTeamChampion = response.max_team_champion;
+                if (response.max_mvp) maxMvp = parseInt(response.max_mvp, 10) || maxMvp;
+                if (response.max_team_champion) maxTeamChampion = parseInt(response.max_team_champion, 10) || maxTeamChampion;
+
+                updateRegistrationLimitTexts();
 
                 isMvpOpen = mvpOpen;
                 currentMvpSubmitted = mvpSubmitted;

@@ -1380,7 +1380,7 @@
                             <input type="number" id="mvpMaxInput" min="1" max="9999" value="15"
                                    style="width:110px;padding:9px 10px;border-radius:9px;border:1px solid var(--bd-2);background:rgba(0,0,0,.28);color:var(--text-hi);font-family:inherit;font-weight:800;outline:none;">
 
-                            <button type="button" class="btn-primary" onclick="saveMvpRegistrationMax()" style="padding:9px 13px;font-size:11px;">
+                            <button type="button" class="btn-primary" id="btnSaveMvpMax" onclick="saveMvpRegistrationMax()" style="padding:9px 13px;font-size:11px;">
                                 <i class="fas fa-floppy-disk"></i> Simpan Batas
                             </button>
                         </div>
@@ -1464,7 +1464,7 @@
                             <input type="number" id="teamChampionMaxInput" min="1" max="9999" value="35"
                                    style="width:110px;padding:9px 10px;border-radius:9px;border:1px solid var(--bd-2);background:rgba(0,0,0,.28);color:var(--text-hi);font-family:inherit;font-weight:800;outline:none;">
 
-                            <button type="button" class="btn-primary" onclick="saveTeamChampionRegistrationMax()" style="padding:9px 13px;font-size:11px;">
+                            <button type="button" class="btn-primary" id="btnSaveTeamChampionMax" onclick="saveTeamChampionRegistrationMax()" style="padding:9px 13px;font-size:11px;">
                                 <i class="fas fa-floppy-disk"></i> Simpan Batas
                             </button>
                         </div>

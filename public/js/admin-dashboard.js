@@ -3658,12 +3658,21 @@ function loadMvpStatus() {
 
 function saveMvpRegistrationMax() {
     var input = document.getElementById('mvpMaxInput');
+    var btn = document.getElementById('btnSaveMvpMax');
     var limit = input ? parseInt(input.value, 10) : 0;
 
     if (!limit || limit < 1) {
         popupError('Batas Tidak Valid', 'Batas MVP minimal 1 ikan per user.');
         return;
     }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.dataset.oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    }
+
+    if (input) input.disabled = true;
 
     var fd = new FormData();
     fd.append('_token', getCsrf());
@@ -3687,11 +3696,24 @@ function saveMvpRegistrationMax() {
         if (!d.success) throw d;
 
         if (input) input.value = d.max_mvp || limit;
-        popupSuccess('Batas MVP Disimpan', d.message || 'Batas MVP berhasil diperbarui.');
+
+        popupSuccess(
+            'Batas MVP Disimpan',
+            d.message || 'Batas MVP berhasil diperbarui.'
+        );
+
         loadMvpStatus();
     })
     .catch(function(e){
         popupError('Gagal', e.message || 'Gagal menyimpan batas MVP.');
+    })
+    .finally(function(){
+        if (input) input.disabled = false;
+
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = btn.dataset.oldHtml || '<i class="fas fa-floppy-disk"></i> Simpan Batas';
+        }
     });
 }
 
@@ -3812,12 +3834,21 @@ function toggleTeamChampionRegistration() {
 
 function saveTeamChampionRegistrationMax() {
     var input = document.getElementById('teamChampionMaxInput');
+    var btn = document.getElementById('btnSaveTeamChampionMax');
     var limit = input ? parseInt(input.value, 10) : 0;
 
     if (!limit || limit < 1) {
         popupError('Batas Tidak Valid', 'Batas Team Champion minimal 1 ikan per user.');
         return;
     }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.dataset.oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    }
+
+    if (input) input.disabled = true;
 
     var fd = new FormData();
     fd.append('_token', getCsrf());
@@ -3841,11 +3872,24 @@ function saveTeamChampionRegistrationMax() {
         if (!d.success) throw d;
 
         if (input) input.value = d.max_team_champion || limit;
-        popupSuccess('Batas Team Champion Disimpan', d.message || 'Batas Team Champion berhasil diperbarui.');
+
+        popupSuccess(
+            'Batas Team Champion Disimpan',
+            d.message || 'Batas Team Champion berhasil diperbarui.'
+        );
+
         loadTeamChampionStatus();
     })
     .catch(function(e){
         popupError('Gagal', e.message || 'Gagal menyimpan batas Team Champion.');
+    })
+    .finally(function(){
+        if (input) input.disabled = false;
+
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = btn.dataset.oldHtml || '<i class="fas fa-floppy-disk"></i> Simpan Batas';
+        }
     });
 }
 
