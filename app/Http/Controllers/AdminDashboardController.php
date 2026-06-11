@@ -244,7 +244,23 @@ class AdminDashboardController extends Controller
         $maxGlobal = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
         $maxTankTotal = $maxGlobal - $minGlobal + 1;
 
-        $totalPesertaUnik = Peserta::whereHas('ikans')->count();
+        $pesertaGroups = Ikan::select('nama_peserta', 'jenis_keanggotaan', 'detail_anggota', 'nomor_tank')
+            ->get()
+            ->groupBy(function ($ikan) {
+                $nama   = trim($ikan->nama_peserta ?: 'Unknown');
+                $jenis  = trim($ikan->jenis_keanggotaan ?: '-');
+                $detail = trim($ikan->detail_anggota ?: '-');
+
+                return mb_strtolower($nama) . '|' . mb_strtolower($jenis) . '|' . mb_strtolower($detail);
+            });
+
+        $totalPesertaUnik = $pesertaGroups->count();
+
+        $pesertaBelumTank = $pesertaGroups->filter(function ($items) {
+            return $items->whereNull('nomor_tank')->count() > 0;
+        })->count();
+
+        $pesertaSudahTank = max(0, $totalPesertaUnik - $pesertaBelumTank);
 
         $sisaTank = max(0, $maxTankTotal - $totalIkan);
 
@@ -256,6 +272,7 @@ class AdminDashboardController extends Controller
             'juri_aktif'     => $juriAktif,
             'rata_rata'      => $avgScore,
             'total_peserta_unik' => $totalPesertaUnik,
+            'peserta_sudah_tank' => $pesertaSudahTank,
             'peserta_belum_tank' => $pesertaBelumTank,
             'ikan_belum_tank'    => $totalIkanBelumTank,
             'total_ikan_semua'   => $totalIkanSemua,
@@ -658,35 +675,58 @@ class AdminDashboardController extends Controller
                 return response()->json(['title' => 'Total Ikan Terdaftar', 'columns' => ['#', 'PESERTA', 'TANK', 'KATEGORI', 'KELAS'], 'rows' => $rows]);
 
             case 'total_peserta':
-                $rows = Peserta::whereHas('ikans')
-                    ->withCount([
-                        'ikans as total_ikan',
-                        'ikans as ikan_sudah_tank_count' => function ($q) {
-                            $q->whereNotNull('nomor_tank');
-                        },
-                        'ikans as ikan_belum_tank_count' => function ($q) {
-                            $q->whereNull('nomor_tank');
-                        },
-                    ])
-                    ->orderByDesc('total_ikan')
+                $groups = Ikan::select('nama_peserta', 'jenis_keanggotaan', 'detail_anggota', 'nomor_tank')
                     ->get()
-                    ->map(function ($p, $idx) {
-                        $ket = ((int) $p->ikan_belum_tank_count > 0)
+                    ->groupBy(function ($ikan) {
+                        $nama   = trim($ikan->nama_peserta ?: 'Unknown');
+                        $jenis  = trim($ikan->jenis_keanggotaan ?: '-');
+                        $detail = trim($ikan->detail_anggota ?: '-');
+
+                        return mb_strtolower($nama) . '|' . mb_strtolower($jenis) . '|' . mb_strtolower($detail);
+                    });
+
+                $rows = $groups->map(function ($items) {
+                        $first = $items->first();
+
+                        $totalIkan = $items->count();
+                        $belumTank = $items->whereNull('nomor_tank')->count();
+                        $sudahTank = max(0, $totalIkan - $belumTank);
+
+                        $keterangan = $belumTank > 0
                             ? 'belum mengacak nomor tank'
                             : 'sudah mengacak nomor tank';
 
                         return [
-                            $idx + 1,
-                            $p->nama_peserta ?? 'Unknown',
-                            (int) $p->total_ikan,
-                            (int) $p->ikan_belum_tank_count,
-                            $ket,
+                            'nama_peserta'      => $first->nama_peserta ?: 'Unknown',
+                            'jenis_keanggotaan' => $first->jenis_keanggotaan ?: '-',
+                            'detail_anggota'    => $first->detail_anggota ?: '-',
+                            'total_ikan'        => $totalIkan,
+                            'sudah_tank'        => $sudahTank,
+                            'belum_tank'        => $belumTank,
+                            'keterangan'        => $keterangan,
                         ];
-                    })->toArray();
+                    })
+                    ->sortBy(function ($row) {
+                        return mb_strtolower($row['nama_peserta']);
+                    })
+                    ->values()
+                    ->map(function ($row, $idx) {
+                        return [
+                            $idx + 1,
+                            $row['nama_peserta'],
+                            $row['jenis_keanggotaan'],
+                            $row['detail_anggota'],
+                            $row['total_ikan'],
+                            $row['sudah_tank'],
+                            $row['belum_tank'],
+                            $row['keterangan'],
+                        ];
+                    })
+                    ->toArray();
 
                 return response()->json([
                     'title'   => 'Total Peserta',
-                    'columns' => ['#', 'PESERTA', 'JUMLAH IKAN', 'BELUM TANK', 'KETERANGAN'],
+                    'columns' => ['#', 'NAMA PESERTA', 'JENIS', 'DETAIL', 'JUMLAH IKAN', 'SUDAH TANK', 'BELUM TANK', 'KETERANGAN'],
                     'rows'    => $rows,
                 ]);
 

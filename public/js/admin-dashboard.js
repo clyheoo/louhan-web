@@ -1365,8 +1365,8 @@ function loadDashboard(){
 
         var pesertaBelumTankEl = document.getElementById('sPesertaBelumTank');
         if(pesertaBelumTankEl){
+            var sudahTank = parseInt(d.peserta_sudah_tank || 0, 10);
             var belumTank = parseInt(d.peserta_belum_tank || 0, 10);
-            var sudahTank = Math.max(0, totalPesertaUnik - belumTank);
 
             if(totalPesertaUnik <= 0){
                 pesertaBelumTankEl.innerHTML =
@@ -2550,7 +2550,7 @@ function openStatPopup(type, title){
         document.getElementById('statDetailCount').innerHTML='Menampilkan <b style="color:'+(statTypeColors[type]||'var(--primary)')+';">'+d.rows.length+'</b> data';
         var numCols={};
         d.columns.forEach(function(c,i){
-            if(['JURI','TOTAL NILAI','JUMLAH IKAN','PESERTA DINILAI','BELUM TANK'].indexOf(c)!==-1)numCols[i]=true;
+            if(['JURI','TOTAL NILAI','JUMLAH IKAN','PESERTA DINILAI','SUDAH TANK','BELUM TANK'].indexOf(c)!==-1)numCols[i]=true;
         });
         var valColor={};
         if(type==='sudah_dinilai')valColor={5:'success'};
@@ -2575,10 +2575,12 @@ function openStatPopup(type, title){
                     } else if(type==='juri_aktif'&&ci===2){
                         var roleColors={Juri:'blue',GrandJuri:'purple',Admin:'blue'};
                         h+='<td><span class="sd-badge '+(roleColors[cell]||'blue')+'">'+esc(String(cell))+'</span></td>';
-                    } else if(type === 'total_peserta' && ci === 3){
+                    } else if(type === 'total_peserta' && ci === 5){
+                        h+='<td class="td-val" style="color:#6EE7B7;">'+esc(String(cell))+'</td>';
+                    } else if(type === 'total_peserta' && ci === 6){
                         var belumNum = parseInt(cell || 0, 10);
                         h+='<td class="td-val" style="color:'+(belumNum > 0 ? 'var(--gold-300)' : '#6EE7B7')+';">'+esc(String(cell))+'</td>';
-                    } else if(type === 'total_peserta' && ci === 4){
+                    } else if(type === 'total_peserta' && ci === 7){
                         var isBelum = String(cell).toLowerCase().indexOf('belum') !== -1;
                         h+='<td><span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:900;color:'+(isBelum ? 'var(--gold-300)' : '#6EE7B7')+';">' +
                             '<i class="fas '+(isBelum ? 'fa-circle-exclamation' : 'fa-circle-check')+'"></i> ' + esc(String(cell)) +
