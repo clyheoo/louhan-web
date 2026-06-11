@@ -2392,6 +2392,17 @@
                                 <option value="Bonsai">Bonsai</option>
                                 <option value="Jumbo">Jumbo</option>
                             </select>
+
+                            <select class="fish-filter" id="fishFilterKelas" aria-label="Filter kelas">
+                                <option value="">Semua Kelas</option>
+                                <option value="A">Kelas A</option>
+                                <option value="B">Kelas B</option>
+                                <option value="C">Kelas C</option>
+                                <option value="D">Kelas D</option>
+                                <option value="E">Kelas E</option>
+                                <option value="__no_kelas">Tanpa Kelas</option>
+                            </select>
+
                             <select class="fish-filter" id="fishFilterStatus" aria-label="Filter status">
                                 <option value="">Semua Status</option>
                                 <option value="diundi">Sudah Diundi</option>
@@ -3495,7 +3506,10 @@
                 }
 
                 // Re-apply filter setelah polling update
-                applyFishFilter();
+                // Re-apply filter setelah polling update
+                if (typeof applyFishFilter === 'function') {
+                    applyFishFilter();
+                }
             })
             .catch(function(err) {
                 console.error('Polling error:', err);
@@ -3735,29 +3749,58 @@
         function applyFishFilter() {
             var q = (document.getElementById('fishSearchInput') || {}).value || '';
             var katFilter = (document.getElementById('fishFilterKategori') || {}).value || '';
+            var kelasFilter = (document.getElementById('fishFilterKelas') || {}).value || '';
             var stsFilter = (document.getElementById('fishFilterStatus') || {}).value || '';
+
             q = q.toLowerCase().trim();
 
             document.querySelectorAll('.ikan-item').forEach(function(el) {
                 var h4 = el.querySelector('.ikan-item-info h4');
                 var pEl = el.querySelector('.ikan-item-info p');
                 var tank = el.querySelector('.tank-num');
-                var text = (h4 ? h4.textContent : '').toLowerCase() + ' ' + (pEl ? pEl.textContent : '').toLowerCase();
-                var matchSearch = !q || text.indexOf(q) !== -1;
-                var matchKat = !katFilter || (pEl && pEl.textContent.toLowerCase().indexOf(katFilter.toLowerCase()) !== -1);
-                var isDiundi = tank && !tank.classList.contains('empty');
-                var matchSts = !stsFilter || (stsFilter === 'diundi' && isDiundi) || (stsFilter === 'belum' && !isDiundi);
 
-                el.style.display = (matchSearch && matchKat && matchSts) ? '' : 'none';
+                var titleText = h4 ? h4.textContent : '';
+                var infoText = pEl ? pEl.textContent : '';
+                var fullText = (titleText + ' ' + infoText).toLowerCase();
+
+                var infoLower = infoText.toLowerCase();
+
+                var matchSearch = !q || fullText.indexOf(q) !== -1;
+
+                var matchKat = !katFilter ||
+                    infoLower.indexOf(katFilter.toLowerCase()) !== -1;
+
+                var kelasValue = '__no_kelas';
+                var kelasMatch = infoText.match(/kelas\s*([A-E])/i);
+
+                if (kelasMatch && kelasMatch[1]) {
+                    kelasValue = kelasMatch[1].toUpperCase();
+                }
+
+                var matchKelas = !kelasFilter ||
+                    (kelasFilter === '__no_kelas'
+                        ? kelasValue === '__no_kelas'
+                        : kelasValue === kelasFilter);
+
+                var isDiundi = tank && !tank.classList.contains('empty');
+
+                var matchSts = !stsFilter ||
+                    (stsFilter === 'diundi' && isDiundi) ||
+                    (stsFilter === 'belum' && !isDiundi);
+
+                el.style.display = (matchSearch && matchKat && matchKelas && matchSts) ? '' : 'none';
             });
         }
 
         (function initFishFilter(){
             var s = document.getElementById('fishSearchInput');
             var k = document.getElementById('fishFilterKategori');
+            var kl = document.getElementById('fishFilterKelas');
             var st = document.getElementById('fishFilterStatus');
+
             if (s) s.addEventListener('input', applyFishFilter);
             if (k) k.addEventListener('change', applyFishFilter);
+            if (kl) kl.addEventListener('change', applyFishFilter);
             if (st) st.addEventListener('change', applyFishFilter);
         })();
 
