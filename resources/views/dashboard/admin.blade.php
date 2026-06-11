@@ -1923,7 +1923,7 @@
         <div class="modal-head">
             <h3>
                 <i class="fas fa-user-pen" style="color:var(--gold-400);"></i>
-                Edit Peserta, Kategori & Kelas
+                Edit Peserta, Kategori, Kelas & Tank
             </h3>
             <button class="modal-close" onclick="closeModal('modalEditKatKelas')">
                 <i class="fas fa-xmark"></i>
@@ -1945,6 +1945,22 @@
             </div>
 
             <input type="hidden" id="editKKIdx">
+
+            <div class="form-group">
+                <label class="form-label">Nomor Tank</label>
+                <input
+                    type="number"
+                    id="editKKTankInput"
+                    class="form-control"
+                    placeholder="Contoh: 101"
+                    min="1"
+                    style="padding-left:14px;"
+                >
+                <div style="font-size:10.5px;color:var(--text-mid);margin-top:6px;line-height:1.5;">
+                    Nomor tank harus belum dipakai peserta lain dan harus masuk rentang kategori/kelas yang tersedia.
+                    Jika ikan belum punya nomor tank, boleh dikosongkan.
+                </div>
+            </div>
 
             <div class="form-group">
                 <label class="form-label">Nama Peserta</label>

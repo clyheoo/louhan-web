@@ -164,6 +164,127 @@ class AdminDashboardController extends Controller
         return $emptyValue;
     }
 
+    private function getManualTankAllowedRanges($kategori, $kelas)
+    {
+        $globalMin = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
+        $globalMax = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+
+        $classRanges = json_decode(
+            \DB::table('settings')->where('key', 'tank_class_ranges')->value('value'),
+            true
+        );
+
+        if (!is_array($classRanges)) {
+            $classRanges = [];
+        }
+
+        $myMin = $globalMin;
+        $myMax = $globalMax;
+        $hasSubRange = false;
+
+        if ($kelas && isset($classRanges[$kelas]['kategori'][$kategori])) {
+            $myMin = (int) ($classRanges[$kelas]['kategori'][$kategori]['min'] ?? $globalMin);
+            $myMax = (int) ($classRanges[$kelas]['kategori'][$kategori]['max'] ?? $globalMax);
+            $hasSubRange = true;
+        }
+
+        if (
+            !$hasSubRange &&
+            in_array($kategori, ['Bonsai', 'Jumbo'], true) &&
+            isset($classRanges[$kategori]['kategori'][$kategori])
+        ) {
+            $myMin = (int) ($classRanges[$kategori]['kategori'][$kategori]['min'] ?? $globalMin);
+            $myMax = (int) ($classRanges[$kategori]['kategori'][$kategori]['max'] ?? $globalMax);
+            $hasSubRange = true;
+        }
+
+        if ($myMin > $myMax) {
+            throw new \Exception('Rentang nomor tank tidak valid.');
+        }
+
+        $excludedRanges = [];
+        $myLookupKey = $kelas ?: $kategori;
+
+        foreach ($classRanges as $otherKelas => $otherData) {
+            if (!isset($otherData['kategori']) || !is_array($otherData['kategori'])) {
+                continue;
+            }
+
+            foreach ($otherData['kategori'] as $otherKat => $otherRange) {
+                if ($otherKelas === $myLookupKey && $otherKat === $kategori) {
+                    continue;
+                }
+
+                $oMin = (int) ($otherRange['min'] ?? 0);
+                $oMax = (int) ($otherRange['max'] ?? 0);
+
+                // Sama seperti logika acak nomor:
+                // range kategori lain yang ketat di dalam range ini tidak boleh dipakai.
+                if ($oMin > $myMin && $oMax < $myMax) {
+                    $excludedRanges[] = [
+                        'min' => $oMin,
+                        'max' => $oMax,
+                    ];
+                }
+            }
+        }
+
+        usort($excludedRanges, function ($a, $b) {
+            return $a['min'] <=> $b['min'];
+        });
+
+        $availableRanges = [];
+        $cursor = $myMin;
+
+        foreach ($excludedRanges as $ex) {
+            if ($ex['min'] > $cursor) {
+                $availableRanges[] = [
+                    'min' => $cursor,
+                    'max' => $ex['min'] - 1,
+                ];
+            }
+
+            $cursor = $ex['max'] + 1;
+        }
+
+        if ($cursor <= $myMax) {
+            $availableRanges[] = [
+                'min' => $cursor,
+                'max' => $myMax,
+            ];
+        }
+
+        if (empty($availableRanges)) {
+            throw new \Exception('Tidak ada rentang nomor tank tersedia untuk kategori ini.');
+        }
+
+        $label = $hasSubRange
+            ? ($kelas ? "Kategori {$kategori} Kelas {$kelas}" : "Kategori {$kategori} Tanpa Kelas")
+            : "Rentang Global {$myMin}-{$myMax}";
+
+        return [$availableRanges, $label];
+    }
+
+    private function tankNumberInsideRanges($number, array $ranges)
+    {
+        foreach ($ranges as $range) {
+            if ($number >= (int) $range['min'] && $number <= (int) $range['max']) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function formatTankRanges(array $ranges)
+    {
+        return collect($ranges)
+            ->map(function ($range) {
+                return $range['min'] . '-' . $range['max'];
+            })
+            ->implode(', ');
+    }
+
     public function getDashboardStats()
     {
         $totalIkan = Ikan::whereNotNull('nomor_tank')->count();
@@ -325,11 +446,8 @@ class AdminDashboardController extends Controller
 
     public function getScoringData(Request $request)
     {
-        $query = Ikan::where(function($q) {
-            $q->whereNotNull('nomor_tank')
-            ->orWhereHas('scorings');
-        })
-            /* ★ FIX: Hapus ->latest()->limit(1), load SEMUA scorings */
+    $query = Ikan::query()
+        /* ★ Load SEMUA ikan, termasuk yang belum punya nomor tank */
         ->with(['peserta', 'scorings' => function ($q) {
             $q->orderBy('created_at', 'desc');
         }, 'scorings.juri', 'scorings.grandJuri', 'bonusPoints']);
@@ -351,7 +469,12 @@ class AdminDashboardController extends Controller
         }
 
         $totalJuriAll = \App\Models\User::where('role', 'juri')->count();
-        $data = $query->orderBy('nomor_tank')->get()->map(function ($ikan) use ($totalJuriAll) {
+        $data = $query
+            ->orderByRaw('CASE WHEN nomor_tank IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('nomor_tank')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($ikan) use ($totalJuriAll) {
             $peserta = $ikan->peserta;
             $scorings = $ikan->scorings;
             $latestScoring = $scorings->first();
@@ -3057,6 +3180,7 @@ class AdminDashboardController extends Controller
             'detail_anggota'    => 'required|string|max:255',
             'kategori'          => 'required|string|max:255',
             'kelas'             => 'nullable|string|max:10',
+            'nomor_tank'        => 'nullable|integer|min:1',
         ]);
 
         $ikan = Ikan::with('peserta')->find($request->ikan_id);
@@ -3069,33 +3193,82 @@ class AdminDashboardController extends Controller
         }
 
         $noKelasKategori = ['Bonsai', 'Jumbo'];
-        $kelas = in_array($request->kategori, $noKelasKategori) ? null : $request->kelas;
+        $kelas = in_array($request->kategori, $noKelasKategori, true) ? null : $request->kelas;
 
-        if (!in_array($request->kategori, $noKelasKategori) && !$kelas) {
+        if (!in_array($request->kategori, $noKelasKategori, true) && !$kelas) {
             return response()->json([
                 'success' => false,
                 'message' => 'Kelas wajib dipilih untuk kategori ini.',
             ], 422);
         }
 
-        \DB::transaction(function () use ($request, $ikan, $kelas) {
-            // PENTING:
-            // Hanya update ikan / nomor tank yang sedang diedit.
-            // Jangan update tabel pesertas, users, atau semua ikan dalam peserta yang sama.
-            $ikan->update([
-                'nama_peserta'      => $request->nama_peserta,
-                'jenis_keanggotaan' => $request->jenis_keanggotaan,
-                'detail_anggota'    => $request->detail_anggota,
-                'kategori'          => $request->kategori,
-                'kelas'             => $kelas,
-                'diubah_oleh'       => auth()->id(),
-            ]);
+        // Jika field nomor tank kosong, nomor lama dipertahankan.
+        // Untuk ikan yang memang belum punya tank, hasilnya tetap null.
+        $nomorTank = $request->filled('nomor_tank')
+            ? (int) $request->nomor_tank
+            : $ikan->nomor_tank;
 
-            // Kelas scoring hanya untuk ikan ini saja.
-            Scoring::where('ikan_id', $ikan->id)->update([
-                'kelas' => $kelas,
-            ]);
-        });
+        if ($nomorTank !== null) {
+            $nomorTank = (int) $nomorTank;
+        }
+
+        try {
+            \DB::transaction(function () use ($request, $ikan, $kelas, $nomorTank) {
+                if ($nomorTank !== null) {
+                    [$availableRanges, $rangeLabel] = $this->getManualTankAllowedRanges(
+                        $request->kategori,
+                        $kelas
+                    );
+
+                    if (!$this->tankNumberInsideRanges($nomorTank, $availableRanges)) {
+                        throw new \Exception(
+                            'Nomor tank ' . $nomorTank .
+                            ' tidak masuk rentang yang tersedia untuk ' . $rangeLabel .
+                            '. Rentang tersedia: ' . $this->formatTankRanges($availableRanges) . '.'
+                        );
+                    }
+
+                    // Lock nomor tank yang sudah dipakai agar tidak dobel saat admin submit bersamaan.
+                    $usedSet = Ikan::whereNotNull('nomor_tank')
+                        ->where('id', '!=', $ikan->id)
+                        ->lockForUpdate()
+                        ->pluck('nomor_tank')
+                        ->map(function ($n) {
+                            return (int) $n;
+                        })
+                        ->flip()
+                        ->toArray();
+
+                    if (isset($usedSet[$nomorTank])) {
+                        throw new \Exception(
+                            'Nomor tank ' . $nomorTank . ' sudah dipakai peserta lain. Pilih nomor tank yang masih kosong.'
+                        );
+                    }
+                }
+
+                // Hanya update ikan yang sedang diedit.
+                // Tidak update semua ikan milik peserta yang sama.
+                $ikan->update([
+                    'nama_peserta'      => $request->nama_peserta,
+                    'jenis_keanggotaan' => $request->jenis_keanggotaan,
+                    'detail_anggota'    => $request->detail_anggota,
+                    'kategori'          => $request->kategori,
+                    'kelas'             => $kelas,
+                    'nomor_tank'        => $nomorTank,
+                    'diubah_oleh'       => auth()->id(),
+                ]);
+
+                // Kelas scoring hanya untuk ikan ini saja.
+                Scoring::where('ikan_id', $ikan->id)->update([
+                    'kelas' => $kelas,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
 
         if ($ikan->peserta && $ikan->peserta->user_id) {
             \Cache::forget('user_results_' . $ikan->peserta->user_id);
@@ -3110,6 +3283,7 @@ class AdminDashboardController extends Controller
                         return;
                     }
 
+                    try { $sync->syncSemuaPeserta(); } catch (\Throwable $e) { \Log::error('Async-sync SemuaPeserta edit ikan: ' . $e->getMessage()); }
                     try { $sync->syncCnt(); } catch (\Throwable $e) { \Log::error('Async-sync CNT edit ikan: ' . $e->getMessage()); }
                     try { $sync->syncHasilJuri(); } catch (\Throwable $e) { \Log::error('Async-sync HasilJuri edit ikan: ' . $e->getMessage()); }
                     try { $sync->syncNilaiJuri(); } catch (\Throwable $e) { \Log::error('Async-sync NilaiJuri edit ikan: ' . $e->getMessage()); }
@@ -3123,7 +3297,7 @@ class AdminDashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Data pada nomor tank ini berhasil diperbarui.',
+            'message' => 'Data peserta, kategori, kelas, dan nomor tank berhasil diperbarui.',
         ]);
     }
 }

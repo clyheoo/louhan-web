@@ -1600,7 +1600,10 @@ function renderTable(data){
             '<td><div style="display:flex;gap:4px;">'+
             '<button class="btn-xs blue" onclick="openDetail('+i+')" title="Lihat Detail"><i class="fas fa-eye"></i></button>'+
             '<button class="btn-xs gold" onclick="openEditKatKelas('+i+')" title="Edit Kategori & Kelas"><i class="fas fa-tags"></i></button>'+
-            (!p.is_locked?'<button class="btn-xs purple" onclick="openEditAdmin('+i+')" title="Edit Nilai"><i class="fas fa-pen-to-square"></i></button>':'<button class="btn-xs purple" style="opacity:.35;cursor:not-allowed;" disabled title="Nilai terkunci — buka kunci dari Point Ranking"><i class="fas fa-pen-to-square"></i></button>')+
+            (p.nomor_tank && !p.is_locked
+                ? '<button class="btn-xs purple" onclick="openEditAdmin('+i+')" title="Edit Nilai"><i class="fas fa-pen-to-square"></i></button>'
+                : '<button class="btn-xs purple" style="opacity:.35;cursor:not-allowed;" disabled title="'+(p.nomor_tank ? 'Nilai terkunci — buka kunci dari Point Ranking' : 'Isi nomor tank terlebih dahulu')+'"><i class="fas fa-pen-to-square"></i></button>'
+            )+
             '<button class="btn-xs red" onclick="deleteIkan('+p.id+',\''+esc(p.nama_peserta).replace(/'/g,"\\'")+'\')" title="Hapus Data"><i class="fas fa-trash-can"></i></button>'+
             '</div></td>';
       tb.appendChild(tr);
@@ -1625,6 +1628,11 @@ function openEditKatKelas(idx){
     document.getElementById('editKKJenis').value = jenis === 'team' ? 'team' : 'perorangan';
     document.getElementById('editKKDetail').value = detail;
     document.getElementById('editKKTank').textContent = 'Tank ' + (p.nomor_tank || '—');
+
+    var tankInput = document.getElementById('editKKTankInput');
+    if(tankInput){
+        tankInput.value = p.nomor_tank || '';
+    }
 
     onEditKKJenisChange();
 
@@ -1679,6 +1687,7 @@ function submitEditKatKelas(){
     var detail = (document.getElementById('editKKDetail').value || '').trim();
     var kat = document.getElementById('editKKKat').value;
     var kelas = document.getElementById('editKKKelas').value;
+    var nomorTank = (document.getElementById('editKKTankInput').value || '').trim();
 
     if(!nama){
         popupError('Nama Wajib', 'Nama peserta tidak boleh kosong.');
@@ -1709,6 +1718,14 @@ function submitEditKatKelas(){
         popupError('Kelas Wajib', 'Pilih kelas terlebih dahulu.');
         return;
     }
+    if(nomorTank !== ''){
+        var tankNum = parseInt(nomorTank, 10);
+
+        if(isNaN(tankNum) || tankNum < 1 || String(tankNum) !== nomorTank){
+            popupError('Nomor Tank Tidak Valid', 'Nomor tank harus berupa angka bulat lebih dari 0.');
+            return;
+        }
+    }
 
     var btn = document.getElementById('btnSaveKK');
     var orig = btn.innerHTML;
@@ -1724,6 +1741,7 @@ function submitEditKatKelas(){
     fd.append('detail_anggota', detail);
     fd.append('kategori', kat);
     fd.append('kelas', kelas);
+    fd.append('nomor_tank', nomorTank);
 
     fetch('/api/admin/edit-kategori-kelas', {
         method: 'POST',
