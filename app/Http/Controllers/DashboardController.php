@@ -48,7 +48,15 @@ class DashboardController extends Controller
         }
 
         return $emptyValue;
-}
+    }
+
+    private function getRegistrationLimit(string $key, int $default): int
+    {
+        $value = DB::table('settings')->where('key', $key)->value('value');
+        $limit = (int) ($value ?? $default);
+
+        return max(1, $limit);
+    }
 
     public function index()
     {
@@ -146,8 +154,8 @@ class DashboardController extends Controller
         try { $teamChampionCount = $ikansSaya->where('is_team_champion', true)->count(); } catch (\Throwable $e) { $teamChampionCount = 0; }
         try { $mvpCount = $ikansSaya->where('is_mvp', true)->count(); } catch (\Throwable $e) { $mvpCount = 0; }
 
-        $maxTeamChampion = 35;
-        $maxMvp = 15;
+        $maxTeamChampion = $this->getRegistrationLimit('team_champion_registration_max', 35);
+        $maxMvp = $this->getRegistrationLimit('mvp_registration_max', 15);
 
         return view('dashboard.user', [
             'user'         => $user, 
@@ -159,6 +167,7 @@ class DashboardController extends Controller
             'daftarKota'   => $daftarKota,
             'daftarTeam'   => $daftarTeam,
             'teamChampionCount' => $teamChampionCount,
+            'mvpCount'          => $mvpCount,
             'maxTeamChampion'   => $maxTeamChampion,
             'maxMvp'            => $maxMvp,
         ]);
@@ -663,14 +672,16 @@ class DashboardController extends Controller
         }
 
         if (!$ikan->is_team_champion) {
+            $maxTeamChampion = $this->getRegistrationLimit('team_champion_registration_max', 35);
+
             $count = Ikan::where('peserta_id', $ikan->peserta_id)
                 ->where('is_team_champion', true)
                 ->count();
 
-            if ($count >= 35) {
+            if ($count >= $maxTeamChampion) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Batas maksimal 35 ikan Team Champion sudah tercapai.',
+                    'message' => 'Batas maksimal ' . $maxTeamChampion . ' ikan Team Champion sudah tercapai.',
                 ], 422);
             }
         }
@@ -707,6 +718,8 @@ class DashboardController extends Controller
             ], 400);
         }
 
+        $maxTeamChampion = $this->getRegistrationLimit('team_champion_registration_max', 35);
+
         $count = Ikan::where('peserta_id', $peserta->id)
             ->where('is_team_champion', true)
             ->count();
@@ -718,10 +731,10 @@ class DashboardController extends Controller
             ], 422);
         }
 
-        if ($count > 35) {
+        if ($count > $maxTeamChampion) {
             return response()->json([
                 'success' => false,
-                'message' => 'Team Champion maksimal 35 ikan. Saat ini terpilih ' . $count . ' ikan.',
+                'message' => 'Team Champion maksimal ' . $maxTeamChampion . ' ikan. Saat ini terpilih ' . $count . ' ikan.',
             ], 422);
         }
 
@@ -768,14 +781,16 @@ class DashboardController extends Controller
         }
 
         if (!$ikan->is_mvp) {
+            $maxMvp = $this->getRegistrationLimit('mvp_registration_max', 15);
+
             $mvpCount = Ikan::where('peserta_id', $ikan->peserta_id)
                 ->where('is_mvp', true)
                 ->count();
 
-            if ($mvpCount >= 15) {
+            if ($mvpCount >= $maxMvp) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Batas maksimal 15 ikan untuk MVP sudah tercapai.',
+                    'message' => 'Batas maksimal ' . $maxMvp . ' ikan untuk MVP sudah tercapai.',
                 ], 422);
             }
         }
@@ -802,6 +817,8 @@ class DashboardController extends Controller
             return response()->json(['success' => false, 'message' => 'Anda sudah mengirimkan data MVP sebelumnya.'], 400);
         }
 
+        $maxMvp = $this->getRegistrationLimit('mvp_registration_max', 15);
+
         $mvpCount = Ikan::where('peserta_id', $peserta->id)
             ->where('is_mvp', true)
             ->count();
@@ -813,10 +830,10 @@ class DashboardController extends Controller
             ], 422);
         }
 
-        if ($mvpCount > 15) {
+        if ($mvpCount > $maxMvp) {
             return response()->json([
                 'success' => false,
-                'message' => 'MVP maksimal 15 ikan.',
+                'message' => 'MVP maksimal ' . $maxMvp . ' ikan.',
             ], 422);
         }
 
@@ -857,6 +874,8 @@ class DashboardController extends Controller
         $undianOpen = (bool)(\DB::table('settings')->where('key', 'undian_registration_open')->value('value') ?? true);
         // ★ TAMBAHKAN INI (taruh di atas if (!$peserta))
         $maxTankRange = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+        $maxMvp = $this->getRegistrationLimit('mvp_registration_max', 15);
+        $maxTeamChampion = $this->getRegistrationLimit('team_champion_registration_max', 35);
 
         if (!$peserta) {
             return response()->json([
@@ -866,10 +885,10 @@ class DashboardController extends Controller
                 'mvp_submitted' => $mvpSubmitted,
                 'undian_open' => $undianOpen,
                 'tank_range_max' => $maxTankRange,
-                'max_mvp' => 15,
-                'team_champion_open' => (bool)(\DB::table('settings')->where('key', 'team_champion_registration_open')->value('value') ?? false),
-                'team_champion_submitted' => (bool)($peserta->is_team_champion_submitted ?? false),
-                'max_team_champion' => 35,
+                'max_mvp' => $maxMvp,
+                'team_champion_open' => $teamChampionOpen,
+                'team_champion_submitted' => $teamChampionSubmitted,
+                'max_team_champion' => $maxTeamChampion,
             ]);
         }
 
@@ -888,8 +907,8 @@ class DashboardController extends Controller
             ];
         });
 
-        $maxMvp = 15;
-        $maxTeamChampion = 35;
+        $maxMvp = $this->getRegistrationLimit('mvp_registration_max', 15);
+        $maxTeamChampion = $this->getRegistrationLimit('team_champion_registration_max', 35);
 
         $myResults = [];
         $myMvpResults = [];
@@ -1130,11 +1149,11 @@ class DashboardController extends Controller
 
             'mvp_open' => $mvpOpen,
             'mvp_submitted' => $mvpSubmitted,
-            'max_mvp' => 15,
+            'max_mvp' => $maxMvp,
 
             'team_champion_open' => $teamChampionOpen,
             'team_champion_submitted' => $teamChampionSubmitted,
-            'max_team_champion' => 35,
+            'max_team_champion' => $maxTeamChampion,
 
             'undian_open' => $undianOpen,
             'tank_range_max' => $maxTankRange,

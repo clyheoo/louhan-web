@@ -25,6 +25,22 @@ class AdminDashboardController extends Controller
         $this->sheetsSync = $sheetsSync;
     }
 
+    private function getRegistrationLimit(string $key, int $default): int
+    {
+        $value = \DB::table('settings')->where('key', $key)->value('value');
+        $limit = (int) ($value ?? $default);
+
+        return max(1, $limit);
+    }
+
+    private function setRegistrationLimit(string $key, int $limit): void
+    {
+        \DB::table('settings')->updateOrInsert(
+            ['key' => $key],
+            ['value' => (string) max(1, $limit), 'updated_at' => now()]
+        );
+    }
+
     public function index()
     {
         return view('dashboard.admin', ['user' => auth()->user()->fresh()]);
@@ -2036,23 +2052,46 @@ class AdminDashboardController extends Controller
     {
         $current = \DB::table('settings')->where('key', 'mvp_registration_open')->value('value');
         $newVal = ($current === '1') ? '0' : '1';
-        
+
         \DB::table('settings')->updateOrInsert(
             ['key' => 'mvp_registration_open'],
             ['value' => $newVal, 'updated_at' => now()]
         );
 
         return response()->json([
-            'success' => true, 
-            'is_open' => (bool)$newVal,
-            'message' => $newVal === '1' ? 'Pendaftaran MVP DIBUKA untuk user.' : 'Pendaftaran MVP DITUTUP untuk user.'
+            'success' => true,
+            'is_open' => (bool) $newVal,
+            'max_mvp' => $this->getRegistrationLimit('mvp_registration_max', 15),
+            'message' => $newVal === '1'
+                ? 'Pendaftaran MVP DIBUKA untuk user.'
+                : 'Pendaftaran MVP DITUTUP untuk user.',
         ]);
     }
 
     public function getMvpStatus()
     {
-        $isOpen = (bool)(\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
-        return response()->json(['is_open' => $isOpen]);
+        $isOpen = (bool) (\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
+
+        return response()->json([
+            'is_open' => $isOpen,
+            'max_mvp' => $this->getRegistrationLimit('mvp_registration_max', 15),
+        ]);
+    }
+
+    public function setMvpRegistrationMax(Request $request)
+    {
+        $request->validate([
+            'max_mvp' => 'required|integer|min:1|max:9999',
+        ]);
+
+        $limit = (int) $request->max_mvp;
+        $this->setRegistrationLimit('mvp_registration_max', $limit);
+
+        return response()->json([
+            'success' => true,
+            'max_mvp' => $limit,
+            'message' => 'Batas pendaftaran MVP berhasil diubah menjadi maksimal ' . $limit . ' ikan per user.',
+        ]);
     }
 
     public function toggleTeamChampionRegistration()
@@ -2068,6 +2107,7 @@ class AdminDashboardController extends Controller
         return response()->json([
             'success' => true,
             'is_open' => (bool) $newVal,
+            'max_team_champion' => $this->getRegistrationLimit('team_champion_registration_max', 35),
             'message' => $newVal === '1'
                 ? 'Pendaftaran Team Champion DIBUKA untuk user.'
                 : 'Pendaftaran Team Champion DITUTUP untuk user.',
@@ -2076,8 +2116,28 @@ class AdminDashboardController extends Controller
 
     public function getTeamChampionStatus()
     {
-        $isOpen = (bool)(\DB::table('settings')->where('key', 'team_champion_registration_open')->value('value') ?? false);
-        return response()->json(['is_open' => $isOpen]);
+        $isOpen = (bool) (\DB::table('settings')->where('key', 'team_champion_registration_open')->value('value') ?? false);
+
+        return response()->json([
+            'is_open' => $isOpen,
+            'max_team_champion' => $this->getRegistrationLimit('team_champion_registration_max', 35),
+        ]);
+    }
+
+    public function setTeamChampionRegistrationMax(Request $request)
+    {
+        $request->validate([
+            'max_team_champion' => 'required|integer|min:1|max:9999',
+        ]);
+
+        $limit = (int) $request->max_team_champion;
+        $this->setRegistrationLimit('team_champion_registration_max', $limit);
+
+        return response()->json([
+            'success' => true,
+            'max_team_champion' => $limit,
+            'message' => 'Batas pendaftaran Team Champion berhasil diubah menjadi maksimal ' . $limit . ' ikan per user.',
+        ]);
     }
 
     public function getTeamChampionIkan()

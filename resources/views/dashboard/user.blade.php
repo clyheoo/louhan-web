@@ -2275,7 +2275,7 @@
                                         Team Champion
                                     </h2>
                                     <p class="card-subtitle">
-                                        Pilih maksimal 35 ikan untuk Team Champion. Pilihan ini terpisah dari MVP.
+                                        Pilih maksimal {{ $maxTeamChampion }} ikan untuk Team Champion. Pilihan ini terpisah dari MVP.
                                     </p>
                                 </div>
                                 <div class="mvp-badge" id="teamChampionCountBadge">
@@ -2865,7 +2865,7 @@
         let maxTeamChampion = {{ $maxTeamChampion ?? 35 }};
 
         let isUndianOpen = {{ $undianOpen ? 'true' : 'false' }};
-        let maxMvp = 15;
+        let maxMvp = {{ $maxMvp ?? 15 }};
 
         function getCsrf(){
             var meta = document.querySelector('meta[name="csrf-token"]');
@@ -3483,7 +3483,7 @@
                 document.getElementById('mvpCountBadge').textContent = `${mvpCount}/${maxMvp} MVP`;
                 // Update progress bar
                 var progFill = document.getElementById('mvpProgressFill');
-                if (progFill) progFill.style.width = Math.min(100, (mvpCount / maxMvp) * 100) + '%';
+                if (progFill) progFill.style.width = Math.min(100, (mvpCount / Math.max(1, maxMvp)) * 100) + '%';
 
                 if(isMvpOpen) {
                     document.getElementById('mvpEmptyList').style.display = mvpCount > 0 ? 'none' : 'block';
@@ -3710,6 +3710,20 @@
         });
 
         function confirmSubmitMvp() {
+            var count = Object.values(currentIkans || {}).filter(function(i){
+                return i && i.is_mvp;
+            }).length;
+
+            if (count < 1) {
+                userPopupError('Belum Ada Ikan', 'Pilih minimal 1 ikan MVP sebelum mengirim.');
+                return;
+            }
+
+            if (count > maxMvp) {
+                userPopupError('Melebihi Batas', 'MVP maksimal ' + maxMvp + ' ikan. Saat ini terpilih ' + count + ' ikan.');
+                return;
+            }
+
             document.getElementById('mvpAgree').checked = false;
             document.getElementById('btnConfirmSubmitMvp').disabled = true;
             document.getElementById('modalConfirmMvp').classList.add('show');

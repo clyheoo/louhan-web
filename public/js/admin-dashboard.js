@@ -3649,21 +3649,76 @@ function loadMvpStatus() {
     .then(r => r.json())
     .then(d => {
         updateMvpToggleUI(d.is_open || false);
+
+        var input = document.getElementById('mvpMaxInput');
+        if (input && d.max_mvp) input.value = d.max_mvp;
     })
     .catch(() => updateMvpToggleUI(false));
+}
+
+function saveMvpRegistrationMax() {
+    var input = document.getElementById('mvpMaxInput');
+    var limit = input ? parseInt(input.value, 10) : 0;
+
+    if (!limit || limit < 1) {
+        popupError('Batas Tidak Valid', 'Batas MVP minimal 1 ikan per user.');
+        return;
+    }
+
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('max_mvp', limit);
+
+    fetch('/api/admin/mvp-registration-max', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: fd
+    })
+    .then(function(r){
+        return r.json().then(function(d){
+            if (!r.ok) throw d;
+            return d;
+        });
+    })
+    .then(function(d){
+        if (!d.success) throw d;
+
+        if (input) input.value = d.max_mvp || limit;
+        popupSuccess('Batas MVP Disimpan', d.message || 'Batas MVP berhasil diperbarui.');
+        loadMvpStatus();
+    })
+    .catch(function(e){
+        popupError('Gagal', e.message || 'Gagal menyimpan batas MVP.');
+    });
 }
 
 function toggleMvpRegistration() {
     var btn = document.getElementById('btnToggleMvp');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    
-    fetch('/api/admin/toggle-mvp-registration', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}})
+
+    fetch('/api/admin/toggle-mvp-registration', {
+        method:'POST',
+        headers:{
+            'X-Requested-With':'XMLHttpRequest',
+            'Accept':'application/json',
+            'X-CSRF-TOKEN':getCsrf()
+        }
+    })
     .then(r => r.json())
     .then(d => {
         if(d.success) {
             updateMvpToggleUI(d.is_open);
+
+            var input = document.getElementById('mvpMaxInput');
+            if (input && d.max_mvp) input.value = d.max_mvp;
+
             popupSuccess('Status MVP Diperbarui', d.message);
-        } else popupError('Gagal', d.message);
+        } else {
+            popupError('Gagal', d.message);
+        }
     })
     .catch(() => popupError('Error', 'Gagal menghubungi server'))
     .finally(() => { btn.disabled = false; });
@@ -3674,6 +3729,9 @@ function loadTeamChampionStatus() {
     .then(function(r){ return r.json(); })
     .then(function(d){
         updateTeamChampionToggleUI(!!d.is_open);
+
+        var input = document.getElementById('teamChampionMaxInput');
+        if (input && d.max_team_champion) input.value = d.max_team_champion;
     })
     .catch(function(){
         updateTeamChampionToggleUI(false);
@@ -3725,6 +3783,8 @@ function toggleTeamChampionRegistration() {
         var isOpen = !!d.is_open;
 
         updateTeamChampionToggleUI(isOpen);
+        var input = document.getElementById('teamChampionMaxInput');
+        if (input && d.max_team_champion) input.value = d.max_team_champion;
 
         popupSuccess(
             isOpen ? 'Team Champion Dibuka' : 'Team Champion Ditutup',
@@ -3747,6 +3807,45 @@ function toggleTeamChampionRegistration() {
     })
     .finally(function(){
         if (btn) btn.disabled = false;
+    });
+}
+
+function saveTeamChampionRegistrationMax() {
+    var input = document.getElementById('teamChampionMaxInput');
+    var limit = input ? parseInt(input.value, 10) : 0;
+
+    if (!limit || limit < 1) {
+        popupError('Batas Tidak Valid', 'Batas Team Champion minimal 1 ikan per user.');
+        return;
+    }
+
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('max_team_champion', limit);
+
+    fetch('/api/admin/team-champion-registration-max', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: fd
+    })
+    .then(function(r){
+        return r.json().then(function(d){
+            if (!r.ok) throw d;
+            return d;
+        });
+    })
+    .then(function(d){
+        if (!d.success) throw d;
+
+        if (input) input.value = d.max_team_champion || limit;
+        popupSuccess('Batas Team Champion Disimpan', d.message || 'Batas Team Champion berhasil diperbarui.');
+        loadTeamChampionStatus();
+    })
+    .catch(function(e){
+        popupError('Gagal', e.message || 'Gagal menyimpan batas Team Champion.');
     });
 }
 
@@ -4001,7 +4100,7 @@ function loadMvpPeserta() {
 function unlockMvpPeserta(pesertaId, nama) {
     popupConfirm(
         'Buka Kunci MVP Peserta',
-        'Yakin ingin membuka kembali pendaftaran MVP untuk <strong>' + esc(nama) + '</strong>?<br><div style="text-align:left;margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;font-size:11px;line-height:1.6;color:var(--muted);"><i class="fas fa-circle-info" style="color:var(--primary);"></i> Peserta dapat menambah/hapus pilihan ikan MVP mereka (maks. 15 ikan). Setelah mereka kirim ulang, akan terkunci otomatis.</div>',
+        'Yakin ingin membuka kembali pendaftaran MVP untuk <strong>' + esc(nama) + '</strong>?<br><div style="text-align:left;margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;font-size:11px;line-height:1.6;color:var(--muted);"><i class="fas fa-circle-info" style="color:var(--primary);"></i> Peserta dapat menambah/hapus pilihan ikan MVP mereka sesuai batas yang admin atur. Setelah mereka kirim ulang, akan terkunci otomatis.</div>',
         'Ya, Buka Kunci',
         function() {
             var fd = new FormData();

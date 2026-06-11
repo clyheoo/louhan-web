@@ -1371,6 +1371,20 @@
                     </div>
                     <div class="card-body">
                         <div style="font-size:13px; color:var(--text);" id="mvpStatusText">Memuat status...</div>
+
+                        <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:rgba(255,255,255,.04);border:1px solid var(--bd-2);border-radius:11px;padding:10px 12px;">
+                            <label for="mvpMaxInput" style="font-size:11px;color:var(--text-mid);font-weight:800;text-transform:uppercase;letter-spacing:.06em;">
+                                Batas MVP / User
+                            </label>
+
+                            <input type="number" id="mvpMaxInput" min="1" max="9999" value="15"
+                                   style="width:110px;padding:9px 10px;border-radius:9px;border:1px solid var(--bd-2);background:rgba(0,0,0,.28);color:var(--text-hi);font-family:inherit;font-weight:800;outline:none;">
+
+                            <button type="button" class="btn-primary" onclick="saveMvpRegistrationMax()" style="padding:9px 13px;font-size:11px;">
+                                <i class="fas fa-floppy-disk"></i> Simpan Batas
+                            </button>
+                        </div>
+
                         <div style="background:rgba(245,158,11,.08);border:1px solid var(--bd-gold);border-radius:11px;padding:10px 14px;margin-top:12px;display:flex;gap:8px;align-items:flex-start;">
                             <i class="fas fa-circle-info" style="color:var(--gold-400);margin-top:2px;"></i>
                             <span style="font-size:11px;color:var(--gold-300);line-height:1.5;">Menghapus ikan dari MVP tidak menghapus data ikan. Peserta dapat mendaftar ulang jika MVP masih dibuka.</span>
@@ -1440,6 +1454,19 @@
                     <div class="card-body">
                         <div id="teamChampionStatusText" style="font-size:13px;color:var(--text-mid);font-weight:700;">
                             Memuat status...
+                        </div>
+
+                        <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:rgba(255,255,255,.04);border:1px solid var(--bd-2);border-radius:11px;padding:10px 12px;">
+                            <label for="teamChampionMaxInput" style="font-size:11px;color:var(--text-mid);font-weight:800;text-transform:uppercase;letter-spacing:.06em;">
+                                Batas Team Champion / User
+                            </label>
+
+                            <input type="number" id="teamChampionMaxInput" min="1" max="9999" value="35"
+                                   style="width:110px;padding:9px 10px;border-radius:9px;border:1px solid var(--bd-2);background:rgba(0,0,0,.28);color:var(--text-hi);font-family:inherit;font-weight:800;outline:none;">
+
+                            <button type="button" class="btn-primary" onclick="saveTeamChampionRegistrationMax()" style="padding:9px 13px;font-size:11px;">
+                                <i class="fas fa-floppy-disk"></i> Simpan Batas
+                            </button>
                         </div>
                     </div>
                 </div>

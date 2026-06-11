@@ -122,6 +122,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/team-champion-ikan', [AdminDashboardController::class, 'getTeamChampionIkan']);
     Route::post('/api/admin/toggle-team-champion-registration', [AdminDashboardController::class, 'toggleTeamChampionRegistration']);
     Route::get('/api/admin/team-champion-status', [AdminDashboardController::class, 'getTeamChampionStatus']);
+    Route::post('/api/admin/team-champion-registration-max', [AdminDashboardController::class, 'setTeamChampionRegistrationMax']);
     Route::get('/api/admin/team-champion-submitted-peserta', [AdminDashboardController::class, 'getTeamChampionSubmittedPeserta']);
     Route::post('/api/admin/unlock-team-champion-peserta', [AdminDashboardController::class, 'unlockTeamChampionPeserta']);
     Route::post('/api/admin/delete-team-champion-ikan', [AdminDashboardController::class, 'deleteTeamChampionIkan']);
@@ -129,6 +130,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/mvp-ikan-data', [AdminDashboardController::class, 'getMvpIkanData']);
     Route::post('/api/admin/toggle-mvp-registration', [AdminDashboardController::class, 'toggleMvpRegistration']);
     Route::get('/api/admin/mvp-status', [AdminDashboardController::class, 'getMvpStatus']);
+    Route::post('/api/admin/mvp-registration-max', [AdminDashboardController::class, 'setMvpRegistrationMax']);
     Route::post('/api/admin/toggle-undian-registration', [AdminDashboardController::class, 'toggleUndianRegistration']);
     Route::get('/api/admin/undian-status', [AdminDashboardController::class, 'getUndianStatus']);
     Route::post('/api/admin/delete-mvp-ikan', [AdminDashboardController::class, 'deleteMvpIkan']);
