@@ -1277,6 +1277,43 @@ function updateJuriScoringLockUI(isUnlocked){
     }
 }
 
+/* ═══ KIRIM HASIL NOMINASI KE PESERTA (TOGGLE GLOBAL) ═══ */
+function loadNominasiPublishStatus(){
+    fetch('/api/admin/nominasi-publish-status',{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){ updateNominasiPublishUI(!!d.nominasi_published); })
+    .catch(function(){ updateNominasiPublishUI(false); });
+}
+function toggleNominasiPublish(){
+    var btn=document.getElementById('btnToggleNominasiPublish');
+    if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; }
+    fetch('/api/admin/toggle-nominasi-publish',{
+        method:'POST',
+        headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.success){
+            updateNominasiPublishUI(!!d.nominasi_published);
+            popupSuccess('Status Hasil Nominasi', d.message);
+        } else { popupError('Gagal', d.message||'Terjadi kesalahan.'); loadNominasiPublishStatus(); }
+    })
+    .catch(function(){ popupError('Error','Gagal menghubungi server.'); loadNominasiPublishStatus(); })
+    .finally(function(){ if(btn) btn.disabled=false; });
+}
+function updateNominasiPublishUI(isPublished){
+    var btn=document.getElementById('btnToggleNominasiPublish');
+    if(!btn) return;
+    btn.disabled=false;
+    if(isPublished){
+        btn.innerHTML='<i class="fas fa-ban"></i> CABUT HASIL NOMINASI';
+        btn.style.background='var(--danger)'; btn.style.boxShadow='0 3px 10px rgba(239,68,68,.2)';
+    } else {
+        btn.innerHTML='<i class="fas fa-paper-plane"></i> KIRIM HASIL NOMINASI';
+        btn.style.background='var(--success)'; btn.style.boxShadow='0 3px 10px rgba(34,197,94,.2)';
+    }
+}
+
 /* ── TOGGLE JURI DETAIL (ADMIN) ── */
 function toggleJuriDetailAdmin(uid){
     var t=document.getElementById(uid+'-toggle');
@@ -5141,11 +5178,59 @@ var adminNomState = {
     tanks: [],
     selected: new Set(),
     histTab: 'approved',
-    histData: { approved: [], rejected: [] }
+    histData: { approved: [], rejected: [] },
+    pendingData: null,
+    lateData: null,
+    filterKat: '',
+    filterKelas: '',
+    histFilterKat: '',
+    histFilterKelas: ''
 };
 
 var _adminPendingCache = '';
 var _adminLateCache = '';
+
+/* ★ Pencocokan filter (abaikan kelas utk Bonsai/Jumbo) */
+function adminNomTankMatch(t){
+    if(!t) return false;
+    var noKelas=['Bonsai','Jumbo'];
+    if(adminNomState.filterKat && (t.kategori||'')!==adminNomState.filterKat) return false;
+    if(adminNomState.filterKelas && noKelas.indexOf(t.kategori)===-1 && (t.kelas||'')!==adminNomState.filterKelas) return false;
+    return true;
+}
+function adminHistTankMatch(t){
+    if(!t) return false;
+    var noKelas=['Bonsai','Jumbo'];
+    if(adminNomState.histFilterKat && (t.kategori||'')!==adminNomState.histFilterKat) return false;
+    if(adminNomState.histFilterKelas && noKelas.indexOf(t.kategori)===-1 && (t.kelas||'')!==adminNomState.histFilterKelas) return false;
+    return true;
+}
+function adminNomApplyFilter(){
+    adminNomState.filterKat=(document.getElementById('adminNomReviewFilterKat')||{}).value||'';
+    adminNomState.filterKelas=(document.getElementById('adminNomReviewFilterKelas')||{}).value||'';
+    var ks=document.getElementById('adminNomReviewFilterKelas');
+    if(ks){ if(adminNomState.filterKat && ['Bonsai','Jumbo'].indexOf(adminNomState.filterKat)!==-1){ ks.value=''; adminNomState.filterKelas=''; ks.disabled=true; } else { ks.disabled=false; } }
+    renderAdminPending(); renderAdminLate();
+}
+function adminNomResetFilter(){
+    adminNomState.filterKat=''; adminNomState.filterKelas='';
+    var a=document.getElementById('adminNomReviewFilterKat'); if(a) a.value='';
+    var b=document.getElementById('adminNomReviewFilterKelas'); if(b){ b.value=''; b.disabled=false; }
+    renderAdminPending(); renderAdminLate();
+}
+function adminHistApplyFilter(){
+    adminNomState.histFilterKat=(document.getElementById('adminHistFilterKat')||{}).value||'';
+    adminNomState.histFilterKelas=(document.getElementById('adminHistFilterKelas')||{}).value||'';
+    var ks=document.getElementById('adminHistFilterKelas');
+    if(ks){ if(adminNomState.histFilterKat && ['Bonsai','Jumbo'].indexOf(adminNomState.histFilterKat)!==-1){ ks.value=''; adminNomState.histFilterKelas=''; ks.disabled=true; } else { ks.disabled=false; } }
+    renderAdminHistory();
+}
+function adminHistResetFilter(){
+    adminNomState.histFilterKat=''; adminNomState.histFilterKelas='';
+    var a=document.getElementById('adminHistFilterKat'); if(a) a.value='';
+    var b=document.getElementById('adminHistFilterKelas'); if(b){ b.value=''; b.disabled=false; }
+    renderAdminHistory();
+}
 
 function loadAdminNominasiAll(){
     _adminPendingCache = '';
@@ -5154,6 +5239,7 @@ function loadAdminNominasiAll(){
     loadAdminPendingReview();
     loadAdminLateIkan();
     loadAdminNomHistory();
+    loadNominasiPublishStatus();   // ★ status tombol Kirim Hasil Nominasi
 }
 
 /* ── (A) PILIH TANK ── */
@@ -5285,57 +5371,22 @@ document.addEventListener('input', function(e){
 function loadAdminPendingReview(silent){
     var body = document.getElementById('adminPendingBody');
     if(!body) return;
-
-    /* ★ Reset cache jika bukan silent → force re-render */
     if(!silent) _adminPendingCache = '';
-
-    /* ★ Spinner hanya saat load pertama (body kosong atau masih spinner) */
     if(!silent && (!body.children.length || body.querySelector('.fa-spinner'))){
         body.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat pending...</p></div>';
     }
-
     fetch('/api/grand-juri/nominasi', { headers:{'Accept':'application/json'} })
     .then(function(r){ return r.json(); })
     .then(function(d){
-        /* ★ FINGERPRINT — skip re-render jika data identik */
         var fingerprint = JSON.stringify(d);
         if(fingerprint === _adminPendingCache) return;
         _adminPendingCache = fingerprint;
-
         document.getElementById('adminPendingCount').textContent = (d.total_pending || 0) + ' pending';
-        if(!d.grouped || d.grouped.length === 0){
-            body.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada nominasi pending untuk direview.</p></div>';
-            return;
-        }
-        var html = '';
-        d.grouped.forEach(function(g){
-            var tankIds = (g.tanks || []).map(function(t){ return t.nominasi_id; });
-            html += '<div style="margin-bottom:14px;border:1px solid var(--bd-2);border-radius:14px;overflow:hidden;background:var(--glass-1);">';
-            html += '<div style="padding:11px 14px;background:var(--glass-2);border-bottom:1px solid var(--bd-1);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">';
-            html += '<div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:10px;background:rgba(34,211,238,.12);color:var(--cyan-300);display:grid;place-items:center;"><i class="fas fa-user-pen"></i></div>';
-            html += '<div><div style="font-size:13px;font-weight:800;color:var(--text-hi);">'+esc(g.juri_name||'Unknown')+'</div><div style="font-size:10px;color:var(--text-mid);font-weight:600;">'+g.tanks.length+' tank dinominasikan</div></div></div>';
-            html += '<button class="btn-xs green" onclick="adminApproveAllInGroup(this,'+JSON.stringify(tankIds).replace(/"/g,'&quot;')+')" style="padding:6px 12px;"><i class="fas fa-check-double"></i> ACC Semua</button>';
-            html += '</div>';
-            html += '<div style="padding:12px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;">';
-            g.tanks.forEach(function(t){
-                var kelasH = (t.kelas && ['Bonsai','Jumbo'].indexOf(t.kategori) === -1)
-                    ? '<div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(16,185,129,.10);color:#6EE7B7;border:1px solid rgba(16,185,129,.20);margin-top:3px;text-align:center;">Kelas '+esc(t.kelas)+'</div>' : '';
-                html += '<div id="admPendCard-'+t.nominasi_id+'" style="padding:10px;border-radius:10px;border:1px solid var(--bd-2);background:var(--glass-2);">';
-                html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:#fff;display:grid;place-items:center;font-weight:800;">'+(t.nomor_tank||'?')+'</div></div>';
-                html += '<div style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(34,211,238,.08);color:var(--cyan-300);border:1px solid rgba(34,211,238,.18);text-align:center;">'+esc(t.kategori||'-')+'</div>';
-                html += kelasH;
-                html += '<div style="font-size:9px;color:var(--text-mid);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;">'+esc(t.nama_peserta||'-')+'</div>';
-                html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;">';
-                html += '<button class="btn-xs green" onclick="adminApprovePending(this,'+t.nominasi_id+')" style="padding:5px;font-size:9px;"><i class="fas fa-check"></i> ACC</button>';
-                html += '<button class="btn-xs red" onclick="adminRejectPending('+t.nominasi_id+','+(t.nomor_tank||0)+')" style="padding:5px;font-size:9px;"><i class="fas fa-times"></i> Tolak</button>';
-                html += '</div></div>';
-            });
-            html += '</div></div>';
-        });
-        body.innerHTML = html;
+        adminNomState.pendingData = d;
+        renderAdminPending();
     })
     .catch(function(){
-        if(silent) return; /* ★ Jangan ganggu UI saat silent poll gagal */
+        if(silent) return;
         body.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat pending.</p></div>';
     });
 }
@@ -5421,55 +5472,107 @@ function adminApproveAllInGroup(btn, idsJson){
 function loadAdminLateIkan(silent){
     var body = document.getElementById('adminLateBody');
     if(!body) return;
-
-    /* ★ Reset cache jika bukan silent → force re-render */
     if(!silent) _adminLateCache = '';
-
-    /* ★ Spinner hanya saat load pertama */
     if(!silent && (!body.children.length || body.querySelector('.fa-spinner'))){
         body.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
     }
-
     fetch('/api/grand-juri/late-ikan', { headers:{'Accept':'application/json'} })
     .then(function(r){ return r.json(); })
     .then(function(d){
-        /* ★ FINGERPRINT — skip re-render jika data identik */
         var fingerprint = JSON.stringify(d);
         if(fingerprint === _adminLateCache) return;
         _adminLateCache = fingerprint;
-
-        var countEl = document.getElementById('adminLateCount');
-        if(!d.enabled){
-            countEl.textContent = (d.juri_done||0)+'/'+(d.total_juri||0)+' juri selesai';
-            body.innerHTML = '<div class="empty-state"><i class="fas fa-lock" style="color:var(--text-faint);"></i><p>Modul aktif setelah <strong>semua juri</strong> selesai nominasi ('+(d.juri_done||0)+'/'+(d.total_juri||0)+' juri sudah selesai).</p></div>';
-            return;
-        }
-        countEl.textContent = (d.ikans||[]).length + ' tank terlambat';
-        if(!d.ikans || d.ikans.length === 0){
-            body.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle" style="color:#6EE7B7;"></i><p>Tidak ada ikan terlambat yang menunggu review.</p></div>';
-            return;
-        }
-        var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">';
-        d.ikans.forEach(function(ikan){
-            var kelasH = (ikan.kelas && ['Bonsai','Jumbo'].indexOf(ikan.kategori) === -1)
-                ? '<div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(16,185,129,.10);color:#6EE7B7;border:1px solid rgba(16,185,129,.20);margin-top:3px;text-align:center;">Kelas '+esc(ikan.kelas)+'</div>' : '';
-            html += '<div id="admLateCard-'+ikan.ikan_id+'" style="padding:11px;border-radius:11px;border:1px solid var(--bd-gold);background:rgba(245,158,11,.04);">';
-            html += '<div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--gold-600),var(--gold-500));color:#fff;display:grid;place-items:center;font-weight:800;margin-bottom:8px;">'+(ikan.nomor_tank||'?')+'</div>';
-            html += '<div style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(34,211,238,.08);color:var(--cyan-300);border:1px solid rgba(34,211,238,.18);text-align:center;">'+esc(ikan.kategori||'-')+'</div>';
-            html += kelasH;
-            html += '<div style="font-size:9px;color:var(--text-mid);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;">'+esc(ikan.nama_peserta||'-')+'</div>';
-            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;">';
-            html += '<button class="btn-xs green" onclick="adminApproveLate(this,'+ikan.ikan_id+')" style="padding:5px;font-size:9px;"><i class="fas fa-check"></i> ACC</button>';
-            html += '<button class="btn-xs red" onclick="adminRejectLate('+ikan.ikan_id+','+(ikan.nomor_tank||0)+')" style="padding:5px;font-size:9px;"><i class="fas fa-times"></i> Tolak</button>';
-            html += '</div></div>';
-        });
-        html += '</div>';
-        body.innerHTML = html;
+        adminNomState.lateData = d;
+        renderAdminLate();
     })
     .catch(function(){
-        if(silent) return; /* ★ Jangan ganggu UI saat silent poll gagal */
+        if(silent) return;
         body.innerHTML = '<div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat data.</p></div>';
     });
+}
+
+function renderAdminPending(){
+    var body = document.getElementById('adminPendingBody');
+    if(!body) return;
+    var d = adminNomState.pendingData;
+    if(!d || !d.grouped || d.grouped.length === 0){
+        body.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada nominasi pending untuk direview.</p></div>';
+        return;
+    }
+    var html = ''; var anyVisible = false;
+    d.grouped.forEach(function(g){
+        var visTanks = (g.tanks || []).filter(adminNomTankMatch);
+        if(visTanks.length === 0) return;
+        anyVisible = true;
+        var tankIds = visTanks.map(function(t){ return t.nominasi_id; });
+        html += '<div style="margin-bottom:14px;border:1px solid var(--bd-2);border-radius:14px;overflow:hidden;background:var(--glass-1);">';
+        html += '<div style="padding:11px 14px;background:var(--glass-2);border-bottom:1px solid var(--bd-1);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">';
+        html += '<div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:10px;background:rgba(34,211,238,.12);color:var(--cyan-300);display:grid;place-items:center;"><i class="fas fa-user-pen"></i></div>';
+        html += '<div><div style="font-size:13px;font-weight:800;color:var(--text-hi);">'+esc(g.juri_name||'Unknown')+'</div><div style="font-size:10px;color:var(--text-mid);font-weight:600;">'+visTanks.length+' tank dinominasikan</div></div></div>';
+        html += '<button class="btn-xs green" onclick="adminApproveAllInGroup(this,'+JSON.stringify(tankIds).replace(/"/g,'&quot;')+')" style="padding:6px 12px;"><i class="fas fa-check-double"></i> ACC Semua</button>';
+        html += '</div>';
+        html += '<div style="padding:12px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;">';
+        visTanks.forEach(function(t){
+            var kelasH = (t.kelas && ['Bonsai','Jumbo'].indexOf(t.kategori) === -1)
+                ? '<div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(16,185,129,.10);color:#6EE7B7;border:1px solid rgba(16,185,129,.20);margin-top:3px;text-align:center;">Kelas '+esc(t.kelas)+'</div>' : '';
+            html += '<div id="admPendCard-'+t.nominasi_id+'" style="padding:10px;border-radius:10px;border:1px solid var(--bd-2);background:var(--glass-2);">';
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:#fff;display:grid;place-items:center;font-weight:800;">'+(t.nomor_tank||'?')+'</div></div>';
+            html += '<div style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(34,211,238,.08);color:var(--cyan-300);border:1px solid rgba(34,211,238,.18);text-align:center;">'+esc(t.kategori||'-')+'</div>';
+            html += kelasH;
+            html += '<div style="font-size:9px;color:var(--text-mid);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;">'+esc(t.nama_peserta||'-')+'</div>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;">';
+            html += '<button class="btn-xs green" onclick="adminApprovePending(this,'+t.nominasi_id+')" style="padding:5px;font-size:9px;"><i class="fas fa-check"></i> ACC</button>';
+            html += '<button class="btn-xs red" onclick="adminRejectPending('+t.nominasi_id+','+(t.nomor_tank||0)+')" style="padding:5px;font-size:9px;"><i class="fas fa-times"></i> Tolak</button>';
+            html += '</div></div>';
+        });
+        html += '</div></div>';
+    });
+    if(!anyVisible){
+        body.innerHTML = '<div class="empty-state"><i class="fas fa-filter"></i><p>Tidak ada nominasi pending yang cocok dengan filter.</p></div>';
+        return;
+    }
+    body.innerHTML = html;
+}
+
+function renderAdminLate(){
+    var body = document.getElementById('adminLateBody');
+    if(!body) return;
+    var d = adminNomState.lateData;
+    if(!d) return;
+    var countEl = document.getElementById('adminLateCount');
+    if(!d.enabled){
+        if(countEl) countEl.textContent = (d.juri_done||0)+'/'+(d.total_juri||0)+' juri selesai';
+        body.innerHTML = '<div class="empty-state"><i class="fas fa-lock" style="color:var(--text-faint);"></i><p>Modul aktif setelah <strong>semua juri</strong> selesai nominasi ('+(d.juri_done||0)+'/'+(d.total_juri||0)+' juri sudah selesai).</p></div>';
+        return;
+    }
+    var allIkans = d.ikans || [];
+    if(allIkans.length === 0){
+        if(countEl) countEl.textContent = '0 tank terlambat';
+        body.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle" style="color:#6EE7B7;"></i><p>Tidak ada ikan terlambat yang menunggu review.</p></div>';
+        return;
+    }
+    var ikans = allIkans.filter(adminNomTankMatch);
+    if(countEl) countEl.textContent = ikans.length + ' tank terlambat';
+    if(ikans.length === 0){
+        body.innerHTML = '<div class="empty-state"><i class="fas fa-filter"></i><p>Tidak ada ikan terlambat yang cocok dengan filter.</p></div>';
+        return;
+    }
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">';
+    ikans.forEach(function(ikan){
+        var kelasH = (ikan.kelas && ['Bonsai','Jumbo'].indexOf(ikan.kategori) === -1)
+            ? '<div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(16,185,129,.10);color:#6EE7B7;border:1px solid rgba(16,185,129,.20);margin-top:3px;text-align:center;">Kelas '+esc(ikan.kelas)+'</div>' : '';
+        html += '<div id="admLateCard-'+ikan.ikan_id+'" style="padding:11px;border-radius:11px;border:1px solid var(--bd-gold);background:rgba(245,158,11,.04);">';
+        html += '<div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--gold-600),var(--gold-500));color:#fff;display:grid;place-items:center;font-weight:800;margin-bottom:8px;">'+(ikan.nomor_tank||'?')+'</div>';
+        html += '<div style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(34,211,238,.08);color:var(--cyan-300);border:1px solid rgba(34,211,238,.18);text-align:center;">'+esc(ikan.kategori||'-')+'</div>';
+        html += kelasH;
+        html += '<div style="font-size:9px;color:var(--text-mid);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;">'+esc(ikan.nama_peserta||'-')+'</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;">';
+        html += '<button class="btn-xs green" onclick="adminApproveLate(this,'+ikan.ikan_id+')" style="padding:5px;font-size:9px;"><i class="fas fa-check"></i> ACC</button>';
+        html += '<button class="btn-xs red" onclick="adminRejectLate('+ikan.ikan_id+','+(ikan.nomor_tank||0)+')" style="padding:5px;font-size:9px;"><i class="fas fa-times"></i> Tolak</button>';
+        html += '</div></div>';
+    });
+    html += '</div>';
+    body.innerHTML = html;
 }
 
 function adminApproveLate(btn, ikanId){
@@ -5589,17 +5692,20 @@ function renderAdminHistory(){
         body.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada data '+(isApp?'yang diterima':'yang ditolak')+'.</p></div>';
         return;
     }
-    var html = '';
+    var html = ''; var anyVisible = false;
     groups.forEach(function(g){
+        var visTanks = (g.tanks || []).filter(adminHistTankMatch);
+        if(visTanks.length === 0) return;
+        anyVisible = true;
         var color = isApp ? '#6EE7B7' : '#FCA5A5';
         var bgC = isApp ? 'rgba(16,185,129,.08)' : 'rgba(239,68,68,.08)';
         var bdC = isApp ? 'rgba(16,185,129,.25)' : 'rgba(239,68,68,.25)';
         html += '<div style="margin-bottom:12px;border:1px solid '+bdC+';border-radius:12px;background:'+bgC+';overflow:hidden;">';
         html += '<div style="padding:10px 14px;display:flex;align-items:center;gap:10px;">';
         html += '<div style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.05);color:'+color+';display:grid;place-items:center;"><i class="fas fa-'+(isApp?'check':'times')+'"></i></div>';
-        html += '<div><div style="font-size:13px;font-weight:800;color:var(--text-hi);">'+esc(g.juri_name)+'</div><div style="font-size:10px;color:var(--text-mid);font-weight:600;">'+g.tanks.length+' tank</div></div></div>';
+        html += '<div><div style="font-size:13px;font-weight:800;color:var(--text-hi);">'+esc(g.juri_name)+'</div><div style="font-size:10px;color:var(--text-mid);font-weight:600;">'+visTanks.length+' tank</div></div></div>';
         html += '<div style="padding:8px 14px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;">';
-        g.tanks.forEach(function(t){
+        visTanks.forEach(function(t){
             var kelasH = (t.kelas && ['Bonsai','Jumbo'].indexOf(t.kategori) === -1)
                 ? '<div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(16,185,129,.10);color:#6EE7B7;border:1px solid rgba(16,185,129,.20);margin-top:3px;text-align:center;">Kelas '+esc(t.kelas)+'</div>' : '';
             html += '<div style="padding:9px;border-radius:9px;border:1px solid '+bdC+';background:rgba(255,255,255,.02);">';
@@ -5615,6 +5721,10 @@ function renderAdminHistory(){
         });
         html += '</div></div>';
     });
+    if(!anyVisible){
+        body.innerHTML = '<div class="empty-state"><i class="fas fa-filter"></i><p>Tidak ada data '+(isApp?'diterima':'ditolak')+' yang cocok dengan filter.</p></div>';
+        return;
+    }
     body.innerHTML = html;
 }
 
@@ -5638,4 +5748,8 @@ window.loadAdminNomHistory    = loadAdminNomHistory;
 window.adminSwitchHistTab     = adminSwitchHistTab;
 window.renderAdminHistory     = renderAdminHistory;
 window.adminResetRejected = adminResetRejected;
+window.adminNomApplyFilter  = adminNomApplyFilter;
+window.adminNomResetFilter  = adminNomResetFilter;
+window.adminHistApplyFilter = adminHistApplyFilter;
+window.adminHistResetFilter = adminHistResetFilter;
 })();

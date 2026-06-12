@@ -3083,6 +3083,35 @@ class AdminDashboardController extends Controller
         return response()->json(['scoring_unlocked' => $unlocked]);
     }
 
+    /* ═══════════════════════════════════════════
+       KIRIM HASIL NOMINASI KE SEMUA PESERTA
+       Toggle global (mirip BUKA PENILAIAN JURI).
+       ═══════════════════════════════════════════ */
+    public function toggleNominasiPublish()
+    {
+        $current = \DB::table('settings')->where('key', 'nominasi_published')->value('value');
+        $newVal  = ($current === '1') ? '0' : '1';
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'nominasi_published'],
+            ['value' => $newVal, 'updated_at' => now()]
+        );
+
+        return response()->json([
+            'success'            => true,
+            'nominasi_published' => (bool) $newVal,
+            'message'            => $newVal === '1'
+                ? 'Hasil Nominasi DIKIRIM — Semua peserta sekarang dapat melihat hasil nominasi.'
+                : 'Hasil Nominasi DICABUT — Peserta tidak dapat melihat hasil nominasi.',
+        ]);
+    }
+
+    public function getNominasiPublishStatus()
+    {
+        $published = (bool) (\DB::table('settings')->where('key', 'nominasi_published')->value('value') ?? false);
+        return response()->json(['nominasi_published' => $published]);
+    }
+
     public function resetRejectedNominasi(Request $request)
     {
         $request->validate([

@@ -1168,6 +1168,108 @@ class DashboardController extends Controller
         ]);
     }
 
+    /* ═══════════════════════════════════════════
+       HASIL NOMINASI UNTUK PESERTA
+       Menampilkan SELURUH hasil nominasi (semua peserta):
+       - approved → dikelompokkan per Kategori + Kelas (gaya sheet)
+       - rejected → daftar tank + alasan penolakan
+       Hanya tampil jika admin sudah "Kirim Hasil Nominasi".
+       ═══════════════════════════════════════════ */
+    public function getNominasiResults()
+    {
+        if (!Auth::id()) {
+            return response()->json([
+                'error'   => 'unauthenticated',
+                'message' => 'Sesi telah berakhir. Silakan login kembali.',
+            ], 401);
+        }
+
+        $published = (bool) (\DB::table('settings')->where('key', 'nominasi_published')->value('value') ?? false);
+
+        if (!$published) {
+            return response()->json([
+                'published'      => false,
+                'groups'         => [],
+                'rejected'       => [],
+                'total_approved' => 0,
+                'total_rejected' => 0,
+            ]);
+        }
+
+        $noKelas = ['Bonsai', 'Jumbo'];
+
+        $noms = \App\Models\Nominasi::whereIn('status', ['approved', 'rejected'])
+            ->with('ikan')
+            ->orderByDesc('reviewed_at')
+            ->get();
+
+        // Dedupe per ikan: APPROVED selalu menang atas rejected
+        $byIkan = [];
+        foreach ($noms as $n) {
+            if (!$n->ikan) continue;
+            $iid = $n->ikan_id;
+
+            if (!isset($byIkan[$iid])) {
+                $byIkan[$iid] = ['status' => $n->status, 'ikan' => $n->ikan, 'catatan' => $n->catatan];
+            } elseif ($byIkan[$iid]['status'] !== 'approved' && $n->status === 'approved') {
+                $byIkan[$iid]['status']  = 'approved';
+                $byIkan[$iid]['catatan'] = null;
+            }
+        }
+
+        $groupsMap = [];
+        $rejected  = [];
+
+        foreach ($byIkan as $iid => $row) {
+            $ikan      = $row['ikan'];
+            $kategori  = $this->cleanExcelDisplayValue($ikan->kategori, '-');
+            $isNoKelas = in_array($kategori, $noKelas);
+            $kelas     = $isNoKelas ? null : ($ikan->kelas ?: null);
+            $tank      = $ikan->nomor_tank;
+
+            if ($row['status'] === 'approved') {
+                $key = $kategori . '|' . ($kelas ?? '');
+                if (!isset($groupsMap[$key])) {
+                    $label = $isNoKelas ? $kategori : trim($kategori . ($kelas ? ' Kelas ' . $kelas : ''));
+                    $groupsMap[$key] = ['kategori' => $kategori, 'kelas' => $kelas, 'label' => $label, 'tanks' => []];
+                }
+                $groupsMap[$key]['tanks'][] = ['ikan_id' => (int) $iid, 'nomor_tank' => $tank];
+            } else {
+                $rejected[] = [
+                    'ikan_id'    => (int) $iid,
+                    'nomor_tank' => $tank,
+                    'kategori'   => $kategori,
+                    'kelas'      => $kelas,
+                    'catatan'    => $row['catatan'] ?: null,
+                ];
+            }
+        }
+
+        $groups = array_values($groupsMap);
+        usort($groups, function ($a, $b) { return strcmp($a['label'], $b['label']); });
+        foreach ($groups as &$g) {
+            usort($g['tanks'], function ($a, $b) {
+                return (int) ($a['nomor_tank'] ?? 0) <=> (int) ($b['nomor_tank'] ?? 0);
+            });
+        }
+        unset($g);
+
+        usort($rejected, function ($a, $b) {
+            return (int) ($a['nomor_tank'] ?? 0) <=> (int) ($b['nomor_tank'] ?? 0);
+        });
+
+        $totalApproved = 0;
+        foreach ($groups as $g) { $totalApproved += count($g['tanks']); }
+
+        return response()->json([
+            'published'      => true,
+            'groups'         => $groups,
+            'rejected'       => $rejected,
+            'total_approved' => $totalApproved,
+            'total_rejected' => count($rejected),
+        ]);
+    }
+
     private function buildComponentSubtotalsFromBreakdown(string $kategori, array $finalAvgDetail, array $mergedDefect): array
     {
         $empty = [

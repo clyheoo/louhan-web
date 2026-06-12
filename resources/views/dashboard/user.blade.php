@@ -1793,6 +1793,7 @@
         .js-page-ikan,
         .js-page-mvp,
         .js-page-team-champion,
+        .js-page-nominasi,
         .js-page-results{
             display:none !important;
         }
@@ -1824,6 +1825,11 @@
 
         /* Menu Hasil Juara */
         body.user-page-results .js-page-results{
+            display:block !important;
+        }
+
+        /* Menu Nominasi */
+        body.user-page-nominasi .js-page-nominasi{
             display:block !important;
         }
 
@@ -1912,6 +1918,26 @@
             font-size: 12px;
             font-weight: 500;
         }
+
+        /* ===== SHEET HASIL NOMINASI ===== */
+        .nominasi-sheet-wrap{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:12px; }
+        .nom-col{ border:1px solid var(--bd-2); border-radius:14px; overflow:hidden; background:var(--glass-2); display:flex; flex-direction:column; }
+        .nom-col-head{ padding:10px 12px; background:linear-gradient(135deg, rgba(34,211,238,.14), rgba(37,99,235,.08)); border-bottom:1px solid var(--bd-cyan); text-align:center; }
+        .nom-col-head .kat{ font-size:12px; font-weight:900; color:var(--cyan-200); text-transform:uppercase; letter-spacing:.04em; line-height:1.25; }
+        .nom-col-head .cnt{ font-size:10px; color:var(--cyan-300); font-weight:700; margin-top:3px; }
+        .nom-tank-cell{ padding:9px 12px; border-bottom:1px solid var(--bd-1); font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:800; color:var(--text-hi); text-align:center; }
+        .nom-tank-cell:last-child{ border-bottom:none; }
+        .nom-tank-cell:nth-child(even){ background:rgba(255,255,255,.02); }
+        .nom-empty-cell{ padding:14px; text-align:center; color:var(--text-low); font-size:12px; }
+        .nom-rejected-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; }
+        .nom-rej-cell{ border:1px solid rgba(239,68,68,.28); background:rgba(239,68,68,.06); border-radius:12px; padding:11px 12px; }
+        .nom-rej-tank{ font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:900; color:#FCA5A5; }
+        .nom-rej-kat{ font-size:10px; color:var(--text-mid); font-weight:700; margin-top:2px; text-transform:uppercase; }
+        .nom-rej-note{ font-size:10px; color:#FCA5A5; margin-top:6px; line-height:1.5; }
+        @media(max-width:520px){
+            .nominasi-sheet-wrap{ grid-template-columns:repeat(auto-fill, minmax(110px,1fr)); gap:8px; }
+            .nom-rejected-grid{ grid-template-columns:1fr 1fr; }
+        }
     </style>
 </head>
 <body class="user-page-overview">
@@ -1948,6 +1974,10 @@
                     </button>
                     <button type="button" class="user-sidebar-item" data-user-page="mvp" onclick="showUserPage('mvp')">
                         <i class="fas fa-star"></i> MVP & Team Champion
+                    </button>
+
+                    <button type="button" class="user-sidebar-item" data-user-page="nominasi" onclick="showUserPage('nominasi')">
+                        <i class="fas fa-clipboard-list"></i> Nominasi
                     </button>
 
                     <button type="button" class="user-sidebar-item" data-user-page="results" onclick="showUserPage('results')">
@@ -2215,6 +2245,42 @@
                                         Hasil MVP Anda
                                     </h3>
                                     <div id="hasilMvpList" style="display:grid;gap:10px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="user-page-section js-page-nominasi" data-user-page-section="nominasi">
+                        <div class="glass-card" id="nominasiCard">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">
+                                        <span class="title-icon"><i class="fas fa-clipboard-list"></i></span>
+                                        Hasil Nominasi
+                                    </h2>
+                                    <p class="card-subtitle">Tank yang lolos nominasi (per kategori &amp; kelas) beserta tank yang ditolak.</p>
+                                </div>
+                                <span class="status-badge" id="nominasiStatusBadge">MENUNGGU</span>
+                            </div>
+                            <div class="card-body">
+                                <div id="nominasiLockedState" style="text-align:center;padding:34px 18px;color:var(--text-mid);">
+                                    <div style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 14px;background:var(--glass-2);border:1px solid var(--bd-2);color:var(--gold-400);font-size:24px;">
+                                        <i class="fas fa-lock"></i>
+                                    </div>
+                                    <strong style="display:block;color:var(--text-hi);margin-bottom:6px;">Hasil Nominasi Belum Dibuka</strong>
+                                    <span style="font-size:13px;line-height:1.6;">Panitia belum mengirimkan hasil nominasi. Silakan cek kembali nanti.</span>
+                                </div>
+                                <div id="nominasiLoadingState" style="display:none;text-align:center;padding:30px;color:var(--text-mid);">
+                                    <i class="fas fa-spinner fa-spin" style="font-size:22px;"></i>
+                                    <div style="margin-top:10px;font-size:13px;">Memuat hasil nominasi...</div>
+                                </div>
+                                <div id="nominasiContent" style="display:none;">
+                                    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+                                        <button type="button" class="modal-close-btn" onclick="loadUserNominasi()" style="padding:8px 14px;font-size:12px;"><i class="fas fa-rotate-right" style="margin-right:6px;"></i>Muat Ulang</button>
+                                    </div>
+                                    <h3 style="font-size:14px;font-weight:900;color:var(--text-hi);margin-bottom:10px;"><i class="fas fa-check-double" style="color:#6EE7B7;margin-right:6px;"></i>Lolos Nominasi</h3>
+                                    <div class="nominasi-sheet-wrap" id="nominasiSheetWrap"></div>
+                                    <div id="nominasiRejectedWrap" style="margin-top:22px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -2696,7 +2762,7 @@
         }
 
         function showUserPage(page){
-            var allowedPages = ['overview', 'profile', 'ikan', 'mvp', 'results'];
+            var allowedPages = ['overview', 'profile', 'ikan', 'mvp', 'nominasi', 'results'];
             if (allowedPages.indexOf(page) === -1) page = 'overview';
 
             document.body.classList.remove(
@@ -2704,6 +2770,7 @@
                 'user-page-profile',
                 'user-page-ikan',
                 'user-page-mvp',
+                'user-page-nominasi',
                 'user-page-results'
             );
 
@@ -2725,13 +2792,90 @@
                 profile: 'Profil Peserta',
                 ikan: 'Daftar Ikan',
                 mvp: 'MVP & Team Champion',
+                nominasi: 'Nominasi',
                 results: 'Hasil Juara'
             };
 
             var titleEl = document.getElementById('userMobilePageTitle');
             if (titleEl) titleEl.textContent = titleMap[page] || 'Ringkasan';
 
+            if (page === 'nominasi' && typeof loadUserNominasi === 'function') {
+                loadUserNominasi();
+            }
+
             closeUserSidebar();
+        }
+
+        function loadUserNominasi(){
+            var badge = document.getElementById('nominasiStatusBadge');
+            var locked = document.getElementById('nominasiLockedState');
+            var loading = document.getElementById('nominasiLoadingState');
+            var content = document.getElementById('nominasiContent');
+            if(!content) return;
+
+            locked.style.display = 'none';
+            content.style.display = 'none';
+            loading.style.display = 'block';
+
+            apiFetch('/api/user/nominasi-results')
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                loading.style.display = 'none';
+
+                if(!d || !d.published){
+                    locked.style.display = 'block';
+                    content.style.display = 'none';
+                    if(badge){ badge.textContent = 'MENUNGGU'; badge.className = 'status-badge'; }
+                    return;
+                }
+
+                if(badge){ badge.textContent = 'DIBUKA'; badge.className = 'status-badge success'; }
+                locked.style.display = 'none';
+                content.style.display = 'block';
+
+                var wrap = document.getElementById('nominasiSheetWrap');
+                var groups = d.groups || [];
+                if(groups.length === 0){
+                    wrap.innerHTML = '<div class="nom-empty-cell" style="border:1px solid var(--bd-2);border-radius:12px;grid-column:1/-1;">Belum ada tank yang lolos nominasi.</div>';
+                } else {
+                    var html = '';
+                    groups.forEach(function(g){
+                        html += '<div class="nom-col">';
+                        html += '<div class="nom-col-head"><div class="kat">'+escapeHtml(g.label||'-')+'</div><div class="cnt">'+(g.tanks||[]).length+' tank</div></div>';
+                        html += '<div class="nom-col-body">';
+                        (g.tanks||[]).forEach(function(t){
+                            html += '<div class="nom-tank-cell">'+escapeHtml(String(t.nomor_tank != null ? t.nomor_tank : '—'))+'</div>';
+                        });
+                        html += '</div></div>';
+                    });
+                    wrap.innerHTML = html;
+                }
+
+                var rejWrap = document.getElementById('nominasiRejectedWrap');
+                var rejected = d.rejected || [];
+                if(rejected.length === 0){
+                    rejWrap.innerHTML = '';
+                } else {
+                    var rh = '<h3 style="font-size:14px;font-weight:900;color:var(--text-hi);margin-bottom:10px;"><i class="fas fa-circle-xmark" style="color:#FCA5A5;margin-right:6px;"></i>Tank Ditolak ('+rejected.length+')</h3>';
+                    rh += '<div class="nom-rejected-grid">';
+                    rejected.forEach(function(t){
+                        var katLabel = t.kategori || '-';
+                        if(t.kelas) katLabel += ' - Kelas ' + t.kelas;
+                        rh += '<div class="nom-rej-cell">';
+                        rh += '<div class="nom-rej-tank">Tank '+escapeHtml(String(t.nomor_tank != null ? t.nomor_tank : '—'))+'</div>';
+                        rh += '<div class="nom-rej-kat">'+escapeHtml(katLabel)+'</div>';
+                        if(t.catatan) rh += '<div class="nom-rej-note"><i class="fas fa-comment-dots"></i> '+escapeHtml(t.catatan)+'</div>';
+                        rh += '</div>';
+                    });
+                    rh += '</div>';
+                    rejWrap.innerHTML = rh;
+                }
+            })
+            .catch(function(){
+                loading.style.display = 'none';
+                locked.style.display = 'block';
+                if(badge){ badge.textContent = 'GAGAL'; badge.className = 'status-badge'; }
+            });
         }
 
         // ★ HELPER: Reset HANYA field ikan (profil TETAP terisi untuk tambah ikan berikutnya)

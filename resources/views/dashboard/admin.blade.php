@@ -1680,7 +1680,10 @@
                 <div class="glass-card" style="margin-bottom:16px;">
                     <div class="card-head">
                         <h3><span class="ti"><i class="fas fa-hand-pointer"></i></span>Pilih Tank untuk Dinominasikan</h3>
-                        <button class="btn-xs blue" onclick="loadAdminNomTanks()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <button class="btn-primary" id="btnToggleNominasiPublish" onclick="toggleNominasiPublish()" style="padding:8px 16px;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
+                            <button class="btn-xs blue" onclick="loadAdminNomTanks()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="filter-bar">
@@ -1715,9 +1718,21 @@
 
                 {{-- Section B: Pending Review --}}
                 <div class="glass-card" style="margin-bottom:16px;">
-                    <div class="card-head">
+                    <div class="card-head" style="flex-wrap:wrap;gap:10px;">
                         <h3><span class="ti" style="background:rgba(245,158,11,.12);border-color:var(--bd-gold);color:var(--gold-400);"><i class="fas fa-hourglass-half"></i></span>Review Nominasi Pending</h3>
-                        <span style="font-size:10px;font-weight:700;color:var(--gold-300);" id="adminPendingCount">0 pending</span>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <select id="adminNomReviewFilterKat" class="filter-select" onchange="adminNomApplyFilter()" style="min-width:140px;padding:7px 30px 7px 10px;font-size:11px;">
+                                <option value="">Semua Kategori</option>
+                                <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
+                                <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                            </select>
+                            <select id="adminNomReviewFilterKelas" class="filter-select" onchange="adminNomApplyFilter()" style="min-width:100px;padding:7px 30px 7px 10px;font-size:11px;">
+                                <option value="">Semua Kelas</option>
+                                <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                            </select>
+                            <button class="btn-xs" onclick="adminNomResetFilter()" style="background:var(--glass-2);color:var(--text-mid);border:1px solid var(--bd-2);padding:7px 10px;"><i class="fas fa-rotate-left"></i></button>
+                            <span style="font-size:10px;font-weight:700;color:var(--gold-300);" id="adminPendingCount">0 pending</span>
+                        </div>
                     </div>
                     <div class="card-body" id="adminPendingBody">
                         <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
@@ -1737,15 +1752,27 @@
 
                 {{-- Section D: History --}}
                 <div class="glass-card">
-                    <div class="card-head">
+                    <div class="card-head" style="flex-wrap:wrap;gap:10px;">
                         <h3><span class="ti"><i class="fas fa-clock-rotate-left"></i></span>Riwayat Review</h3>
-                        <div style="display:flex;gap:5px;background:var(--glass-2);padding:3px;border-radius:9px;border:1px solid var(--bd-2);">
-                            <button onclick="adminSwitchHistTab('approved')" id="adminHistTabApp" class="btn-xs" style="padding:6px 12px;background:rgba(16,185,129,.20);color:#6EE7B7;border:none;">
-                                <i class="fas fa-check-circle"></i> Diterima (<span id="adminHistAppCount">0</span>)
-                            </button>
-                            <button onclick="adminSwitchHistTab('rejected')" id="adminHistTabRej" class="btn-xs" style="padding:6px 12px;background:transparent;color:var(--text-mid);border:none;">
-                                <i class="fas fa-times-circle"></i> Ditolak (<span id="adminHistRejCount">0</span>)
-                            </button>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <select id="adminHistFilterKat" class="filter-select" onchange="adminHistApplyFilter()" style="min-width:130px;padding:7px 30px 7px 10px;font-size:11px;">
+                                <option value="">Semua Kategori</option>
+                                <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
+                                <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                            </select>
+                            <select id="adminHistFilterKelas" class="filter-select" onchange="adminHistApplyFilter()" style="min-width:95px;padding:7px 30px 7px 10px;font-size:11px;">
+                                <option value="">Semua Kelas</option>
+                                <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                            </select>
+                            <button class="btn-xs" onclick="adminHistResetFilter()" style="background:var(--glass-2);color:var(--text-mid);border:1px solid var(--bd-2);padding:7px 10px;"><i class="fas fa-rotate-left"></i></button>
+                            <div style="display:flex;gap:5px;background:var(--glass-2);padding:3px;border-radius:9px;border:1px solid var(--bd-2);">
+                                <button onclick="adminSwitchHistTab('approved')" id="adminHistTabApp" class="btn-xs" style="padding:6px 12px;background:rgba(16,185,129,.20);color:#6EE7B7;border:none;">
+                                    <i class="fas fa-check-circle"></i> Diterima (<span id="adminHistAppCount">0</span>)
+                                </button>
+                                <button onclick="adminSwitchHistTab('rejected')" id="adminHistTabRej" class="btn-xs" style="padding:6px 12px;background:transparent;color:var(--text-mid);border:none;">
+                                    <i class="fas fa-times-circle"></i> Ditolak (<span id="adminHistRejCount">0</span>)
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="card-body" id="adminHistBody">
