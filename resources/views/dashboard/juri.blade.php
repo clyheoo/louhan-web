@@ -817,6 +817,62 @@ let nomState = {
     excludedTankIds: new Set(),
 };
 
+// ═══════════════════════════════════════════════════════════════
+// PERSIST PILIHAN NOMINASI (DRAFT) — bertahan saat refresh / keluar halaman
+// ═══════════════════════════════════════════════════════════════
+function getNomDraftKey() { return 'juri_nom_draft_' + authUserId; }
+
+function saveNomDraft() {
+    try {
+        // Jangan simpan tank yang sudah pending (sumbernya server) atau approved/rejected.
+        var pendingIds = new Set();
+        (nomState.tanks || []).forEach(function(t) { if (t.is_pending) pendingIds.add(t.id); });
+
+        var sel = [];
+        nomState.selected.forEach(function(id) {
+            if (pendingIds.has(id)) return;
+            if (nomState.excludedTankIds.has(id)) return;
+            sel.push(id);
+        });
+
+        var defs = {};
+        sel.forEach(function(id) {
+            if (nomState.defects[id]) defs[id] = nomState.defects[id];
+        });
+
+        localStorage.setItem(getNomDraftKey(), JSON.stringify({ selected: sel, defects: defs }));
+    } catch (e) {}
+}
+
+function loadNomDraft() {
+    try {
+        var raw = localStorage.getItem(getNomDraftKey());
+        if (!raw) return;
+        var d = JSON.parse(raw);
+
+        // Hanya pulihkan tank yang masih ada di daftar & bukan excluded.
+        var validIds = new Set((nomState.tanks || []).map(function(t) { return t.id; }));
+
+        (d.selected || []).forEach(function(id) {
+            id = parseInt(id, 10);
+            if (nomState.excludedTankIds.has(id)) return;
+            if (validIds.size && !validIds.has(id)) return;
+            nomState.selected.add(id);
+        });
+
+        Object.keys(d.defects || {}).forEach(function(key) {
+            var nid = parseInt(key, 10);
+            if (nomState.excludedTankIds.has(nid)) return;
+            if (validIds.size && !validIds.has(nid)) return;
+            nomState.defects[nid] = d.defects[key];
+        });
+    } catch (e) {}
+}
+
+function clearNomDraft() {
+    try { localStorage.removeItem(getNomDraftKey()); } catch (e) {}
+}
+
 // ★ State Global UI Juri
 let currentJuriView = 'nominasi'; // 'nominasi' atau 'penjurian'
 let isScoringUnlocked = false;    // Default terkunci, diupdate dari API
@@ -1185,6 +1241,9 @@ async function nomLoadData() {
             nomState.defects[parseInt(id, 10)] = pd[id];
         });
 
+        // ★ Pulihkan pilihan draft (belum dikirim) dari localStorage — tahan refresh/keluar halaman.
+        loadNomDraft();
+
         // Paksa HANYA pending tampil paling atas, lalu urut nomor tank.
         // Selected (sekadar dipilih) sengaja TIDAK ikut menentukan urutan.
         nomState.tanks.sort(function(a, b) {
@@ -1468,6 +1527,7 @@ function saveNomDefectAll() {
     }
     nomDefectAllCtx = null;
     document.getElementById('modal-nom-defect-all').classList.add('hidden');
+    saveNomDraft();
     nomRenderGrid();
 }
 
@@ -1492,6 +1552,7 @@ function nomUpdateFilterInfo() {
 function nomToggle(id) {
     if (nomState.selected.has(id)) { nomState.selected.delete(id); }
     else { nomState.selected.add(id); }
+    saveNomDraft();
     nomUpdateCount(); nomRenderGrid();
 }
 
@@ -1552,6 +1613,7 @@ async function nomConfirmSubmit() {
         });
 
         if (res.success) {
+            clearNomDraft(); // ★ pilihan sudah jadi pending (milik server), draft tak perlu lagi
             nomClosePreview();
             showSuccessPopup('Nominasi Terkirim!', res.message);
 
@@ -1933,6 +1995,7 @@ function saveDefect() {
         nomState.defects[tankId]['raw_'+partKey+'_penalty'] = values;
         defectModal = null;
         document.getElementById('modal-defect').classList.add('hidden');
+        saveNomDraft();
         nomRenderGrid();
         return;
     }
