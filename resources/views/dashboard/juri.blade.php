@@ -1185,15 +1185,12 @@ async function nomLoadData() {
             nomState.defects[parseInt(id, 10)] = pd[id];
         });
 
-        // Paksa pending tampil paling atas, lalu yang selected, lalu nomor tank.
+        // Paksa HANYA pending tampil paling atas, lalu urut nomor tank.
+        // Selected (sekadar dipilih) sengaja TIDAK ikut menentukan urutan.
         nomState.tanks.sort(function(a, b) {
             var ap = a.is_pending ? 1 : 0;
             var bp = b.is_pending ? 1 : 0;
             if (ap !== bp) return bp - ap;
-
-            var as = nomState.selected.has(a.id) ? 1 : 0;
-            var bs = nomState.selected.has(b.id) ? 1 : 0;
-            if (as !== bs) return bs - as;
 
             return (parseInt(a.nomor_tank || 0, 10) || 0) - (parseInt(b.nomor_tank || 0, 10) || 0);
         });
@@ -1300,10 +1297,8 @@ function nomRenderGrid() {
         var bp = b.is_pending ? 1 : 0;
         if (ap !== bp) return bp - ap;
 
-        var as = nomState.selected.has(a.id) ? 1 : 0;
-        var bs = nomState.selected.has(b.id) ? 1 : 0;
-        if (as !== bs) return bs - as;
-
+        // Tank yang sekadar dipilih (selected) TIDAK naik ke atas — tetap di posisi nomor tank-nya.
+        // Hanya PENDING yang dipaksa di atas (sudah ditangani blok is_pending di atas).
         return (parseInt(a.nomor_tank || 0, 10) || 0) - (parseInt(b.nomor_tank || 0, 10) || 0);
     });
 
