@@ -882,11 +882,15 @@ function nomShow(id) { document.getElementById(id)?.classList.remove('hidden'); 
 function nomHide(id) { document.getElementById(id)?.classList.add('hidden'); }
 
 async function checkNominasiStatus(attempt = 1) {
-    // ★ GUARD: Jika user di tab Penjurian, JANGAN ubah halaman
-    const isOnPenjurianTab = (currentJuriView === 'penjurian');
-    
     try {
         const res = await apiFetch('/api/juri/nominasi-status');
+
+        // ★ GUARD: hitung tab AKTIF SETELAH request selesai.
+        //    Tab bisa berpindah ke 'penjurian' selama menunggu response,
+        //    jadi snapshot di awal fungsi bisa basi & memunculkan halaman pending
+        //    di atas halaman penjurian. Baca currentJuriView yang terbaru di sini.
+        const isOnPenjurianTab = (currentJuriView === 'penjurian');
+
         const status = res.status;
         const wasPending = sessionStorage.getItem('nom_was_pending') === '1';
         
@@ -928,10 +932,10 @@ async function checkNominasiStatus(attempt = 1) {
             }
 
         } else if (status === 'pending') {
-            // ★ Jika di tab penjurian, JANGAN pindah ke waiting
+            // ★ Di tab penjurian: JANGAN tampilkan halaman pending/waiting,
+            //    dan JANGAN jalankan timer nominasi. Halaman pending hanya milik tab nominasi.
             if (isOnPenjurianTab) {
-                if (nomState.autoRefreshTimer) clearInterval(nomState.autoRefreshTimer);
-                nomState.autoRefreshTimer = setInterval(checkNominasiStatus, 5000);
+                if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
                 return;
             }
             nomShowWaiting(res.nominations);
@@ -952,7 +956,8 @@ async function checkNominasiStatus(attempt = 1) {
             await new Promise(r => setTimeout(r, attempt * 800));
             return checkNominasiStatus(attempt + 1);
         }
-        if (!isOnPenjurianTab) nomHide('nom-loading');
+        // ★ Baca tab terbaru langsung (variabel guard kini hanya hidup di dalam try).
+        if (currentJuriView !== 'penjurian') nomHide('nom-loading');
         showWarningModal([{type:'select', msg:'Gagal memeriksa status nominasi. Periksa koneksi internet Anda.'}]);
     }
 }
