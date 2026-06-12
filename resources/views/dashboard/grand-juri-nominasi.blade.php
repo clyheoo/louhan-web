@@ -307,6 +307,32 @@
         </div>
     </div>
 
+    {{-- ★ FILTER GLOBAL KATEGORI & KELAS --}}
+    <div class="g-card gj-filter-bar">
+        <div class="gj-filter-inner">
+            <div class="gj-filter-label"><i class="fas fa-filter"></i> Filter</div>
+            <select id="gj-filter-kat" class="gj-filter-select" onchange="gjApplyFilter()">
+                <option value="">Semua Kategori</option>
+                <option value="Cencu">Cencu</option>
+                <option value="Chingwa">Chingwa</option>
+                <option value="Freemarking">Freemarking</option>
+                <option value="Goldenbase">Goldenbase</option>
+                <option value="Klasik">Klasik</option>
+                <option value="Bonsai">Bonsai</option>
+                <option value="Jumbo">Jumbo</option>
+            </select>
+            <select id="gj-filter-kelas" class="gj-filter-select" onchange="gjApplyFilter()">
+                <option value="">Semua Kelas</option>
+                <option value="A">Kelas A</option>
+                <option value="B">Kelas B</option>
+                <option value="C">Kelas C</option>
+                <option value="D">Kelas D</option>
+                <option value="E">Kelas E</option>
+            </select>
+            <button class="gj-filter-reset" onclick="gjResetFilter()"><i class="fas fa-rotate-left"></i> Reset</button>
+        </div>
+    </div>
+
     {{-- Daftar Nominasi --}}
     <div id="nom-list" class="space-y-5"></div>
     <div id="nom-empty" class="g-card" style="display:none;">
@@ -411,6 +437,21 @@
 
 <style>@media(max-width:540px){.hide-sm{display:none;}}</style>
 
+<style>
+/* ★ FILTER GLOBAL KATEGORI & KELAS */
+.gj-filter-bar{margin-bottom:18px;}
+.gj-filter-inner{display:flex;align-items:center;gap:10px;padding:14px 18px;flex-wrap:wrap;}
+.gj-filter-label{font-size:12px;font-weight:800;color:var(--purple);display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.05em;}
+.gj-filter-select{padding:9px 34px 9px 12px;border:1px solid var(--bd-2);border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;color:var(--text-hi);background-color:var(--glass-2);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A78BFA' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:13px;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none;transition:all .2s;min-width:150px;}
+.gj-filter-select:hover{border-color:var(--purple);background-color:var(--purple-light);}
+.gj-filter-select:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(124,58,237,.12);}
+.gj-filter-select:disabled{opacity:.45;cursor:not-allowed;}
+.gj-filter-select option{background-color:var(--ocean-800);color:var(--text-hi);}
+.gj-filter-reset{padding:9px 14px;border-radius:10px;border:1px solid var(--bd-2);background:var(--glass-2);color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all .2s;}
+.gj-filter-reset:hover{background:var(--purple-light);color:var(--purple);border-color:rgba(124,58,237,.25);}
+@media(max-width:540px){.gj-filter-inner{padding:12px 14px;}.gj-filter-select{flex:1;min-width:0;}}
+</style>
+
 <script>
 var NO_KELAS_KAT = ['Bonsai', 'Jumbo'];
 function isNoKelasGJ(kat) { return NO_KELAS_KAT.indexOf(kat) !== -1; }
@@ -419,6 +460,12 @@ var CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('conte
 var pendingRejectId = null;
 var _pendingCache = '';
 var _lateCache = '';
+
+/* ★ STATE FILTER GLOBAL + cache data mentah untuk re-render */
+var gjFilterKat = '';
+var gjFilterKelas = '';
+var _gjGroupedData = [];
+var _gjLateData = null;
 
 async function apiFetch(url, opts) {
     opts = opts || {};
@@ -590,52 +637,109 @@ async function loadNominasi(silent) {
 
         document.getElementById('stat-juri').textContent = res.total_juri || 0;
         document.getElementById('stat-tank').textContent = res.total_pending || 0;
-        var list = document.getElementById('nom-list');
-        var empty = document.getElementById('nom-empty');
-        if (!res.grouped || !Array.isArray(res.grouped) || res.grouped.length === 0) {
-            list.innerHTML = '';
-            empty.style.display = '';
-            return;
-        }
-        empty.style.display = 'none';
-        var html = '';
-        for (var g = 0; g < res.grouped.length; g++) {
-            try {
-                var group = res.grouped[g];
-                if (!group || !group.tanks || !Array.isArray(group.tanks)) continue;
-                var tankIds = [];
-                for (var ti = 0; ti < group.tanks.length; ti++) {
-                    if (group.tanks[ti] && group.tanks[ti].nominasi_id) tankIds.push(group.tanks[ti].nominasi_id);
-                }
-                html += '<div class="g-card nom-group fade-in">';
-                html += '<div class="nom-group-head"><div class="nom-group-info"><div class="nom-group-avatar"><i class="fas fa-user"></i></div><div><h3>' + escH(group.juri_name || 'Unknown') + '</h3><p>' + group.tanks.length + ' tank dinominasikan</p></div></div>';
-                html += '<button onclick="approveAllInGroup(this, ' + JSON.stringify(tankIds) + ')" class="btn-acc-all"><i class="fas fa-check-double"></i> ACC Semua</button>';
-                html += '</div><div class="nom-group-body">';
-                for (var t = 0; t < group.tanks.length; t++) {
-                    try {
-                        var tank = group.tanks[t];
-                        if (!tank || !tank.nominasi_id) continue;
-                        var kelasHtml = '';
-                        if (tank.kelas && !isNoKelasGJ(tank.kategori)) {
-                            kelasHtml = '<div class="tank-badge kelas">Kelas ' + escH(tank.kelas) + '</div>';
-                        }
-                        html += '<div id="tank-card-' + tank.nominasi_id + '" class="tank-card">';
-                        html += '<div class="tank-num">' + (tank.nomor_tank || '?') + '</div>';
-                        html += '<div class="tank-badges"><div class="tank-badge kat">' + escH(tank.kategori || '-') + '</div>' + kelasHtml + '</div>';
-                        html += '<div class="tank-actions">';
-                        html += '<button onclick="approveNominasi(this, ' + tank.nominasi_id + ')" class="tank-btn acc"><i class="fas fa-check"></i> ACC</button>';
-                        html += '<button onclick="showRejectConfirm(' + tank.nominasi_id + ', ' + (tank.nomor_tank || 0) + ')" class="tank-btn rej"><i class="fas fa-times"></i> Tolak</button>';
-                        html += '</div></div>';
-                    } catch(e2) { /* skip tank */ }
-                }
-                html += '</div></div>';
-            } catch(e1) { /* skip group */ }
-        }
-        list.innerHTML = html;
+
+        // ★ Simpan data mentah, lalu render dengan filter aktif
+        _gjGroupedData = (res.grouped && Array.isArray(res.grouped)) ? res.grouped : [];
+        renderNominasiGroups();
+
         loadLateIkan(true); // ★ refresh late-ikan module setiap refresh nominasi (silent)
     } catch(e) {
         if (!silent) showWarningModal([{ msg: 'Gagal memuat data nominasi.' }]);
     }
+}
+
+/* ═══ FILTER GLOBAL — pencocokan kategori & kelas ═══ */
+function gjTankMatch(t) {
+    if (!t) return false;
+    if (gjFilterKat && (t.kategori || '') !== gjFilterKat) return false;
+    // kelas diabaikan untuk kategori tanpa kelas (Bonsai/Jumbo)
+    if (gjFilterKelas && !isNoKelasGJ(t.kategori) && (t.kelas || '') !== gjFilterKelas) return false;
+    return true;
+}
+
+function renderNominasiGroups() {
+    var list = document.getElementById('nom-list');
+    var empty = document.getElementById('nom-empty');
+    var html = '';
+
+    for (var g = 0; g < _gjGroupedData.length; g++) {
+        try {
+            var group = _gjGroupedData[g];
+            if (!group || !group.tanks || !Array.isArray(group.tanks)) continue;
+
+            // ★ saring tank sesuai filter
+            var visTanks = group.tanks.filter(gjTankMatch);
+            if (visTanks.length === 0) continue;
+
+            var tankIds = [];
+            for (var ti = 0; ti < visTanks.length; ti++) {
+                if (visTanks[ti] && visTanks[ti].nominasi_id) tankIds.push(visTanks[ti].nominasi_id);
+            }
+
+            html += '<div class="g-card nom-group fade-in">';
+            html += '<div class="nom-group-head"><div class="nom-group-info"><div class="nom-group-avatar"><i class="fas fa-user"></i></div><div><h3>' + escH(group.juri_name || 'Unknown') + '</h3><p>' + visTanks.length + ' tank dinominasikan</p></div></div>';
+            html += '<button onclick="approveAllInGroup(this, ' + JSON.stringify(tankIds) + ')" class="btn-acc-all"><i class="fas fa-check-double"></i> ACC Semua</button>';
+            html += '</div><div class="nom-group-body">';
+            for (var t = 0; t < visTanks.length; t++) {
+                try {
+                    var tank = visTanks[t];
+                    if (!tank || !tank.nominasi_id) continue;
+                    var kelasHtml = '';
+                    if (tank.kelas && !isNoKelasGJ(tank.kategori)) {
+                        kelasHtml = '<div class="tank-badge kelas">Kelas ' + escH(tank.kelas) + '</div>';
+                    }
+                    html += '<div id="tank-card-' + tank.nominasi_id + '" class="tank-card">';
+                    html += '<div class="tank-num">' + (tank.nomor_tank || '?') + '</div>';
+                    html += '<div class="tank-badges"><div class="tank-badge kat">' + escH(tank.kategori || '-') + '</div>' + kelasHtml + '</div>';
+                    html += '<div class="tank-actions">';
+                    html += '<button onclick="approveNominasi(this, ' + tank.nominasi_id + ')" class="tank-btn acc"><i class="fas fa-check"></i> ACC</button>';
+                    html += '<button onclick="showRejectConfirm(' + tank.nominasi_id + ', ' + (tank.nomor_tank || 0) + ')" class="tank-btn rej"><i class="fas fa-times"></i> Tolak</button>';
+                    html += '</div></div>';
+                } catch(e2) { /* skip tank */ }
+            }
+            html += '</div></div>';
+        } catch(e1) { /* skip group */ }
+    }
+
+    if (html === '') {
+        if (_gjGroupedData.length === 0) {
+            // memang tidak ada nominasi pending
+            list.innerHTML = '';
+            empty.style.display = '';
+        } else {
+            // ada data, tapi tak ada yang cocok filter
+            empty.style.display = 'none';
+            list.innerHTML = '<div class="g-card"><div class="empty-state"><i class="fas fa-filter"></i><p>Tidak ada nominasi yang cocok dengan filter.</p><p class="sub">Ubah kategori/kelas atau klik Reset.</p></div></div>';
+        }
+        return;
+    }
+    empty.style.display = 'none';
+    list.innerHTML = html;
+}
+
+function gjApplyFilter() {
+    gjFilterKat   = document.getElementById('gj-filter-kat').value;
+    gjFilterKelas = document.getElementById('gj-filter-kelas').value;
+
+    // nonaktifkan dropdown kelas jika kategori tanpa kelas (Bonsai/Jumbo)
+    var kelasSel = document.getElementById('gj-filter-kelas');
+    if (gjFilterKat && isNoKelasGJ(gjFilterKat)) {
+        kelasSel.value = ''; gjFilterKelas = ''; kelasSel.disabled = true;
+    } else {
+        kelasSel.disabled = false;
+    }
+
+    renderNominasiGroups();
+    renderLateGrid();   // late-ikan ikut terfilter
+}
+
+function gjResetFilter() {
+    gjFilterKat = ''; gjFilterKelas = '';
+    document.getElementById('gj-filter-kat').value = '';
+    var kelasSel = document.getElementById('gj-filter-kelas');
+    kelasSel.value = ''; kelasSel.disabled = false;
+    renderNominasiGroups();
+    renderLateGrid();
 }
 
 function escH(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -707,6 +811,7 @@ async function loadLateIkan(silent) {
         var fingerprint = JSON.stringify(res);
         if(fingerprint === _lateCache) return;
         _lateCache = fingerprint;
+        _gjLateData = res; // ★ simpan untuk re-render saat filter berubah
 
         var section = document.getElementById('late-section');
         var disabled = document.getElementById('late-disabled-info');
@@ -726,32 +831,41 @@ async function loadLateIkan(silent) {
         }
 
         disabled.style.display = 'none';
-
-        if (!res.ikans || res.ikans.length === 0) {
-            section.style.display = 'none';
-            return;
-        }
-
-        section.style.display = '';
-        document.getElementById('late-count-badge').textContent = res.ikans.length + ' tank';
-        document.getElementById('late-sub').textContent = 'Semua juri sudah selesai — review ikan yang baru saja didaftarkan';
-
-        var html = '';
-        res.ikans.forEach(function(ikan) {
-            var kelasHtml = '';
-            if (ikan.kelas && !isNoKelasGJ(ikan.kategori)) {
-                kelasHtml = '<div class="tank-badge kelas">Kelas ' + escH(ikan.kelas) + '</div>';
-            }
-            html += '<div id="late-card-' + ikan.ikan_id + '" class="tank-card">';
-            html += '<div class="tank-num" style="background:linear-gradient(135deg,var(--gold-600),var(--gold-500));box-shadow:0 4px 12px -3px rgba(245,158,11,.4);">' + (ikan.nomor_tank || '?') + '</div>';
-            html += '<div class="tank-badges"><div class="tank-badge kat">' + escH(ikan.kategori || '-') + '</div>' + kelasHtml + '</div>';
-            html += '<div class="tank-actions">';
-            html += '<button onclick="approveLateIkan(this, ' + ikan.ikan_id + ')" class="tank-btn acc"><i class="fas fa-check"></i> ACC</button>';
-            html += '<button onclick="rejectLateIkan(' + ikan.ikan_id + ', ' + (ikan.nomor_tank || 0) + ')" class="tank-btn rej"><i class="fas fa-times"></i> Tolak</button>';
-            html += '</div></div>';
-        });
-        document.getElementById('late-grid').innerHTML = html;
+        renderLateGrid();   // ★ render + terapkan filter global
     } catch(e) { /* silent */ }
+}
+
+function renderLateGrid() {
+    var res = _gjLateData;
+    var section = document.getElementById('late-section');
+    if (!res || !res.enabled) return;
+
+    var allIkans = (res.ikans && Array.isArray(res.ikans)) ? res.ikans : [];
+    if (allIkans.length === 0) { section.style.display = 'none'; return; }
+
+    // ★ terapkan filter global
+    var ikans = allIkans.filter(gjTankMatch);
+    if (ikans.length === 0) { section.style.display = 'none'; return; }
+
+    section.style.display = '';
+    document.getElementById('late-count-badge').textContent = ikans.length + ' tank';
+    document.getElementById('late-sub').textContent = 'Semua juri sudah selesai — review ikan yang baru saja didaftarkan';
+
+    var html = '';
+    ikans.forEach(function(ikan) {
+        var kelasHtml = '';
+        if (ikan.kelas && !isNoKelasGJ(ikan.kategori)) {
+            kelasHtml = '<div class="tank-badge kelas">Kelas ' + escH(ikan.kelas) + '</div>';
+        }
+        html += '<div id="late-card-' + ikan.ikan_id + '" class="tank-card">';
+        html += '<div class="tank-num" style="background:linear-gradient(135deg,var(--gold-600),var(--gold-500));box-shadow:0 4px 12px -3px rgba(245,158,11,.4);">' + (ikan.nomor_tank || '?') + '</div>';
+        html += '<div class="tank-badges"><div class="tank-badge kat">' + escH(ikan.kategori || '-') + '</div>' + kelasHtml + '</div>';
+        html += '<div class="tank-actions">';
+        html += '<button onclick="approveLateIkan(this, ' + ikan.ikan_id + ')" class="tank-btn acc"><i class="fas fa-check"></i> ACC</button>';
+        html += '<button onclick="rejectLateIkan(' + ikan.ikan_id + ', ' + (ikan.nomor_tank || 0) + ')" class="tank-btn rej"><i class="fas fa-times"></i> Tolak</button>';
+        html += '</div></div>';
+    });
+    document.getElementById('late-grid').innerHTML = html;
 }
 
 async function approveLateIkan(btn, ikanId) {
