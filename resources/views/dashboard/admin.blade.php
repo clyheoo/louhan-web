@@ -1734,7 +1734,7 @@
                             <span style="font-size:10px;font-weight:700;color:var(--gold-300);" id="adminPendingCount">0 pending</span>
                         </div>
                     </div>
-                    <div class="card-body" id="adminPendingBody">
+                    <div class="card-body" id="adminPendingBody" style="max-height:520px;overflow-y:auto;padding-right:12px;">
                         <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
                     </div>
                 </div>
@@ -1745,7 +1745,7 @@
                         <h3><span class="ti" style="background:rgba(245,158,11,.12);border-color:var(--bd-gold);color:var(--gold-400);"><i class="fas fa-clock"></i></span>Ikan Terlambat Daftar</h3>
                         <span style="font-size:10px;font-weight:700;color:var(--gold-300);" id="adminLateCount">—</span>
                     </div>
-                    <div class="card-body" id="adminLateBody">
+                    <div class="card-body" id="adminLateBody" style="max-height:420px;overflow-y:auto;padding-right:12px;">
                         <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
                     </div>
                 </div>
@@ -1755,6 +1755,13 @@
                     <div class="card-head" style="flex-wrap:wrap;gap:10px;">
                         <h3><span class="ti"><i class="fas fa-clock-rotate-left"></i></span>Riwayat Review</h3>
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <input
+                                type="text"
+                                id="adminHistSearchTank"
+                                class="filter-select"
+                                placeholder="Cari no tank..."
+                                oninput="adminHistApplyFilter()"
+                                style="min-width:125px;padding:7px 10px;font-size:11px;">
                             <select id="adminHistFilterKat" class="filter-select" onchange="adminHistApplyFilter()" style="min-width:130px;padding:7px 30px 7px 10px;font-size:11px;">
                                 <option value="">Semua Kategori</option>
                                 <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>

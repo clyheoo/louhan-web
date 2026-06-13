@@ -147,6 +147,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/jumbo-scored-ikans', [AdminDashboardController::class, 'getJumboScoredIkans']);
     Route::post('/api/admin/calc-jumbo-point', [AdminDashboardController::class, 'calcJumboPoint']);
     Route::post('/api/admin/reset-rejected-nominasi', [AdminDashboardController::class, 'resetRejectedNominasi']);
+    Route::post('/api/admin/hapus-nominasi', [AdminDashboardController::class, 'hapusNominasi']);
     Route::get('/api/admin/results-status', [AdminDashboardController::class, 'getResultsStatus']);    
     Route::post('/api/admin/publish-results-all', [AdminDashboardController::class, 'publishResultsAll']);
     Route::post('/api/admin/publish-result-user', [AdminDashboardController::class, 'publishResultUser']);

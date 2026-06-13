@@ -5184,7 +5184,8 @@ var adminNomState = {
     filterKat: '',
     filterKelas: '',
     histFilterKat: '',
-    histFilterKelas: ''
+    histFilterKelas: '',
+    histSearchTank: ''
 };
 
 var _adminPendingCache = '';
@@ -5200,9 +5201,18 @@ function adminNomTankMatch(t){
 }
 function adminHistTankMatch(t){
     if(!t) return false;
-    var noKelas=['Bonsai','Jumbo'];
-    if(adminNomState.histFilterKat && (t.kategori||'')!==adminNomState.histFilterKat) return false;
-    if(adminNomState.histFilterKelas && noKelas.indexOf(t.kategori)===-1 && (t.kelas||'')!==adminNomState.histFilterKelas) return false;
+
+    var noKelas = ['Bonsai','Jumbo'];
+
+    if(adminNomState.histFilterKat && (t.kategori || '') !== adminNomState.histFilterKat) return false;
+    if(adminNomState.histFilterKelas && noKelas.indexOf(t.kategori) === -1 && (t.kelas || '') !== adminNomState.histFilterKelas) return false;
+
+    var q = (adminNomState.histSearchTank || '').toLowerCase().trim();
+    if(q){
+        var nomor = String(t.nomor_tank || '').toLowerCase();
+        if(nomor.indexOf(q) === -1) return false;
+    }
+
     return true;
 }
 function adminNomApplyFilter(){
@@ -5219,17 +5229,154 @@ function adminNomResetFilter(){
     renderAdminPending(); renderAdminLate();
 }
 function adminHistApplyFilter(){
-    adminNomState.histFilterKat=(document.getElementById('adminHistFilterKat')||{}).value||'';
-    adminNomState.histFilterKelas=(document.getElementById('adminHistFilterKelas')||{}).value||'';
-    var ks=document.getElementById('adminHistFilterKelas');
-    if(ks){ if(adminNomState.histFilterKat && ['Bonsai','Jumbo'].indexOf(adminNomState.histFilterKat)!==-1){ ks.value=''; adminNomState.histFilterKelas=''; ks.disabled=true; } else { ks.disabled=false; } }
+    adminNomState.histSearchTank = (document.getElementById('adminHistSearchTank') || {}).value || '';
+    adminNomState.histFilterKat  = (document.getElementById('adminHistFilterKat') || {}).value || '';
+    adminNomState.histFilterKelas = (document.getElementById('adminHistFilterKelas') || {}).value || '';
+
+    var ks = document.getElementById('adminHistFilterKelas');
+    if(ks){
+        if(adminNomState.histFilterKat && ['Bonsai','Jumbo'].indexOf(adminNomState.histFilterKat) !== -1){
+            ks.value = '';
+            adminNomState.histFilterKelas = '';
+            ks.disabled = true;
+        } else {
+            ks.disabled = false;
+        }
+    }
+
     renderAdminHistory();
 }
+
 function adminHistResetFilter(){
-    adminNomState.histFilterKat=''; adminNomState.histFilterKelas='';
-    var a=document.getElementById('adminHistFilterKat'); if(a) a.value='';
-    var b=document.getElementById('adminHistFilterKelas'); if(b){ b.value=''; b.disabled=false; }
+    adminNomState.histSearchTank = '';
+    adminNomState.histFilterKat = '';
+    adminNomState.histFilterKelas = '';
+
+    var s = document.getElementById('adminHistSearchTank'); if(s) s.value = '';
+    var a = document.getElementById('adminHistFilterKat'); if(a) a.value = '';
+    var b = document.getElementById('adminHistFilterKelas'); if(b){ b.value = ''; b.disabled = false; }
+
     renderAdminHistory();
+}
+
+function adminNomJsonArg(obj){
+    try { return encodeURIComponent(JSON.stringify(obj || {})); }
+    catch(e){ return encodeURIComponent('{}'); }
+}
+
+function adminNomParseJsonArg(raw){
+    try { return JSON.parse(decodeURIComponent(raw || '%7B%7D')); }
+    catch(e){ return {}; }
+}
+
+function adminNomDefectArr(t, key){
+    var arr = t && Array.isArray(t[key]) ? t[key] : ['0'];
+
+    if(typeof adminNormalizeDefectLegacy === 'function'){
+        arr = adminNormalizeDefectLegacy(arr);
+    }
+
+    arr = arr.filter(function(v){
+        return v !== null && v !== undefined && String(v).trim() !== '';
+    });
+
+    return arr.length ? arr : ['0'];
+}
+
+function adminNomHasDefect(t){
+    var keys = ['raw_head_penalty','raw_face_penalty','raw_body_penalty','raw_finnage_penalty'];
+
+    for(var i = 0; i < keys.length; i++){
+        var arr = adminNomDefectArr(t, keys[i]);
+        var real = arr.filter(function(v){ return String(v) !== '0'; });
+        if(real.length > 0) return true;
+    }
+
+    return false;
+}
+
+function adminNomDefectButton(t){
+    var has = adminNomHasDefect(t);
+    var bg  = has ? 'rgba(245,158,11,.12)' : 'rgba(34,211,238,.08)';
+    var bd  = has ? 'rgba(245,158,11,.30)' : 'rgba(34,211,238,.18)';
+    var col = has ? 'var(--gold-300)' : 'var(--cyan-300)';
+    var txt = has ? 'Lihat Defect' : 'Defect Aman';
+
+    return '<button class="btn-xs" onclick="adminShowNomDefect(\''+adminNomJsonArg(t)+'\')" style="margin-top:8px;width:100%;font-size:9px;padding:5px 8px;background:'+bg+';border:1px solid '+bd+';color:'+col+';">' +
+        '<i class="fas fa-eye" style="margin-right:3px;"></i>'+txt+
+    '</button>';
+}
+
+function adminNomDefectRow(label, arr){
+    var real = arr.filter(function(v){ return String(v) !== '0'; });
+    var val = real.length ? real.join(', ') : 'Aman (0)';
+    var isSafe = real.length === 0;
+
+    return '<div style="padding:9px 10px;border-radius:10px;border:1px solid '+(isSafe?'rgba(34,211,238,.16)':'rgba(245,158,11,.28)')+';background:'+(isSafe?'rgba(34,211,238,.05)':'rgba(245,158,11,.07)')+';">' +
+        '<div style="font-size:10px;font-weight:900;color:var(--text-hi);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">'+label+'</div>' +
+        '<div style="font-size:11px;line-height:1.55;color:'+(isSafe?'var(--cyan-300)':'var(--gold-300)')+';font-weight:700;">'+esc(val)+'</div>' +
+    '</div>';
+}
+
+function adminShowNomDefect(encoded){
+    var t = adminNomParseJsonArg(encoded);
+
+    var html = '<div style="text-align:left;">' +
+        '<div style="margin-bottom:10px;font-size:12px;color:var(--text-mid);line-height:1.5;">' +
+            'Tank <b style="color:var(--cyan-300);">#'+esc(t.nomor_tank || '-')+'</b> · '+esc(t.kategori || '-')+
+            ((t.kelas && ['Bonsai','Jumbo'].indexOf(t.kategori) === -1) ? ' · Kelas '+esc(t.kelas) : '') +
+            '<br>Peserta: <b style="color:var(--text-hi);">'+esc(t.nama_peserta || '-')+'</b>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">' +
+            adminNomDefectRow('Head', adminNomDefectArr(t, 'raw_head_penalty')) +
+            adminNomDefectRow('Face', adminNomDefectArr(t, 'raw_face_penalty')) +
+            adminNomDefectRow('Body', adminNomDefectArr(t, 'raw_body_penalty')) +
+            adminNomDefectRow('Finnage', adminNomDefectArr(t, 'raw_finnage_penalty')) +
+        '</div>' +
+    '</div>';
+
+    popupInfo('Defect Nominasi', html);
+}
+
+function adminDeleteNominasi(nominasiId, nomorTank){
+    popupConfirm(
+        'Hapus Nominasi?',
+        'Yakin ingin menghapus nominasi Tank <strong>'+esc(nomorTank || '-')+'</strong>?<br>' +
+        '<span style="font-size:11px;color:var(--text-mid);line-height:1.6;display:block;margin-top:6px;">' +
+        'Aksi ini hanya menghapus record nominasi. Data ikan/tank/peserta tidak dihapus. Tank bisa masuk nominasi lagi jika dipilih ulang oleh juri/admin.' +
+        '</span>',
+        'Ya, Hapus',
+        function(){
+            fetch('/api/admin/hapus-nominasi', {
+                method: 'POST',
+                headers: {
+                    'Content-Type':'application/json',
+                    'X-CSRF-TOKEN': getCsrf(),
+                    'Accept':'application/json'
+                },
+                body: JSON.stringify({ nominasi_id: nominasiId })
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if(d.success){
+                    popupSuccess('Nominasi Dihapus', d.message || 'Nominasi berhasil dihapus.');
+
+                    _adminPendingCache = '';
+                    _adminLateCache = '';
+
+                    loadAdminNomHistory();
+                    loadAdminPendingReview();
+                    loadAdminLateIkan();
+                    loadAdminNomTanks();
+                } else {
+                    popupError('Gagal', d.message || 'Nominasi gagal dihapus.');
+                }
+            })
+            .catch(function(){
+                popupError('Error', 'Gagal menghubungi server.');
+            });
+        }
+    );
 }
 
 function loadAdminNominasiAll(){
@@ -5520,6 +5667,7 @@ function renderAdminPending(){
             html += '<div style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(34,211,238,.08);color:var(--cyan-300);border:1px solid rgba(34,211,238,.18);text-align:center;">'+esc(t.kategori||'-')+'</div>';
             html += kelasH;
             html += '<div style="font-size:9px;color:var(--text-mid);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;">'+esc(t.nama_peserta||'-')+'</div>';
+            html += adminNomDefectButton(t);
             html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;">';
             html += '<button class="btn-xs green" onclick="adminApprovePending(this,'+t.nominasi_id+')" style="padding:5px;font-size:9px;"><i class="fas fa-check"></i> ACC</button>';
             html += '<button class="btn-xs red" onclick="adminRejectPending('+t.nominasi_id+','+(t.nomor_tank||0)+')" style="padding:5px;font-size:9px;"><i class="fas fa-times"></i> Tolak</button>';
@@ -5686,45 +5834,73 @@ function adminSwitchHistTab(tab){
 function renderAdminHistory(){
     var body = document.getElementById('adminHistBody');
     if(!body) return;
+
     var groups = adminNomState.histData[adminNomState.histTab];
     var isApp = adminNomState.histTab === 'approved';
+
     if(!groups || groups.length === 0){
         body.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Tidak ada data '+(isApp?'yang diterima':'yang ditolak')+'.</p></div>';
         return;
     }
-    var html = ''; var anyVisible = false;
+
+    var html = '';
+    var anyVisible = false;
+
     groups.forEach(function(g){
         var visTanks = (g.tanks || []).filter(adminHistTankMatch);
         if(visTanks.length === 0) return;
+
         anyVisible = true;
+
         var color = isApp ? '#6EE7B7' : '#FCA5A5';
         var bgC = isApp ? 'rgba(16,185,129,.08)' : 'rgba(239,68,68,.08)';
         var bdC = isApp ? 'rgba(16,185,129,.25)' : 'rgba(239,68,68,.25)';
+
         html += '<div style="margin-bottom:12px;border:1px solid '+bdC+';border-radius:12px;background:'+bgC+';overflow:hidden;">';
         html += '<div style="padding:10px 14px;display:flex;align-items:center;gap:10px;">';
         html += '<div style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.05);color:'+color+';display:grid;place-items:center;"><i class="fas fa-'+(isApp?'check':'times')+'"></i></div>';
         html += '<div><div style="font-size:13px;font-weight:800;color:var(--text-hi);">'+esc(g.juri_name)+'</div><div style="font-size:10px;color:var(--text-mid);font-weight:600;">'+visTanks.length+' tank</div></div></div>';
-        html += '<div style="padding:8px 14px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;">';
+
+        html += '<div style="padding:8px 14px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;">';
+
         visTanks.forEach(function(t){
             var kelasH = (t.kelas && ['Bonsai','Jumbo'].indexOf(t.kategori) === -1)
-                ? '<div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(16,185,129,.10);color:#6EE7B7;border:1px solid rgba(16,185,129,.20);margin-top:3px;text-align:center;">Kelas '+esc(t.kelas)+'</div>' : '';
+                ? '<div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(16,185,129,.10);color:#6EE7B7;border:1px solid rgba(16,185,129,.20);margin-top:3px;text-align:center;">Kelas '+esc(t.kelas)+'</div>'
+                : '';
+
             html += '<div style="padding:9px;border-radius:9px;border:1px solid '+bdC+';background:rgba(255,255,255,.02);">';
             html += '<div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));color:#fff;display:grid;place-items:center;font-weight:800;margin-bottom:6px;font-size:13px;">'+(t.nomor_tank||'?')+'</div>';
             html += '<div style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(34,211,238,.08);color:var(--cyan-300);border:1px solid rgba(34,211,238,.18);text-align:center;">'+esc(t.kategori||'-')+'</div>';
             html += kelasH;
-            if(!isApp && t.catatan) html += '<div style="font-size:9px;color:'+color+';margin-top:5px;line-height:1.4;"><i class="fas fa-comment-dots"></i> '+esc(t.catatan)+'</div>';
-            html += '<div style="font-size:9px;color:var(--text-low);margin-top:5px;font-weight:600;">'+esc(t.reviewed_at||'')+'</div>';
-            if (!isApp) {
-                html += '<button class="btn-xs blue" onclick="adminResetRejected('+t.nominasi_id+',\''+(t.nomor_tank||0)+'\')" style="margin-top:8px;width:100%;font-size:9px;padding:5px 8px;"><i class="fas fa-rotate-left" style="margin-right:3px;"></i>Reset & Ajukan Ulang</button>';
+
+            if(!isApp && t.catatan){
+                html += '<div style="font-size:9px;color:'+color+';margin-top:5px;line-height:1.4;"><i class="fas fa-comment-dots"></i> '+esc(t.catatan)+'</div>';
             }
+
+            html += '<div style="font-size:9px;color:var(--text-low);margin-top:5px;font-weight:600;">'+esc(t.reviewed_at||'')+'</div>';
+
+            html += adminNomDefectButton(t);
+
+            html += '<div style="display:grid;grid-template-columns:1fr;gap:5px;margin-top:6px;">';
+
+            if(!isApp){
+                html += '<button class="btn-xs blue" onclick="adminResetRejected('+t.nominasi_id+',\''+(t.nomor_tank||0)+'\')" style="width:100%;font-size:9px;padding:5px 8px;"><i class="fas fa-rotate-left" style="margin-right:3px;"></i>Reset & Ajukan Ulang</button>';
+            }
+
+            html += '<button class="btn-xs red" onclick="adminDeleteNominasi('+t.nominasi_id+',\''+(t.nomor_tank||0)+'\')" style="width:100%;font-size:9px;padding:5px 8px;"><i class="fas fa-trash" style="margin-right:3px;"></i>Hapus Nominasi</button>';
+
+            html += '</div>';
             html += '</div>';
         });
+
         html += '</div></div>';
     });
+
     if(!anyVisible){
         body.innerHTML = '<div class="empty-state"><i class="fas fa-filter"></i><p>Tidak ada data '+(isApp?'diterima':'ditolak')+' yang cocok dengan filter.</p></div>';
         return;
     }
+
     body.innerHTML = html;
 }
 
@@ -5752,4 +5928,6 @@ window.adminNomApplyFilter  = adminNomApplyFilter;
 window.adminNomResetFilter  = adminNomResetFilter;
 window.adminHistApplyFilter = adminHistApplyFilter;
 window.adminHistResetFilter = adminHistResetFilter;
+window.adminShowNomDefect = adminShowNomDefect;
+window.adminDeleteNominasi = adminDeleteNominasi;
 })();

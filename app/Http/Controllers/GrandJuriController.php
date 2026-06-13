@@ -139,6 +139,12 @@ class GrandJuriController extends Controller
                             'nama_peserta'  => $ikan->nama_peserta ?? 'Unknown',
                             'detail_anggota'=> $ikan->detail_anggota ?? '—',
                             'submitted_at'  => $n->created_at->toISOString(),
+
+                            // defect nominasi dari juri
+                            'raw_head_penalty'    => $n->raw_head_penalty ?? ['0'],
+                            'raw_face_penalty'    => $n->raw_face_penalty ?? ['0'],
+                            'raw_body_penalty'    => $n->raw_body_penalty ?? ['0'],
+                            'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
                         ];
                     })->filter()->values()->toArray(),
                 ];
@@ -249,11 +255,18 @@ class GrandJuriController extends Controller
                     $ikan = $n->ikan;
                     return [
                         'nominasi_id'  => $n->id,
+                        'ikan_id'      => $n->ikan_id,
                         'nomor_tank'   => $ikan ? $ikan->nomor_tank : null,
                         'kategori'     => $ikan ? $ikan->kategori : null,
                         'kelas'        => $ikan ? $ikan->kelas : null,
                         'nama_peserta' => $ikan->nama_peserta ?? 'Unknown',
                         'reviewed_at'  => $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-',
+
+                        // defect nominasi dari juri
+                        'raw_head_penalty'    => $n->raw_head_penalty ?? ['0'],
+                        'raw_face_penalty'    => $n->raw_face_penalty ?? ['0'],
+                        'raw_body_penalty'    => $n->raw_body_penalty ?? ['0'],
+                        'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
                     ];
                 })->values()->toArray(),
             ];
@@ -268,12 +281,19 @@ class GrandJuriController extends Controller
                     $ikan = $n->ikan;
                     return [
                         'nominasi_id'  => $n->id,
+                        'ikan_id'      => $n->ikan_id,
                         'nomor_tank'   => $ikan ? $ikan->nomor_tank : null,
                         'kategori'     => $ikan ? $ikan->kategori : null,
                         'kelas'        => $ikan ? $ikan->kelas : null,
                         'nama_peserta' => $ikan->nama_peserta ?? 'Unknown',
                         'catatan'      => $n->catatan ?: null,
                         'reviewed_at'  => $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-',
+
+                        // defect nominasi dari juri
+                        'raw_head_penalty'    => $n->raw_head_penalty ?? ['0'],
+                        'raw_face_penalty'    => $n->raw_face_penalty ?? ['0'],
+                        'raw_body_penalty'    => $n->raw_body_penalty ?? ['0'],
+                        'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
                     ];
                 })->values()->toArray(),
             ];

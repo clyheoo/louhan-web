@@ -3144,6 +3144,57 @@ class AdminDashboardController extends Controller
         ]);
     }
 
+    public function hapusNominasi(Request $request)
+    {
+        $request->validate([
+            'nominasi_id' => 'required|integer|exists:nominasis,id',
+        ]);
+
+        $nominasi = Nominasi::with(['ikan', 'juri'])->find($request->nominasi_id);
+
+        if (!$nominasi) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nominasi tidak ditemukan.',
+            ], 404);
+        }
+
+        $nomorTank = $nominasi->ikan->nomor_tank ?? '?';
+        $juriName  = $nominasi->juri->name ?? 'Juri';
+        $status    = strtoupper($nominasi->status ?? '-');
+
+        /*
+        * Penting:
+        * - Yang dihapus hanya record nominasis.
+        * - Data ikan/tank/peserta tidak dihapus.
+        * - Karena halaman penjurian juri membaca Nominasi status approved,
+        *   menghapus nominasi approved akan mengeluarkan tank ini dari daftar penjurian juri terkait.
+        */
+        \DB::transaction(function () use ($nominasi) {
+            $nominasi->delete();
+        });
+
+        $sync = $this->sheetsSync;
+
+        try {
+            app()->terminating(function () use ($sync) {
+                if (!$sync->isReady()) return;
+
+                try { $sync->syncSemuaNominasi(); } catch (\Throwable $e) { \Log::error('Async-sync SemuaNominasi hapus nominasi: ' . $e->getMessage()); }
+                try { $sync->syncSemuaPilNom(); } catch (\Throwable $e) { \Log::error('Async-sync SemuaPilNom hapus nominasi: ' . $e->getMessage()); }
+                try { $sync->syncHasilNominasi(); } catch (\Throwable $e) { \Log::error('Async-sync HasilNominasi hapus nominasi: ' . $e->getMessage()); }
+                try { $sync->syncNominasiFix(); } catch (\Throwable $e) { \Log::error('Async-sync NominasiFix hapus nominasi: ' . $e->getMessage()); }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Gagal register async hapus nominasi: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Nominasi Tank ' . $nomorTank . ' milik ' . $juriName . ' berhasil dihapus dari nominasi. Status sebelumnya: ' . $status . '.',
+        ]);
+    }
+
     public function getResultsStatus()
     {
         $pesertas = Peserta::with('user')

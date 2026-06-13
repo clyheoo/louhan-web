@@ -44,7 +44,10 @@ class JuriController extends Controller
             ->orderByRaw('CAST(nomor_tank AS UNSIGNED) ASC')
             ->get();
 
-        $myScores = Scoring::where('juri_id', auth()->id())
+        $myScores = Scoring::where('juri_id', $juriId)
+            ->when($hasApproved, function ($q) use ($approvedIkanIds) {
+                $q->whereIn('ikan_id', $approvedIkanIds);
+            })
             ->with('ikan', 'ikan.peserta')
             ->orderByDesc('created_at')
             ->get();
@@ -59,7 +62,10 @@ class JuriController extends Controller
             return $s;
         });
 
-        $myScoredTankIds = Scoring::where('juri_id', auth()->id())
+        $myScoredTankIds = Scoring::where('juri_id', $juriId)
+            ->when($hasApproved, function ($q) use ($approvedIkanIds) {
+                $q->whereIn('ikan_id', $approvedIkanIds);
+            })
             ->pluck('ikan_id')
             ->toArray();
 
@@ -69,6 +75,9 @@ class JuriController extends Controller
         }
 
         $scoredCounts = Scoring::select('ikan_id', \DB::raw('COUNT(*) as total_juri'))
+            ->when($hasApproved, function ($q) use ($approvedIkanIds) {
+                $q->whereIn('ikan_id', $approvedIkanIds);
+            })
             ->groupBy('ikan_id')
             ->pluck('total_juri', 'ikan_id')
             ->toArray();
