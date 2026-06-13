@@ -17,6 +17,57 @@ class NominasiSheet implements WithTitle, WithEvents
         return 'HASIL NOMINASI';
     }
 
+    private function normalizeDefectArray($value): array
+    {
+        if (is_string($value)) {
+            $value = [$value];
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->map(function ($v) {
+                $v = trim((string) $v);
+                $v = preg_replace('/\s+Sempurna/u', '', $v) ?? $v;
+                return $v;
+            })
+            ->filter(fn ($v) => $v !== '' && $v !== '0')
+            ->unique()
+            ->values()
+            ->toArray();
+    }
+
+    private function formatNominasiDefect(Nominasi $n): string
+    {
+        $parts = [
+            'HEAD'    => $this->normalizeDefectArray($n->raw_head_penalty ?? ['0']),
+            'FACE'    => $this->normalizeDefectArray($n->raw_face_penalty ?? ['0']),
+            'BODY'    => $this->normalizeDefectArray($n->raw_body_penalty ?? ['0']),
+            'FINNAGE' => $this->normalizeDefectArray($n->raw_finnage_penalty ?? ['0']),
+        ];
+
+        $out = [];
+
+        foreach ($parts as $label => $items) {
+            if (!empty($items)) {
+                $out[] = $label . ': ' . implode(', ', $items);
+            }
+        }
+
+        return empty($out) ? '-' : implode(' | ', $out);
+    }
+
+    private function statusLabel($status): string
+    {
+        if ($status === 'approved') return 'DISETUJUI';
+        if ($status === 'rejected') return 'DITOLAK';
+        if ($status === 'pending') return 'PENDING';
+
+        return strtoupper((string) $status);
+    }
+
     public function registerEvents(): array
     {
         return [
@@ -72,193 +123,157 @@ class NominasiSheet implements WithTitle, WithEvents
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEE2E2']],
                     'font' => ['color' => ['rgb' => '991B1B'], 'bold' => true],
                 ];
+                $styleRowPending = [
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF3C7']],
+                    'font' => ['color' => ['rgb' => '92400E'], 'bold' => true],
+                ];
+
+                $styleDefectCell = [
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FDE68A']],
+                    'font' => ['color' => ['rgb' => '78350F'], 'bold' => true],
+                    'alignment' => ['wrapText' => true, 'vertical' => 'top'],
+                ];
 
                 // ═══════════════════════════════════════════
-                // 2. DATA RETRIEVAL
+                // 2. DATA RETRIEVAL — SEMUA NOMINASI LANGSUNG
                 // ═══════════════════════════════════════════
-                $nominations = Nominasi::whereIn('status', ['approved', 'rejected'])
+                $nominations = Nominasi::whereIn('status', ['pending', 'approved', 'rejected'])
                     ->with(['juri', 'ikan.peserta', 'reviewer'])
-                    ->orderBy('created_at')
-                    ->get();
+                    ->get()
+                    ->sortBy(function ($n) {
+                        $tank = $n->ikan?->nomor_tank;
 
-                // ★ Group by SNAPSHOT (nama_peserta + detail_anggota dari tabel ikans),
-                //   bukan peserta_id. Tujuannya: kalau 1 user pakai >1 identitas saat
-                //   daftar ikan, masing-masing identitas tampil sebagai group sendiri
-                //   dengan nama yang konsisten — bukan menumpuk jadi "nama terakhir".
-                $groupedByPeserta = $nominations->groupBy(function ($n) {
-                    $ikan = $n->ikan;
-                    if (!$ikan) return 'unknown_' . $n->id;
-                    $nama   = $ikan->nama_peserta   ?? $ikan->peserta?->nama_peserta   ?? '(tanpa nama)';
-                    $detail = $ikan->detail_anggota ?? $ikan->peserta?->detail_anggota ?? '(tanpa team)';
-                    return $nama . ' || ' . $detail;
-                })->sortKeys();
+                        if (is_numeric($tank)) {
+                            return (int) $tank;
+                        }
 
-                // Separate for summary
-                $approvedList = $nominations->where('status', 'approved');
-                $rejectedList = $nominations->where('status', 'rejected');
+                        return 999999;
+                    })
+                    ->values();
 
-                $headers = ['NO', 'TANK', 'KATEGORI', 'KELAS', 'STATUS', 'NOMINASI OLEH', 'REVIEW OLEH', 'TANGGAL REVIEW', 'CATATAN'];
+                $totalPending  = $nominations->where('status', 'pending')->count();
+                $totalApproved = $nominations->where('status', 'approved')->count();
+                $totalRejected = $nominations->where('status', 'rejected')->count();
+
+                $headers = [
+                    'NO',
+                    'TANK',
+                    'NAMA PESERTA',
+                    'TEAM / DETAIL',
+                    'KATEGORI',
+                    'KELAS',
+                    'STATUS',
+                    'NOMINASI OLEH',
+                    'REVIEW OLEH',
+                    'TANGGAL SUBMIT',
+                    'TANGGAL REVIEW',
+                    'DEFECT',
+                    'CATATAN',
+                ];
+
                 $row = 1;
 
-                // ═══════════════════════════════════════════
-                // 3. TABEL PER PESERTA
-                // ═══════════════════════════════════════════
-                foreach ($groupedByPeserta as $snapshotKey => $items) {
-                    $firstItem      = $items->first();
-                    $firstIkan      = $firstItem->ikan;
-                    $pesertaName    = $firstIkan?->nama_peserta   ?? $firstIkan?->peserta?->nama_peserta   ?? 'Unknown';
-                    $detailAnggota  = $firstIkan?->detail_anggota ?? $firstIkan?->peserta?->detail_anggota ?? '-';
-
-                    // Hitung jumlah diterima & ditolak untuk peserta ini
-                    $jmlApproved = $items->where('status', 'approved')->count();
-                    $jmlRejected = $items->where('status', 'rejected')->count();
-
-                    // Title: Nama Peserta
-                    $sheet->mergeCells("A{$row}:I{$row}");
-                    $sheet->setCellValue("A{$row}", "PESERTA: {$pesertaName}  |  Diterima: {$jmlApproved}  |  Ditolak: {$jmlRejected}");
-                    $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleTitle);
-                    $row++;
-
-                    // Subtitle: Team
-                    $sheet->mergeCells("A{$row}:I{$row}");
-                    $sheet->setCellValue("A{$row}", "TEAM: {$detailAnggota}");
-                    $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleTitle);
-                    $row++;
-
-                    // Header Tabel
-                    $sheet->fromArray([$headers], null, "A{$row}");
-                    $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleHeader);
-                    $row++;
-
-                    // Data rows
-                    $no = 1;
-                    $startDataRow = $row;
-
-                    foreach ($items as $n) {
-                        $ikan = $n->ikan;
-                        $statusText = $n->status === 'approved' ? 'DISETUJUI' : 'DITOLAK';
-                        $tankStr = $ikan ? ('Tank ' . ($ikan->nomor_tank ?? '-')) : '-';
-
-                        $sheet->setCellValue("A{$row}", $no++);
-                        $sheet->setCellValue("B{$row}", $tankStr);
-                        $sheet->setCellValue("C{$row}", $ikan->kategori ?? '-');
-                        $sheet->setCellValue("D{$row}", $ikan->kelas ?? '-');
-                        $sheet->setCellValue("E{$row}", $statusText);
-                        $sheet->setCellValue("F{$row}", $n->juri ? $n->juri->name : '-');
-                        $sheet->setCellValue("G{$row}", $n->reviewer ? $n->reviewer->name : '-');
-                        $sheet->setCellValue("H{$row}", $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-');
-                        $sheet->setCellValue("I{$row}", $n->catatan ?: '-');
-
-                        // Warna baris sesuai status
-                        if ($n->status === 'approved') {
-                            $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleRowApproved);
-                        } else {
-                            $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleRowRejected);
-                        }
-                        $row++;
-                    }
-
-                    // Border data
-                    if ($row > $startDataRow) {
-                        $sheet->getStyle("A{$startDataRow}:I" . ($row - 1))->applyFromArray($styleBorder);
-                    }
-
-                    // Jarak antar peserta
-                    $row += 2;
-                }
-
-                // ═══════════════════════════════════════════
-                // 4. RINGKASAN: NOMINASI DITERIMA
-                // ═══════════════════════════════════════════
-                $row += 1;
-                $sheet->mergeCells("A{$row}:I{$row}");
-                $sheet->setCellValue("A{$row}", "═══════ RINGKASAN NOMINASI DITERIMA ({$approvedList->count()} IKAN) ═══════");
-                $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleTitleGreen);
+                // Judul
+                $sheet->mergeCells("A{$row}:M{$row}");
+                $sheet->setCellValue(
+                    "A{$row}",
+                    "SELURUH NOMINASI | Total: {$nominations->count()} | Pending: {$totalPending} | Diterima: {$totalApproved} | Ditolak: {$totalRejected}"
+                );
+                $sheet->getStyle("A{$row}:M{$row}")->applyFromArray($styleTitle);
+                $sheet->getStyle("A{$row}:M{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $row += 2;
 
-                $headersSummary = ['NO', 'NAMA PESERTA', 'TEAM', 'TANK', 'KATEGORI', 'KELAS', 'NOMINASI OLEH', 'REVIEW OLEH', 'TANGGAL REVIEW'];
-                $sheet->fromArray([$headersSummary], null, "A{$row}");
-                $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleHeaderGreen);
+                // Header utama
+                $sheet->fromArray([$headers], null, "A{$row}");
+                $sheet->getStyle("A{$row}:M{$row}")->applyFromArray($styleHeader);
+                $sheet->getRowDimension($row)->setRowHeight(30);
                 $row++;
 
                 $no = 1;
                 $startDataRow = $row;
 
-                foreach ($approvedList as $n) {
+                foreach ($nominations as $n) {
                     $ikan    = $n->ikan;
                     $peserta = $ikan?->peserta;
 
-                    $sheet->setCellValue("A{$row}", $no++);
-                    $sheet->setCellValue("B{$row}", $ikan?->nama_peserta   ?? $peserta?->nama_peserta   ?? '-');
-                    $sheet->setCellValue("C{$row}", $ikan?->detail_anggota ?? $peserta?->detail_anggota ?? '-');
-                    $sheet->setCellValue("D{$row}", $ikan ? ('Tank ' . ($ikan->nomor_tank ?? '-')) : '-');
-                    $sheet->setCellValue("E{$row}", $ikan->kategori ?? '-');
-                    $sheet->setCellValue("F{$row}", $ikan->kelas ?? '-');
-                    $sheet->setCellValue("G{$row}", $n->juri ? $n->juri->name : '-');
-                    $sheet->setCellValue("H{$row}", $n->reviewer ? $n->reviewer->name : '-');
-                    $sheet->setCellValue("I{$row}", $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-');
+                    $tankStr = $ikan ? ('Tank ' . ($ikan->nomor_tank ?? '-')) : '-';
 
-                    $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleRowApproved);
+                    $namaPeserta = $ikan?->nama_peserta
+                        ?? $peserta?->nama_peserta
+                        ?? '-';
+
+                    $detailAnggota = $ikan?->detail_anggota
+                        ?? $peserta?->detail_anggota
+                        ?? '-';
+
+                    $defectText = $this->formatNominasiDefect($n);
+
+                    $sheet->setCellValue("A{$row}", $no++);
+                    $sheet->setCellValue("B{$row}", $tankStr);
+                    $sheet->setCellValue("C{$row}", $namaPeserta);
+                    $sheet->setCellValue("D{$row}", $detailAnggota);
+                    $sheet->setCellValue("E{$row}", $ikan?->kategori ?? '-');
+                    $sheet->setCellValue("F{$row}", $ikan?->kelas ?? '-');
+                    $sheet->setCellValue("G{$row}", $this->statusLabel($n->status));
+                    $sheet->setCellValue("H{$row}", $n->juri ? $n->juri->name : '-');
+                    $sheet->setCellValue("I{$row}", $n->reviewer ? $n->reviewer->name : '-');
+                    $sheet->setCellValue("J{$row}", $n->created_at ? $n->created_at->format('d M Y, H:i') : '-');
+                    $sheet->setCellValue("K{$row}", $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-');
+                    $sheet->setCellValue("L{$row}", $defectText);
+                    $sheet->setCellValue("M{$row}", $n->catatan ?: '-');
+
+                    if ($n->status === 'approved') {
+                        $sheet->getStyle("A{$row}:M{$row}")->applyFromArray($styleRowApproved);
+                    } elseif ($n->status === 'rejected') {
+                        $sheet->getStyle("A{$row}:M{$row}")->applyFromArray($styleRowRejected);
+                    } else {
+                        $sheet->getStyle("A{$row}:M{$row}")->applyFromArray($styleRowPending);
+                    }
+
+                    if ($defectText !== '-') {
+                        $sheet->getStyle("L{$row}")->applyFromArray($styleDefectCell);
+                    }
+
+                    $sheet->getStyle("L{$row}:M{$row}")
+                        ->getAlignment()
+                        ->setWrapText(true)
+                        ->setVertical(Alignment::VERTICAL_TOP);
+
+                    $row++;
+                }
+
+                if ($row === $startDataRow) {
+                    $sheet->mergeCells("A{$row}:M{$row}");
+                    $sheet->setCellValue("A{$row}", "Belum ada data nominasi.");
+                    $sheet->getStyle("A{$row}:M{$row}")->applyFromArray($styleBorder);
                     $row++;
                 }
 
                 if ($row > $startDataRow) {
-                    $sheet->getStyle("A{$startDataRow}:I" . ($row - 1))->applyFromArray($styleBorderGreen);
-                }
-
-                // ═══════════════════════════════════════════
-                // 5. RINGKASAN: NOMINASI DITOLAK
-                // ═══════════════════════════════════════════
-                $row += 2;
-                $sheet->mergeCells("A{$row}:I{$row}");
-                $sheet->setCellValue("A{$row}", "═══════ RINGKASAN NOMINASI DITOLAK ({$rejectedList->count()} IKAN) ═══════");
-                $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleTitleRed);
-                $row += 2;
-
-                $headersSummaryReject = ['NO', 'NAMA PESERTA', 'TEAM', 'TANK', 'KATEGORI', 'KELAS', 'NOMINASI OLEH', 'REVIEW OLEH', 'CATATAN'];
-                $sheet->fromArray([$headersSummaryReject], null, "A{$row}");
-                $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleHeaderRed);
-                $row++;
-
-                $no = 1;
-                $startDataRow = $row;
-
-                foreach ($rejectedList as $n) {
-                    $ikan = $n->ikan;
-                    $peserta = $ikan ? $ikan->peserta : null;
-
-                    $sheet->setCellValue("A{$row}", $no++);
-                    $sheet->setCellValue("B{$row}", $peserta ? $peserta->nama_peserta : '-');
-                    $sheet->setCellValue("C{$row}", $peserta ? ($peserta->detail_anggota ?? '-') : '-');
-                    $sheet->setCellValue("D{$row}", $ikan ? ('Tank ' . ($ikan->nomor_tank ?? '-')) : '-');
-                    $sheet->setCellValue("E{$row}", $ikan->kategori ?? '-');
-                    $sheet->setCellValue("F{$row}", $ikan->kelas ?? '-');
-                    $sheet->setCellValue("G{$row}", $n->juri ? $n->juri->name : '-');
-                    $sheet->setCellValue("H{$row}", $n->reviewer ? $n->reviewer->name : '-');
-                    $sheet->setCellValue("I{$row}", $n->catatan ?: '-');
-
-                    $sheet->getStyle("A{$row}:I{$row}")->applyFromArray($styleRowRejected);
-                    $row++;
-                }
-
-                if ($row > $startDataRow) {
-                    $sheet->getStyle("A{$startDataRow}:I" . ($row - 1))->applyFromArray($styleBorderRed);
+                    $sheet->getStyle("A{$startDataRow}:M" . ($row - 1))->applyFromArray($styleBorder);
                 }
 
                 // ═══════════════════════════════════════════
                 // 6. COLUMN SIZING
                 // ═══════════════════════════════════════════
                 $sheet->getColumnDimension('A')->setWidth(5);
-                $sheet->getColumnDimension('B')->setWidth(22);
-                $sheet->getColumnDimension('C')->setWidth(22);
-                $sheet->getColumnDimension('D')->setWidth(14);
-                $sheet->getColumnDimension('E')->setWidth(14);
-                $sheet->getColumnDimension('F')->setWidth(18);
-                $sheet->getColumnDimension('G')->setWidth(18);
-                $sheet->getColumnDimension('H')->setWidth(20);
-                $sheet->getColumnDimension('I')->setWidth(35);
+                $sheet->getColumnDimension('B')->setWidth(13);
+                $sheet->getColumnDimension('C')->setWidth(24);
+                $sheet->getColumnDimension('D')->setWidth(22);
+                $sheet->getColumnDimension('E')->setWidth(16);
+                $sheet->getColumnDimension('F')->setWidth(10);
+                $sheet->getColumnDimension('G')->setWidth(14);
+                $sheet->getColumnDimension('H')->setWidth(18);
+                $sheet->getColumnDimension('I')->setWidth(18);
+                $sheet->getColumnDimension('J')->setWidth(20);
+                $sheet->getColumnDimension('K')->setWidth(20);
+                $sheet->getColumnDimension('L')->setWidth(55);
+                $sheet->getColumnDimension('M')->setWidth(35);
 
-                $sheet->freezePane('A1');
+                $sheet->getStyle("A:M")->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+                $sheet->getStyle("L:M")->getAlignment()->setWrapText(true);
+
+                $sheet->freezePane('A4');
             },
         ];
     }
