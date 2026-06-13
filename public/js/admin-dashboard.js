@@ -1112,7 +1112,7 @@ function submitEditAdmin(){
         if(d._err||!d.success){popupError('Gagal Menyimpan',d.message||'Terjadi kesalahan pada server.');return;}
         closeModal('modalEditAdmin');
         popupSuccess('Nilai Berhasil Diperbarui!','Total nilai akhir: <strong style="color:#D8B4FE;font-size:18px;">'+d.total+'</strong><br><span style="font-size:12px;color:var(--text-muted);">'+totalChanged+' komponen diperbarui'+(defectChanged?' + defect data diperbarui':'')+'</span>');
-        loadScoringData();loadDashboard();
+        loadScoringData();loadDashboard();if(typeof loadAdminPointRanking==='function')loadAdminPointRanking();
     })
     .catch(function(){popupError('Kesalahan Jaringan','Gagal menghubungi server.');})
     .finally(function(){btn.disabled=false;btn.innerHTML='<i class="fas fa-save"></i> SIMPAN PERUBAHAN';});
@@ -4428,6 +4428,23 @@ function setAdminPointScope(s){
     loadAdminPointRanking();
 }
 
+/* ★ EDIT NILAI dari Point Ranking — pakai modal & endpoint yang SAMA dgn Data Penilaian Keseluruhan */
+function openEditAdminFromRanking(ikanId){
+    function findIdx(){
+        for(var i=0;i<allScoringData.length;i++){
+            if(parseInt(allScoringData[i].id,10)===parseInt(ikanId,10)) return i;
+        }
+        return -1;
+    }
+    var idx=findIdx();
+    if(idx!==-1){ openEditAdmin(idx); return; }
+    loadScoringData(function(){
+        var j=findIdx();
+        if(j!==-1){ openEditAdmin(j); }
+        else { popupError('Data Tidak Ditemukan','Data penilaian untuk ikan ini belum tersedia. Buka menu "Data Penilaian Keseluruhan" lalu ulangi.'); }
+    });
+}
+
 function loadAdminPointRanking(){
     var kat = document.getElementById('admPointFilterKategori').value;
     var kelas = document.getElementById('admPointFilterKelas').value;
@@ -4454,7 +4471,7 @@ function loadAdminPointRanking(){
             html += '<div style="font-size:13px;font-weight:800;color:var(--text-hi);display:flex;align-items:center;gap:9px;"><i class="fas '+(isGlobal?'fa-globe':'fa-layer-group')+'" style="color:var(--gold-500);"></i> '+esc(g.group_name)+'</div>';
             html += '<span style="font-size:11px;color:var(--gold-300);font-weight:700;">'+g.total+' peserta</span></div>';
             html += '<div style="overflow-x:auto;border-radius:0 0 10px 10px;border:1px solid rgba(245,158,11,.20);border-top:none;"><table class="data-table" style="min-width:800px;">';
-            html += '<thead><tr><th style="width:40px;text-align:center;">#</th><th>PESERTA</th>'+(isGlobal?'<th>KATEGORI</th>':'')+'<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:80px;text-align:center;">POINT</th><th style="width:100px;text-align:center;">RANK POINT</th><th style="width:90px;text-align:center;">AKSI</th></tr></thead><tbody>';
+            html += '<thead><tr><th style="width:40px;text-align:center;">#</th><th>PESERTA</th>'+(isGlobal?'<th>KATEGORI</th>':'')+'<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:80px;text-align:center;">POINT</th><th style="width:100px;text-align:center;">RANK POINT</th><th style="width:130px;text-align:center;">AKSI</th></tr></thead><tbody>';
             g.data.forEach(function(d,i){
                 var rankPt = d.rank_point ?? 0;
                 var frp = d.final_rank_point ?? rankPt;
@@ -4501,9 +4518,9 @@ function loadAdminPointRanking(){
                 // ★ Tombol Kunci / Buka Kunci di Point Ranking — versi cerah & menonjol
                 // GANTI BLOK TOMBOL KUNCI/BUKA DENGAN INI:
                 if(d.is_locked){
-                    html += '<td style="text-align:center;"><div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:800;color:#FCA5A5;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock" style="font-size:8px;"></i> Terkunci</span></div><button class="btn-xs" style="background:rgba(239,68,68,.15);color:#FCA5A5;border:1px solid rgba(239,68,68,.3);font-weight:800;padding:5px 10px;transition:all .2s;" onmouseover="this.style.background=\'var(--danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(239,68,68,.15)\';this.style.color=\'#FCA5A5\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></td>';
+                    html += '<td style="text-align:center;"><div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:800;color:#FCA5A5;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock" style="font-size:8px;"></i> Terkunci</span></div><div style="display:inline-flex;gap:4px;justify-content:center;"><button class="btn-xs" style="background:rgba(239,68,68,.15);color:#FCA5A5;border:1px solid rgba(239,68,68,.3);font-weight:800;padding:5px 10px;transition:all .2s;" onmouseover="this.style.background=\'var(--danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(239,68,68,.15)\';this.style.color=\'#FCA5A5\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button><button class="btn-xs purple" style="opacity:.35;cursor:not-allowed;padding:5px 9px;" disabled title="Nilai terkunci — buka kunci dulu untuk mengedit"><i class="fas fa-pen-to-square"></i></button></div></td>';
                 } else {
-                    html += '<td style="text-align:center;"><div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:800;color:var(--gold-300);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock-open" style="font-size:8px;"></i> Terbuka</span></div><button class="btn-xs" style="background:rgba(245,158,11,.15);color:var(--gold-300);border:1px solid rgba(245,158,11,.3);font-weight:800;padding:5px 10px;transition:all .2s;" onmouseover="this.style.background=\'var(--gold-500)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(245,158,11,.15)\';this.style.color=\'var(--gold-300)\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Kunci nilai (final)"><i class="fas fa-lock"></i> Kunci</button></td>';
+                    html += '<td style="text-align:center;"><div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:800;color:var(--gold-300);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock-open" style="font-size:8px;"></i> Terbuka</span></div><div style="display:inline-flex;gap:4px;justify-content:center;"><button class="btn-xs" style="background:rgba(245,158,11,.15);color:var(--gold-300);border:1px solid rgba(245,158,11,.3);font-weight:800;padding:5px 10px;transition:all .2s;" onmouseover="this.style.background=\'var(--gold-500)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(245,158,11,.15)\';this.style.color=\'var(--gold-300)\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Kunci nilai (final)"><i class="fas fa-lock"></i> Kunci</button><button class="btn-xs purple" style="padding:5px 9px;" onclick="openEditAdminFromRanking('+d.ikan_id+')" title="Edit Nilai"><i class="fas fa-pen-to-square"></i></button></div></td>';
                 }
                 html += '</tr>';
             });
