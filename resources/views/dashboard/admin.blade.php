@@ -967,6 +967,7 @@
 
             <div class="sb-section-label" style="margin-top:8px;">Manajemen</div>
             <a class="sidebar-item" data-page="users"><i class="fas fa-users-gear"></i> Kelola User</a>
+            <a class="sidebar-item" data-page="kelola_juri"><i class="fas fa-user-shield"></i> Kelola Juri</a>
             <a class="sidebar-item" data-page="registrasi"><i class="fas fa-database"></i> Registrasi & Undian</a>
             <a class="sidebar-item" data-page="nominasi"><i class="fas fa-award"></i> Nominasi</a>
             <a class="sidebar-item" data-page="mvp"><i class="fas fa-star"></i> Kelola MVP</a>
@@ -1120,7 +1121,6 @@
                         <h3><span class="ti"><i class="fas fa-table-list"></i></span>Data Penilaian Keseluruhan</h3>
                         <div style="display:flex;align-items:center;gap:8px;">
                             <span style="font-size:10px;color:var(--text-low);">Semua input dari Juri & Grand Juri</span>
-                            <button class="btn-primary" id="btnToggleJuriScoring" onclick="toggleJuriScoringLock()" style="padding:8px 16px; font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
                         </div>
                     </div>
                     <div class="card-body">
@@ -1190,6 +1190,27 @@
                             </div>
                         </div>
                         <div class="user-list" id="userList">
+                            <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ PAGE: KELOLA JURI ═══════════ -->
+            <section class="page-section" data-page="kelola_juri" style="display:none;">
+                <div class="glass-card">
+                    <div class="card-head">
+                        <h3><span class="ti"><i class="fas fa-user-shield"></i></span>Kelola Juri — Penugasan Kategori &amp; Kelas</h3>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:10px;color:var(--text-low);">Kunci / buka sesi penilaian juri</span>
+                            <button class="btn-primary" id="btnToggleJuriScoring" onclick="toggleJuriScoringLock()" style="padding:8px 16px; font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p style="font-size:11.5px;color:var(--text-mid);margin-bottom:14px;line-height:1.6;">
+                            Atur kategori &amp; kelas yang boleh dinilai tiap juri. Juri yang <b style="color:#FCA5A5;">belum diatur</b> tidak dapat menilai (tampil terkunci) sampai admin menugaskannya. Centang <b>(semua kelas)</b> untuk memberi akses seluruh kelas pada kategori tersebut, atau pilih kelas tertentu saja.
+                        </p>
+                        <div id="kelolaJuriList" style="display:flex;flex-direction:column;gap:12px;">
                             <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
                         </div>
                     </div>

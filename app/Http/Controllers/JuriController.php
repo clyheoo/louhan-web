@@ -99,6 +99,19 @@ class JuriController extends Controller
             ->orderByRaw('CAST(nomor_tank AS UNSIGNED) ASC')
             ->get();
 
+        // ★ GATING PENUGASAN: hanya tampilkan tank pada kategori/kelas yang ditugaskan admin.
+        //   Kelas penugasan null = seluruh kelas kategori tsb (atau kategori tanpa kelas).
+        $myAssignments = \App\Models\JuriAssignment::where('juri_id', $juriId)->get(['kategori', 'kelas']);
+        $availableTanks = $availableTanks->filter(function ($t) use ($myAssignments) {
+            foreach ($myAssignments as $a) {
+                if ($a->kategori !== $t->kategori) continue;
+                if ($a->kelas === null || $a->kelas === '' || (string) $a->kelas === (string) $t->kelas) {
+                    return true;
+                }
+            }
+            return false;
+        })->values();
+
         $myScores = Scoring::where('juri_id', $juriId)
             ->whereIn('ikan_id', $approvedIkanIds)
             ->with('ikan', 'ikan.peserta')
@@ -131,11 +144,20 @@ class JuriController extends Controller
             ->pluck('total_juri', 'ikan_id')
             ->toArray();
 
-        // Gabungkan defect dari SEMUA nominasi approved untuk ikan yang sama.
-        // Jadi defect admin + juri lain tetap ikut pre-fill ke halaman juri.
-        $nominationDefects = Nominasi::where('status', 'approved')
+        // Gabungkan defect dari SEMUA sumber untuk ikan yang sama, lalu union per ikan_id:
+        //   1. Nominasi approved  → defect saat nominasi + tambahan admin + tambahan grand juri (review).
+        //   2. Scoring tersimpan  → defect juri LAIN yang sudah menilai + hasil edit Grand Juri.
+        $defectColumns = ['ikan_id', 'raw_head_penalty', 'raw_face_penalty', 'raw_body_penalty', 'raw_finnage_penalty'];
+
+        $nominasiDefectRows = Nominasi::where('status', 'approved')
             ->whereIn('ikan_id', $approvedIkanIds)
-            ->get(['ikan_id', 'raw_head_penalty', 'raw_face_penalty', 'raw_body_penalty', 'raw_finnage_penalty'])
+            ->get($defectColumns);
+
+        $scoringDefectRows = Scoring::whereIn('ikan_id', $approvedIkanIds)
+            ->get($defectColumns);
+
+        $nominationDefects = $nominasiDefectRows
+            ->concat($scoringDefectRows)
             ->groupBy('ikan_id')
             ->map(function ($rows) use ($mergeDefectRows) {
                 return $mergeDefectRows($rows);
@@ -187,6 +209,23 @@ class JuriController extends Controller
                 'message' => 'Nominasi untuk tank ini sudah tidak aktif atau telah dihapus admin. Halaman akan diperbarui.',
                 'nomination_removed' => true,
             ], 409);
+        }
+
+        // ★ GATING PENUGASAN: juri hanya boleh menilai kategori/kelas yang ditugaskan admin.
+        $myAssignments = \App\Models\JuriAssignment::where('juri_id', auth()->id())->get(['kategori', 'kelas']);
+        $bolehNilai = false;
+        foreach ($myAssignments as $a) {
+            if ($a->kategori !== $ikan->kategori) continue;
+            if ($a->kelas === null || $a->kelas === '' || (string) $a->kelas === (string) $ikan->kelas) {
+                $bolehNilai = true;
+                break;
+            }
+        }
+        if (!$bolehNilai) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda belum ditugaskan untuk menilai kategori/kelas tank ini. Hubungi admin.',
+            ], 403);
         }
 
         $noKelasKategori = ['Bonsai', 'Jumbo'];
@@ -359,14 +398,20 @@ class JuriController extends Controller
             ->values()
             ->toArray();
 
-        $scoringUnlocked = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
+        $hasJuriAssignment = \App\Models\JuriAssignment::where('juri_id', auth()->id())->exists();
+        $globalUnlocked    = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
+        // Boleh menilai hanya jika sesi dibuka admin DAN juri sudah ditugaskan.
+        $scoringUnlocked   = $globalUnlocked && $hasJuriAssignment;
+        // Sesi sudah dibuka admin, tapi juri ini belum diatur kategori/kelasnya.
+        $assignmentPending = $globalUnlocked && !$hasJuriAssignment;
 
         if ($nominations->isEmpty()) {
             return response()->json([
-                'status'            => count($globalApprovedIds) > 0 ? 'approved' : 'none',
-                'scoring_unlocked'  => $scoringUnlocked,
-                'nominations'       => [],
-                'approved_ikan_ids' => $globalApprovedIds,
+                'status'             => count($globalApprovedIds) > 0 ? 'approved' : 'none',
+                'scoring_unlocked'   => $scoringUnlocked,
+                'assignment_pending' => $assignmentPending,
+                'nominations'        => [],
+                'approved_ikan_ids'  => $globalApprovedIds,
             ]);
         }
 
@@ -391,13 +436,13 @@ class JuriController extends Controller
 
         $approvedIds = $globalApprovedIds;
 
-        // ★ Cek apakah admin sudah membuka kunci penjurian
-        $scoringUnlocked = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
+        // ★ $scoringUnlocked & $assignmentPending sudah dihitung di atas.
 
         return response()->json([
-            'status'            => $status,
-            'scoring_unlocked'  => $scoringUnlocked,
-            'nominations'       => $nominations->map(function ($n) {
+            'status'             => $status,
+            'scoring_unlocked'   => $scoringUnlocked,
+            'assignment_pending' => $assignmentPending,
+            'nominations'        => $nominations->map(function ($n) {
                 return [
                     'id'            => $n->id,
                     'ikan_id'       => $n->ikan_id,

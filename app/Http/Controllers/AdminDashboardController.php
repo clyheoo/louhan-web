@@ -3720,4 +3720,77 @@ class AdminDashboardController extends Controller
             'message' => 'Data peserta, kategori, kelas, dan nomor tank berhasil diperbarui.',
         ]);
     }
+
+    /* ═══════════════════════════════════════════
+       KELOLA JURI — PENUGASAN KATEGORI & KELAS
+       ═══════════════════════════════════════════ */
+    public function getJuriAssignments()
+    {
+        $juris = User::where('role', 'juri')->orderBy('name')->get(['id', 'name', 'email']);
+
+        $assignments = \App\Models\JuriAssignment::all()->groupBy('juri_id');
+
+        $data = $juris->map(function ($j) use ($assignments) {
+            $rows = $assignments->get($j->id, collect());
+            return [
+                'id'          => $j->id,
+                'name'        => $j->name,
+                'email'       => $j->email,
+                'assignments' => $rows->map(fn ($r) => [
+                    'kategori' => $r->kategori,
+                    'kelas'    => $r->kelas, // null = seluruh kelas / kategori tanpa kelas
+                ])->values(),
+            ];
+        });
+
+        return response()->json(['juris' => $data]);
+    }
+
+    public function saveJuriAssignments(Request $request)
+    {
+        $request->validate([
+            'juri_id'                => 'required|exists:users,id',
+            'assignments'            => 'array',
+            'assignments.*.kategori' => 'required|string|max:255',
+            'assignments.*.kelas'    => 'nullable|string|max:10',
+        ]);
+
+        $juri = User::find($request->json('juri_id'));
+        if (!$juri || $juri->role !== 'juri') {
+            return response()->json(['success' => false, 'message' => 'User yang dipilih bukan Juri.'], 422);
+        }
+
+        $noKelas = ['Bonsai', 'Jumbo'];
+
+        $items = collect($request->json('assignments') ?? [])
+            ->map(function ($a) use ($noKelas) {
+                $kat   = trim((string) ($a['kategori'] ?? ''));
+                $kelas = isset($a['kelas']) ? trim((string) $a['kelas']) : '';
+                // Kategori tanpa kelas dipaksa null.
+                if (in_array($kat, $noKelas, true)) {
+                    $kelas = null;
+                }
+                return ['kategori' => $kat, 'kelas' => ($kelas === '' ? null : $kelas)];
+            })
+            ->filter(fn ($a) => $a['kategori'] !== '')
+            ->unique(fn ($a) => $a['kategori'] . '|' . ($a['kelas'] ?? ''))
+            ->values();
+
+        \DB::transaction(function () use ($juri, $items) {
+            \App\Models\JuriAssignment::where('juri_id', $juri->id)->delete();
+            foreach ($items as $it) {
+                \App\Models\JuriAssignment::create([
+                    'juri_id'  => $juri->id,
+                    'kategori' => $it['kategori'],
+                    'kelas'    => $it['kelas'],
+                ]);
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Penugasan juri "' . $juri->name . '" berhasil disimpan (' . $items->count() . ' kombinasi).',
+            'count'   => $items->count(),
+        ]);
+    }
 }

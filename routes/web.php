@@ -159,6 +159,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
     // ★ NOMINASI — kirim/cabut hasil nominasi ke semua peserta
     Route::post('/api/admin/toggle-nominasi-publish', [AdminDashboardController::class, 'toggleNominasiPublish']);
     Route::get('/api/admin/nominasi-publish-status', [AdminDashboardController::class, 'getNominasiPublishStatus']);
+
+    // ★ KELOLA JURI — penugasan kategori & kelas per juri
+    Route::get('/api/admin/juri-assignments', [AdminDashboardController::class, 'getJuriAssignments']);
+    Route::post('/api/admin/juri-assignments', [AdminDashboardController::class, 'saveJuriAssignments']);
 });
 
 /* ═══════════════════════════════════════════

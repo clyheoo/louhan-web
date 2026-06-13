@@ -4852,6 +4852,130 @@ loadUsers();
 loadJuriScoringLockStatus();
 
 /* ═══════════════════════════════════════════════
+   KELOLA JURI — PENUGASAN KATEGORI & KELAS
+   ═══════════════════════════════════════════════ */
+function loadJuriAssignments(){
+    var c=document.getElementById('kelolaJuriList');
+    if(!c) return;
+    c.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
+    fetch('/api/admin/juri-assignments',{headers:{'Accept':'application/json'}})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(d){
+        var juris=(d&&d.juris)||[];
+        if(!juris.length){ c.innerHTML='<div class="empty-state"><i class="fas fa-user-slash"></i><p>Belum ada user dengan role Juri.</p></div>'; return; }
+        c.innerHTML=juris.map(renderJuriAssignmentCard).join('');
+    })
+    .catch(function(err){
+        c.innerHTML='<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i><p style="color:var(--danger);">'+esc(err.message)+'</p></div>';
+    });
+}
+
+function renderJuriAssignmentCard(j){
+    var has={};
+    (j.assignments||[]).forEach(function(a){
+        var kelas=(a.kelas===null||a.kelas===undefined)?'':String(a.kelas);
+        has[a.kategori+'|'+kelas]=true;
+    });
+    var jid=j.id;
+    var count=(j.assignments||[]).length;
+    var badge=count>0
+        ? '<span style="font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:20px;background:rgba(16,185,129,.15);color:#6EE7B7;border:1px solid rgba(16,185,129,.3);">'+count+' PENUGASAN</span>'
+        : '<span style="font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:20px;background:rgba(239,68,68,.12);color:#FCA5A5;border:1px solid rgba(239,68,68,.3);">BELUM DITUGASKAN</span>';
+
+    var body='';
+    allKategoriList.forEach(function(kat){
+        var isNoKelas=noKelasKategori.indexOf(kat)!==-1;
+        if(isNoKelas){
+            var ck=has[kat+'|']?'checked':'';
+            body+='<label style="display:inline-flex;align-items:center;gap:6px;margin:0 14px 8px 0;font-size:12px;color:var(--text);">'
+                +'<input type="checkbox" class="ja-cb" data-jid="'+jid+'" data-kat="'+kat+'" data-kelas="" '+ck+' style="accent-color:var(--cyan-500);"> <b>'+kat+'</b></label>';
+        }else{
+            var ckAll=has[kat+'|']?'checked':'';
+            var perKelas='';
+            kelasList.forEach(function(kl){
+                var ckk=(has[kat+'|'+kl]||has[kat+'|'])?'checked':'';
+                var dis=ckAll?'disabled':'';
+                perKelas+='<label style="display:inline-flex;align-items:center;gap:4px;margin:0 10px 0 0;font-size:11.5px;color:var(--text-mid);">'
+                    +'<input type="checkbox" class="ja-cb ja-kelas" data-jid="'+jid+'" data-kat="'+kat+'" data-kelas="'+kl+'" '+ckk+' '+dis+' style="accent-color:var(--cyan-500);"> '+kl+'</label>';
+            });
+            body+='<div style="border:1px solid var(--bd-1);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--glass-2);">'
+                +'<label style="display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:12px;color:var(--text);">'
+                +'<input type="checkbox" class="ja-cb ja-all" data-jid="'+jid+'" data-kat="'+kat+'" data-kelas="" '+ckAll+' onchange="toggleJaAll(this)" style="accent-color:var(--gold-400);"> <b>'+kat+'</b> <span style="font-size:10px;color:var(--text-low);">(semua kelas)</span></label>'
+                +'<span>'+perKelas+'</span>'
+                +'</div>';
+        }
+    });
+
+    return '<div class="detail-juri-accordion" id="ja-card-'+jid+'">'
+        +'<div class="detail-juri-toggle" onclick="toggleJaCard('+jid+')">'
+        +'<span class="dj-name"><i class="fas fa-user" style="color:var(--cyan-400);"></i> '+esc(j.name)+' '+badge+'</span>'
+        +'<i class="fas fa-chevron-down dj-arrow"></i>'
+        +'</div>'
+        +'<div class="detail-juri-scores" style="padding:12px 16px;">'
+        +'<div style="font-size:10.5px;color:var(--text-low);margin-bottom:10px;"><i class="fas fa-envelope"></i> '+esc(j.email)+'</div>'
+        +body
+        +'<div style="display:flex;justify-content:flex-end;margin-top:8px;">'
+        +'<button class="btn-xs blue" onclick="saveJuriAssignments('+jid+',this)"><i class="fas fa-floppy-disk"></i> Simpan Penugasan</button>'
+        +'</div>'
+        +'</div>'
+        +'</div>';
+}
+
+function toggleJaCard(jid){
+    var card=document.getElementById('ja-card-'+jid);
+    if(!card) return;
+    var tog=card.querySelector('.detail-juri-toggle');
+    var body=card.querySelector('.detail-juri-scores');
+    var open=body.classList.toggle('open');
+    if(tog) tog.classList.toggle('open',open);
+}
+
+function toggleJaAll(cb){
+    var card=cb.closest('[id^="ja-card-"]');
+    if(!card) return;
+    var kat=cb.dataset.kat;
+    card.querySelectorAll('.ja-kelas[data-kat="'+kat+'"]').forEach(function(k){
+        k.disabled=cb.checked;
+        if(cb.checked) k.checked=true;
+    });
+}
+
+function saveJuriAssignments(jid,btn){
+    var card=document.getElementById('ja-card-'+jid);
+    if(!card) return;
+    var assignments=[];
+
+    // Kategori "semua kelas" → 1 baris kelas null
+    card.querySelectorAll('.ja-all[data-jid="'+jid+'"]').forEach(function(a){
+        if(a.checked) assignments.push({kategori:a.dataset.kat,kelas:null});
+    });
+    // Kategori tanpa kelas (Bonsai/Jumbo): checkbox tunggal
+    card.querySelectorAll('.ja-cb[data-jid="'+jid+'"]').forEach(function(a){
+        if(a.classList.contains('ja-kelas')||a.classList.contains('ja-all')) return;
+        if(a.checked) assignments.push({kategori:a.dataset.kat,kelas:null});
+    });
+    // Kelas spesifik (yang tidak tercakup "semua kelas")
+    card.querySelectorAll('.ja-kelas[data-jid="'+jid+'"]').forEach(function(a){
+        if(a.disabled) return;
+        if(a.checked) assignments.push({kategori:a.dataset.kat,kelas:a.dataset.kelas});
+    });
+
+    var orig=btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    fetch('/api/admin/juri-assignments',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRF-TOKEN':getCsrf(),'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+        body:JSON.stringify({juri_id:jid,assignments:assignments})
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+        btn.disabled=false; btn.innerHTML=orig;
+        if(d.success){ popupSuccess('Tersimpan',d.message||'Penugasan disimpan.'); loadJuriAssignments(); }
+        else popupError('Gagal',d.message||'Terjadi kesalahan.');
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; popupError('Kesalahan Jaringan','Gagal menghubungi server.'); });
+}
+
+/* ═══════════════════════════════════════════════
    SIDEBAR NAVIGATION
    ═══════════════════════════════════════════════ */
 (function initSidebar(){
@@ -4866,7 +4990,8 @@ loadJuriScoringLockStatus();
         ranking:      { title:'Point Ranking',                   sub:'Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)', icon:'fa-trophy' },
         undian:       { title:'Kelola Mesin Undian',             sub:'Membuka dan mengunci mesin undian tank untuk peserta', icon:'fa-dice' },
         jumbo_calc:   { title:'Hitung Point Jumbo',              sub:'Kalkulasi point Jumbo berdasarkan rumus kategori lain', icon:'fa-calculator' },
-        team_champion:{ title:'Team Champion',                   sub:'Kelola pendaftaran Team Champion, status buka/tutup, dan data peserta', icon:'fa-users-crown' }
+        team_champion:{ title:'Team Champion',                   sub:'Kelola pendaftaran Team Champion, status buka/tutup, dan data peserta', icon:'fa-users-crown' },
+        kelola_juri:  { title:'Kelola Juri',                     sub:'Atur kategori & kelas yang boleh dinilai tiap juri', icon:'fa-user-shield' }
     };
     var loaded = { dashboard:true }; // dashboard loaded by initial loadDashboard()
 
@@ -4906,6 +5031,7 @@ loadJuriScoringLockStatus();
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
             if(pageId === 'undian'){ loadUndianStatus(); }
             if(pageId === 'jumbo_calc'){ loadJumboCalcFish(); }
+            if(pageId === 'kelola_juri'){ loadJuriAssignments(); loadJuriScoringLockStatus(); }
 
         } else {
             // Refresh ringan saat dibuka ulang
@@ -4915,6 +5041,7 @@ loadJuriScoringLockStatus();
             if(pageId === 'results'){ loadResultsStatus(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
             if(pageId === 'undian'){ loadUndianStatus(); }
+            if(pageId === 'kelola_juri'){ loadJuriScoringLockStatus(); }
         }
 
         // ★ START auto-polling kalau halaman nominasi aktif

@@ -173,11 +173,11 @@
         
         {{-- OVERLAY PENGUIJAN TERKUNCI --}}
         <div id="scoring-lock-overlay" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center rounded-3xl text-center p-8" style="background: rgba(4,7,15,0.92); backdrop-filter: blur(10px); border: 1px solid var(--bd-2);">
-            <div class="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl" style="background: linear-gradient(135deg, #F59E0B, #B45309); box-shadow: 0 0 40px rgba(245,158,11,0.3);">
-                <i class="fas fa-lock text-white text-4xl"></i>
+            <div id="scoring-lock-iconwrap" class="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl" style="background: linear-gradient(135deg, #F59E0B, #B45309); box-shadow: 0 0 40px rgba(245,158,11,0.3);">
+                <i id="scoring-lock-icon" class="fas fa-lock text-white text-4xl"></i>
             </div>
-            <h2 class="text-xl font-extrabold mb-2" style="color: var(--text-hi);">Sesi Penjurian Terkunci</h2>
-            <p class="text-sm mb-6" style="color: var(--text-mid); max-width: 320px;">Admin belum membuka akses untuk melakukan penilaian. Silakan menunggu hingga sesi dibuka.</p>
+            <h2 id="scoring-lock-title" class="text-xl font-extrabold mb-2" style="color: var(--text-hi);">Sesi Penjurian Terkunci</h2>
+            <p id="scoring-lock-desc" class="text-sm mb-6" style="color: var(--text-mid); max-width: 320px;">Admin belum membuka akses untuk melakukan penilaian. Silakan menunggu hingga sesi dibuka.</p>
             <div class="flex items-center justify-center gap-2 text-xs" style="color:var(--text-faint);">
                 <div class="w-2 h-2 rounded-full animate-pulse" style="background:var(--gold-400);"></div>
                 Auto-refresh status
@@ -875,6 +875,7 @@ function clearNomDraft() {
 
 let currentJuriView = 'nominasi';
 let isScoringUnlocked = false;
+let isAssignmentPending = false;
 let scoringLockTimer = null;
 let lastApprovedIkanSig = '';
 
@@ -924,6 +925,7 @@ async function checkNominasiStatus(attempt = 1) {
             if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
 
             isScoringUnlocked = res.scoring_unlocked === true;
+            isAssignmentPending = res.assignment_pending === true;
             updateScoringLockUI();
 
             // ★ Jika di tab penjurian, cukup update state
@@ -2357,8 +2359,28 @@ function updateScoringLockUI() {
 
     if (isScoringUnlocked) {
         lockOverlay.classList.add('hidden');
+        return;
+    }
+
+    lockOverlay.classList.remove('hidden');
+
+    const iconWrap = document.getElementById('scoring-lock-iconwrap');
+    const icon     = document.getElementById('scoring-lock-icon');
+    const title    = document.getElementById('scoring-lock-title');
+    const desc     = document.getElementById('scoring-lock-desc');
+
+    if (isAssignmentPending) {
+        // Sesi sudah dibuka admin, tapi juri ini belum diatur kategori/kelasnya.
+        if (icon)  icon.className = 'fas fa-hourglass-half text-white text-4xl';
+        if (iconWrap) { iconWrap.style.background = 'linear-gradient(135deg, #22D3EE, #0891B2)'; iconWrap.style.boxShadow = '0 0 40px rgba(34,211,238,0.3)'; }
+        if (title) title.textContent = 'Halaman Penilaian Sedang Diatur';
+        if (desc)  desc.textContent = 'Admin sedang mengatur kategori & kelas penilaian Anda. Silakan tunggu hingga penugasan selesai.';
     } else {
-        lockOverlay.classList.remove('hidden');
+        // Admin benar-benar mengunci sesi penjurian.
+        if (icon)  icon.className = 'fas fa-lock text-white text-4xl';
+        if (iconWrap) { iconWrap.style.background = 'linear-gradient(135deg, #F59E0B, #B45309)'; iconWrap.style.boxShadow = '0 0 40px rgba(245,158,11,0.3)'; }
+        if (title) title.textContent = 'Sesi Penjurian Terkunci';
+        if (desc)  desc.textContent = 'Admin belum membuka akses untuk melakukan penilaian. Silakan menunggu hingga sesi dibuka.';
     }
 }
 
@@ -2371,6 +2393,7 @@ async function loadJuriDataForPenjurian() {
         const statusRes = await apiFetch('/api/juri/nominasi-status?_t=' + Date.now());
 
         isScoringUnlocked = statusRes.scoring_unlocked === true;
+        isAssignmentPending = statusRes.assignment_pending === true;
         updateScoringLockUI();
         setApprovedIkanSig(statusRes.approved_ikan_ids || []);
 
@@ -2446,10 +2469,12 @@ async function checkScoringLockAndInit() {
         const res = await apiFetch('/api/juri/nominasi-status?_t=' + Date.now());
 
         isScoringUnlocked = res.scoring_unlocked === true;
+        isAssignmentPending = res.assignment_pending === true;
         updateScoringLockUI();
 
     } catch (e) {
         isScoringUnlocked = false;
+        isAssignmentPending = false;
         updateScoringLockUI();
     }
 }
@@ -2469,11 +2494,13 @@ function startScoringLockPolling() {
 
             const wasLocked = !isScoringUnlocked;
             const nextUnlocked = res.scoring_unlocked === true;
+            const nextPending = res.assignment_pending === true;
 
             const newApprovedSig = makeApprovedIkanSig(res.approved_ikan_ids || []);
             const approvedChanged = lastApprovedIkanSig !== '' && newApprovedSig !== lastApprovedIkanSig;
 
             isScoringUnlocked = nextUnlocked;
+            isAssignmentPending = nextPending;
             updateScoringLockUI();
 
             // Update signature setelah dihitung perbedaannya.
