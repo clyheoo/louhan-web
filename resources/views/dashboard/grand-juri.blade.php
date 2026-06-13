@@ -973,7 +973,7 @@ var MINOR_DEFECTS=[
     'Bibir Miring',
     'Bibir Miring (kasat mata)',
     'Katarak',
-    'Bibir Tidak Menutup Sempurna & Selaput Bergerak',
+    'Bibir Tidak Menutup & Selaput Bergerak',
     'Abses / Luka',
     'Fintail Bleaching',
     'Fintail Bleaching / Transparan',
@@ -1002,7 +1002,7 @@ var DEFECT_OPTIONS={
         {label:'--- MINOR ---',options:[
             {value:'Bibir Miring (kasat mata)',label:'Bibir Miring (kasat mata)'},
             {value:'Katarak',label:'Katarak'},
-            {value:'Bibir Tidak Menutup Sempurna & Selaput Bergerak',label:'Bibir Tidak Menutup Sempurna & Selaput Bergerak'}
+            {value:'Bibir Tidak Menutup & Selaput Bergerak',label:'Bibir Tidak Menutup & Selaput Bergerak'}
         ]},
         {label:'--- MAYOR ---',options:[
             {value:'Bagian Bibir Hilang',label:'Bagian Bibir Hilang'},
@@ -1031,14 +1031,14 @@ var DEFECT_OPTIONS={
     ]
 };
 function getStandardOptionsGJ(){var o=[];for(var i=90;i>=10;i-=5)o.push({value:i.toString(),label:i.toString()});return o;}
-var DEFECT_LEGACY_MAP={'Bibir Miring':'Bibir Miring (kasat mata)','Fintail Bleaching':'Fintail Bleaching / Transparan','Pangkal Ekor Naik/Trn':'Pangkal Ekor Naik atau Turun','Dayung Tdk Seimbang':'Sirip Dayung Tidak Seimbang','Mulut Terbuka Terus':'Bibir Tidak Menutup Sempurna & Selaput Bergerak','Pangkal Bengkok/Patah':'Pangkal Bengkok / Melintir'};
+var DEFECT_LEGACY_MAP={'Bibir Miring':'Bibir Miring (kasat mata)','Fintail Bleaching':'Fintail Bleaching / Transparan','Pangkal Ekor Naik/Trn':'Pangkal Ekor Naik atau Turun','Dayung Tdk Seimbang':'Sirip Dayung Tidak Seimbang','Mulut Terbuka Terus':'Bibir Tidak Menutup & Selaput Bergerak','Pangkal Bengkok/Patah':'Pangkal Bengkok / Melintir'};
 function normalizeDefectLegacy(arr){return arr.map(function(v){return DEFECT_LEGACY_MAP[v]||v;});}
 function normDefArr(v){if(!v)return['0'];if(typeof v==='string')return[v];if(Array.isArray(v))return v;return['0'];}
 var editDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};
 var originalDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};
 var activeDefectKeyGJ=null;
 function evaluateDefectsGJ(){var parts=['head','face','body','finnage'];var partStatus={};parts.forEach(function(p){partStatus[p]={minor:false,mayor:false,items:[]};});parts.forEach(function(p){var defs=normDefArr(editDefectData['raw_'+p+'_penalty']);defs.forEach(function(d){if(d&&d!=='0'){partStatus[p].items.push(d);if(MINOR_DEFECTS.indexOf(d)!==-1)partStatus[p].minor=true;if(MAYOR_DEFECTS.indexOf(d)!==-1)partStatus[p].mayor=true;}});});var componentsWithMinor=0;parts.forEach(function(p){if(partStatus[p].minor)componentsWithMinor++;});var isGlobalMayor=componentsWithMinor>=3;var results={};parts.forEach(function(p){if(partStatus[p].items.length>0){var isM=partStatus[p].mayor||(partStatus[p].minor&&isGlobalMayor);results[p+'_penalty']=isM?'30%':'10%';}else{results[p+'_penalty']='';}});return results;}
-function openDefectModalGJ(defectKey){activeDefectKeyGJ=defectKey;var partName=defectKey.replace('raw_','').replace('_penalty','').toUpperCase();document.getElementById('defectModalTitleGJ').innerText='Pilih Defect - '+partName;var options=DEFECT_OPTIONS[defectKey];var currentValues=editDefectData[defectKey]||['0'];var html='';options.forEach(function(group){html+='<div class="gj-defect-group"><div class="gj-defect-group-title">'+group.label+'</div><div class="gj-defect-options">';group.options.forEach(function(opt){var isChecked=currentValues.indexOf(opt.value)!==-1;html+='<label class="gj-defect-option '+(isChecked?'selected':'')+'" onclick="toggleDefectGJ(\''+defectKey+'\',\''+opt.value.replace(/'/g,"\\'")+'\')"><input type="checkbox" '+(isChecked?'checked':'')+' onclick="event.stopPropagation();toggleDefectGJ(\''+defectKey+'\',\''+opt.value.replace(/'/g,"\\'")+'\')"><span>'+opt.label+'</span></label>';});html+='</div></div>';});document.getElementById('defectModalBodyGJ').innerHTML=html;openModal('modalDefectGJ');}
+function openDefectModalGJ(defectKey){activeDefectKeyGJ=defectKey;var partName=defectKey.replace('raw_','').replace('_penalty','').toUpperCase();document.getElementById('defectModalTitleGJ').innerText='Pilih Defect - '+partName;var options=DEFECT_OPTIONS[defectKey];var currentValues = normDefArr(editDefectData[defectKey] || ['0']);editDefectData[defectKey] = currentValues;var html='';options.forEach(function(group){html+='<div class="gj-defect-group"><div class="gj-defect-group-title">'+group.label+'</div><div class="gj-defect-options">';group.options.forEach(function(opt){var isChecked=currentValues.indexOf(opt.value)!==-1;html+='<label class="gj-defect-option '+(isChecked?'selected':'')+'" onclick="toggleDefectGJ(\''+defectKey+'\',\''+opt.value.replace(/'/g,"\\'")+'\')"><input type="checkbox" '+(isChecked?'checked':'')+' onclick="event.stopPropagation();toggleDefectGJ(\''+defectKey+'\',\''+opt.value.replace(/'/g,"\\'")+'\')"><span>'+opt.label+'</span></label>';});html+='</div></div>';});document.getElementById('defectModalBodyGJ').innerHTML=html;openModal('modalDefectGJ');}
 function closeDefectModalGJ(){closeModal('modalDefectGJ');activeDefectKeyGJ=null;renderEditInputs(currentEditKat);}
 function toggleDefectGJ(defectKey,value){var current=editDefectData[defectKey]||['0'];if(value==='0'){editDefectData[defectKey]=['0'];}else{current=current.filter(function(v){return v!=='0';});if(current.indexOf(value)!==-1){current=current.filter(function(v){return v!==value;});}else{current.push(value);}if(current.length===0)current=['0'];editDefectData[defectKey]=current;}openDefectModalGJ(defectKey);}
 

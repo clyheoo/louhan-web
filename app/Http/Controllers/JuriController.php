@@ -12,18 +12,75 @@ class JuriController extends Controller
 {
     public function getJuriData()
     {
-    $juriId = auth()->id();
-        // Ambil ikan yang sudah approved untuk juri login.
-        // Rejected global tetap tidak dipakai di sini agar hasil reset/re-submit dari admin
-        // tidak membuat data approved juri hilang karena record rejected lama.
-        $approvedIkanIds = Nominasi::where('juri_id', $juriId)
-            ->where('status', 'approved')
+        $juriId = auth()->id();
+
+        $normalizeDefectArray = function ($value) {
+            if (is_string($value)) {
+                $value = [$value];
+            }
+
+            if (!is_array($value)) {
+                return ['0'];
+            }
+
+            $items = collect($value)
+                ->map(function ($v) {
+                    $v = trim((string) $v);
+
+                    // Normalisasi teks lama agar tampil & dihitung sebagai teks baru.
+                    $v = preg_replace('/\s+Sempurna/u', '', $v) ?? $v;
+
+                    return $v;
+                })
+                ->filter(fn ($v) => $v !== '')
+                ->unique()
+                ->values()
+                ->toArray();
+
+            if (empty($items)) {
+                return ['0'];
+            }
+
+            if (in_array('0', $items, true) && count($items) > 1) {
+                $items = array_values(array_filter($items, fn ($v) => $v !== '0'));
+            }
+
+            return empty($items) ? ['0'] : $items;
+        };
+
+        $mergeDefectRows = function ($rows) use ($normalizeDefectArray) {
+            $keys = [
+                'raw_head_penalty',
+                'raw_face_penalty',
+                'raw_body_penalty',
+                'raw_finnage_penalty',
+            ];
+
+            $merged = [];
+
+            foreach ($keys as $key) {
+                $vals = [];
+
+                foreach ($rows as $row) {
+                    foreach ($normalizeDefectArray($row->{$key} ?? ['0']) as $v) {
+                        if ($v && $v !== '0') {
+                            $vals[$v] = true;
+                        }
+                    }
+                }
+
+                $merged[$key] = count($vals) ? array_values(array_keys($vals)) : ['0'];
+            }
+
+            return $merged;
+        };
+
+        // Ambil SEMUA tank yang sudah approved, baik dari admin, juri lain, maupun juri login.
+        $approvedIkanIds = Nominasi::where('status', 'approved')
             ->pluck('ikan_id')
             ->unique()
             ->values()
             ->toArray();
-
-        $hasApproved = count($approvedIkanIds) > 0;
 
         $availableTanks = Ikan::query()
             ->select([
@@ -38,16 +95,12 @@ class JuriController extends Controller
                 'is_locked',
             ])
             ->whereNotNull('nomor_tank')
-            ->when($hasApproved, function ($q) use ($approvedIkanIds) {
-                $q->whereIn('id', $approvedIkanIds);
-            })
+            ->whereIn('id', $approvedIkanIds)
             ->orderByRaw('CAST(nomor_tank AS UNSIGNED) ASC')
             ->get();
 
         $myScores = Scoring::where('juri_id', $juriId)
-            ->when($hasApproved, function ($q) use ($approvedIkanIds) {
-                $q->whereIn('ikan_id', $approvedIkanIds);
-            })
+            ->whereIn('ikan_id', $approvedIkanIds)
             ->with('ikan', 'ikan.peserta')
             ->orderByDesc('created_at')
             ->get();
@@ -63,9 +116,7 @@ class JuriController extends Controller
         });
 
         $myScoredTankIds = Scoring::where('juri_id', $juriId)
-            ->when($hasApproved, function ($q) use ($approvedIkanIds) {
-                $q->whereIn('ikan_id', $approvedIkanIds);
-            })
+            ->whereIn('ikan_id', $approvedIkanIds)
             ->pluck('ikan_id')
             ->toArray();
 
@@ -75,29 +126,19 @@ class JuriController extends Controller
         }
 
         $scoredCounts = Scoring::select('ikan_id', \DB::raw('COUNT(*) as total_juri'))
-            ->when($hasApproved, function ($q) use ($approvedIkanIds) {
-                $q->whereIn('ikan_id', $approvedIkanIds);
-            })
+            ->whereIn('ikan_id', $approvedIkanIds)
             ->groupBy('ikan_id')
             ->pluck('total_juri', 'ikan_id')
             ->toArray();
 
-        // ★ Ambil defect yang dipilih saat nominasi (untuk pre-fill form scoring).
-        //    Query langsung approved noms milik juri ini, TANPA filter $approvedIkanIds —
-        //    karena filter itu bisa membuang ikan yang pernah ditolak lalu re-nominasi.
-        //    Frontend hanya akan apply pre-fill untuk tank yang ada di tankScores
-        //    (yaitu available_tanks), jadi data ekstra di nomination_defects aman.
-        $nominationDefects = Nominasi::where('juri_id', auth()->id())
-            ->where('status', 'approved')
+        // Gabungkan defect dari SEMUA nominasi approved untuk ikan yang sama.
+        // Jadi defect admin + juri lain tetap ikut pre-fill ke halaman juri.
+        $nominationDefects = Nominasi::where('status', 'approved')
+            ->whereIn('ikan_id', $approvedIkanIds)
             ->get(['ikan_id', 'raw_head_penalty', 'raw_face_penalty', 'raw_body_penalty', 'raw_finnage_penalty'])
-            ->keyBy('ikan_id')
-            ->map(function ($n) {
-                return [
-                    'raw_head_penalty'    => $n->raw_head_penalty    ?? ['0'],
-                    'raw_face_penalty'    => $n->raw_face_penalty    ?? ['0'],
-                    'raw_body_penalty'    => $n->raw_body_penalty    ?? ['0'],
-                    'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
-                ];
+            ->groupBy('ikan_id')
+            ->map(function ($rows) use ($mergeDefectRows) {
+                return $mergeDefectRows($rows);
             });
 
         return response()->json([
@@ -106,6 +147,7 @@ class JuriController extends Controller
             'all_scored'         => $allScored,
             'scored_counts'      => $scoredCounts,
             'nomination_defects' => $nominationDefects,
+            'approved_ikan_ids'  => $approvedIkanIds,
         ]);
     }
 
@@ -133,6 +175,18 @@ class JuriController extends Controller
         $ikan = Ikan::find($ikanId);
         if (!$ikan) {
             return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
+        }
+
+        $hasApprovedNominasi = Nominasi::where('ikan_id', $ikanId)
+            ->where('status', 'approved')
+            ->exists();
+
+        if (!$hasApprovedNominasi) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nominasi untuk tank ini sudah tidak aktif atau telah dihapus admin. Halaman akan diperbarui.',
+                'nomination_removed' => true,
+            ], 409);
         }
 
         $noKelasKategori = ['Bonsai', 'Jumbo'];
@@ -255,6 +309,18 @@ class JuriController extends Controller
             return response()->json(['success' => false, 'message' => 'Nilai ini sudah pernah dikirim ke Grand Juri.']);
         }
 
+        $hasApprovedNominasi = Nominasi::where('ikan_id', $scoring->ikan_id)
+            ->where('status', 'approved')
+            ->exists();
+
+        if (!$hasApprovedNominasi) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nominasi untuk tank ini sudah tidak aktif atau telah dihapus admin. Nilai tidak dapat dikirim ke Grand Juri.',
+                'nomination_removed' => true,
+            ], 409);
+        }
+
         $scoring->update(['submitted_to_grand' => true]);
 
         // ★ AUTO-SYNC dijalankan SETELAH response dikirim ke browser
@@ -287,30 +353,43 @@ class JuriController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
+        $globalApprovedIds = Nominasi::where('status', 'approved')
+            ->pluck('ikan_id')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        $scoringUnlocked = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
+
         if ($nominations->isEmpty()) {
             return response()->json([
-                'status'            => 'none',
+                'status'            => count($globalApprovedIds) > 0 ? 'approved' : 'none',
+                'scoring_unlocked'  => $scoringUnlocked,
                 'nominations'       => [],
-                'approved_ikan_ids' => [],
+                'approved_ikan_ids' => $globalApprovedIds,
             ]);
         }
 
         $hasPending  = $nominations->contains('status', 'pending');
         $hasApproved = $nominations->contains('status', 'approved');
+        $hasRejected = $nominations->contains('status', 'rejected');
 
-        // ★ Prioritas: pending > approved > none
-        //   Selama ada SATU PUN nominasi yang masih pending,
-        //   juri TIDAK boleh masuk scoring page.
-        //   Semua nominasi harus selesai di-review (approved/rejected) dulu.
+        // Prioritas status milik juri login:
+        // pending → approved → rejected.
+        // Approved global hanya dipakai kalau juri login belum punya status sendiri.
         if ($hasPending) {
             $status = 'pending';
         } elseif ($hasApproved) {
+            $status = 'approved';
+        } elseif ($hasRejected) {
+            $status = 'none';
+        } elseif (count($globalApprovedIds) > 0) {
             $status = 'approved';
         } else {
             $status = 'none';
         }
 
-        $approvedIds = $nominations->where('status', 'approved')->pluck('ikan_id')->toArray();
+        $approvedIds = $globalApprovedIds;
 
         // ★ Cek apakah admin sudah membuka kunci penjurian
         $scoringUnlocked = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
@@ -387,11 +466,12 @@ class JuriController extends Controller
                 ->delete();
 
             foreach ($ikanIds as $ikanId) {
-                // Jangan ubah nominasi yang sudah approved.
-                $alreadyApproved = Nominasi::where('juri_id', $juriId)
-                    ->where('ikan_id', $ikanId)
-                    ->where('status', 'approved')
-                    ->exists();
+
+            // Approved milik admin/juri lain tetap boleh dikirim sebagai pending oleh juri ini.
+            $alreadyApproved = Nominasi::where('juri_id', $juriId)
+                ->where('ikan_id', $ikanId)
+                ->where('status', 'approved')
+                ->exists();
 
                 if ($alreadyApproved) {
                     $skippedApproved++;

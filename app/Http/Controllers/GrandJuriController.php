@@ -33,6 +33,48 @@ class GrandJuriController extends Controller
         'mini_champion'    => 'MINI CHAMPION',
     ];
 
+    private function normalizeDefectArray($value): array
+    {
+        if (is_string($value)) {
+            $value = [$value];
+        }
+
+        if (!is_array($value)) {
+            return ['0'];
+        }
+
+        $items = collect($value)
+            ->map(function ($v) {
+                $v = trim((string) $v);
+                $v = preg_replace('/\s+Sempurna/u', '', $v) ?? $v;
+                return $v;
+            })
+            ->filter(fn ($v) => $v !== '')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        if (empty($items)) {
+            return ['0'];
+        }
+
+        if (in_array('0', $items, true) && count($items) > 1) {
+            $items = array_values(array_filter($items, fn ($v) => $v !== '0'));
+        }
+
+        return empty($items) ? ['0'] : $items;
+    }
+
+    private function nominasiDefectPayload(Nominasi $n): array
+    {
+        return [
+            'raw_head_penalty'    => $this->normalizeDefectArray($n->raw_head_penalty ?? ['0']),
+            'raw_face_penalty'    => $this->normalizeDefectArray($n->raw_face_penalty ?? ['0']),
+            'raw_body_penalty'    => $this->normalizeDefectArray($n->raw_body_penalty ?? ['0']),
+            'raw_finnage_penalty' => $this->normalizeDefectArray($n->raw_finnage_penalty ?? ['0']),
+        ];
+    }
+
     public function index()
     {
         return view('dashboard.grand-juri', ['user' => auth()->user()->fresh()]);
@@ -130,6 +172,7 @@ class GrandJuriController extends Controller
                     'tanks'     => $items->map(function ($n) {
                         $ikan = $n->ikan;
                         if (!$ikan) return null;
+                        $defects = $this->nominasiDefectPayload($n);
                         return [
                             'nominasi_id'   => $n->id,
                             'ikan_id'       => $n->ikan_id,
@@ -138,13 +181,14 @@ class GrandJuriController extends Controller
                             'kelas'         => $ikan->kelas ?? null,
                             'nama_peserta'  => $ikan->nama_peserta ?? 'Unknown',
                             'detail_anggota'=> $ikan->detail_anggota ?? '—',
-                            'submitted_at'  => $n->created_at->toISOString(),
+                            'submitted_at'  => $n->created_at ? $n->created_at->toISOString() : null,
 
                             // defect nominasi dari juri
-                            'raw_head_penalty'    => $n->raw_head_penalty ?? ['0'],
-                            'raw_face_penalty'    => $n->raw_face_penalty ?? ['0'],
-                            'raw_body_penalty'    => $n->raw_body_penalty ?? ['0'],
-                            'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
+                            'raw_head_penalty'    => $defects['raw_head_penalty'],
+                            'raw_face_penalty'    => $defects['raw_face_penalty'],
+                            'raw_body_penalty'    => $defects['raw_body_penalty'],
+                            'raw_finnage_penalty' => $defects['raw_finnage_penalty'],
+                            
                         ];
                     })->filter()->values()->toArray(),
                 ];
@@ -155,12 +199,18 @@ class GrandJuriController extends Controller
                 'total_pending' => $nominations->count(),
                 'total_juri'    => count($grouped),
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::error('getNominasi error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json([
                 'grouped'       => [],
                 'total_pending' => 0,
                 'total_juri'    => 0,
-            ]);
+                'error'         => true,
+                'message'       => 'Gagal memuat nominasi pending.',
+            ], 500);
         }
     }
 
@@ -241,70 +291,92 @@ class GrandJuriController extends Controller
     ═══════════════════════════════════════════ */
     public function getNominasiHistory()
     {
-        $nominations = Nominasi::whereIn('status', ['approved', 'rejected'])
-            ->with(['juri', 'ikan.peserta'])
-            ->orderByDesc('reviewed_at')
-            ->get();
+        try {
+            $nominations = Nominasi::whereIn('status', ['approved', 'rejected'])
+                ->with(['juri', 'ikan.peserta'])
+                ->orderByDesc('reviewed_at')
+                ->orderByDesc('updated_at')
+                ->get();
 
-        $approved = $nominations->where('status', 'approved')->groupBy('juri_id')->map(function ($items) {
-            $juri = $items->first()->juri;
-            return [
-                'juri_id'   => $juri ? $juri->id : null,
-                'juri_name' => $juri ? $juri->name : 'Unknown',
-                'tanks'     => $items->map(function ($n) {
-                    $ikan = $n->ikan;
+            $mapTank = function (Nominasi $n, bool $withCatatan = false) {
+                $ikan = $n->ikan;
+                $defects = $this->nominasiDefectPayload($n);
+
+                $row = [
+                    'nominasi_id'  => $n->id,
+                    'ikan_id'      => $n->ikan_id,
+                    'nomor_tank'   => $ikan ? $ikan->nomor_tank : null,
+                    'kategori'     => $ikan ? $ikan->kategori : null,
+                    'kelas'        => $ikan ? $ikan->kelas : null,
+                    'nama_peserta' => $ikan ? ($ikan->nama_peserta ?? 'Unknown') : 'Unknown',
+                    'reviewed_at'  => $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-',
+
+                    'raw_head_penalty'    => $defects['raw_head_penalty'],
+                    'raw_face_penalty'    => $defects['raw_face_penalty'],
+                    'raw_body_penalty'    => $defects['raw_body_penalty'],
+                    'raw_finnage_penalty' => $defects['raw_finnage_penalty'],
+                ];
+
+                if ($withCatatan) {
+                    $row['catatan'] = $n->catatan ?: null;
+                }
+
+                return $row;
+            };
+
+            $approved = $nominations->where('status', 'approved')
+                ->groupBy('juri_id')
+                ->map(function ($items) use ($mapTank) {
+                    $juri = $items->first()->juri;
+
                     return [
-                        'nominasi_id'  => $n->id,
-                        'ikan_id'      => $n->ikan_id,
-                        'nomor_tank'   => $ikan ? $ikan->nomor_tank : null,
-                        'kategori'     => $ikan ? $ikan->kategori : null,
-                        'kelas'        => $ikan ? $ikan->kelas : null,
-                        'nama_peserta' => $ikan->nama_peserta ?? 'Unknown',
-                        'reviewed_at'  => $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-',
-
-                        // defect nominasi dari juri
-                        'raw_head_penalty'    => $n->raw_head_penalty ?? ['0'],
-                        'raw_face_penalty'    => $n->raw_face_penalty ?? ['0'],
-                        'raw_body_penalty'    => $n->raw_body_penalty ?? ['0'],
-                        'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
+                        'juri_id'   => $juri ? $juri->id : null,
+                        'juri_name' => $juri ? $juri->name : 'Unknown',
+                        'tanks'     => $items->map(function ($n) use ($mapTank) {
+                            return $mapTank($n, false);
+                        })->values()->toArray(),
                     ];
-                })->values()->toArray(),
-            ];
-        })->values()->toArray();
+                })
+                ->values()
+                ->toArray();
 
-        $rejected = $nominations->where('status', 'rejected')->groupBy('juri_id')->map(function ($items) {
-            $juri = $items->first()->juri;
-            return [
-                'juri_id'   => $juri ? $juri->id : null,
-                'juri_name' => $juri ? $juri->name : 'Unknown',
-                'tanks'     => $items->map(function ($n) {
-                    $ikan = $n->ikan;
+            $rejected = $nominations->where('status', 'rejected')
+                ->groupBy('juri_id')
+                ->map(function ($items) use ($mapTank) {
+                    $juri = $items->first()->juri;
+
                     return [
-                        'nominasi_id'  => $n->id,
-                        'ikan_id'      => $n->ikan_id,
-                        'nomor_tank'   => $ikan ? $ikan->nomor_tank : null,
-                        'kategori'     => $ikan ? $ikan->kategori : null,
-                        'kelas'        => $ikan ? $ikan->kelas : null,
-                        'nama_peserta' => $ikan->nama_peserta ?? 'Unknown',
-                        'catatan'      => $n->catatan ?: null,
-                        'reviewed_at'  => $n->reviewed_at ? $n->reviewed_at->format('d M Y, H:i') : '-',
-
-                        // defect nominasi dari juri
-                        'raw_head_penalty'    => $n->raw_head_penalty ?? ['0'],
-                        'raw_face_penalty'    => $n->raw_face_penalty ?? ['0'],
-                        'raw_body_penalty'    => $n->raw_body_penalty ?? ['0'],
-                        'raw_finnage_penalty' => $n->raw_finnage_penalty ?? ['0'],
+                        'juri_id'   => $juri ? $juri->id : null,
+                        'juri_name' => $juri ? $juri->name : 'Unknown',
+                        'tanks'     => $items->map(function ($n) use ($mapTank) {
+                            return $mapTank($n, true);
+                        })->values()->toArray(),
                     ];
-                })->values()->toArray(),
-            ];
-        })->values()->toArray();
+                })
+                ->values()
+                ->toArray();
 
-        return response()->json([
-            'approved'       => $approved,
-            'rejected'       => $rejected,
-            'total_approved' => $nominations->where('status', 'approved')->count(),
-            'total_rejected' => $nominations->where('status', 'rejected')->count(),
-        ]);
+            return response()->json([
+                'approved'       => $approved,
+                'rejected'       => $rejected,
+                'total_approved' => $nominations->where('status', 'approved')->count(),
+                'total_rejected' => $nominations->where('status', 'rejected')->count(),
+            ]);
+
+        } catch (\Throwable $e) {
+            \Log::error('getNominasiHistory error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'approved'       => [],
+                'rejected'       => [],
+                'total_approved' => 0,
+                'total_rejected' => 0,
+                'error'          => true,
+                'message'        => 'Gagal memuat riwayat nominasi.',
+            ], 500);
+        }
     }
 
     /* ═══════════════════════════════════════════

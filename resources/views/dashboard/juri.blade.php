@@ -873,10 +873,22 @@ function clearNomDraft() {
     try { localStorage.removeItem(getNomDraftKey()); } catch (e) {}
 }
 
-// ★ State Global UI Juri
-let currentJuriView = 'nominasi'; // 'nominasi' atau 'penjurian'
-let isScoringUnlocked = false;    // Default terkunci, diupdate dari API
-let scoringLockTimer = null;      // Timer polling status kunci
+let currentJuriView = 'nominasi';
+let isScoringUnlocked = false;
+let scoringLockTimer = null;
+let lastApprovedIkanSig = '';
+
+function makeApprovedIkanSig(ids) {
+    return (ids || [])
+        .map(function(id) { return parseInt(id, 10); })
+        .filter(function(id) { return !isNaN(id); })
+        .sort(function(a, b) { return a - b; })
+        .join('|');
+}
+
+function setApprovedIkanSig(ids) {
+    lastApprovedIkanSig = makeApprovedIkanSig(ids);
+}
 
 function nomShow(id) { document.getElementById(id)?.classList.remove('hidden'); }
 function nomHide(id) { document.getElementById(id)?.classList.add('hidden'); }
@@ -1186,9 +1198,20 @@ function nomShowApprovedAnim() {
     nomShow('nom-approved-anim');
     setTimeout(function() {
         nomHide('nom-approved-anim');
-        nomHide('nom-page'); nomHide('nom-waiting');
+        nomHide('nom-page');
+        nomHide('nom-waiting');
         nomShow('scoring-page');
+
+        currentJuriView = 'penjurian';
+
+        var navNom = document.getElementById('nav-btn-nominasi');
+        var navPen = document.getElementById('nav-btn-penjurian');
+
+        if (navNom) navNom.classList.remove('active');
+        if (navPen) navPen.classList.add('active');
+
         initScoringPage();
+        startScoringLockPolling();
     }, 2500);
 }
 
@@ -1617,20 +1640,36 @@ async function nomConfirmSubmit() {
             })
         });
 
-        if (res.success) {
-            clearNomDraft(); // ★ pilihan sudah jadi pending (milik server), draft tak perlu lagi
-            nomClosePreview();
+    if (res.success) {
+        const createdCount = (res.count === undefined || res.count === null)
+            ? 1
+            : parseInt(res.count || 0, 10);
+
+        nomClosePreview();
+
+        if (createdCount > 0) {
+            clearNomDraft();
+            sessionStorage.setItem('nom_was_pending', '1');
+
             showSuccessPopup('Nominasi Terkirim!', res.message);
 
             // Refresh list supaya pending baru langsung selected dan tampil paling atas.
             await nomLoadData();
 
             setTimeout(function() {
-                checkNominasiStatus();
-            }, 800);
+                viewPendingNominations();
+            }, 600);
         } else {
-            showWarningModal([{type:'select', msg: res.message || 'Gagal mengirim nominasi.'}]);
+            showWarningModal([{
+                type: 'select',
+                msg: res.message || 'Tidak ada nominasi baru yang masuk pending. Kemungkinan semua tank yang dipilih sudah approved untuk akun juri ini.'
+            }]);
+
+            await nomLoadData();
         }
+    } else {
+        showWarningModal([{type:'select', msg: res.message || 'Gagal mengirim nominasi.'}]);
+    }
     } catch (e) {
         showWarningModal([{type:'select', msg:'Gagal mengirim. Periksa koneksi internet Anda.'}]);
     }
@@ -1664,7 +1703,7 @@ const MINOR_DEFECTS = [
     "Bibir Miring",                      // legacy
     "Bibir Miring (kasat mata)",
     "Katarak",
-    "Bibir Tidak Menutup Sempurna & Selaput Bergerak",
+    "Bibir Tidak Menutup & Selaput Bergerak",
     "Abses / Luka",
     "Fintail Bleaching",                 // legacy
     "Fintail Bleaching / Transparan",
@@ -1686,10 +1725,34 @@ const MAYOR_DEFECTS = [
 // ★ Hanya label BARU yang dimunculkan ke juri saat memilih defect
 const DEFECT_MAP = {
     head:    { label:'Head',    minor:['Kutil'], mayor:[] },
-    face:    { label:'Face',    minor:['Bibir Miring (kasat mata)','Katarak','Bibir Tidak Menutup Sempurna & Selaput Bergerak'], mayor:['Bagian Bibir Hilang','Muka Miring'] },
+    face:    { label:'Face',    minor:['Bibir Miring (kasat mata)','Katarak','Bibir Tidak Menutup & Selaput Bergerak'], mayor:['Bagian Bibir Hilang','Muka Miring'] },
     body:    { label:'Body',    minor:['Kutil','Abses / Luka'], mayor:[] },
     finnage: { label:'Finnage', minor:['Kutil','Fintail Bleaching / Transparan','Pangkal Ekor Naik atau Turun','Sirip Dayung Tidak Seimbang'], mayor:['Fin/Tulang Hilang 1 Ruas','Pangkal Bengkok / Melintir'] },
 };
+
+function normalizeDefectName(v) {
+    return String(v || '').replace(/\s+Sempurna/g, '').trim();
+}
+
+function normalizeDefectArr(v) {
+    if (!v) return ['0'];
+    if (typeof v === 'string') v = [v];
+    if (!Array.isArray(v)) return ['0'];
+
+    var arr = v
+        .map(normalizeDefectName)
+        .filter(function(x) { return x !== ''; });
+
+    arr = Array.from(new Set(arr));
+
+    if (arr.length === 0) return ['0'];
+
+    if (arr.indexOf('0') !== -1 && arr.length > 1) {
+        arr = arr.filter(function(x) { return x !== '0'; });
+    }
+
+    return arr.length ? arr : ['0'];
+}
 
 const SCORING_GROUPS = [
     { id:'overall', title:"Overall", fields:[{key:'overall.impression',label:'Impression',type:'standard'}] },
@@ -1722,14 +1785,32 @@ function loadDraft() {
     try {
         var raw = localStorage.getItem(getDraftKey());
         if (!raw) return;
+
         var saved = JSON.parse(raw);
         var scoredIds = {};
-        appData.my_scores.forEach(function(s) { scoredIds[s.ikan_id] = true; });
+        var validIds = {};
+
+        appData.my_scores.forEach(function(s) {
+            scoredIds[parseInt(s.ikan_id, 10)] = true;
+        });
+
+        appData.available_tanks.forEach(function(t) {
+            validIds[parseInt(t.id, 10)] = true;
+        });
+
         Object.keys(saved).forEach(function(id) {
-            if (!scoredIds[parseInt(id)]) { tankScores[id] = saved[id]; }
+            var nid = parseInt(id, 10);
+
+            // Draft tank yang sudah tidak ada di approved nomination jangan dimunculkan lagi.
+            if (!validIds[nid]) return;
+
+            if (!scoredIds[nid]) {
+                tankScores[id] = saved[id];
+            }
         });
     } catch(e) {}
 }
+
 function removeDraft(tankId) {
     try {
         var raw = localStorage.getItem(getDraftKey());
@@ -1738,6 +1819,21 @@ function removeDraft(tankId) {
         delete saved[tankId];
         localStorage.setItem(getDraftKey(), JSON.stringify(saved));
     } catch(e) {}
+}
+
+function pruneUnavailableTankScores() {
+    var validIds = {};
+    (appData.available_tanks || []).forEach(function(t) {
+        validIds[parseInt(t.id, 10)] = true;
+    });
+
+    Object.keys(tankScores || {}).forEach(function(id) {
+        var nid = parseInt(id, 10);
+        if (!validIds[nid]) {
+            delete tankScores[id];
+            removeDraft(id);
+        }
+    });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1775,7 +1871,7 @@ function evalDefects(ts) {
     const status = {};
     parts.forEach(p => { status[p] = {hasMinor:false, mayor:false, items:[]}; });
     parts.forEach(p => {
-        const defs = ts.defects['raw_'+p+'_penalty'] || ['0'];
+        const defs = normalizeDefectArr(ts.defects['raw_'+p+'_penalty'] || ['0']);
         defs.forEach(d => {
             if (d && d !== '0') {
                 status[p].items.push(d);
@@ -2184,7 +2280,7 @@ async function loadJuriData() {
                     !cur ||
                     cur.length === 0 ||
                     (cur.length === 1 && cur[0] === '0');
-                const ndArr = nd[k];
+                const ndArr = normalizeDefectArr(nd[k]);
                 const hasReal = Array.isArray(ndArr) && ndArr.some(function(v) {
                     return v && v !== '0';
                 });
@@ -2199,10 +2295,18 @@ async function loadJuriData() {
 }
 
 function initScoringPage() {
-    activeTab = 'overall'; showGuideline = false; isConfirmed = false; isSubmitting = false;
-    renderTabs(); updateGuidelineBtn();
+    activeTab = 'overall';
+    showGuideline = false;
+    isConfirmed = false;
+    isSubmitting = false;
+
+    renderTabs();
+    updateGuidelineBtn();
+
     document.getElementById('guideline-panel').classList.add('hidden');
-    loadJuriData();
+
+    // Pakai loader penjurian yang membaca status approved terbaru.
+    loadJuriDataForPenjurian();
 }
 
 function switchJuriView(view) {
@@ -2268,6 +2372,7 @@ async function loadJuriDataForPenjurian() {
 
         isScoringUnlocked = statusRes.scoring_unlocked === true;
         updateScoringLockUI();
+        setApprovedIkanSig(statusRes.approved_ikan_ids || []);
 
         // Selalu load data juri terbaru.
         // Cache buster dipakai agar hasil reset/acak ulang nomor tank dari admin langsung terbaca.
@@ -2278,6 +2383,8 @@ async function loadJuriDataForPenjurian() {
         appData.all_scored         = dataRes.all_scored || {};
         appData.scored_counts      = dataRes.scored_counts || {};
         appData.nomination_defects = dataRes.nomination_defects || {};
+
+        pruneUnavailableTankScores();
 
         initTankScores(appData.available_tanks);
         loadDraft();
@@ -2306,7 +2413,7 @@ async function loadJuriDataForPenjurian() {
                     cur.length === 0 ||
                     (cur.length === 1 && cur[0] === '0');
 
-                const ndArr = nd[k];
+                const ndArr = normalizeDefectArr(nd[k]);
 
                 const hasReal = Array.isArray(ndArr) && ndArr.some(function(v) {
                     return v && v !== '0';
@@ -2349,29 +2456,46 @@ async function checkScoringLockAndInit() {
 
 function startScoringLockPolling() {
     stopScoringLockPolling();
+
     scoringLockTimer = setInterval(async function() {
-        // ★ Hanya poll jika user masih di tab penjurian
+        // Hanya poll jika user masih di tab penjurian.
         if (currentJuriView !== 'penjurian') {
             stopScoringLockPolling();
             return;
         }
-        
+
         try {
             const res = await apiFetch('/api/juri/nominasi-status?_t=' + Date.now());
+
             const wasLocked = !isScoringUnlocked;
-            isScoringUnlocked = res.scoring_unlocked === true;
+            const nextUnlocked = res.scoring_unlocked === true;
+
+            const newApprovedSig = makeApprovedIkanSig(res.approved_ikan_ids || []);
+            const approvedChanged = lastApprovedIkanSig !== '' && newApprovedSig !== lastApprovedIkanSig;
+
+            isScoringUnlocked = nextUnlocked;
             updateScoringLockUI();
+
+            // Update signature setelah dihitung perbedaannya.
+            lastApprovedIkanSig = newApprovedSig;
+
+            if (approvedChanged) {
+                // Ini yang membuat tank hilang/masuk otomatis tanpa refresh browser.
+                await loadJuriDataForPenjurian();
+                return;
+            }
 
             if (wasLocked && isScoringUnlocked) {
                 showSuccessPopup('Sesi Dibuka!', 'Admin telah membuka akses penjurian. Anda bisa mulai menilai.');
-                // ★ Reload data untuk memastikan form terupdate
-                loadJuriDataForPenjurian();
+                await loadJuriDataForPenjurian();
+                return;
             }
+
             if (!wasLocked && !isScoringUnlocked) {
                 showWarningModal([{type:'select', msg:'Admin telah MENGUNCI sesi penjurian.'}]);
             }
         } catch (e) {}
-    }, 8000);
+    }, 3000);
 }
 
 function stopScoringLockPolling() {

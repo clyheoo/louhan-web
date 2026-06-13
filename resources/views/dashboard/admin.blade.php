@@ -2086,6 +2086,74 @@
     </div>
 </div>
 
+{{-- MODAL DEFECT NOMINASI ADMIN --}}
+<div class="modal-bg" id="modalAdminNomDefect" style="--mw:860px;">
+    <div class="modal-box"
+         style="
+            width:min(860px, calc(100vw - 24px));
+            max-height:92vh;
+            display:flex;
+            flex-direction:column;
+            overflow:hidden;
+         ">
+
+        <div class="modal-head" style="flex-shrink:0;">
+            <h3 id="adminNomDefectTitle">
+                <i class="fas fa-triangle-exclamation" style="color:var(--gold-400);"></i>
+                Defect Nominasi Admin
+            </h3>
+            <button class="modal-close" onclick="adminCloseNomDefect()">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="modal-body"
+             id="adminNomDefectScroll"
+             style="
+                flex:1;
+                min-height:0;
+                overflow-y:auto;
+                overflow-x:hidden;
+                padding:16px 18px;
+                overscroll-behavior:contain;
+             ">
+            <div id="adminNomDefectInfo"
+                 style="
+                    position:sticky;
+                    top:0;
+                    z-index:5;
+                    margin:-16px -18px 14px;
+                    padding:14px 18px;
+                    font-size:12px;
+                    color:var(--text-mid);
+                    line-height:1.55;
+                    background:linear-gradient(180deg,rgba(11,18,32,.98),rgba(11,18,32,.92));
+                    border-bottom:1px solid var(--bd-1);
+                    backdrop-filter:blur(10px);
+                 "></div>
+
+            <div id="adminNomDefectBody"></div>
+        </div>
+
+        <div class="modal-foot"
+             style="
+                flex-shrink:0;
+                display:grid;
+                grid-template-columns:1fr 1fr;
+                gap:10px;
+                background:rgba(11,18,32,.96);
+                border-top:1px solid var(--bd-1);
+             ">
+            <button class="btn-cancel" onclick="adminResetNomDefect()" type="button">
+                <i class="fas fa-eraser"></i> Reset Semua
+            </button>
+            <button class="btn-primary" onclick="adminSaveNomDefect()" type="button">
+                <i class="fas fa-check"></i> Simpan Defect
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════════ MODAL: EDIT DATA PESERTA, KATEGORI & KELAS ═══════════ -->
 <div class="modal-bg" id="modalEditKatKelas" style="--mw:540px;">
     <div class="modal-box">

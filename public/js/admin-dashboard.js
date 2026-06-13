@@ -917,7 +917,7 @@ var ADMIN_MINOR_DEFECTS=[
     'Bibir Miring',
     'Bibir Miring (kasat mata)',
     'Katarak',
-    'Bibir Tidak Menutup Sempurna & Selaput Bergerak',
+    'Bibir Tidak Menutup & Selaput Bergerak',
     'Abses / Luka',
     'Fintail Bleaching',
     'Fintail Bleaching / Transparan',
@@ -946,7 +946,7 @@ var ADMIN_DEFECT_OPTIONS={
         {label:'--- MINOR ---',options:[
             {value:'Bibir Miring (kasat mata)',label:'Bibir Miring (kasat mata)'},
             {value:'Katarak',label:'Katarak'},
-            {value:'Bibir Tidak Menutup Sempurna & Selaput Bergerak',label:'Bibir Tidak Menutup Sempurna & Selaput Bergerak'}
+            {value:'Bibir Tidak Menutup & Selaput Bergerak',label:'Bibir Tidak Menutup & Selaput Bergerak'}
         ]},
         {label:'--- MAYOR ---',options:[
             {value:'Bagian Bibir Hilang',label:'Bagian Bibir Hilang'},
@@ -975,7 +975,7 @@ var ADMIN_DEFECT_OPTIONS={
     ]
 };
 
-var ADMIN_DEFECT_LEGACY_MAP={'Bibir Miring':'Bibir Miring (kasat mata)','Fintail Bleaching':'Fintail Bleaching / Transparan','Pangkal Ekor Naik/Trn':'Pangkal Ekor Naik atau Turun','Dayung Tdk Seimbang':'Sirip Dayung Tidak Seimbang','Mulut Terbuka Terus':'Bibir Tidak Menutup Sempurna & Selaput Bergerak','Pangkal Bengkok/Patah':'Pangkal Bengkok / Melintir'};
+var ADMIN_DEFECT_LEGACY_MAP={'Bibir Miring':'Bibir Miring (kasat mata)','Fintail Bleaching':'Fintail Bleaching / Transparan','Pangkal Ekor Naik/Trn':'Pangkal Ekor Naik atau Turun','Dayung Tdk Seimbang':'Sirip Dayung Tidak Seimbang','Mulut Terbuka Terus':'Bibir Tidak Menutup & Selaput Bergerak','Pangkal Bengkok/Patah':'Pangkal Bengkok / Melintir'};
 function adminNormalizeDefectLegacy(arr){return arr.map(function(v){return ADMIN_DEFECT_LEGACY_MAP[v]||v;});}
 
 var adminEditDefectData={raw_head_penalty:['0'],raw_face_penalty:['0'],raw_body_penalty:['0'],raw_finnage_penalty:['0']};
@@ -5177,6 +5177,8 @@ function renderJumboCalcResult(data, kat){
 var adminNomState = {
     tanks: [],
     selected: new Set(),
+    defects: {},
+    defectCtx: null,
     histTab: 'approved',
     histData: { approved: [], rejected: [] },
     pendingData: null,
@@ -5399,6 +5401,8 @@ function loadAdminNomTanks(){
     .then(function(d){
         adminNomState.tanks = d.tanks || [];
         adminNomState.selected.clear();
+        adminNomState.defects = {};
+        adminNomState.defectCtx = null;
         renderAdminNomGrid();
         updateAdminNomCount();
     })
@@ -5420,6 +5424,304 @@ function adminNomGetFiltered(){
         }
         return true;
     });
+}
+
+function adminNomNormDef(v){
+    if(!v) return ['0'];
+    if(typeof v === 'string') return adminNormalizeDefectLegacy([v]);
+    if(Array.isArray(v)) return adminNormalizeDefectLegacy(v);
+    return ['0'];
+}
+
+function adminNomEmptyDefect(){
+    return {
+        raw_head_penalty: ['0'],
+        raw_face_penalty: ['0'],
+        raw_body_penalty: ['0'],
+        raw_finnage_penalty: ['0']
+    };
+}
+
+function adminNomEvalDefects(defectData){
+    var parts = ['head','face','body','finnage'];
+    var status = {};
+
+    parts.forEach(function(p){
+        status[p] = { minor:false, mayor:false, items:[] };
+    });
+
+    parts.forEach(function(p){
+        var key = 'raw_' + p + '_penalty';
+        var vals = adminNomNormDef(defectData[key]);
+
+        vals.forEach(function(d){
+            if(d && d !== '0'){
+                status[p].items.push(d);
+                if(ADMIN_MINOR_DEFECTS.indexOf(d) !== -1) status[p].minor = true;
+                if(ADMIN_MAYOR_DEFECTS.indexOf(d) !== -1) status[p].mayor = true;
+            }
+        });
+    });
+
+    var minorComponents = 0;
+    parts.forEach(function(p){
+        if(status[p].minor) minorComponents++;
+    });
+
+    var globalMayor = minorComponents >= 3;
+    var result = {};
+
+    parts.forEach(function(p){
+        if(status[p].items.length === 0){
+            result[p] = '';
+        } else {
+            result[p] = (status[p].mayor || (status[p].minor && globalMayor)) ? '30%' : '10%';
+        }
+    });
+
+    return result;
+}
+
+function adminNomDefectSummary(tankId){
+    var d = adminNomState.defects[tankId];
+    if(!d) return { count:0, level:'none' };
+
+    var count = 0;
+    ['head','face','body','finnage'].forEach(function(p){
+        var vals = adminNomNormDef(d['raw_' + p + '_penalty']);
+        vals.forEach(function(v){
+            if(v && v !== '0') count++;
+        });
+    });
+
+    if(count === 0) return { count:0, level:'none' };
+
+    var ev = adminNomEvalDefects(d);
+    var mayor = ['head','face','body','finnage'].some(function(p){
+        return ev[p] === '30%';
+    });
+
+    return { count:count, level: mayor ? 'mayor' : 'minor' };
+}
+
+function adminNomDefectBtnHtml(tankId){
+    var sum = adminNomDefectSummary(tankId);
+
+    var bg = 'rgba(34,211,238,.08)';
+    var bd = 'rgba(34,211,238,.22)';
+    var color = 'var(--cyan-300)';
+    var icon = 'fa-circle-exclamation';
+    var label = 'Tandai Defect';
+
+    if(sum.level === 'minor'){
+        bg = 'rgba(245,158,11,.10)';
+        bd = 'rgba(245,158,11,.30)';
+        color = 'var(--gold-300)';
+        label = 'Defect Minor (' + sum.count + ')';
+    }
+
+    if(sum.level === 'mayor'){
+        bg = 'rgba(239,68,68,.12)';
+        bd = 'rgba(239,68,68,.32)';
+        color = '#FCA5A5';
+        icon = 'fa-triangle-exclamation';
+        label = 'Defect Mayor (' + sum.count + ')';
+    }
+
+    return '<button type="button" onclick="event.stopPropagation();adminOpenNomDefect('+tankId+')" ' +
+        'style="margin-top:8px;width:100%;padding:6px 8px;border-radius:8px;border:1px solid '+bd+';background:'+bg+';color:'+color+';font-family:inherit;font-size:9.5px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">' +
+        '<i class="fas '+icon+'"></i> '+label+
+    '</button>';
+}
+
+function adminNomPartLabel(defectKey){
+    if(defectKey === 'raw_head_penalty') return 'HEAD';
+    if(defectKey === 'raw_face_penalty') return 'FACE';
+    if(defectKey === 'raw_body_penalty') return 'BODY';
+    if(defectKey === 'raw_finnage_penalty') return 'FINNAGE';
+    return defectKey;
+}
+
+function adminOpenNomDefect(tankId){
+    var tank = adminNomState.tanks.find(function(t){ return parseInt(t.id,10) === parseInt(tankId,10); });
+    var current = adminNomState.defects[tankId] || adminNomEmptyDefect();
+
+    adminNomState.defectCtx = {
+        tankId: tankId,
+        working: {
+            raw_head_penalty: adminNomNormDef(current.raw_head_penalty),
+            raw_face_penalty: adminNomNormDef(current.raw_face_penalty),
+            raw_body_penalty: adminNomNormDef(current.raw_body_penalty),
+            raw_finnage_penalty: adminNomNormDef(current.raw_finnage_penalty)
+        }
+    };
+
+    var title = document.getElementById('adminNomDefectTitle');
+    if(title) title.textContent = 'Defect Nominasi Admin';
+
+    var info = document.getElementById('adminNomDefectInfo');
+    if(info){
+        info.innerHTML =
+            'Tank <b style="color:var(--cyan-300);">#'+esc(tank ? tank.nomor_tank : tankId)+'</b>' +
+            ' · '+esc(tank ? tank.kategori : '-') +
+            (tank && tank.kelas && ['Bonsai','Jumbo'].indexOf(tank.kategori) === -1 ? ' · Kelas '+esc(tank.kelas) : '') +
+            '<br>Peserta: <b style="color:var(--text-hi);">'+esc(tank ? (tank.nama_peserta || '-') : '-')+'</b>';
+    }
+
+    adminRenderNomDefectBody();
+    openModal('modalAdminNomDefect');
+
+    setTimeout(function(){
+        var sc = document.getElementById('adminNomDefectScroll');
+        if(sc) sc.scrollTop = 0;
+    }, 50);
+}
+
+function adminRenderNomDefectBody(){
+    var ctx = adminNomState.defectCtx;
+    var body = document.getElementById('adminNomDefectBody');
+    if(!ctx || !body) return;
+
+    var ev = adminNomEvalDefects(ctx.working);
+    var keys = ['raw_head_penalty','raw_face_penalty','raw_body_penalty','raw_finnage_penalty'];
+
+    var html =
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;align-items:start;">';
+
+    keys.forEach(function(key){
+        var part = key.replace('raw_','').replace('_penalty','');
+        var current = adminNomNormDef(ctx.working[key]);
+        var options = ADMIN_DEFECT_OPTIONS[key] || [];
+
+        var tag =
+            '<span style="padding:4px 8px;border-radius:999px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);color:#6EE7B7;font-size:9px;font-weight:900;white-space:nowrap;">AMAN</span>';
+
+        if(ev[part] === '10%'){
+            tag =
+                '<span style="padding:4px 8px;border-radius:999px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.30);color:var(--gold-300);font-size:9px;font-weight:900;white-space:nowrap;">MINOR −10%</span>';
+        }
+
+        if(ev[part] === '30%'){
+            tag =
+                '<span style="padding:4px 8px;border-radius:999px;background:rgba(239,68,68,.13);border:1px solid rgba(239,68,68,.35);color:#FCA5A5;font-size:9px;font-weight:900;white-space:nowrap;">MAYOR −30%</span>';
+        }
+
+        html +=
+            '<div style="border:1px solid var(--bd-2);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));overflow:hidden;box-shadow:0 10px 24px -18px rgba(0,0,0,.55);">';
+
+        html +=
+            '<div style="padding:12px 14px;border-bottom:1px solid var(--bd-1);display:flex;justify-content:space-between;align-items:center;gap:10px;background:rgba(255,255,255,.025);">' +
+                '<b style="font-size:12px;color:var(--text-hi);letter-spacing:.08em;">' + adminNomPartLabel(key) + '</b>' +
+                tag +
+            '</div>';
+
+        html += '<div style="padding:13px;display:flex;flex-direction:column;gap:13px;">';
+
+        options.forEach(function(group, groupIdx){
+            html +=
+                '<div style="border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:10px;background:rgba(0,0,0,.12);">' +
+                    '<div style="font-size:10px;font-weight:900;color:var(--text-low);letter-spacing:.08em;margin-bottom:9px;text-transform:uppercase;">' +
+                        esc(group.label).replace(/---/g, '') +
+                    '</div>' +
+                    '<div style="display:grid;grid-template-columns:1fr;gap:8px;">';
+
+            group.options.forEach(function(opt, optIdx){
+                var checked = current.indexOf(opt.value) !== -1;
+                var safeVal = String(opt.value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                var inputId = 'admin_nom_def_' + key + '_' + groupIdx + '_' + optIdx;
+
+                html +=
+                    '<label for="' + inputId + '" onclick="event.stopPropagation();" ' +
+                    'style="' +
+                        'display:grid;' +
+                        'grid-template-columns:18px 1fr;' +
+                        'align-items:center;' +
+                        'gap:10px;' +
+                        'min-height:44px;' +
+                        'padding:10px 11px;' +
+                        'border-radius:11px;' +
+                        'border:1px solid ' + (checked ? 'var(--cyan-400)' : 'var(--bd-2)') + ';' +
+                        'background:' + (checked ? 'rgba(34,211,238,.12)' : 'rgba(255,255,255,.03)') + ';' +
+                        'cursor:pointer;' +
+                        'user-select:none;' +
+                        'transition:all .15s;' +
+                    '">' +
+                        '<input id="' + inputId + '" type="checkbox" ' + (checked ? 'checked' : '') + ' ' +
+                            'onclick="event.stopPropagation();" ' +
+                            'onchange="adminToggleNomDefect(\'' + key + '\',\'' + safeVal + '\')" ' +
+                            'style="width:17px;height:17px;accent-color:var(--cyan-400);cursor:pointer;">' +
+                        '<span style="font-size:11.5px;font-weight:800;color:var(--text);line-height:1.35;">' + esc(opt.label) + '</span>' +
+                    '</label>';
+            });
+
+            html += '</div></div>';
+        });
+
+        html += '</div></div>';
+    });
+
+    html += '</div>';
+    body.innerHTML = html;
+}
+
+function adminToggleNomDefect(defectKey, value){
+    var ctx = adminNomState.defectCtx;
+    if(!ctx) return;
+
+    var current = adminNomNormDef(ctx.working[defectKey]);
+
+    if(value === '0'){
+        current = ['0'];
+    } else {
+        current = current.filter(function(v){ return v !== '0'; });
+
+        if(current.indexOf(value) !== -1){
+            current = current.filter(function(v){ return v !== value; });
+        } else {
+            current.push(value);
+        }
+
+        if(current.length === 0) current = ['0'];
+    }
+
+    ctx.working[defectKey] = current;
+    adminRenderNomDefectBody();
+}
+
+function adminResetNomDefect(){
+    if(!adminNomState.defectCtx) return;
+
+    adminNomState.defectCtx.working = adminNomEmptyDefect();
+    adminRenderNomDefectBody();
+}
+
+function adminSaveNomDefect(){
+    var ctx = adminNomState.defectCtx;
+    if(!ctx) return;
+
+    var hasAny = ['raw_head_penalty','raw_face_penalty','raw_body_penalty','raw_finnage_penalty'].some(function(key){
+        return adminNomNormDef(ctx.working[key]).some(function(v){ return v && v !== '0'; });
+    });
+
+    if(hasAny){
+        adminNomState.defects[ctx.tankId] = {
+            raw_head_penalty: adminNomNormDef(ctx.working.raw_head_penalty),
+            raw_face_penalty: adminNomNormDef(ctx.working.raw_face_penalty),
+            raw_body_penalty: adminNomNormDef(ctx.working.raw_body_penalty),
+            raw_finnage_penalty: adminNomNormDef(ctx.working.raw_finnage_penalty)
+        };
+    } else {
+        delete adminNomState.defects[ctx.tankId];
+    }
+
+    adminNomState.defectCtx = null;
+    closeModal('modalAdminNomDefect');
+    renderAdminNomGrid();
+}
+
+function adminCloseNomDefect(){
+    adminNomState.defectCtx = null;
+    closeModal('modalAdminNomDefect');
 }
 
 function renderAdminNomGrid(){
@@ -5447,14 +5749,24 @@ function renderAdminNomGrid(){
         html += '<div style="font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;background:rgba(34,211,238,.08);color:var(--cyan-300);border:1px solid rgba(34,211,238,.18);text-align:center;">'+esc(t.kategori||'-')+'</div>';
         html += kelasBadge;
         html += '<div style="font-size:10px;color:var(--text-mid);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;">'+esc(t.nama_peserta||'-')+'</div>';
+
+        if(sel){
+            html += adminNomDefectBtnHtml(t.id);
+        }
+
         html += '</div>';
     });
     grid.innerHTML = html;
 }
 
 function adminNomToggleTank(id){
-    if(adminNomState.selected.has(id)) adminNomState.selected.delete(id);
-    else adminNomState.selected.add(id);
+    if(adminNomState.selected.has(id)){
+        adminNomState.selected.delete(id);
+        delete adminNomState.defects[id];
+    } else {
+        adminNomState.selected.add(id);
+    }
+
     renderAdminNomGrid();
     updateAdminNomCount();
 }
@@ -5477,6 +5789,12 @@ function updateAdminNomCount(){
 function adminNomSubmit(){
     if(adminNomState.selected.size === 0) return;
     var ids = Array.from(adminNomState.selected);
+    var defectsPayload = {};
+    ids.forEach(function(id){
+        if(adminNomState.defects[id]){
+            defectsPayload[id] = adminNomState.defects[id];
+        }
+    });
     popupConfirm(
         'Submit Nominasi',
         'Yakin ingin submit <strong>'+ids.length+' tank</strong> sebagai nominasi admin?<br><span style="font-size:11px;color:var(--text-mid);">Tank akan masuk ke daftar pending review dan bisa di-ACC/Tolak oleh admin atau grand juri.</span>',
@@ -5488,13 +5806,18 @@ function adminNomSubmit(){
             fetch('/api/admin/submit-nominasi', {
                 method: 'POST',
                 headers: {'Content-Type':'application/json','X-CSRF-TOKEN':getCsrf(),'Accept':'application/json'},
-                body: JSON.stringify({ ikan_ids: ids })
+                body: JSON.stringify({
+                    ikan_ids: ids,
+                    defects: defectsPayload
+                })
             })
             .then(function(r){ return r.json(); })
             .then(function(d){
                 if(d.success){
                     popupSuccess('Nominasi Terkirim', d.message);
                     adminNomState.selected.clear();
+                    adminNomState.defects = {};
+                    adminNomState.defectCtx = null;
                     loadAdminNomTanks();
                     loadAdminPendingReview();
                 } else {
@@ -5913,6 +6236,11 @@ window.loadAdminNomTanks      = loadAdminNomTanks;
 window.renderAdminNomGrid     = renderAdminNomGrid;
 window.adminNomToggleTank     = adminNomToggleTank;
 window.adminNomSubmit         = adminNomSubmit;
+window.adminOpenNomDefect     = adminOpenNomDefect;
+window.adminToggleNomDefect   = adminToggleNomDefect;
+window.adminResetNomDefect    = adminResetNomDefect;
+window.adminSaveNomDefect     = adminSaveNomDefect;
+window.adminCloseNomDefect    = adminCloseNomDefect;
 window.loadAdminPendingReview = loadAdminPendingReview;
 window.adminApprovePending    = adminApprovePending;
 window.adminRejectPending     = adminRejectPending;
@@ -5930,4 +6258,9 @@ window.adminHistApplyFilter = adminHistApplyFilter;
 window.adminHistResetFilter = adminHistResetFilter;
 window.adminShowNomDefect = adminShowNomDefect;
 window.adminDeleteNominasi = adminDeleteNominasi;
+window.adminOpenNomDefect   = adminOpenNomDefect;
+window.adminToggleNomDefect = adminToggleNomDefect;
+window.adminResetNomDefect  = adminResetNomDefect;
+window.adminSaveNomDefect   = adminSaveNomDefect;
+window.adminCloseNomDefect  = adminCloseNomDefect;
 })();

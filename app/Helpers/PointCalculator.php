@@ -11,7 +11,7 @@ class PointCalculator
         'Bibir Miring',                                      // legacy
         'Bibir Miring (kasat mata)',                         // baru
         'Katarak',
-        'Bibir Tidak Menutup Sempurna & Selaput Bergerak',   // dipindah dari mayor ke minor
+        'Bibir Tidak Menutup & Selaput Bergerak',   // dipindah dari mayor ke minor
         'Abses / Luka',
         'Fintail Bleaching',                                 // legacy
         'Fintail Bleaching / Transparan',                    // baru
@@ -29,6 +29,12 @@ class PointCalculator
         'Pangkal Bengkok / Melintir',                        // baru
         'Fin/Tulang Hilang 1 Ruas',
     ];
+
+    private static function normalizeDefectName($value): string
+    {
+        $value = trim((string) $value);
+        return preg_replace('/\s+Sempurna/u', '', $value) ?? $value;
+    }
 
     public static function hitungPoint(string $kategori, array $nd, array $defectData = []): float
     {
@@ -145,6 +151,8 @@ class PointCalculator
             if (is_string($defs)) $defs = [$defs];
             
             foreach ($defs as $d) {
+                $d = self::normalizeDefectName($d);
+
                 if ($d && $d !== '0') {
                     $partStatus[$p]['items'][] = $d;
                     if (in_array($d, self::MINOR_DEFECTS)) { $partStatus[$p]['minor'] = true; }
@@ -362,6 +370,7 @@ class PointCalculator
             if (is_string($defs)) $defs = [$defs];
             
             foreach ($defs as $d) {
+                $d = self::normalizeDefectName($d);
                 if ($d && $d !== '0') {
                     $partStatus[$p]['items'][] = $d;
                     if (in_array($d, self::MINOR_DEFECTS)) { 

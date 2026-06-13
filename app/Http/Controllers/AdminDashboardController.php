@@ -1368,6 +1368,7 @@ class AdminDashboardController extends Controller
         public function submitAdminNominasi(Request $request)
         {
             $ikanIds = $request->json('ikan_ids');
+            $defects = $request->json('defects') ?? [];
 
             if (!is_array($ikanIds) || count($ikanIds) === 0) {
                 return response()->json([
@@ -1379,6 +1380,47 @@ class AdminDashboardController extends Controller
             $ikans = Ikan::whereIn('id', $ikanIds)
                 ->whereNotNull('nomor_tank')
                 ->get();
+
+            $ikanIds = collect($ikanIds)
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+
+            $normalizeDefectArray = function ($value) {
+                if (is_string($value)) {
+                    $value = [$value];
+                }
+
+                if (!is_array($value)) {
+                    return ['0'];
+                }
+
+                $items = collect($value)
+                    ->map(function ($v) {
+                        $v = trim((string) $v);
+
+                        // Hapus kata lama dari data yang mungkin masih tersimpan di browser/cache.
+                        $v = preg_replace('/\s+Sempurna/u', '', $v) ?? $v;
+
+                        return $v;
+                    })
+                    ->filter(fn ($v) => $v !== '')
+                    ->unique()
+                    ->values()
+                    ->toArray();
+
+                if (empty($items)) {
+                    return ['0'];
+                }
+
+                if (in_array('0', $items, true) && count($items) > 1) {
+                    $items = array_values(array_filter($items, fn ($v) => $v !== '0'));
+                }
+
+                return empty($items) ? ['0'] : $items;
+            };
 
             if ($ikans->count() !== count($ikanIds)) {
                 return response()->json([
@@ -1410,34 +1452,41 @@ class AdminDashboardController extends Controller
                     ->where('is_late_addition', false)
                     ->delete();
 
-                Nominasi::create([
+                $payload = [
                     'juri_id'          => auth()->id(),
                     'ikan_id'          => $ikanId,
                     'status'           => 'pending',
                     'is_late_addition' => false,
-                ]);
+                ];
+
+                $d = $defects[(string) $ikanId] ?? $defects[$ikanId] ?? null;
+
+                if (is_array($d)) {
+                    $payload['raw_head_penalty']    = $normalizeDefectArray($d['raw_head_penalty'] ?? ['0']);
+                    $payload['raw_face_penalty']    = $normalizeDefectArray($d['raw_face_penalty'] ?? ['0']);
+                    $payload['raw_body_penalty']    = $normalizeDefectArray($d['raw_body_penalty'] ?? ['0']);
+                    $payload['raw_finnage_penalty'] = $normalizeDefectArray($d['raw_finnage_penalty'] ?? ['0']);
+                }
+
+                Nominasi::create($payload);
                 $created++;
             }
 
-            // ★ Sync HASIL NOMINASI: di loop di atas, record rejected lama dihapus
-            //   untuk memungkinkan resubmit. Sheet HASIL NOMINASI menampilkan
-            //   rejected, jadi tanpa sync di sini data rejected lama akan
-            //   muncul sebagai "hantu" di spreadsheet sampai trigger berikutnya.
             if ($created > 0) {
                 try {
-                    // ★ Sync HASIL NOMINASI: di loop di atas, record rejected lama dihapus
-            //   untuk memungkinkan resubmit. Sheet HASIL NOMINASI menampilkan
-            //   rejected, jadi tanpa sync di sini data rejected lama akan
-            //   muncul sebagai "hantu" di spreadsheet sampai trigger berikutnya.
-            if ($created > 0) {
-                $sync = $this->sheetsSync;
-                app()->terminating(function () use ($sync) {
-                    if (!$sync->isReady()) return;
-                    try { $sync->syncHasilNominasi(); } catch (\Exception $e) { \Log::warning('Async-sync HasilNominasi (admin submit nominasi): ' . $e->getMessage()); }
-                });
-                    }
+                    $sync = $this->sheetsSync;
+
+                    app()->terminating(function () use ($sync) {
+                        if (!$sync->isReady()) return;
+
+                        try { $sync->syncSemuaNominasi(); } catch (\Exception $e) { \Log::warning('Async-sync SemuaNominasi (admin submit nominasi): ' . $e->getMessage()); }
+                        try { $sync->syncSemuaPilNom(); } catch (\Exception $e) { \Log::warning('Async-sync SemuaPilNom (admin submit nominasi): ' . $e->getMessage()); }
+                        try { $sync->syncHasilNominasi(); } catch (\Exception $e) { \Log::warning('Async-sync HasilNominasi (admin submit nominasi): ' . $e->getMessage()); }
+                        try { $sync->syncNominasiFix(); } catch (\Exception $e) { \Log::warning('Async-sync NominasiFix (admin submit nominasi): ' . $e->getMessage()); }
+                    });
+
                 } catch (\Exception $e) {
-                    \Log::warning('Auto-sync HASIL NOMINASI gagal (admin submit nominasi): ' . $e->getMessage());
+                    \Log::warning('Auto-sync nominasi gagal (admin submit nominasi): ' . $e->getMessage());
                 }
             }
 
