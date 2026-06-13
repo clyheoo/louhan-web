@@ -2147,7 +2147,7 @@
             <button class="btn-cancel" onclick="adminResetNomDefect()" type="button">
                 <i class="fas fa-eraser"></i> Reset Semua
             </button>
-            <button class="btn-primary" onclick="adminSaveNomDefect()" type="button">
+            <button id="adminNomDefectSaveBtn" class="btn-primary" onclick="adminSaveNomDefect()" type="button">
                 <i class="fas fa-check"></i> Simpan Defect
             </button>
         </div>

@@ -41,6 +41,52 @@ class AdminDashboardController extends Controller
         );
     }
 
+    private function normalizeNominasiDefectArray($value): array
+    {
+        if (is_string($value)) {
+            $value = [$value];
+        }
+
+        if (!is_array($value)) {
+            return ['0'];
+        }
+
+        $items = collect($value)
+            ->map(function ($v) {
+                $v = trim((string) $v);
+                $v = preg_replace('/\s+Sempurna/u', '', $v) ?? $v;
+                return $v;
+            })
+            ->filter(fn ($v) => $v !== '')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        if (empty($items)) {
+            return ['0'];
+        }
+
+        if (in_array('0', $items, true) && count($items) > 1) {
+            $items = array_values(array_filter($items, fn ($v) => $v !== '0'));
+        }
+
+        return empty($items) ? ['0'] : $items;
+    }
+
+    private function normalizeNominasiDefectPayload($defects): array
+    {
+        if (!is_array($defects)) {
+            $defects = [];
+        }
+
+        return [
+            'raw_head_penalty'    => $this->normalizeNominasiDefectArray($defects['raw_head_penalty'] ?? ['0']),
+            'raw_face_penalty'    => $this->normalizeNominasiDefectArray($defects['raw_face_penalty'] ?? ['0']),
+            'raw_body_penalty'    => $this->normalizeNominasiDefectArray($defects['raw_body_penalty'] ?? ['0']),
+            'raw_finnage_penalty' => $this->normalizeNominasiDefectArray($defects['raw_finnage_penalty'] ?? ['0']),
+        ];
+    }
+
     public function index()
     {
         return view('dashboard.admin', ['user' => auth()->user()->fresh()]);
@@ -3159,6 +3205,50 @@ class AdminDashboardController extends Controller
     {
         $published = (bool) (\DB::table('settings')->where('key', 'nominasi_published')->value('value') ?? false);
         return response()->json(['nominasi_published' => $published]);
+    }
+
+    public function updateNominasiDefect(Request $request)
+    {
+        $request->validate([
+            'nominasi_id' => 'required|integer|exists:nominasis,id',
+            'defects'     => 'nullable|array',
+        ]);
+
+        $nominasi = Nominasi::with(['ikan', 'juri'])->find($request->json('nominasi_id'));
+
+        if (!$nominasi) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nominasi tidak ditemukan.',
+            ], 404);
+        }
+
+        $payload = $this->normalizeNominasiDefectPayload($request->json('defects') ?? []);
+
+        $nominasi->update($payload);
+
+        $nomorTank = $nominasi->ikan->nomor_tank ?? '-';
+
+        $sync = $this->sheetsSync;
+
+        try {
+            app()->terminating(function () use ($sync) {
+                if (!$sync->isReady()) return;
+
+                try { $sync->syncSemuaNominasi(); } catch (\Exception $e) { \Log::warning('Async-sync SemuaNominasi update defect nominasi: ' . $e->getMessage()); }
+                try { $sync->syncSemuaPilNom(); } catch (\Exception $e) { \Log::warning('Async-sync SemuaPilNom update defect nominasi: ' . $e->getMessage()); }
+                try { $sync->syncHasilNominasi(); } catch (\Exception $e) { \Log::warning('Async-sync HasilNominasi update defect nominasi: ' . $e->getMessage()); }
+                try { $sync->syncNominasiFix(); } catch (\Exception $e) { \Log::warning('Async-sync NominasiFix update defect nominasi: ' . $e->getMessage()); }
+            });
+        } catch (\Exception $e) {
+            \Log::warning('Register sync update defect nominasi gagal: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Defect nominasi Tank #' . $nomorTank . ' berhasil diperbarui.',
+            'defects' => $payload,
+        ]);
     }
 
     public function resetRejectedNominasi(Request $request)

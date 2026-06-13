@@ -5302,10 +5302,10 @@ function adminNomDefectButton(t){
     var bg  = has ? 'rgba(245,158,11,.12)' : 'rgba(34,211,238,.08)';
     var bd  = has ? 'rgba(245,158,11,.30)' : 'rgba(34,211,238,.18)';
     var col = has ? 'var(--gold-300)' : 'var(--cyan-300)';
-    var txt = has ? 'Lihat Defect' : 'Defect Aman';
+    var txt = has ? 'Edit Defect' : 'Edit Defect';
 
-    return '<button class="btn-xs" onclick="adminShowNomDefect(\''+adminNomJsonArg(t)+'\')" style="margin-top:8px;width:100%;font-size:9px;padding:5px 8px;background:'+bg+';border:1px solid '+bd+';color:'+col+';">' +
-        '<i class="fas fa-eye" style="margin-right:3px;"></i>'+txt+
+    return '<button class="btn-xs" onclick="event.stopPropagation();adminOpenReviewNomDefect(\''+adminNomJsonArg(t)+'\')" style="margin-top:8px;width:100%;font-size:9px;padding:5px 8px;background:'+bg+';border:1px solid '+bd+';color:'+col+';">' +
+        '<i class="fas fa-pen-to-square" style="margin-right:3px;"></i>'+txt+
     '</button>';
 }
 
@@ -5320,24 +5320,61 @@ function adminNomDefectRow(label, arr){
     '</div>';
 }
 
-function adminShowNomDefect(encoded){
+function adminOpenReviewNomDefect(encoded){
     var t = adminNomParseJsonArg(encoded);
 
-    var html = '<div style="text-align:left;">' +
-        '<div style="margin-bottom:10px;font-size:12px;color:var(--text-mid);line-height:1.5;">' +
-            'Tank <b style="color:var(--cyan-300);">#'+esc(t.nomor_tank || '-')+'</b> · '+esc(t.kategori || '-')+
+    if(!t || !t.nominasi_id){
+        popupError('Data Tidak Valid', 'Nominasi ID tidak ditemukan.');
+        return;
+    }
+
+    adminNomState.defectCtx = {
+        mode: 'edit_nominasi',
+        nominasiId: parseInt(t.nominasi_id, 10),
+        tankId: t.ikan_id || t.id || t.nominasi_id,
+        tank: t,
+        working: {
+            raw_head_penalty: adminNomNormDef(t.raw_head_penalty),
+            raw_face_penalty: adminNomNormDef(t.raw_face_penalty),
+            raw_body_penalty: adminNomNormDef(t.raw_body_penalty),
+            raw_finnage_penalty: adminNomNormDef(t.raw_finnage_penalty)
+        }
+    };
+
+    var title = document.getElementById('adminNomDefectTitle');
+    if(title){
+        title.innerHTML =
+            '<i class="fas fa-pen-to-square" style="color:var(--gold-400);"></i> Edit Defect Nominasi';
+    }
+
+    var info = document.getElementById('adminNomDefectInfo');
+    if(info){
+        info.innerHTML =
+            'Tank <b style="color:var(--cyan-300);">#'+esc(t.nomor_tank || '-')+'</b>' +
+            ' · '+esc(t.kategori || '-') +
             ((t.kelas && ['Bonsai','Jumbo'].indexOf(t.kategori) === -1) ? ' · Kelas '+esc(t.kelas) : '') +
             '<br>Peserta: <b style="color:var(--text-hi);">'+esc(t.nama_peserta || '-')+'</b>' +
-        '</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">' +
-            adminNomDefectRow('Head', adminNomDefectArr(t, 'raw_head_penalty')) +
-            adminNomDefectRow('Face', adminNomDefectArr(t, 'raw_face_penalty')) +
-            adminNomDefectRow('Body', adminNomDefectArr(t, 'raw_body_penalty')) +
-            adminNomDefectRow('Finnage', adminNomDefectArr(t, 'raw_finnage_penalty')) +
-        '</div>' +
-    '</div>';
+            '<br><span style="color:var(--gold-300);font-weight:800;">Perubahan disimpan ke data nominasi dan akan terbaca di panel juri/grand juri.</span>';
+    }
 
-    popupInfo('Defect Nominasi', html);
+    var saveBtn = document.getElementById('adminNomDefectSaveBtn');
+    if(saveBtn){
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> Simpan Perubahan';
+    }
+
+    adminRenderNomDefectBody();
+    openModal('modalAdminNomDefect');
+
+    setTimeout(function(){
+        var sc = document.getElementById('adminNomDefectScroll');
+        if(sc) sc.scrollTop = 0;
+    }, 50);
+}
+
+// Alias agar onclick lama tidak error kalau masih ada cache browser.
+function adminShowNomDefect(encoded){
+    adminOpenReviewNomDefect(encoded);
 }
 
 function adminDeleteNominasi(nominasiId, nomorTank){
@@ -5695,21 +5732,87 @@ function adminResetNomDefect(){
     adminRenderNomDefectBody();
 }
 
+function adminNomWorkingPayload(working){
+    return {
+        raw_head_penalty: adminNomNormDef(working.raw_head_penalty),
+        raw_face_penalty: adminNomNormDef(working.raw_face_penalty),
+        raw_body_penalty: adminNomNormDef(working.raw_body_penalty),
+        raw_finnage_penalty: adminNomNormDef(working.raw_finnage_penalty)
+    };
+}
+
 function adminSaveNomDefect(){
     var ctx = adminNomState.defectCtx;
     if(!ctx) return;
 
+    var payload = adminNomWorkingPayload(ctx.working);
+
+    // MODE EDIT: dari Review Nominasi Pending / Riwayat Review.
+    if(ctx.mode === 'edit_nominasi'){
+        var btn = document.getElementById('adminNomDefectSaveBtn');
+        var oldHtml = btn ? btn.innerHTML : '';
+
+        if(btn){
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+        }
+
+        fetch('/api/admin/update-nominasi-defect', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrf(),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                nominasi_id: ctx.nominasiId,
+                defects: payload
+            })
+        })
+        .then(function(r){
+            return r.json().then(function(d){
+                if(!r.ok) throw d;
+                return d;
+            });
+        })
+        .then(function(d){
+            if(!d.success){
+                popupError('Gagal', d.message || 'Defect nominasi gagal diperbarui.');
+                return;
+            }
+
+            adminNomState.defectCtx = null;
+            closeModal('modalAdminNomDefect');
+
+            _adminPendingCache = '';
+            _adminLateCache = '';
+
+            loadAdminPendingReview();
+            loadAdminNomHistory();
+            loadAdminNomTanks();
+
+            popupSuccess('Defect Diperbarui', d.message || 'Defect nominasi berhasil diperbarui.');
+        })
+        .catch(function(e){
+            popupError('Error', e.message || 'Gagal menyimpan defect nominasi.');
+        })
+        .finally(function(){
+            if(btn){
+                btn.disabled = false;
+                btn.innerHTML = oldHtml || '<i class="fas fa-save"></i> Simpan Perubahan';
+            }
+        });
+
+        return;
+    }
+
+    // MODE LAMA: pilih defect saat admin membuat nominasi baru.
     var hasAny = ['raw_head_penalty','raw_face_penalty','raw_body_penalty','raw_finnage_penalty'].some(function(key){
         return adminNomNormDef(ctx.working[key]).some(function(v){ return v && v !== '0'; });
     });
 
     if(hasAny){
-        adminNomState.defects[ctx.tankId] = {
-            raw_head_penalty: adminNomNormDef(ctx.working.raw_head_penalty),
-            raw_face_penalty: adminNomNormDef(ctx.working.raw_face_penalty),
-            raw_body_penalty: adminNomNormDef(ctx.working.raw_body_penalty),
-            raw_finnage_penalty: adminNomNormDef(ctx.working.raw_finnage_penalty)
-        };
+        adminNomState.defects[ctx.tankId] = payload;
     } else {
         delete adminNomState.defects[ctx.tankId];
     }
@@ -6256,6 +6359,7 @@ window.adminNomApplyFilter  = adminNomApplyFilter;
 window.adminNomResetFilter  = adminNomResetFilter;
 window.adminHistApplyFilter = adminHistApplyFilter;
 window.adminHistResetFilter = adminHistResetFilter;
+window.adminOpenReviewNomDefect = adminOpenReviewNomDefect;
 window.adminShowNomDefect = adminShowNomDefect;
 window.adminDeleteNominasi = adminDeleteNominasi;
 window.adminOpenNomDefect   = adminOpenNomDefect;
