@@ -1203,6 +1203,7 @@
                         <h3><span class="ti"><i class="fas fa-user-shield"></i></span>Kelola Juri — Penugasan Kategori &amp; Kelas</h3>
                         <div style="display:flex;align-items:center;gap:8px;">
                             <span style="font-size:10px;color:var(--text-low);">Kunci / buka sesi penilaian juri</span>
+                            <button class="btn-primary" id="btnResetJuriAssignments" onclick="resetAllJuriAssignments()" style="padding:8px 16px;font-size:11px;background:var(--danger);box-shadow:0 3px 10px rgba(239,68,68,.2);"><i class="fas fa-trash-can-arrow-up"></i> RESET PENUGASAN</button>
                             <button class="btn-primary" id="btnToggleJuriScoring" onclick="toggleJuriScoringLock()" style="padding:8px 16px; font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
                         </div>
                     </div>

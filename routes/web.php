@@ -163,6 +163,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     // ★ KELOLA JURI — penugasan kategori & kelas per juri
     Route::get('/api/admin/juri-assignments', [AdminDashboardController::class, 'getJuriAssignments']);
     Route::post('/api/admin/juri-assignments', [AdminDashboardController::class, 'saveJuriAssignments']);
+    Route::post('/api/admin/reset-juri-assignments', [AdminDashboardController::class, 'resetAllJuriAssignments']);
 });
 
 /* ═══════════════════════════════════════════

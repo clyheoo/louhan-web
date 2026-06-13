@@ -4851,10 +4851,31 @@ loadScoringData();
 loadUsers();
 loadJuriScoringLockStatus();
 
+function ensureJaStyle(){
+    if(document.getElementById('ja-checklist-style')) return;
+    var st=document.createElement('style');
+    st.id='ja-checklist-style';
+    st.textContent=''
+      +'.ja-kat-row{border:1px solid var(--bd-1);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--glass-1);}'
+      +'.ja-kat-head{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text-hi);font-weight:700;cursor:pointer;user-select:none;}'
+      +'.ja-kat-head input{width:16px;height:16px;accent-color:var(--cyan-500);cursor:pointer;}'
+      +'.ja-kat-head .muted{font-size:10.5px;color:var(--text-low);font-weight:600;}'
+      +'.ja-kelas-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}'
+      +'.ja-kelas-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--bd-2);border-radius:9px;background:var(--glass-2);font-size:12.5px;color:var(--text-mid);cursor:pointer;transition:all .15s;user-select:none;}'
+      +'.ja-kelas-pill:hover{border-color:var(--bd-cyan);color:var(--text-hi);}'
+      +'.ja-kelas-pill input{width:15px;height:15px;accent-color:var(--cyan-500);cursor:pointer;}'
+      +'.ja-kelas-pill:has(input:checked){background:rgba(34,211,238,.12);border-color:var(--bd-cyan);color:var(--cyan-300);font-weight:700;}'
+      +'.ja-nokelas{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid var(--bd-2);border-radius:10px;background:var(--glass-2);font-size:13px;color:var(--text);cursor:pointer;font-weight:700;user-select:none;}'
+      +'.ja-nokelas input{width:16px;height:16px;accent-color:var(--cyan-500);cursor:pointer;}'
+      +'.ja-nokelas:has(input:checked){background:rgba(34,211,238,.12);border-color:var(--bd-cyan);color:var(--cyan-300);}';
+    document.head.appendChild(st);
+}
+
 /* ═══════════════════════════════════════════════
    KELOLA JURI — PENUGASAN KATEGORI & KELAS
    ═══════════════════════════════════════════════ */
 function loadJuriAssignments(){
+    ensureJaStyle();
     var c=document.getElementById('kelolaJuriList');
     if(!c) return;
     c.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
@@ -4864,6 +4885,11 @@ function loadJuriAssignments(){
         var juris=(d&&d.juris)||[];
         if(!juris.length){ c.innerHTML='<div class="empty-state"><i class="fas fa-user-slash"></i><p>Belum ada user dengan role Juri.</p></div>'; return; }
         c.innerHTML=juris.map(renderJuriAssignmentCard).join('');
+        // Set indikator header "semua kelas" (penuh / strip sebagian) sesuai data tersimpan.
+        c.querySelectorAll('.ja-all').forEach(function(allCb){
+            var card=allCb.closest('[id^="ja-card-"]');
+            if(card) refreshKategoriState(card, allCb.dataset.kat);
+        });
     })
     .catch(function(err){
         c.innerHTML='<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i><p style="color:var(--danger);">'+esc(err.message)+'</p></div>';
@@ -4882,39 +4908,41 @@ function renderJuriAssignmentCard(j){
         ? '<span style="font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:20px;background:rgba(16,185,129,.15);color:#6EE7B7;border:1px solid rgba(16,185,129,.3);">'+count+' PENUGASAN</span>'
         : '<span style="font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:20px;background:rgba(239,68,68,.12);color:#FCA5A5;border:1px solid rgba(239,68,68,.3);">BELUM DITUGASKAN</span>';
 
-    var body='';
+    var rows='';
+    var noKelasChips='';
     allKategoriList.forEach(function(kat){
         var isNoKelas=noKelasKategori.indexOf(kat)!==-1;
         if(isNoKelas){
             var ck=has[kat+'|']?'checked':'';
-            body+='<label style="display:inline-flex;align-items:center;gap:6px;margin:0 14px 8px 0;font-size:12px;color:var(--text);">'
-                +'<input type="checkbox" class="ja-cb" data-jid="'+jid+'" data-kat="'+kat+'" data-kelas="" '+ck+' style="accent-color:var(--cyan-500);"> <b>'+kat+'</b></label>';
+            noKelasChips+='<label class="ja-nokelas"><input type="checkbox" class="ja-cb" data-jid="'+jid+'" data-kat="'+kat+'" data-kelas="" '+ck+'> '+kat+'</label>';
         }else{
             var ckAll=has[kat+'|']?'checked':'';
-            var perKelas='';
+            var pills='';
             kelasList.forEach(function(kl){
                 var ckk=(has[kat+'|'+kl]||has[kat+'|'])?'checked':'';
-                var dis=ckAll?'disabled':'';
-                perKelas+='<label style="display:inline-flex;align-items:center;gap:4px;margin:0 10px 0 0;font-size:11.5px;color:var(--text-mid);">'
-                    +'<input type="checkbox" class="ja-cb ja-kelas" data-jid="'+jid+'" data-kat="'+kat+'" data-kelas="'+kl+'" '+ckk+' '+dis+' style="accent-color:var(--cyan-500);"> '+kl+'</label>';
+                pills+='<label class="ja-kelas-pill"><input type="checkbox" class="ja-cb ja-kelas" data-jid="'+jid+'" data-kat="'+kat+'" data-kelas="'+kl+'" '+ckk+' onchange="onKelasChange(this)"> '+kl+'</label>';
             });
-            body+='<div style="border:1px solid var(--bd-1);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--glass-2);">'
-                +'<label style="display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:12px;color:var(--text);">'
-                +'<input type="checkbox" class="ja-cb ja-all" data-jid="'+jid+'" data-kat="'+kat+'" data-kelas="" '+ckAll+' onchange="toggleJaAll(this)" style="accent-color:var(--gold-400);"> <b>'+kat+'</b> <span style="font-size:10px;color:var(--text-low);">(semua kelas)</span></label>'
-                +'<span>'+perKelas+'</span>'
+            rows+='<div class="ja-kat-row">'
+                +'<label class="ja-kat-head"><input type="checkbox" class="ja-cb ja-all" data-jid="'+jid+'" data-kat="'+kat+'" data-kelas="" '+ckAll+' onchange="toggleJaAll(this)"> '+kat+' <span class="muted">(semua kelas)</span></label>'
+                +'<div class="ja-kelas-wrap">'+pills+'</div>'
                 +'</div>';
         }
     });
+    if(noKelasChips){
+        rows+='<div class="ja-kat-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">'
+            +'<span style="font-size:11px;color:var(--text-low);font-weight:700;">Tanpa Kelas:</span>'+noKelasChips+'</div>';
+    }
 
     return '<div class="detail-juri-accordion" id="ja-card-'+jid+'">'
         +'<div class="detail-juri-toggle" onclick="toggleJaCard('+jid+')">'
         +'<span class="dj-name"><i class="fas fa-user" style="color:var(--cyan-400);"></i> '+esc(j.name)+' '+badge+'</span>'
         +'<i class="fas fa-chevron-down dj-arrow"></i>'
         +'</div>'
-        +'<div class="detail-juri-scores" style="padding:12px 16px;">'
-        +'<div style="font-size:10.5px;color:var(--text-low);margin-bottom:10px;"><i class="fas fa-envelope"></i> '+esc(j.email)+'</div>'
-        +body
-        +'<div style="display:flex;justify-content:flex-end;margin-top:8px;">'
+        +'<div class="detail-juri-scores" style="padding:14px 16px;">'
+        +'<div style="font-size:10.5px;color:var(--text-low);margin-bottom:12px;"><i class="fas fa-envelope"></i> '+esc(j.email)+'</div>'
+        +rows
+        +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">'
+        +'<button class="btn-xs" onclick="resetJuriAssignmentForm('+jid+')" style="background:var(--glass-3);color:var(--text-mid);border:1px solid var(--bd-2);"><i class="fas fa-rotate-left"></i> Atur Ulang</button>'
         +'<button class="btn-xs blue" onclick="saveJuriAssignments('+jid+',this)"><i class="fas fa-floppy-disk"></i> Simpan Penugasan</button>'
         +'</div>'
         +'</div>'
@@ -4930,14 +4958,59 @@ function toggleJaCard(jid){
     if(tog) tog.classList.toggle('open',open);
 }
 
+// Header "semua kelas": penuh = tercentang, sebagian = strip (indeterminate), kosong = lepas.
+// Saat sebagian, header TIDAK dipaksa ter-uncheck (sesuai permintaan).
+function refreshKategoriState(card, kat){
+    var kelasCbs=card.querySelectorAll('.ja-kelas[data-kat="'+kat+'"]');
+    if(!kelasCbs.length) return;
+    var checked=0;
+    kelasCbs.forEach(function(k){ if(k.checked) checked++; });
+    var allCb=card.querySelector('.ja-all[data-kat="'+kat+'"]');
+    if(!allCb) return;
+    if(checked===kelasCbs.length){ allCb.checked=true; allCb.indeterminate=false; }
+    else if(checked===0){ allCb.checked=false; allCb.indeterminate=false; }
+    else { allCb.indeterminate=true; } // sebagian — biarkan .checked apa adanya
+}
+
+function onKelasChange(cb){
+    var card=cb.closest('[id^="ja-card-"]');
+    if(!card) return;
+    refreshKategoriState(card, cb.dataset.kat);
+}
+
+// "Atur Ulang" per juri: kosongkan semua centang di kartu ini (belum tersimpan sampai Simpan ditekan)
+function resetJuriAssignmentForm(jid){
+    var card=document.getElementById('ja-card-'+jid);
+    if(!card) return;
+    card.querySelectorAll('.ja-cb[data-jid="'+jid+'"]').forEach(function(a){ a.checked=false; a.indeterminate=false; });
+}
+
+// "Reset Penugasan" global: hapus SEMUA penugasan juri → semua juri kembali ke jam pasir
+function resetAllJuriAssignments(){
+    popupConfirm(
+        'Reset Semua Penugasan',
+        'Semua penugasan kategori &amp; kelas untuk <strong>SELURUH juri</strong> akan dihapus. Setiap juri akan kembali menunggu (jam pasir) sampai Anda mengaturnya lagi.<br><span style="font-size:11px;color:var(--danger);">Tindakan ini tidak dapat dibatalkan.</span>',
+        'Ya, Reset Semua',
+        function(){
+            fetch('/api/admin/reset-juri-assignments',{
+                method:'POST',
+                headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}
+            })
+            .then(function(r){return r.json();})
+            .then(function(d){
+                if(d.success){ popupSuccess('Penugasan Direset',d.message||'Semua penugasan dihapus.'); loadJuriAssignments(); }
+                else popupError('Gagal',d.message||'Terjadi kesalahan.');
+            })
+            .catch(function(){ popupError('Kesalahan Jaringan','Gagal menghubungi server.'); });
+        }
+    );
+}
+
 function toggleJaAll(cb){
     var card=cb.closest('[id^="ja-card-"]');
     if(!card) return;
-    var kat=cb.dataset.kat;
-    card.querySelectorAll('.ja-kelas[data-kat="'+kat+'"]').forEach(function(k){
-        k.disabled=cb.checked;
-        if(cb.checked) k.checked=true;
-    });
+    cb.indeterminate=false; // klik master = jadikan semua / kosong
+    card.querySelectorAll('.ja-kelas[data-kat="'+cb.dataset.kat+'"]').forEach(function(k){ k.checked=cb.checked; });
 }
 
 function saveJuriAssignments(jid,btn){
@@ -4945,19 +5018,25 @@ function saveJuriAssignments(jid,btn){
     if(!card) return;
     var assignments=[];
 
-    // Kategori "semua kelas" → 1 baris kelas null
-    card.querySelectorAll('.ja-all[data-jid="'+jid+'"]').forEach(function(a){
-        if(a.checked) assignments.push({kategori:a.dataset.kat,kelas:null});
-    });
-    // Kategori tanpa kelas (Bonsai/Jumbo): checkbox tunggal
+    // Kategori tanpa kelas (Bonsai/Jumbo)
     card.querySelectorAll('.ja-cb[data-jid="'+jid+'"]').forEach(function(a){
         if(a.classList.contains('ja-kelas')||a.classList.contains('ja-all')) return;
         if(a.checked) assignments.push({kategori:a.dataset.kat,kelas:null});
     });
-    // Kelas spesifik (yang tidak tercakup "semua kelas")
+
+    // Kategori berkelas: kelompokkan per kategori
+    var perKat={};
     card.querySelectorAll('.ja-kelas[data-jid="'+jid+'"]').forEach(function(a){
-        if(a.disabled) return;
-        if(a.checked) assignments.push({kategori:a.dataset.kat,kelas:a.dataset.kelas});
+        var kat=a.dataset.kat;
+        if(!perKat[kat]) perKat[kat]={total:0,checked:[]};
+        perKat[kat].total++;
+        if(a.checked) perKat[kat].checked.push(a.dataset.kelas);
+    });
+    Object.keys(perKat).forEach(function(kat){
+        var info=perKat[kat];
+        if(info.checked.length===0) return;
+        if(info.checked.length===info.total) assignments.push({kategori:kat,kelas:null}); // semua kelas
+        else info.checked.forEach(function(kl){ assignments.push({kategori:kat,kelas:kl}); });
     });
 
     var orig=btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Menyimpan...';

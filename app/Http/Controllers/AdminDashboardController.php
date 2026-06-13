@@ -2444,6 +2444,7 @@ class AdminDashboardController extends Controller
             'users',
             'nominasi',
             'nilai_murni',
+            'juri_assignment',
         ];
 
         if (!in_array($sheets, $valid)) {
@@ -2463,6 +2464,7 @@ class AdminDashboardController extends Controller
             'users'                    => 'Detail_Pengguna',
             'nominasi'                 => 'Nominasi',
             'nilai_murni'              => 'Nilai_Murni_Juri',
+            'juri_assignment'          => 'Penugasan_Juri',
             default                    => 'Semua_Data',
         };
 
@@ -3718,6 +3720,17 @@ class AdminDashboardController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Data peserta, kategori, kelas, dan nomor tank berhasil diperbarui.',
+        ]);
+    }
+
+    public function resetAllJuriAssignments()
+    {
+        $deleted = \App\Models\JuriAssignment::count();
+        \App\Models\JuriAssignment::query()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Semua penugasan juri telah direset (' . $deleted . ' kombinasi dihapus). Setiap juri kini menunggu pengaturan ulang.',
         ]);
     }
 
