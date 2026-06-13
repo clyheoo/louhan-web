@@ -1783,6 +1783,7 @@ const GUIDELINES = {
 // ═══════════════════════════════════════════════════════════════
 function getDraftKey() { return 'juri_draft_' + authUserId; }
 function saveDraft() { try { localStorage.setItem(getDraftKey(), JSON.stringify(tankScores)); } catch(e) {} }
+
 function loadDraft() {
     try {
         var raw = localStorage.getItem(getDraftKey());
@@ -1790,25 +1791,21 @@ function loadDraft() {
 
         var saved = JSON.parse(raw);
         var scoredIds = {};
-        var validIds = {};
 
         appData.my_scores.forEach(function(s) {
             scoredIds[parseInt(s.ikan_id, 10)] = true;
         });
 
-        appData.available_tanks.forEach(function(t) {
-            validIds[parseInt(t.id, 10)] = true;
-        });
-
+        // ★ Pulihkan SEMUA draft yang belum final di server.
+        //   Sengaja TIDAK disaring pakai available_tanks: kalau penugasan/sesi
+        //   sempat berubah, tank bisa hilang sebentar dari available_tanks dan
+        //   draftnya jadi tidak ikut ter-restore (kelihatan seperti "terhapus").
+        //   Form hanya merender tank yang tersedia, jadi draft ekstra di memori
+        //   tidak mengganggu — tapi aman & otomatis muncul lagi saat tank tersedia.
         Object.keys(saved).forEach(function(id) {
             var nid = parseInt(id, 10);
-
-            // Draft tank yang sudah tidak ada di approved nomination jangan dimunculkan lagi.
-            if (!validIds[nid]) return;
-
-            if (!scoredIds[nid]) {
-                tankScores[id] = saved[id];
-            }
+            if (scoredIds[nid]) return; // sudah tersimpan permanen di server
+            tankScores[id] = saved[id];
         });
     } catch(e) {}
 }
@@ -1824,16 +1821,26 @@ function removeDraft(tankId) {
 }
 
 function pruneUnavailableTankScores() {
+    // ★ PENTING: JANGAN hapus draft dari localStorage di sini.
+    //   available_tanks bisa KOSONG sementara (sesi dikunci, penugasan juri
+    //   di-reset/diubah, atau request data sesaat gagal). Kalau saat itu kita
+    //   panggil removeDraft(), SEMUA pekerjaan juri yang belum disimpan hilang
+    //   permanen — inilah penyebab "data lokal tiba-tiba terhapus".
+    //   Cukup rapikan dari memori; localStorage dipertahankan & muncul lagi
+    //   begitu tanknya kembali tersedia.
+    if (!appData.available_tanks || appData.available_tanks.length === 0) {
+        return; // jangan utak-atik apa pun saat daftar tank kosong/transient
+    }
+
     var validIds = {};
-    (appData.available_tanks || []).forEach(function(t) {
+    appData.available_tanks.forEach(function(t) {
         validIds[parseInt(t.id, 10)] = true;
     });
 
     Object.keys(tankScores || {}).forEach(function(id) {
         var nid = parseInt(id, 10);
         if (!validIds[nid]) {
-            delete tankScores[id];
-            removeDraft(id);
+            delete tankScores[id]; // hanya dari memori — localStorage TIDAK disentuh
         }
     });
 }
