@@ -164,6 +164,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/juri-assignments', [AdminDashboardController::class, 'getJuriAssignments']);
     Route::post('/api/admin/juri-assignments', [AdminDashboardController::class, 'saveJuriAssignments']);
     Route::post('/api/admin/reset-juri-assignments', [AdminDashboardController::class, 'resetAllJuriAssignments']);
+    Route::get('/api/admin/export-async', [AdminDashboardController::class, 'exportAsyncStart']);
+    Route::get('/api/admin/export-status/{token}', [AdminDashboardController::class, 'exportAsyncStatus']);
+    Route::get('/api/admin/export-download/{token}', [AdminDashboardController::class, 'exportAsyncDownload']);
 });
 
 /* ═══════════════════════════════════════════

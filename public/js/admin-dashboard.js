@@ -4404,6 +4404,30 @@ function submitImport() {
     });
 }
 
+function exportAllAsync(btn){
+    if(btn){ btn.dataset.orig=btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Menyiapkan...'; }
+    fetch('/api/admin/export-async?sheets=all',{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(!d.token){ exportBtnReset(btn); popupError('Gagal','Tidak bisa memulai export.'); return; }
+        pollExport(d.token, 0, btn);
+    })
+    .catch(function(){ exportBtnReset(btn); popupError('Kesalahan Jaringan','Gagal memulai export.'); });
+}
+function pollExport(token, tries, btn){
+    fetch('/api/admin/export-status/'+token,{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.status==='ready'){ exportBtnReset(btn); window.location.href='/api/admin/export-download/'+token; return; }
+        if(d.status==='failed'){ exportBtnReset(btn); popupError('Export Gagal',d.message||'Terjadi kesalahan saat membuat file.'); return; }
+        if(tries>180){ exportBtnReset(btn); popupError('Terlalu Lama','Export belum selesai. Coba lagi sebentar.'); return; }
+        if(btn) btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Membuat file...';
+        setTimeout(function(){ pollExport(token, tries+1, btn); }, 2000);
+    })
+    .catch(function(){ setTimeout(function(){ pollExport(token, tries+1, btn); }, 3000); });
+}
+function exportBtnReset(btn){ if(btn&&btn.dataset.orig){ btn.disabled=false; btn.innerHTML=btn.dataset.orig; } }
+
 /* ═══════════════════════════════════════════════
    POINT RANKING (SAMA SEPERTI GRAND JURI)
    ═══════════════════════════════════════════════ */

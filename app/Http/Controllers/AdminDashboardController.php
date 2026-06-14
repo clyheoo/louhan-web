@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Scoring;
 use App\Models\Peserta;
 use App\Models\Ikan;
@@ -15,6 +18,7 @@ use App\Exports\AdminExport;
 use App\Imports\GenericImport;
 use App\Exports\ArrayExport;
 use App\Services\SheetsSyncService; 
+use App\Jobs\GenerateAdminExport;
 
 class AdminDashboardController extends Controller
 {
@@ -2475,6 +2479,31 @@ class AdminDashboardController extends Controller
         $fileName = 'LCI_Admin_' . $label . '_' . now()->format('Y-m-d_His') . '.xlsx';
 
         return Excel::download(new AdminExport($sheets), $fileName);
+    }
+
+    public function exportAsyncStart(Request $request)
+    {
+        $sheets = $request->query('sheets', 'all');
+        $token  = (string) Str::uuid();
+        Cache::put("export:{$token}", ['status' => 'queued'], now()->addHours(2));
+        GenerateAdminExport::dispatch($token, $sheets);
+        return response()->json(['token' => $token]);
+    }
+
+    public function exportAsyncStatus(string $token)
+    {
+        $data = Cache::get("export:{$token}");
+        if (!$data) return response()->json(['status' => 'unknown'], 404);
+        return response()->json($data);
+    }
+
+    public function exportAsyncDownload(string $token)
+    {
+        $data = Cache::get("export:{$token}");
+        if (!$data || ($data['status'] ?? null) !== 'ready') {
+            abort(404, 'File belum siap.');
+        }
+        return Storage::disk('local')->download($data['path'], $data['name']);
     }
 
         /* ═══════════════════════════════════════════
