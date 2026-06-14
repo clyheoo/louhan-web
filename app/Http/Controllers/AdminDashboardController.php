@@ -2428,6 +2428,10 @@ class AdminDashboardController extends Controller
 
     public function exportExcel(Request $request)
     {
+        @set_time_limit(0);
+        @ini_set('max_execution_time', '0');
+        @ini_set('memory_limit', '1024M');
+
         $sheets = $request->query('sheets', 'all');
 
         $valid = [
