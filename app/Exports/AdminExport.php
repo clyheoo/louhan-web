@@ -13,6 +13,8 @@ use App\Exports\Sheets\JuriAssignmentSheet;
 use App\Exports\Sheets\NilaiMurniJuriSheet;
 use App\Exports\Sheets\TeamChampionSheet;
 use App\Exports\Sheets\PointRankingSubtotalSheet;
+use App\Exports\Sheets\IndividualRankingSheet;
+use App\Exports\Sheets\TeamRankingSheet;
 
 class AdminExport implements WithMultipleSheets
 {
@@ -38,6 +40,8 @@ class AdminExport implements WithMultipleSheets
             $result[] = new RumusPenilaianSheet();
             $result[] = new NominasiSheet();
             $result[] = new JuriAssignmentSheet();
+            $result[] = new IndividualRankingSheet();
+            $result[] = new TeamRankingSheet();
             $result[] = new NilaiMurniJuriSheet();
             $result[] = new PointRankingSubtotalSheet($rankingScope);
         } elseif ($this->sheets === 'daftar') {
@@ -69,7 +73,10 @@ class AdminExport implements WithMultipleSheets
             $result[] = new PointRankingSubtotalSheet('per_kategori');
         } elseif ($this->sheets === 'ranking_subtotal_global') {
             $result[] = new PointRankingSubtotalSheet('global');
-        }
+        } elseif ($this->sheets === 'juara_peserta') {
+            $result[] = new IndividualRankingSheet();
+        } elseif ($this->sheets === 'juara_team') 
+            $result[] = new TeamRankingSheet();
 
 
         return $result;
