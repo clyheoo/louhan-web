@@ -6,13 +6,12 @@ use App\Models\Ikan;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class DaftarIkanSheet implements FromArray, WithTitle, WithStyles, ShouldAutoSize
+class DaftarIkanSheet implements FromArray, WithTitle, WithStyles
 {
     public function title(): string { return 'DAFTAR IKAN'; }
 
@@ -41,6 +40,12 @@ class DaftarIkanSheet implements FromArray, WithTitle, WithStyles, ShouldAutoSiz
     {
         $lastCol = $sheet->getHighestColumn();
         $lastRow = $sheet->getHighestRow();
+
+        // Lebar kolom manual (pengganti ShouldAutoSize yang lambat)
+        $widths = ['A'=>5,'B'=>24,'C'=>14,'D'=>8,'E'=>9,'F'=>20,'G'=>26,'H'=>18];
+        foreach ($widths as $col => $w) {
+            $sheet->getColumnDimension($col)->setAutoSize(false)->setWidth($w);
+        }
 
         // Header
         $sheet->getStyle("A1:{$lastCol}1")->applyFromArray([

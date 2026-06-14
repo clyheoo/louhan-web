@@ -646,13 +646,13 @@ class PointRankingSheet implements FromArray, WithTitle, WithEvents
                         }
                     }
 
-                    // ★ Style khusus kolom RANK POINT (bold + background emas)
-                    $rankPointColLetter = Coordinate::stringFromColumnIndex($lastColIdx - 1);
-                    $sheet->getStyle("{$rankPointColLetter}{$r}")->applyFromArray([
-                        'font' => ['bold' => true, 'size' => 11],
-                        'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF9C3']],
-                        'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
-                    ]);
+                    // RANK POINT: gaya kolom sekali saja (bukan per baris) — lebih cepat.
+            $rankPointColAll = Coordinate::stringFromColumnIndex($lastColIdx - 1);
+            $sheet->getStyle("{$rankPointColAll}3:{$rankPointColAll}{$lastRow}")->applyFromArray([
+                'font' => ['bold' => true, 'size' => 11],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF9C3']],
+                'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+            ]);
                 }
             }
 

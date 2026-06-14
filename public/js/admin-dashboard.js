@@ -2780,8 +2780,16 @@ function openStatPopup(type, title){
 }
 
 function doExport(sheets){
-    document.getElementById('exportDD').classList.remove('show');
-    window.location.href='/api/admin/export?sheets='+sheets;
+    var dd=document.getElementById('exportDD');
+    if(dd) dd.classList.remove('show');
+    _exportToast('Menyiapkan export... jangan tutup halaman.', true);
+    fetch('/api/admin/export-async?sheets='+encodeURIComponent(sheets),{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(!d.token){ _exportToast('Gagal memulai export.', false); _exportToastHide(5000); return; }
+        pollExportToast(d.token, 0);
+    })
+    .catch(function(){ _exportToast('Kesalahan jaringan saat memulai export.', false); _exportToastHide(5000); });
 }
 document.addEventListener('click',function(e){
     if(!e.target.closest('.export-wrap')){
@@ -4404,29 +4412,33 @@ function submitImport() {
     });
 }
 
-function exportAllAsync(btn){
-    if(btn){ btn.dataset.orig=btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Menyiapkan...'; }
-    fetch('/api/admin/export-async?sheets=all',{headers:{'Accept':'application/json'}})
-    .then(function(r){return r.json();})
-    .then(function(d){
-        if(!d.token){ exportBtnReset(btn); popupError('Gagal','Tidak bisa memulai export.'); return; }
-        pollExport(d.token, 0, btn);
-    })
-    .catch(function(){ exportBtnReset(btn); popupError('Kesalahan Jaringan','Gagal memulai export.'); });
+function _exportToast(msg, spinning){
+    var t=document.getElementById('exportToast');
+    if(!t){
+        t=document.createElement('div');
+        t.id='exportToast';
+        t.style.cssText='position:fixed;right:20px;bottom:20px;z-index:99999;background:#0b1220;color:#e2e8f0;border:1px solid rgba(34,211,238,.35);border-radius:12px;padding:14px 18px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.45);display:flex;align-items:center;gap:10px;max-width:340px;';
+        document.body.appendChild(t);
+    }
+    t.innerHTML=(spinning?'<i class="fas fa-spinner fa-spin" style="color:#22D3EE;"></i>':'<i class="fas fa-circle-info" style="color:#34D399;"></i>')+'<span>'+msg+'</span>';
+    t.style.display='flex';
 }
-function pollExport(token, tries, btn){
+function _exportToastHide(delay){
+    var t=document.getElementById('exportToast');
+    if(t) setTimeout(function(){ if(t) t.style.display='none'; }, delay||0);
+}
+function pollExportToast(token, tries){
     fetch('/api/admin/export-status/'+token,{headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
     .then(function(d){
-        if(d.status==='ready'){ exportBtnReset(btn); window.location.href='/api/admin/export-download/'+token; return; }
-        if(d.status==='failed'){ exportBtnReset(btn); popupError('Export Gagal',d.message||'Terjadi kesalahan saat membuat file.'); return; }
-        if(tries>180){ exportBtnReset(btn); popupError('Terlalu Lama','Export belum selesai. Coba lagi sebentar.'); return; }
-        if(btn) btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Membuat file...';
-        setTimeout(function(){ pollExport(token, tries+1, btn); }, 2000);
+        if(d.status==='ready'){ _exportToast('File siap, mengunduh...', false); _exportToastHide(3000); window.location.href='/api/admin/export-download/'+token; return; }
+        if(d.status==='failed'){ _exportToast('Export gagal: '+(d.message||'kesalahan server'), false); _exportToastHide(7000); return; }
+        if(tries>240){ _exportToast('Export belum selesai (worker mungkin belum jalan). Cek cron.', false); _exportToastHide(8000); return; }
+        _exportToast('Membuat file export... ('+(tries*2)+' detik)', true);
+        setTimeout(function(){ pollExportToast(token, tries+1); }, 2000);
     })
-    .catch(function(){ setTimeout(function(){ pollExport(token, tries+1, btn); }, 3000); });
+    .catch(function(){ setTimeout(function(){ pollExportToast(token, tries+1); }, 3000); });
 }
-function exportBtnReset(btn){ if(btn&&btn.dataset.orig){ btn.disabled=false; btn.innerHTML=btn.dataset.orig; } }
 
 /* ═══════════════════════════════════════════════
    POINT RANKING (SAMA SEPERTI GRAND JURI)

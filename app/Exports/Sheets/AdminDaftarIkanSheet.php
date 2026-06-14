@@ -7,13 +7,12 @@ use App\Helpers\PointCalculator;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class AdminDaftarIkanSheet implements FromArray, WithTitle, WithStyles, ShouldAutoSize
+class AdminDaftarIkanSheet implements FromArray, WithTitle, WithStyles
 {
     public function title(): string
     {
@@ -220,6 +219,12 @@ class AdminDaftarIkanSheet implements FromArray, WithTitle, WithStyles, ShouldAu
     {
         $lastCol = $sheet->getHighestColumn();
         $lastRow = $sheet->getHighestRow();
+
+        // Lebar kolom manual (pengganti ShouldAutoSize yang lambat)
+        $widths = ['A'=>5,'B'=>24,'C'=>14,'D'=>8,'E'=>9,'F'=>18,'G'=>22,'H'=>9,'I'=>12,'J'=>10,'K'=>8,'L'=>12,'M'=>24,'N'=>8,'O'=>18];
+        foreach ($widths as $col => $w) {
+            $sheet->getColumnDimension($col)->setAutoSize(false)->setWidth($w);
+        }
 
         // Header
         $sheet->getStyle("A1:{$lastCol}1")->applyFromArray([

@@ -6,14 +6,13 @@ use App\Models\ScoringPointConfig;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class RumusPenilaianSheet implements FromArray, WithTitle, WithEvents, ShouldAutoSize
+class RumusPenilaianSheet implements FromArray, WithTitle, WithEvents
 {
     public function title(): string
     {
