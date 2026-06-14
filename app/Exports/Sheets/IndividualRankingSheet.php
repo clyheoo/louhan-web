@@ -9,84 +9,60 @@ use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use App\Support\GridSheetLayout;
 
 class IndividualRankingSheet implements FromArray, WithTitle, WithEvents
 {
+    private ?GridSheetLayout $grid = null;
+
     public function title(): string { return 'HASIL PESERTA'; }
 
     public function array(): array
     {
         $all = PesertaRankingBuilder::build();
 
-        // Kelompokkan SEMUA peserta yang dinilai per kategori + kelas
         $groups = [];
-        foreach ($all as $p) {
-            $groups[$p['kategori'] . ' - Kelas ' . $p['kelas']][] = $p;
-        }
+        foreach ($all as $p) $groups[$p['kategori'] . ' - Kelas ' . $p['kelas']][] = $p;
         ksort($groups);
 
-        $rows = [];
-        foreach ($groups as $groupName => $items) {
-            // Urutkan dari peringkat tertinggi (posisi 1) ke bawah — semua ditampilkan
+        $blocks = [];
+        foreach ($groups as $name => $items) {
             usort($items, fn ($a, $b) => ($a['juara'] ?: 9999) <=> ($b['juara'] ?: 9999));
 
-            $rows[] = ['§TITLE§' . $groupName . ' (' . count($items) . ' peserta)', '', '', '', '', ''];
-            $rows[] = ['NO', 'NAMA PESERTA', 'NO TANK', 'JUARA', 'BONUS', 'RANK POINT'];
-
-            $no = 1;
+            $rows = []; $no = 1; $sumBonus = 0; $sumPoint = 0; $sumRank = 0;
             foreach ($items as $p) {
                 $juara = ($p['juara'] >= 1 && $p['juara'] <= 10) ? 'Juara ' . $p['juara'] : '-';
-                $rows[] = [$no++, $p['nama'], $p['nomor_tank'], $juara, $p['bonus'], $p['rank_point']];
+                $tp = round($p['total_point'], 2);
+                $rows[] = [$no++, $p['nama'], $p['nomor_tank'], $juara, $p['bonus'], $tp, $p['rank_point']];
+                $sumBonus += $p['bonus']; $sumPoint += $tp; $sumRank += $p['rank_point'];
             }
-            $rows[] = ['', '', '', '', '', ''];
+
+            $blocks[] = [
+                'title'  => $name . ' (' . count($items) . ' peserta)',
+                'header' => ['NO', 'NAMA PESERTA', 'NO TANK', 'JUARA', 'BONUS', 'TOTAL POINT', 'RANK POINT'],
+                'rows'   => $rows,
+                'total'  => ['TOTAL', '', '', '', $sumBonus, round($sumPoint, 2), $sumRank],
+                'cols'   => 7,
+            ];
         }
 
-        if (empty($rows)) $rows[] = ['Belum ada peserta yang dinilai.', '', '', '', '', ''];
+        if (empty($blocks)) return [['Belum ada peserta yang dinilai.']];
 
-        return $rows;
+        $this->grid = new GridSheetLayout($blocks, 3); // 3 tabel ke kanan, lalu turun
+        return $this->grid->toArray();
     }
 
     public function registerEvents(): array
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-                $sheet = $event->sheet->getDelegate();
-                $lastRow = $sheet->getHighestRow();
-
-                $widths = ['A'=>5,'B'=>28,'C'=>10,'D'=>12,'E'=>10,'F'=>14];
-                foreach ($widths as $col => $w) $sheet->getColumnDimension($col)->setAutoSize(false)->setWidth($w);
-
-                for ($r = 1; $r <= $lastRow; $r++) {
-                    $a = (string) $sheet->getCell("A{$r}")->getValue();
-
-                    if (str_starts_with($a, '§TITLE§')) {
-                        $sheet->setCellValue("A{$r}", substr($a, strlen('§TITLE§')));
-                        $sheet->mergeCells("A{$r}:F{$r}");
-                        $sheet->getStyle("A{$r}:F{$r}")->applyFromArray([
-                            'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF']],
-                            'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => '6D28D9']],
-                            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
-                        ]);
-                        $sheet->getRowDimension($r)->setRowHeight(22);
-                    } elseif ($a === 'NO') {
-                        $sheet->getStyle("A{$r}:F{$r}")->applyFromArray([
-                            'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => 'FFFFFF']],
-                            'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => '1E40AF']],
-                            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
-                            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'BFDBFE']]],
-                        ]);
-                    } elseif ($a !== '' && is_numeric($a)) {
-                        $sheet->getStyle("A{$r}:F{$r}")->applyFromArray([
-                            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
-                            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'DDD6FE']]],
-                        ]);
-                        $sheet->getStyle("B{$r}")->getAlignment()->setHorizontal('left');
-                        $sheet->getStyle("F{$r}")->applyFromArray([
-                            'font' => ['bold' => true],
-                            'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF9C3']],
-                        ]);
-                    }
-                }
+                if (!$this->grid) return;
+                $this->grid->style($event->sheet->getDelegate(), [
+                    'colWidths'     => [0=>5, 1=>22, 2=>9, 3=>11, 4=>9, 5=>12, 6=>12],
+                    'pointColIndex' => 5,
+                    'rankColIndex'  => 6,
+                    'totalMergeTo'  => 3,
+                ]);
             },
         ];
     }

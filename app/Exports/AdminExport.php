@@ -32,6 +32,8 @@ class AdminExport implements WithMultipleSheets
 
         if ($this->sheets === 'all') {
             $result[] = new AdminDaftarIkanSheet();
+            $result[] = new IndividualRankingSheet();
+            $result[] = new TeamRankingSheet();
             $result[] = new AdminUserDetailSheet();
             $result[] = new TeamChampionSheet();
             $result[] = new MvpIkanSheet('team');
@@ -40,8 +42,6 @@ class AdminExport implements WithMultipleSheets
             $result[] = new RumusPenilaianSheet();
             $result[] = new NominasiSheet();
             $result[] = new JuriAssignmentSheet();
-            $result[] = new IndividualRankingSheet();
-            $result[] = new TeamRankingSheet();
             $result[] = new NilaiMurniJuriSheet();
             $result[] = new PointRankingSubtotalSheet($rankingScope);
         } elseif ($this->sheets === 'daftar') {
