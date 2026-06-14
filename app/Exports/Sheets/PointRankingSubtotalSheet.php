@@ -7,14 +7,13 @@ use App\Helpers\PointCalculator;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class PointRankingSubtotalSheet implements FromArray, WithTitle, WithEvents, ShouldAutoSize
+class PointRankingSubtotalSheet implements FromArray, WithTitle, WithEvents
 {
     private string $scope;
 

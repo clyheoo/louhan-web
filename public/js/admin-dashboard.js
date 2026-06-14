@@ -4427,14 +4427,21 @@ function _exportToastHide(delay){
     var t=document.getElementById('exportToast');
     if(t) setTimeout(function(){ if(t) t.style.display='none'; }, delay||0);
 }
+
 function pollExportToast(token, tries){
     fetch('/api/admin/export-status/'+token,{headers:{'Accept':'application/json'}})
     .then(function(r){return r.json();})
     .then(function(d){
         if(d.status==='ready'){ _exportToast('File siap, mengunduh...', false); _exportToastHide(3000); window.location.href='/api/admin/export-download/'+token; return; }
-        if(d.status==='failed'){ _exportToast('Export gagal: '+(d.message||'kesalahan server'), false); _exportToastHide(7000); return; }
-        if(tries>240){ _exportToast('Export belum selesai (worker mungkin belum jalan). Cek cron.', false); _exportToastHide(8000); return; }
-        _exportToast('Membuat file export... ('+(tries*2)+' detik)', true);
+        if(d.status==='failed'){ _exportToast('Export gagal: '+(d.message||'kesalahan server'), false); _exportToastHide(8000); return; }
+        var elapsed=tries*2;
+        if(d.status==='queued'){
+            if(elapsed>=20){ _exportToast('Tugas masih MENGANTRI — worker (cron queue:work) belum berjalan di server.', false); _exportToastHide(10000); return; }
+            _exportToast('Menunggu worker memproses... ('+elapsed+' dtk)', true);
+        } else {
+            _exportToast('Membuat file export... ('+elapsed+' dtk)', true);
+        }
+        if(tries>450){ _exportToast('Export terlalu lama. Cek log/worker server.', false); _exportToastHide(10000); return; }
         setTimeout(function(){ pollExportToast(token, tries+1); }, 2000);
     })
     .catch(function(){ setTimeout(function(){ pollExportToast(token, tries+1); }, 3000); });

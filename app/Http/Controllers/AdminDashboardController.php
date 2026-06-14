@@ -2486,7 +2486,7 @@ class AdminDashboardController extends Controller
         $sheets = $request->query('sheets', 'all');
         $token  = (string) Str::uuid();
         Cache::put("export:{$token}", ['status' => 'queued'], now()->addHours(2));
-        GenerateAdminExport::dispatch($token, $sheets);
+        GenerateAdminExport::dispatchAfterResponse($token, $sheets);
         return response()->json(['token' => $token]);
     }
 
