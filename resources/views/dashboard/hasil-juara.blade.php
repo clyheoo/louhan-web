@@ -337,6 +337,7 @@
     </div>
 
 <script>
+    var MVP_FEATURE_ENABLED = @json($mvpFeatureEnabled ?? true);
     var hasilData = {
         results: [],
         mvp: [],
@@ -463,15 +464,17 @@
         html += '</select>';
         html += '</div>';
 
-        html += '<div class="result-filter-card">';
-        html += '<label><i class="fas fa-star"></i> Filter MVP</label>';
-        html += '<select id="filterMvpGroup" onchange="onFilterMvpChange()">';
-        html += '<option value="all">Semua Kategori & Kelas MVP</option>';
-        mvpGroups.forEach(function(g){
-            html += '<option value="'+escapeHtml(g.key)+'">'+escapeHtml(g.label)+'</option>';
-        });
-        html += '</select>';
-        html += '</div>';
+        if(MVP_FEATURE_ENABLED){
+            html += '<div class="result-filter-card">';
+            html += '<label><i class="fas fa-star"></i> Filter MVP</label>';
+            html += '<select id="filterMvpGroup" onchange="onFilterMvpChange()">';
+            html += '<option value="all">Semua Kategori & Kelas MVP</option>';
+            mvpGroups.forEach(function(g){
+                html += '<option value="'+escapeHtml(g.key)+'">'+escapeHtml(g.label)+'</option>';
+            });
+            html += '</select>';
+            html += '</div>';
+        }
 
         html += '</div>';
 
@@ -600,15 +603,17 @@
             html += '<div class="empty-state" style="padding:26px 10px;"><i class="fas fa-folder-open"></i><p>Tidak ada hasil juara pada filter ini.</p></div>';
         }
 
-        html += '<div class="result-section-title">';
-        html += '<h3><i class="fas fa-star" style="color:var(--gold-300);"></i> Data MVP Team Anda</h3>';
-        html += '<span class="result-count-pill">'+mvp.length+' MVP</span>';
-        html += '</div>';
+        if(MVP_FEATURE_ENABLED){
+            html += '<div class="result-section-title">';
+            html += '<h3><i class="fas fa-star" style="color:var(--gold-300);"></i> Data MVP Team Anda</h3>';
+            html += '<span class="result-count-pill">'+mvp.length+' MVP</span>';
+            html += '</div>';
 
-        if(mvp.length > 0){
-            html += mvp.map(renderMvpCard).join('');
-        } else {
-            html += '<div class="empty-state" style="padding:26px 10px;"><i class="fas fa-star-half-stroke"></i><p>Tidak ada data MVP pada filter ini.</p></div>';
+            if(mvp.length > 0){
+                html += mvp.map(renderMvpCard).join('');
+            } else {
+                html += '<div class="empty-state" style="padding:26px 10px;"><i class="fas fa-star-half-stroke"></i><p>Tidak ada data MVP pada filter ini.</p></div>';
+            }
         }
 
         body.innerHTML = html;

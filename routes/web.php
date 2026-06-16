@@ -105,6 +105,16 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/scoring-data', [AdminDashboardController::class, 'getScoringData']);
     Route::get('/api/admin/available-tank-block', [AdminDashboardController::class, 'getAvailableTankBlock']);
     Route::post('/api/admin/edit-kategori-kelas', [AdminDashboardController::class, 'editKategoriKelas']);
+    Route::get('/api/admin/scoring-configs', [AdminDashboardController::class, 'getScoringConfigs']);
+    Route::post('/api/admin/scoring-config', [AdminDashboardController::class, 'saveScoringConfig']);
+    Route::get('/api/admin/taxonomy', [AdminDashboardController::class, 'getTaxonomy']);
+    Route::post('/api/admin/category/add', [AdminDashboardController::class, 'addCategory']);
+    Route::post('/api/admin/category/rename', [AdminDashboardController::class, 'renameCategory']);
+    Route::post('/api/admin/category/toggle-kelas', [AdminDashboardController::class, 'toggleCategoryKelas']);
+    Route::post('/api/admin/category/delete', [AdminDashboardController::class, 'deleteCategory']);
+    Route::post('/api/admin/class/add', [AdminDashboardController::class, 'addClass']);
+    Route::post('/api/admin/class/rename', [AdminDashboardController::class, 'renameClass']);
+    Route::post('/api/admin/class/delete', [AdminDashboardController::class, 'deleteClass']);
     Route::post('/api/admin/create-user', [AdminDashboardController::class, 'createUser']);
     Route::post('/api/admin/change-role', [AdminDashboardController::class, 'changeRole']);
     Route::post('/api/admin/delete-user', [AdminDashboardController::class, 'deleteUser']);
@@ -130,6 +140,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/mvp-ikan', [AdminDashboardController::class, 'getMvpIkan']);
     Route::get('/api/admin/mvp-ikan-data', [AdminDashboardController::class, 'getMvpIkanData']);
     Route::post('/api/admin/toggle-mvp-registration', [AdminDashboardController::class, 'toggleMvpRegistration']);
+    Route::post('/api/admin/toggle-mvp-feature', [AdminDashboardController::class, 'toggleMvpFeature']);
+    Route::post('/api/admin/toggle-team-champion-feature', [AdminDashboardController::class, 'toggleTeamChampionFeature']);
     Route::get('/api/admin/mvp-status', [AdminDashboardController::class, 'getMvpStatus']);
     Route::post('/api/admin/mvp-registration-max', [AdminDashboardController::class, 'setMvpRegistrationMax']);
     Route::post('/api/admin/toggle-undian-registration', [AdminDashboardController::class, 'toggleUndianRegistration']);
@@ -140,7 +152,6 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/import-excel', [AdminDashboardController::class, 'importExcel']);
     Route::get('/api/admin/import-template', [AdminDashboardController::class, 'downloadImportTemplate']);
     Route::get('/api/admin/stat-detail', [AdminDashboardController::class, 'getStatDetail']);
-    Route::get('/api/admin/debug-user-ikans', [AdminDashboardController::class, 'debugUserIkans']);
     Route::get('/api/admin/point-ranking', [AdminDashboardController::class, 'getPointRanking']);
     Route::post('/api/admin/submit-nominasi', [AdminDashboardController::class, 'submitAdminNominasi']);
     Route::post('/api/admin/update-nominasi-defect', [AdminDashboardController::class, 'updateNominasiDefect']);

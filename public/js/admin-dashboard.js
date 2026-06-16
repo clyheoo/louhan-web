@@ -32,6 +32,25 @@ var allKategoriList = ['Cencu','Chingwa','Freemarking','Goldenbase','Klasik','Bo
 var noKelasKategori = ['Bonsai', 'Jumbo'];
 var kategoriListWithKelas = allKategoriList.filter(function(k){ return noKelasKategori.indexOf(k) === -1; });
 
+// ★ MODUL 2: sinkronkan daftar kategori & kelas dari DB (fallback ke nilai default di atas)
+function refreshTaxonomyArrays(cb){
+    fetch('/api/admin/taxonomy', {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d && Array.isArray(d.categories) && d.categories.length){
+            allKategoriList = d.categories.map(function(c){ return c.name; });
+            noKelasKategori = d.categories.filter(function(c){ return !c.uses_kelas; }).map(function(c){ return c.name; });
+            kategoriListWithKelas = allKategoriList.filter(function(k){ return noKelasKategori.indexOf(k) === -1; });
+        }
+        if(d && Array.isArray(d.classes) && d.classes.length){
+            kelasList = d.classes.slice();
+        }
+        if(typeof cb === 'function') cb();
+    })
+    .catch(function(){ if(typeof cb === 'function') cb(); });
+}
+refreshTaxonomyArrays();
+
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 
 function openModal(id){
@@ -3694,6 +3713,7 @@ function loadMvpStatus() {
     .then(r => r.json())
     .then(d => {
         updateMvpToggleUI(d.is_open || false);
+        updateMvpFeatureUI(d.feature_enabled !== false);
 
         var input = document.getElementById('mvpMaxInput');
         if (input && d.max_mvp) input.value = d.max_mvp;
@@ -3796,6 +3816,7 @@ function loadTeamChampionStatus() {
     .then(function(r){ return r.json(); })
     .then(function(d){
         updateTeamChampionToggleUI(!!d.is_open);
+        updateTeamChampionFeatureUI(d.feature_enabled !== false);
 
         var input = document.getElementById('teamChampionMaxInput');
         if (input && d.max_team_champion) input.value = d.max_team_champion;
@@ -5128,9 +5149,11 @@ function saveJuriAssignments(jid,btn){
         mvp:          { title:'Kelola MVP',                      sub:'Manajemen pendaftaran ikan MVP', icon:'fa-star' },
         ranking:      { title:'Point Ranking',                   sub:'Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)', icon:'fa-trophy' },
         undian:       { title:'Kelola Mesin Undian',             sub:'Membuka dan mengunci mesin undian tank untuk peserta', icon:'fa-dice' },
+        taxonomy:     { title:'Kelola Kategori & Kelas',         sub:'Tambah, ubah nama, atur mode kelas, atau hapus kategori & kelas', icon:'fa-layer-group' },
         jumbo_calc:   { title:'Hitung Point Jumbo',              sub:'Kalkulasi point Jumbo berdasarkan rumus kategori lain', icon:'fa-calculator' },
         team_champion:{ title:'Team Champion',                   sub:'Kelola pendaftaran Team Champion, status buka/tutup, dan data peserta', icon:'fa-users-crown' },
-        kelola_juri:  { title:'Kelola Juri',                     sub:'Atur kategori & kelas yang boleh dinilai tiap juri', icon:'fa-user-shield' }
+        kelola_juri:  { title:'Kelola Juri',                     sub:'Atur kategori & kelas yang boleh dinilai tiap juri', icon:'fa-user-shield' },
+        scoring_config:{ title:'Pengaturan Penilaian',           sub:'Atur bobot & persentase point tiap kategori (rumus tidak berubah)', icon:'fa-sliders' }
     };
     var loaded = { dashboard:true }; // dashboard loaded by initial loadDashboard()
 
@@ -5171,6 +5194,8 @@ function saveJuriAssignments(jid,btn){
             if(pageId === 'undian'){ loadUndianStatus(); }
             if(pageId === 'jumbo_calc'){ loadJumboCalcFish(); }
             if(pageId === 'kelola_juri'){ loadJuriAssignments(); loadJuriScoringLockStatus(); }
+            if(pageId === 'taxonomy'){ loadTaxonomyManage(); }
+            if(pageId === 'scoring_config'){ loadScoringConfigs(); }
 
         } else {
             // Refresh ringan saat dibuka ulang
@@ -6597,6 +6622,377 @@ function renderAdminHistory(){
 }
 
 /* ═══════════════════════════════════════════════
+   MODUL 1 — PENGATURAN PENILAIAN (SCORING POINT CONFIG)
+   Field id di bawah = NAMA KOLOM DB (jangan diganti).
+   ═══════════════════════════════════════════════ */
+var spcConfigs = {}; // cache: { kategori: {...kolom config...} }
+
+var SPC_SECTIONS = [
+    { key:'overall', label:'Overall Impression', icon:'fa-star',
+      bobot:'overall_bobot',
+      fields:[ {col:'overall_point', label:'Impression'} ] },
+    { key:'head', label:'Head', icon:'fa-brain',
+      bobot:'head_bobot',
+      fields:[ {col:'head_size_pct', label:'Size (Ukuran)'}, {col:'head_bentuk_k_pct', label:'Bentuk Kepala'} ] },
+    { key:'face', label:'Face', icon:'fa-face-smile',
+      bobot:'face_bobot',
+      fields:[ {col:'face_face_pct', label:'Face'} ] },
+    { key:'body', label:'Body Shape', icon:'fa-shapes',
+      bobot:'body_bobot',
+      fields:[ {col:'body_bentuk_pct', label:'Bentuk Badan'}, {col:'body_proposional_pct', label:'Proporsional'}, {col:'body_pangkal_pct', label:'Pangkal'} ] },
+    { key:'marking', label:'Marking', icon:'fa-pen-nib',
+      bobot:'marking_bobot',
+      fields:[ {col:'marking_fullness_pct', label:'Fullness'}, {col:'marking_contrast_pct', label:'Contrast'}, {col:'marking_bentuk_pct', label:'Bentuk'} ] },
+    { key:'pearl', label:'Pearl', icon:'fa-circle-dot',
+      bobot:'pearl_bobot',
+      fields:[ {col:'pearl_shinning_pct', label:'Shining'}, {col:'pearl_fullnes_pct', label:'Fullness'}, {col:'pearl_bentuk_pearl_pct', label:'Bentuk'} ] },
+    { key:'color', label:'Color', icon:'fa-palette',
+      bobot:'color_bobot',
+      fields:[ {col:'color_komposisi_pct', label:'Komposisi'}, {col:'color_kecerahan_pct', label:'Kecerahan'}, {col:'color_fullness_colour_pct', label:'Fullness'} ] },
+    { key:'finnage', label:'Finnage', icon:'fa-feather',
+      bobot:'finnage_bobot',
+      fields:[ {col:'finnage_bentuk_sirip_ekor_pct', label:'Bentuk Sirip & Ekor'}, {col:'finnage_kecerahan_pct', label:'Kecerahan'} ] }
+];
+
+function spcInputStyle(){
+    return 'width:100%;text-align:center;font-weight:700;padding:9px 6px;font-size:13px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#F8FAFC;outline:none;font-family:inherit;';
+}
+
+function loadScoringConfigs(){
+    var sel = document.getElementById('spcCategorySelect');
+    var form = document.getElementById('scoringConfigForm');
+    if(!sel || !form) return;
+    form.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat konfigurasi...</p></div>';
+    fetch('/api/admin/scoring-configs', {headers:{'Accept':'application/json'}})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(d){
+        spcConfigs = {};
+        var list = (d && d.configs) || [];
+        list.forEach(function(c){ spcConfigs[c.kategori] = c; });
+        var prev = sel.value;
+        sel.innerHTML = '<option value="">-- Pilih Kategori --</option>';
+        Object.keys(spcConfigs).sort().forEach(function(k){
+            var o = document.createElement('option');
+            o.value = k; o.textContent = k;
+            sel.appendChild(o);
+        });
+        if(prev && spcConfigs[prev]){ sel.value = prev; renderScoringConfigForm(prev); }
+        else { form.innerHTML = '<div class="empty-state"><i class="fas fa-hand-pointer"></i><p>Pilih kategori untuk mulai menyetel.</p></div>'; }
+    })
+    .catch(function(err){
+        form.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i><p style="color:var(--danger);">'+esc(err.message)+'</p></div>';
+    });
+}
+
+function onScoringConfigCategoryChange(){
+    var k = document.getElementById('spcCategorySelect').value;
+    var form = document.getElementById('scoringConfigForm');
+    if(!k){ form.innerHTML = '<div class="empty-state"><i class="fas fa-hand-pointer"></i><p>Pilih kategori untuk mulai menyetel.</p></div>'; return; }
+    renderScoringConfigForm(k);
+}
+
+function renderScoringConfigForm(kategori){
+    var cfg = spcConfigs[kategori] || {};
+    var form = document.getElementById('scoringConfigForm');
+    if(!form) return;
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;">';
+    SPC_SECTIONS.forEach(function(sec){
+        html += '<div style="background:var(--glass-2);border:1px solid var(--bd-2);border-radius:14px;padding:14px;">';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">'
+              + '<span style="width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:rgba(34,211,238,.12);border:1px solid var(--bd-cyan);color:var(--cyan-400);font-size:12px;"><i class="fas '+sec.icon+'"></i></span>'
+              + '<b style="font-size:12px;color:var(--text-hi);text-transform:uppercase;letter-spacing:.04em;">'+esc(sec.label)+'</b></div>';
+
+        var bobotVal = (cfg[sec.bobot] !== undefined && cfg[sec.bobot] !== null) ? cfg[sec.bobot] : '';
+        html += '<div style="margin-bottom:10px;">'
+              + '<label style="display:block;font-size:10px;font-weight:700;color:var(--cyan-300);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Bobot</label>'
+              + '<input type="number" step="0.01" min="0" id="spc-'+sec.bobot+'" value="'+esc(String(bobotVal))+'" style="'+spcInputStyle()+'"></div>';
+
+        sec.fields.forEach(function(f){
+            var v = (cfg[f.col] !== undefined && cfg[f.col] !== null) ? cfg[f.col] : '';
+            var suffix = (sec.key === 'overall') ? 'Point' : '%';
+            html += '<div style="margin-bottom:8px;">'
+                  + '<label style="display:block;font-size:10px;font-weight:600;color:var(--text-mid);margin-bottom:5px;">'+esc(f.label)+' <span style="color:var(--text-low);">('+suffix+')</span></label>'
+                  + '<input type="number" step="0.01" min="0" id="spc-'+f.col+'" value="'+esc(String(v))+'" oninput="spcUpdateSum(\''+sec.key+'\')" style="'+spcInputStyle()+'"></div>';
+        });
+
+        if(sec.key !== 'overall' && sec.fields.length > 1){
+            html += '<div id="spc-sum-'+sec.key+'" style="font-size:10px;font-weight:700;color:var(--text-low);margin-top:4px;"></div>';
+        }
+        html += '</div>';
+    });
+    html += '</div>';
+    html += '<div style="margin-top:18px;display:flex;justify-content:flex-end;">'
+          + '<button class="btn-primary" id="spcSaveBtn" onclick="saveScoringConfig(this)" style="padding:10px 22px;font-size:12px;"><i class="fas fa-floppy-disk"></i> Simpan Konfigurasi</button></div>';
+    form.innerHTML = html;
+
+    SPC_SECTIONS.forEach(function(sec){ if(sec.key !== 'overall' && sec.fields.length > 1) spcUpdateSum(sec.key); });
+}
+
+function spcUpdateSum(sectionKey){
+    var sec = null;
+    for(var i=0;i<SPC_SECTIONS.length;i++){ if(SPC_SECTIONS[i].key === sectionKey){ sec = SPC_SECTIONS[i]; break; } }
+    if(!sec) return;
+    var el = document.getElementById('spc-sum-'+sectionKey);
+    if(!el) return;
+    var sum = 0;
+    sec.fields.forEach(function(f){
+        var node = document.getElementById('spc-'+f.col);
+        var v = node ? parseFloat(node.value) : NaN;
+        if(!isNaN(v)) sum += v;
+    });
+    sum = Math.round(sum * 100) / 100;
+    var ok = Math.abs(sum - 100) < 0.001;
+    el.innerHTML = 'Total persen: <b style="color:'+(ok ? '#34D399' : '#FBBF24')+';">'+sum+'%</b>' + (ok ? '' : ' <span style="color:var(--text-low);">(umumnya 100%)</span>');
+}
+
+function saveScoringConfig(btn){
+    var kategori = document.getElementById('spcCategorySelect').value;
+    if(!kategori){ popupError('Belum ada kategori', 'Pilih kategori terlebih dahulu.'); return; }
+
+    var payload = { _token: getCsrf(), kategori: kategori };
+    var invalid = false;
+    SPC_SECTIONS.forEach(function(sec){
+        var bEl = document.getElementById('spc-'+sec.bobot);
+        payload[sec.bobot] = bEl ? bEl.value : '';
+        if(bEl && (bEl.value === '' || isNaN(parseFloat(bEl.value)) || parseFloat(bEl.value) < 0)) invalid = true;
+        sec.fields.forEach(function(f){
+            var el = document.getElementById('spc-'+f.col);
+            payload[f.col] = el ? el.value : '';
+            if(el && (el.value === '' || isNaN(parseFloat(el.value)) || parseFloat(el.value) < 0)) invalid = true;
+        });
+    });
+    if(invalid){ popupError('Input tidak valid', 'Semua kolom bobot & persentase wajib diisi angka ≥ 0.'); return; }
+
+    var orig = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    fetch('/api/admin/scoring-config', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+        body: JSON.stringify(payload)
+    })
+    .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, body:j}; }); })
+    .then(function(res){
+        btn.disabled = false; btn.innerHTML = orig;
+        if(res.ok && res.body && res.body.success){
+            if(res.body.config) spcConfigs[kategori] = res.body.config;
+            popupSuccess('Tersimpan', res.body.message || 'Konfigurasi penilaian berhasil disimpan.');
+        } else {
+            popupError('Gagal', (res.body && res.body.message) || 'Gagal menyimpan konfigurasi.');
+        }
+    })
+    .catch(function(err){
+        btn.disabled = false; btn.innerHTML = orig;
+        popupError('Gagal', err.message);
+    });
+}
+
+/* ═══════════════════════════════════════════════
+   MODUL 3 — SAKLAR FITUR MVP & TEAM CHAMPION
+   ═══════════════════════════════════════════════ */
+function updateMvpFeatureUI(enabled){
+    var btn = document.getElementById('btnToggleMvpFeature');
+    var txt = document.getElementById('mvpFeatureText');
+    if(!btn || !txt) return;
+    btn.className = 'btn-primary';
+    if(enabled){
+        btn.innerHTML = '<i class="fas fa-toggle-on"></i> Nonaktifkan Fitur';
+        txt.innerHTML = '<span style="color:#6EE7B7;"><i class="fas fa-circle-check"></i> Fitur MVP <b>AKTIF</b> — menu, pendaftaran, dan hasil MVP tampil untuk user.</span>';
+    } else {
+        btn.innerHTML = '<i class="fas fa-toggle-off"></i> Aktifkan Fitur';
+        txt.innerHTML = '<span style="color:#FCA5A5;"><i class="fas fa-ban"></i> Fitur MVP <b>NONAKTIF</b> — menu, pendaftaran, dan hasil MVP disembunyikan dari user.</span>';
+    }
+}
+
+function toggleMvpFeature(){
+    var btn = document.getElementById('btnToggleMvpFeature');
+    if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    fetch('/api/admin/toggle-mvp-feature', {
+        method:'POST',
+        headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d.success){
+            updateMvpFeatureUI(!!d.feature_enabled);
+            popupSuccess('Fitur MVP Diperbarui', d.message);
+        } else { popupError('Gagal', d.message || 'Gagal memperbarui fitur MVP.'); }
+    })
+    .catch(function(){ popupError('Error', 'Gagal menghubungi server.'); })
+    .finally(function(){ if(btn) btn.disabled = false; });
+}
+
+function updateTeamChampionFeatureUI(enabled){
+    var btn = document.getElementById('btnToggleTeamChampionFeature');
+    var txt = document.getElementById('teamChampionFeatureText');
+    if(!btn || !txt) return;
+    btn.className = 'btn-primary';
+    if(enabled){
+        btn.innerHTML = '<i class="fas fa-toggle-on"></i> Nonaktifkan Fitur';
+        txt.innerHTML = '<span style="color:#6EE7B7;"><i class="fas fa-circle-check"></i> Fitur Team Champion <b>AKTIF</b> — menu & pendaftaran tampil untuk user.</span>';
+    } else {
+        btn.innerHTML = '<i class="fas fa-toggle-off"></i> Aktifkan Fitur';
+        txt.innerHTML = '<span style="color:#FCA5A5;"><i class="fas fa-ban"></i> Fitur Team Champion <b>NONAKTIF</b> — pendaftaran diblokir untuk user.</span>';
+    }
+}
+
+function toggleTeamChampionFeature(){
+    var btn = document.getElementById('btnToggleTeamChampionFeature');
+    if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    fetch('/api/admin/toggle-team-champion-feature', {
+        method:'POST',
+        headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d.success){
+            updateTeamChampionFeatureUI(!!d.feature_enabled);
+            popupSuccess('Fitur Team Champion Diperbarui', d.message);
+        } else { popupError('Gagal', d.message || 'Gagal memperbarui fitur Team Champion.'); }
+    })
+    .catch(function(){ popupError('Error', 'Gagal menghubungi server.'); })
+    .finally(function(){ if(btn) btn.disabled = false; });
+}
+
+/* ═══════════════════════════════════════════════
+   MODUL 2 — KELOLA KATEGORI & KELAS (UI)
+   ═══════════════════════════════════════════════ */
+var taxCategories = [];
+var taxClasses = [];
+
+function loadTaxonomyManage(){
+    var cc = document.getElementById('categoryList');
+    if(cc) cc.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
+    fetch('/api/admin/taxonomy', {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        taxCategories = (d && d.categories) || [];
+        taxClasses = (d && d.classes) || [];
+        renderCategoryList();
+        renderClassList();
+        refreshTaxonomyArrays(); // selaraskan array global utk UI lain
+    })
+    .catch(function(err){
+        if(cc) cc.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i><p style="color:var(--danger);">'+esc(err.message)+'</p></div>';
+    });
+}
+
+function renderCategoryList(){
+    var c = document.getElementById('categoryList');
+    if(!c) return;
+    if(!taxCategories.length){ c.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Belum ada kategori.</p></div>'; return; }
+    c.innerHTML = taxCategories.map(function(cat){
+        var n = esc(cat.name);
+        var safe = n.replace(/'/g,"\\'");
+        var modeLabel = cat.uses_kelas
+            ? '<span style="font-size:10px;font-weight:800;color:#6EE7B7;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);border-radius:6px;padding:2px 8px;">PAKAI KELAS</span>'
+            : '<span style="font-size:10px;font-weight:800;color:#FBBF24;background:rgba(245,158,11,.12);border:1px solid var(--bd-gold);border-radius:6px;padding:2px 8px;">TANPA KELAS</span>';
+        return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--glass-2);border:1px solid var(--bd-2);border-radius:11px;padding:10px 12px;">'
+            + '<b style="font-size:13px;color:var(--text-hi);flex:1;min-width:120px;">'+n+'</b>'
+            + modeLabel
+            + '<button type="button" onclick="renameCategoryPrompt(\''+safe+'\')" style="padding:7px 11px;font-size:10px;font-weight:700;border-radius:8px;border:1px solid var(--bd-2);background:var(--glass-2);color:var(--cyan-300);cursor:pointer;"><i class="fas fa-pen"></i> Ubah Nama</button>'
+            + '<button type="button" onclick="toggleCategoryKelas(\''+safe+'\')" style="padding:7px 11px;font-size:10px;font-weight:700;border-radius:8px;border:1px solid var(--bd-2);background:var(--glass-2);color:var(--text-mid);cursor:pointer;"><i class="fas fa-toggle-on"></i> Mode Kelas</button>'
+            + '<button type="button" onclick="deleteCategory(\''+safe+'\')" style="padding:7px 11px;font-size:10px;font-weight:700;border-radius:8px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.12);color:#FCA5A5;cursor:pointer;"><i class="fas fa-trash"></i> Hapus</button>'
+            + '</div>';
+    }).join('');
+}
+
+function renderClassList(){
+    var c = document.getElementById('classList');
+    if(!c) return;
+    if(!taxClasses.length){ c.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Belum ada kelas.</p></div>'; return; }
+    c.innerHTML = taxClasses.map(function(name){
+        var n = esc(name); var safe = n.replace(/'/g,"\\'");
+        return '<div style="display:flex;align-items:center;gap:8px;background:var(--glass-2);border:1px solid var(--bd-2);border-radius:11px;padding:8px 12px;">'
+            + '<b style="font-size:13px;color:var(--text-hi);">'+n+'</b>'
+            + '<button type="button" title="Ubah nama" onclick="renameClassPrompt(\''+safe+'\')" style="padding:6px 9px;font-size:10px;border-radius:7px;border:1px solid var(--bd-2);background:var(--glass-2);color:var(--cyan-300);cursor:pointer;"><i class="fas fa-pen"></i></button>'
+            + '<button type="button" title="Hapus" onclick="deleteClass(\''+safe+'\')" style="padding:6px 9px;font-size:10px;border-radius:7px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.12);color:#FCA5A5;cursor:pointer;"><i class="fas fa-trash"></i></button>'
+            + '</div>';
+    }).join('');
+}
+
+function taxPost(url, payload, okTitle, btn){
+    var orig = btn ? btn.innerHTML : null;
+    if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    payload._token = getCsrf();
+    return fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+        body: JSON.stringify(payload)
+    })
+    .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, body:j}; }); })
+    .then(function(res){
+        if(btn){ btn.disabled = false; btn.innerHTML = orig; }
+        if(res.ok && res.body && res.body.success){
+            popupSuccess(okTitle, res.body.message || 'Berhasil.');
+            loadTaxonomyManage();
+        } else {
+            popupError('Gagal', (res.body && res.body.message) || 'Operasi gagal.');
+        }
+    })
+    .catch(function(err){
+        if(btn){ btn.disabled = false; btn.innerHTML = orig; }
+        popupError('Gagal', err.message);
+    });
+}
+
+function addCategory(btn){
+    var el = document.getElementById('newCategoryName');
+    var name = (el.value || '').trim();
+    if(!name){ popupError('Nama kosong', 'Isi nama kategori.'); return; }
+    var usesKelas = document.getElementById('newCategoryUsesKelas').checked;
+    taxPost('/api/admin/category/add', {name:name, uses_kelas: usesKelas ? 1 : 0}, 'Kategori Ditambahkan', btn)
+        .then(function(){ el.value = ''; });
+}
+
+function renameCategoryPrompt(oldName){
+    var nv = window.prompt('Ubah nama kategori "'+oldName+'" menjadi:', oldName);
+    if(nv === null) return;
+    nv = nv.trim();
+    if(!nv || nv === oldName) return;
+    popupConfirm('Ubah Nama Kategori',
+        'Ubah <b>'+esc(oldName)+'</b> menjadi <b>'+esc(nv)+'</b>? Semua data ikan, konfigurasi point, penugasan juri, dan rentang tank akan ikut diperbarui.',
+        'Ya, Ubah',
+        function(){ taxPost('/api/admin/category/rename', {old_name:oldName, new_name:nv}, 'Nama Kategori Diubah'); });
+}
+
+function toggleCategoryKelas(name){
+    taxPost('/api/admin/category/toggle-kelas', {name:name}, 'Mode Kelas Diubah');
+}
+
+function deleteCategory(name){
+    popupConfirm('Hapus Kategori',
+        'Hapus kategori <b>'+esc(name)+'</b>? Hanya bisa jika tidak ada ikan terdaftar pada kategori ini.',
+        'Ya, Hapus',
+        function(){ taxPost('/api/admin/category/delete', {name:name}, 'Kategori Dihapus'); });
+}
+
+function addClass(btn){
+    var el = document.getElementById('newClassName');
+    var name = (el.value || '').trim();
+    if(!name){ popupError('Nama kosong', 'Isi nama kelas.'); return; }
+    taxPost('/api/admin/class/add', {name:name}, 'Kelas Ditambahkan', btn)
+        .then(function(){ el.value = ''; });
+}
+
+function renameClassPrompt(oldName){
+    var nv = window.prompt('Ubah nama kelas "'+oldName+'" menjadi:', oldName);
+    if(nv === null) return;
+    nv = nv.trim();
+    if(!nv || nv === oldName) return;
+    popupConfirm('Ubah Nama Kelas',
+        'Ubah kelas <b>'+esc(oldName)+'</b> menjadi <b>'+esc(nv)+'</b>? Data ikan, nilai, penugasan juri, dan rentang tank akan ikut diperbarui.',
+        'Ya, Ubah',
+        function(){ taxPost('/api/admin/class/rename', {old_name:oldName, new_name:nv}, 'Nama Kelas Diubah'); });
+}
+
+function deleteClass(name){
+    popupConfirm('Hapus Kelas',
+        'Hapus kelas <b>'+esc(name)+'</b>? Hanya bisa jika tidak ada ikan terdaftar pada kelas ini.',
+        'Ya, Hapus',
+        function(){ taxPost('/api/admin/class/delete', {name:name}, 'Kelas Dihapus'); });
+}
+
+/* ═══════════════════════════════════════════════
    EXPOSE FUNGSI NOMINASI KE WINDOW
    (agar bisa diakses dari onclick HTML & dari window.activatePage)
    ═══════════════════════════════════════════════ */
@@ -6633,4 +7029,21 @@ window.adminToggleNomDefect = adminToggleNomDefect;
 window.adminResetNomDefect  = adminResetNomDefect;
 window.adminSaveNomDefect   = adminSaveNomDefect;
 window.adminCloseNomDefect  = adminCloseNomDefect;
+window.loadScoringConfigs           = loadScoringConfigs;
+window.onScoringConfigCategoryChange = onScoringConfigCategoryChange;
+window.renderScoringConfigForm      = renderScoringConfigForm;
+window.spcUpdateSum                 = spcUpdateSum;
+window.saveScoringConfig            = saveScoringConfig;
+window.toggleMvpFeature            = toggleMvpFeature;
+window.updateMvpFeatureUI          = updateMvpFeatureUI;
+window.toggleTeamChampionFeature   = toggleTeamChampionFeature;
+window.updateTeamChampionFeatureUI = updateTeamChampionFeatureUI;
+window.loadTaxonomyManage   = loadTaxonomyManage;
+window.addCategory          = addCategory;
+window.renameCategoryPrompt = renameCategoryPrompt;
+window.toggleCategoryKelas  = toggleCategoryKelas;
+window.deleteCategory       = deleteCategory;
+window.addClass             = addClass;
+window.renameClassPrompt    = renameClassPrompt;
+window.deleteClass          = deleteClass;
 })();

@@ -45,6 +45,13 @@ class AdminDashboardController extends Controller
         );
     }
 
+    private function isFeatureEnabled(string $key): bool
+    {
+        $val = \DB::table('settings')->where('key', $key)->value('value');
+        // Default AKTIF bila belum pernah diset (menjaga perilaku lama).
+        return ($val === null) ? true : ($val === '1');
+    }
+
     private function normalizeNominasiDefectArray($value): array
     {
         if (is_string($value)) {
@@ -96,44 +103,9 @@ class AdminDashboardController extends Controller
         return view('dashboard.admin', ['user' => auth()->user()->fresh()]);
     }
 
-    // LIST PESERTA UNTUK DROPDOWN ADMIN
-    public function getListPesertas()
-    {
-        $pesertas = Peserta::orderBy('nama_peserta')->get()->map(function ($p) {
-            return [
-                'id' => $p->id,
-                'text' => $p->nama_peserta . ' (' . $p->detail_anggota . ')'
-            ];
-        });
-        return response()->json($pesertas);
-    }
-
-    // TAMBAH IKAN DARI ADMIN
-    public function storeIkanAdmin(Request $request)
-    {
-        $request->validate([
-            'peserta_id' => 'required|exists:pesertas,id',
-            'kategori'   => 'required|string|max:255',
-            'kelas'      => 'required|string|max:10',
-        ]);
-
-        $peserta = Peserta::find($request->peserta_id);
-
-        Ikan::create([
-            'peserta_id' => $request->peserta_id,
-            'nama_peserta' => $peserta ? $peserta->nama_peserta : '-',
-            'detail_anggota' => $peserta ? $peserta->detail_anggota : '-',
-            'jenis_keanggotaan' => $peserta ? $peserta->jenis_keanggotaan : 'perorangan', // ★ SNAPSHOT
-            'kategori'   => $request->kategori,
-            'kelas'      => $request->kelas,
-        ]);
-
-        return response()->json(['success' => true, 'message' => 'Ikan berhasil didaftarkan ke peserta.']);
-    }
-
     public function registerPesertaIkan(Request $request)
     {
-        $noKelasKategori = ['Bonsai', 'Jumbo'];
+        $noKelasKategori = \App\Helpers\Taxonomy::noKelasNames();
 
         $rules = [
             'user_id'           => 'required|exists:users,id',
@@ -256,7 +228,7 @@ class AdminDashboardController extends Controller
 
         if (
             !$hasSubRange &&
-            in_array($kategori, ['Bonsai', 'Jumbo'], true) &&
+            in_array($kategori, \App\Helpers\Taxonomy::noKelasNames(), true) &&
             isset($classRanges[$kategori]['kategori'][$kategori])
         ) {
             $myMin = (int) ($classRanges[$kategori]['kategori'][$kategori]['min'] ?? $globalMin);
@@ -1816,8 +1788,8 @@ class AdminDashboardController extends Controller
                 $strictlyOutside = ($a['max'] < $b['min']) || ($a['min'] > $b['max']);
 
                 if (!$strictlyInside && !$strictlyOutside) {
-                    $labelA = in_array($a['kelas'], ['Bonsai', 'Jumbo']) ? $a['kelas'] : 'Kelas ' . $a['kelas'];
-                    $labelB = in_array($b['kelas'], ['Bonsai', 'Jumbo']) ? $b['kelas'] : 'Kelas ' . $b['kelas'];
+                    $labelA = in_array($a['kelas'], \App\Helpers\Taxonomy::noKelasNames()) ? $a['kelas'] : 'Kelas ' . $a['kelas'];
+                    $labelB = in_array($b['kelas'], \App\Helpers\Taxonomy::noKelasNames()) ? $b['kelas'] : 'Kelas ' . $b['kelas'];
                     $msg = "Rentang <b>{$a['kategori']}</b> di {$labelA} ({$a['min']}–{$a['max']}) menyentuh/melewati batas rentang <b>{$b['kategori']}</b> di {$labelB} ({$b['min']}–{$b['max']}). Pastikan rentang ketat di dalam atau sepenuhnya di luar rentang yang sudah ada.";
                     return response()->json(['success' => false, 'message' => $msg], 422);
                 }
@@ -1931,7 +1903,7 @@ class AdminDashboardController extends Controller
 
         if (is_array($classRanges) && !empty($classRanges)) {
             $conflicts = [];
-            $noKelasKategori = ['Bonsai', 'Jumbo'];
+            $noKelasKategori = \App\Helpers\Taxonomy::noKelasNames();
 
             foreach ($classRanges as $kelas => $data) {
                 if (!isset($data['kategori']) || !is_array($data['kategori'])) continue;
@@ -2167,12 +2139,33 @@ class AdminDashboardController extends Controller
         ]);
     }
 
+    public function toggleMvpFeature()
+    {
+        $current = \DB::table('settings')->where('key', 'mvp_feature_enabled')->value('value');
+        $isEnabled = ($current === null) ? true : ($current === '1');
+        $newVal = $isEnabled ? '0' : '1';
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'mvp_feature_enabled'],
+            ['value' => $newVal, 'updated_at' => now()]
+        );
+
+        return response()->json([
+            'success'         => true,
+            'feature_enabled' => ($newVal === '1'),
+            'message'         => $newVal === '1'
+                ? 'Fitur MVP DIAKTIFKAN. Menu, pendaftaran, dan hasil MVP kembali tampil untuk user.'
+                : 'Fitur MVP DINONAKTIFKAN. Menu, pendaftaran, dan hasil MVP disembunyikan dari user. Data ikan yang sudah ditandai tidak terhapus.',
+        ]);
+    }
+
     public function getMvpStatus()
     {
         $isOpen = (bool) (\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
 
         return response()->json([
             'is_open' => $isOpen,
+            'feature_enabled' => $this->isFeatureEnabled('mvp_feature_enabled'),
             'max_mvp' => $this->getRegistrationLimit('mvp_registration_max', 15),
         ]);
     }
@@ -2219,7 +2212,28 @@ class AdminDashboardController extends Controller
 
         return response()->json([
             'is_open' => $isOpen,
+            'feature_enabled' => $this->isFeatureEnabled('team_champion_feature_enabled'),
             'max_team_champion' => $this->getRegistrationLimit('team_champion_registration_max', 35),
+        ]);
+    }
+
+    public function toggleTeamChampionFeature()
+    {
+        $current = \DB::table('settings')->where('key', 'team_champion_feature_enabled')->value('value');
+        $isEnabled = ($current === null) ? true : ($current === '1');
+        $newVal = $isEnabled ? '0' : '1';
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'team_champion_feature_enabled'],
+            ['value' => $newVal, 'updated_at' => now()]
+        );
+
+        return response()->json([
+            'success'         => true,
+            'feature_enabled' => ($newVal === '1'),
+            'message'         => $newVal === '1'
+                ? 'Fitur Team Champion DIAKTIFKAN. Menu & pendaftaran kembali tampil untuk user.'
+                : 'Fitur Team Champion DINONAKTIFKAN. Menu, pendaftaran, dan hasil Team Champion disembunyikan dari user. Data ikan yang sudah ditandai tidak terhapus.',
         ]);
     }
 
@@ -2607,8 +2621,8 @@ class AdminDashboardController extends Controller
             ], 422);
         }
 
-        $noKelasKategori = ['Bonsai', 'Jumbo'];
-        $validKategori = ['Cencu', 'Chingwa', 'Freemarking', 'Goldenbase', 'Klasik', 'Bonsai', 'Jumbo'];
+        $noKelasKategori = \App\Helpers\Taxonomy::noKelasNames();
+        $validKategori = \App\Helpers\Taxonomy::categoryNames();
         $validKelas = ['A', 'B', 'C', 'D', 'E'];
 
         $imported = 0;
@@ -2761,81 +2775,6 @@ class AdminDashboardController extends Controller
         ];
 
         return Excel::download(new ArrayExport($data), 'Template_Import_Peserta_Ikan.xlsx');
-    }
-
-        /* ═══════════════════════════════════════════
-       DEBUG: Cek data ikan per user (tanpa login sbg user)
-       ═══════════════════════════════════════════ */
-    public function debugUserIkans(Request $request)
-    {
-        $email = $request->query('email');
-        if (!$email) {
-            return response()->json(['error' => 'Parameter ?email= wajib diisi']);
-        }
-
-        $user = User::where('email', $email)->first();
-        if (!$user) {
-            return response()->json(['error' => 'User tidak ditemukan', 'email' => $email]);
-        }
-
-        $peserta = Peserta::where('user_id', $user->id)->first();
-
-        $result = [
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-            ],
-            'peserta' => $peserta ? [
-                'id' => $peserta->id,
-                'user_id' => $peserta->user_id,
-                'nama_peserta' => $peserta->nama_peserta,
-                'jenis_keanggotaan' => $peserta->jenis_keanggotaan,
-                'detail_anggota' => $peserta->detail_anggota,
-            ] : null,
-            'ikan_count' => 0,
-            'ikans' => [],
-        ];
-
-        if ($peserta) {
-            $ikans = $peserta->ikans()->orderBy('created_at', 'desc')->get();
-            $result['ikan_count'] = $ikans->count();
-            $result['ikans'] = $ikans->map(function ($ikan) {
-                return [
-                    'id' => $ikan->id,
-                    'peserta_id' => $ikan->peserta_id,
-                    'nama_peserta' => $ikan->nama_peserta,
-                    'kategori' => $ikan->kategori,
-                    'kelas' => $ikan->kelas,
-                    'nomor_tank' => $ikan->nomor_tank,
-                    'dibuat_oleh' => $ikan->dibuat_oleh,
-                ];
-            })->toArray();
-        }
-
-        // Also check what getMyIkans would return
-        $myIkansResponse = [];
-        if ($peserta) {
-            $myIkansResponse = $peserta->ikans()->orderBy('created_at', 'desc')->get()->map(function($ikan) {
-                return [
-                    'id' => $ikan->id,
-                    'nama_peserta' => $ikan->nama_peserta,
-                    'kategori' => $ikan->kategori,
-                    'kelas' => $ikan->kelas,
-                    'nomor_tank' => $ikan->nomor_tank,
-                    'is_mvp' => $ikan->is_mvp ?? false,
-                    'dibuat_oleh' => $ikan->dibuat_oleh ?? 'user',
-                ];
-            })->toArray();
-        }
-
-        $result['getMyIkans_would_return'] = [
-            'ikans_count' => count($myIkansResponse),
-            'ikans' => $myIkansResponse,
-        ];
-
-        return response()->json($result, 200, [], JSON_PRETTY_PRINT);
     }
     
     public function getPointRanking(Request $request)
@@ -3005,7 +2944,7 @@ class AdminDashboardController extends Controller
             $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $finalAvgDetail, $mergedDefect);
             $totalBonus = (int) $ikan->bonusPoints->sum('points');
             $finalPoint = $totalPoint + $totalBonus;
-            $noKelasKategori = ['Bonsai', 'Jumbo'];
+            $noKelasKategori = \App\Helpers\Taxonomy::noKelasNames();
 
             if ($scope === 'per_kategori' || in_array($ikan->kategori, $noKelasKategori) || !$ikan->kelas) {
                 $key = $ikan->kategori;
@@ -3640,7 +3579,7 @@ class AdminDashboardController extends Controller
             ], 404);
         }
 
-        $noKelasKategori = ['Bonsai', 'Jumbo'];
+        $noKelasKategori = \App\Helpers\Taxonomy::noKelasNames();
         $kelas = in_array($request->kategori, $noKelasKategori, true) ? null : $request->kelas;
 
         if (!in_array($request->kategori, $noKelasKategori, true) && !$kelas) {
@@ -3806,7 +3745,7 @@ class AdminDashboardController extends Controller
             return response()->json(['success' => false, 'message' => 'User yang dipilih bukan Juri.'], 422);
         }
 
-        $noKelas = ['Bonsai', 'Jumbo'];
+        $noKelas = \App\Helpers\Taxonomy::noKelasNames();
 
         $items = collect($request->json('assignments') ?? [])
             ->map(function ($a) use ($noKelas) {
@@ -3838,5 +3777,344 @@ class AdminDashboardController extends Controller
             'message' => 'Penugasan juri "' . $juri->name . '" berhasil disimpan (' . $items->count() . ' kombinasi).',
             'count'   => $items->count(),
         ]);
+    }
+    /* ═══════════════════════════════════════════
+       MODUL 1 — PENGATURAN PENILAIAN (SCORING POINT CONFIG)
+       Hanya mengatur NILAI bobot & persentase. Rumus PointCalculator tidak berubah.
+       ═══════════════════════════════════════════ */
+    public function getScoringConfigs()
+    {
+        $configs = ScoringPointConfig::orderBy('kategori')->get();
+
+        return response()->json(['configs' => $configs]);
+    }
+
+    public function saveScoringConfig(Request $request)
+    {
+        $numeric = ['nullable', 'numeric', 'min:0'];
+
+        $data = $request->validate([
+            'kategori'                      => 'required|string|max:255',
+            'overall_bobot'                 => $numeric,
+            'overall_point'                 => $numeric,
+            'head_bobot'                    => $numeric,
+            'head_size_pct'                 => $numeric,
+            'head_bentuk_k_pct'             => $numeric,
+            'face_bobot'                    => $numeric,
+            'face_face_pct'                 => $numeric,
+            'body_bobot'                    => $numeric,
+            'body_bentuk_pct'               => $numeric,
+            'body_proposional_pct'          => $numeric,
+            'body_pangkal_pct'              => $numeric,
+            'marking_bobot'                 => $numeric,
+            'marking_fullness_pct'          => $numeric,
+            'marking_contrast_pct'          => $numeric,
+            'marking_bentuk_pct'            => $numeric,
+            'pearl_bobot'                   => $numeric,
+            'pearl_shinning_pct'            => $numeric,
+            'pearl_fullnes_pct'             => $numeric,
+            'pearl_bentuk_pearl_pct'        => $numeric,
+            'color_bobot'                   => $numeric,
+            'color_komposisi_pct'           => $numeric,
+            'color_kecerahan_pct'           => $numeric,
+            'color_fullness_colour_pct'     => $numeric,
+            'finnage_bobot'                 => $numeric,
+            'finnage_bentuk_sirip_ekor_pct' => $numeric,
+            'finnage_kecerahan_pct'         => $numeric,
+        ]);
+
+        $kategori = $data['kategori'];
+        unset($data['kategori']);
+
+        // Kolom kosong dianggap 0 supaya rumus tetap aman (tidak ada null masuk perkalian).
+        foreach ($data as $k => $v) {
+            $data[$k] = ($v === null || $v === '') ? 0 : $v;
+        }
+
+        $cfg = ScoringPointConfig::updateOrCreate(
+            ['kategori' => $kategori],
+            $data
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Konfigurasi penilaian kategori "' . $kategori . '" berhasil disimpan.',
+            'config'  => $cfg,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       MODUL 2 — KELOLA KATEGORI & KELAS
+       ═══════════════════════════════════════════ */
+    public function getTaxonomy()
+    {
+        return response()->json([
+            'categories' => \App\Helpers\Taxonomy::categories(), // [{name, uses_kelas}]
+            'classes'    => \App\Helpers\Taxonomy::classNames(),
+        ]);
+    }
+
+    public function addCategory(Request $request)
+    {
+        $data = $request->validate([
+            'name'       => 'required|string|max:255|unique:contest_categories,name',
+            'uses_kelas' => 'nullable|boolean',
+        ]);
+        $usesKelas = $request->boolean('uses_kelas', true);
+        $maxUrutan = (int) \App\Models\ContestCategory::max('urutan');
+
+        \DB::transaction(function () use ($data, $usesKelas, $maxUrutan) {
+            \App\Models\ContestCategory::create([
+                'name'       => $data['name'],
+                'uses_kelas' => $usesKelas,
+                'urutan'     => $maxUrutan + 1,
+            ]);
+            // Siapkan baris config kosong agar bisa disetel di menu Pengaturan Penilaian.
+            ScoringPointConfig::firstOrCreate(['kategori' => $data['name']]);
+        });
+
+        \App\Helpers\Taxonomy::flush();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori "' . $data['name'] . '" ditambahkan. Atur bobot point-nya di menu Pengaturan Penilaian.',
+        ]);
+    }
+
+    public function renameCategory(Request $request)
+    {
+        $data = $request->validate([
+            'old_name' => 'required|string|max:255',
+            'new_name' => 'required|string|max:255',
+        ]);
+        $old = trim($data['old_name']);
+        $new = trim($data['new_name']);
+
+        $cat = \App\Models\ContestCategory::where('name', $old)->first();
+        if (!$cat) {
+            return response()->json(['success' => false, 'message' => 'Kategori lama tidak ditemukan.'], 404);
+        }
+        if ($new === $old) {
+            return response()->json(['success' => true, 'message' => 'Tidak ada perubahan nama.']);
+        }
+        if (\App\Models\ContestCategory::where('name', $new)->exists()) {
+            return response()->json(['success' => false, 'message' => 'Nama kategori "' . $new . '" sudah dipakai.'], 422);
+        }
+
+        \DB::transaction(function () use ($cat, $old, $new) {
+            Ikan::where('kategori', $old)->update(['kategori' => $new]);
+            ScoringPointConfig::where('kategori', $old)->update(['kategori' => $new]);
+            \App\Models\JuriAssignment::where('kategori', $old)->update(['kategori' => $new]);
+            $usesKelas = (bool) $cat->uses_kelas;
+            $cat->update(['name' => $new]);
+            $this->renameCategoryInTankRanges($old, $new, !$usesKelas);
+        });
+
+        \App\Helpers\Taxonomy::flush();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori "' . $old . '" diubah menjadi "' . $new . '". Data ikan, konfigurasi point, penugasan juri, dan rentang tank ikut diperbarui.',
+        ]);
+    }
+
+    public function toggleCategoryKelas(Request $request)
+    {
+        $data = $request->validate(['name' => 'required|string|max:255']);
+        $cat = \App\Models\ContestCategory::where('name', $data['name'])->first();
+        if (!$cat) {
+            return response()->json(['success' => false, 'message' => 'Kategori tidak ditemukan.'], 404);
+        }
+        if (Ikan::where('kategori', $cat->name)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak bisa mengubah mode kelas: sudah ada ikan terdaftar pada kategori "' . $cat->name . '". Mode kelas hanya bisa diubah saat kategori masih kosong.',
+            ], 422);
+        }
+
+        $cat->update(['uses_kelas' => !$cat->uses_kelas]);
+        \App\Helpers\Taxonomy::flush();
+
+        return response()->json([
+            'success'    => true,
+            'uses_kelas' => (bool) $cat->uses_kelas,
+            'message'    => 'Mode kategori "' . $cat->name . '" diubah menjadi ' . ($cat->uses_kelas ? 'MEMAKAI kelas' : 'TANPA kelas') . '.',
+        ]);
+    }
+
+    public function deleteCategory(Request $request)
+    {
+        $data = $request->validate(['name' => 'required|string|max:255']);
+        $cat = \App\Models\ContestCategory::where('name', $data['name'])->first();
+        if (!$cat) {
+            return response()->json(['success' => false, 'message' => 'Kategori tidak ditemukan.'], 404);
+        }
+
+        $jumlahIkan = Ikan::where('kategori', $cat->name)->count();
+        if ($jumlahIkan > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kategori "' . $cat->name . '" tidak bisa dihapus karena masih ada ' . $jumlahIkan . ' ikan terdaftar. Pindahkan atau hapus ikan tersebut lebih dulu.',
+            ], 422);
+        }
+
+        \DB::transaction(function () use ($cat) {
+            ScoringPointConfig::where('kategori', $cat->name)->delete();
+            \App\Models\JuriAssignment::where('kategori', $cat->name)->delete();
+            $this->deleteCategoryFromTankRanges($cat->name, !$cat->uses_kelas);
+            $cat->delete();
+        });
+
+        \App\Helpers\Taxonomy::flush();
+
+        return response()->json(['success' => true, 'message' => 'Kategori "' . $cat->name . '" berhasil dihapus.']);
+    }
+
+    public function addClass(Request $request)
+    {
+        $data = $request->validate(['name' => 'required|string|max:10|unique:contest_classes,name']);
+        $maxUrutan = (int) \App\Models\ContestClass::max('urutan');
+        \App\Models\ContestClass::create(['name' => trim($data['name']), 'urutan' => $maxUrutan + 1]);
+        \App\Helpers\Taxonomy::flush();
+
+        return response()->json(['success' => true, 'message' => 'Kelas "' . $data['name'] . '" ditambahkan.']);
+    }
+
+    public function renameClass(Request $request)
+    {
+        $data = $request->validate([
+            'old_name' => 'required|string|max:10',
+            'new_name' => 'required|string|max:10',
+        ]);
+        $old = trim($data['old_name']);
+        $new = trim($data['new_name']);
+
+        $cls = \App\Models\ContestClass::where('name', $old)->first();
+        if (!$cls) {
+            return response()->json(['success' => false, 'message' => 'Kelas lama tidak ditemukan.'], 404);
+        }
+        if ($new === $old) {
+            return response()->json(['success' => true, 'message' => 'Tidak ada perubahan nama.']);
+        }
+        if (\App\Models\ContestClass::where('name', $new)->exists()) {
+            return response()->json(['success' => false, 'message' => 'Nama kelas "' . $new . '" sudah dipakai.'], 422);
+        }
+
+        \DB::transaction(function () use ($cls, $old, $new) {
+            Ikan::where('kelas', $old)->update(['kelas' => $new]);
+            Scoring::where('kelas', $old)->update(['kelas' => $new]);
+            \App\Models\JuriAssignment::where('kelas', $old)->update(['kelas' => $new]);
+            $cls->update(['name' => $new]);
+            $this->renameClassInTankRanges($old, $new);
+        });
+
+        \App\Helpers\Taxonomy::flush();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kelas "' . $old . '" diubah menjadi "' . $new . '". Data ikan, nilai, penugasan juri, dan rentang tank ikut diperbarui.',
+        ]);
+    }
+
+    public function deleteClass(Request $request)
+    {
+        $data = $request->validate(['name' => 'required|string|max:10']);
+        $cls = \App\Models\ContestClass::where('name', $data['name'])->first();
+        if (!$cls) {
+            return response()->json(['success' => false, 'message' => 'Kelas tidak ditemukan.'], 404);
+        }
+
+        $jumlahIkan = Ikan::where('kelas', $cls->name)->count();
+        if ($jumlahIkan > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kelas "' . $cls->name . '" tidak bisa dihapus karena masih ada ' . $jumlahIkan . ' ikan terdaftar.',
+            ], 422);
+        }
+
+        \DB::transaction(function () use ($cls) {
+            \App\Models\JuriAssignment::where('kelas', $cls->name)->delete();
+            $this->deleteClassFromTankRanges($cls->name);
+            $cls->delete();
+        });
+
+        \App\Helpers\Taxonomy::flush();
+
+        return response()->json(['success' => true, 'message' => 'Kelas "' . $cls->name . '" berhasil dihapus.']);
+    }
+
+    /* ─── Cascade JSON rentang tank (settings: tank_class_ranges) ─── */
+    private function loadTankRangesArray(): array
+    {
+        $raw = \DB::table('settings')->where('key', 'tank_class_ranges')->value('value');
+        $arr = json_decode($raw ?? '', true);
+        return is_array($arr) ? $arr : [];
+    }
+
+    private function saveTankRangesArray(array $arr): void
+    {
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'tank_class_ranges'],
+            ['value' => json_encode($arr), 'updated_at' => now()]
+        );
+    }
+
+    private function renameCategoryInTankRanges(string $old, string $new, bool $isNoKelas): void
+    {
+        $arr = $this->loadTankRangesArray();
+        if (empty($arr)) return;
+
+        foreach ($arr as $topKey => &$entry) {
+            if (isset($entry['kategori']) && is_array($entry['kategori']) && array_key_exists($old, $entry['kategori'])) {
+                $entry['kategori'][$new] = $entry['kategori'][$old];
+                unset($entry['kategori'][$old]);
+            }
+        }
+        unset($entry);
+
+        if ($isNoKelas && array_key_exists($old, $arr)) {
+            $arr[$new] = $arr[$old];
+            unset($arr[$old]);
+        }
+
+        $this->saveTankRangesArray($arr);
+    }
+
+    private function deleteCategoryFromTankRanges(string $name, bool $isNoKelas): void
+    {
+        $arr = $this->loadTankRangesArray();
+        if (empty($arr)) return;
+
+        foreach ($arr as $topKey => &$entry) {
+            if (isset($entry['kategori']) && is_array($entry['kategori'])) {
+                unset($entry['kategori'][$name]);
+            }
+        }
+        unset($entry);
+
+        if ($isNoKelas) {
+            unset($arr[$name]);
+        }
+
+        $this->saveTankRangesArray($arr);
+    }
+
+    private function renameClassInTankRanges(string $old, string $new): void
+    {
+        $arr = $this->loadTankRangesArray();
+        if (array_key_exists($old, $arr)) {
+            $arr[$new] = $arr[$old];
+            unset($arr[$old]);
+            $this->saveTankRangesArray($arr);
+        }
+    }
+
+    private function deleteClassFromTankRanges(string $name): void
+    {
+        $arr = $this->loadTankRangesArray();
+        if (array_key_exists($name, $arr)) {
+            unset($arr[$name]);
+            $this->saveTankRangesArray($arr);
+        }
     }
 }

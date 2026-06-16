@@ -58,6 +58,12 @@ class DashboardController extends Controller
         return max(1, $limit);
     }
 
+    private function isFeatureEnabled(string $key): bool
+    {
+        $val = \DB::table('settings')->where('key', $key)->value('value');
+        return ($val === null) ? true : ($val === '1');
+    }
+
     public function index()
     {
         $user = Auth::user()->fresh();
@@ -98,6 +104,8 @@ class DashboardController extends Controller
         $undianOpen = (bool)(\DB::table('settings')->where('key', 'undian_registration_open')->value('value') ?? true);
         $teamChampionOpen = (bool)(\DB::table('settings')->where('key', 'team_champion_registration_open')->value('value') ?? false);
         $mvpOpen = (bool)(\DB::table('settings')->where('key', 'mvp_registration_open')->value('value') ?? false);
+        $mvpFeatureEnabled = $this->isFeatureEnabled('mvp_feature_enabled');
+        $teamChampionFeatureEnabled = $this->isFeatureEnabled('team_champion_feature_enabled');
 
         // ★ DAFTAR KOTA & TEAM PER-USER (TIDAK lintas user)
         $daftarKota = collect();
@@ -164,6 +172,8 @@ class DashboardController extends Controller
             'undianOpen'   => $undianOpen,
             'teamChampionOpen' => $teamChampionOpen,
             'mvpOpen'          => $mvpOpen,
+            'mvpFeatureEnabled' => $mvpFeatureEnabled,
+            'teamChampionFeatureEnabled' => $teamChampionFeatureEnabled,
             'daftarKota'   => $daftarKota,
             'daftarTeam'   => $daftarTeam,
             'teamChampionCount' => $teamChampionCount,
@@ -202,7 +212,7 @@ class DashboardController extends Controller
             'kategori' => 'required|string|max:255',
         ];
 
-        if (!in_array($request->kategori, ['Bonsai', 'Jumbo'])) {
+        if (!in_array($request->kategori, \App\Helpers\Taxonomy::noKelasNames())) {
             $rules['kelas'] = 'required|string|max:10';
         } else {
             $rules['kelas'] = 'nullable';
@@ -215,7 +225,7 @@ class DashboardController extends Controller
             return response()->json(['success' => false, 'message' => 'Silakan isi profil terlebih dahulu.'], 400);
         }
 
-        $kelas = in_array($request->kategori, ['Bonsai', 'Jumbo']) ? null : $request->kelas;
+        $kelas = in_array($request->kategori, \App\Helpers\Taxonomy::noKelasNames()) ? null : $request->kelas;
 
         $ikan = Ikan::create([
             'peserta_id' => $peserta->id,
@@ -268,7 +278,7 @@ class DashboardController extends Controller
         }
 
         // Fallback: Bonsai/Jumbo disimpan di key khusus (tanpa kelas)
-        if (!$hasSubRange && in_array($kategori, ['Bonsai', 'Jumbo']) && $classRanges && isset($classRanges[$kategori]['kategori'][$kategori])) {
+        if (!$hasSubRange && in_array($kategori, \App\Helpers\Taxonomy::noKelasNames()) && $classRanges && isset($classRanges[$kategori]['kategori'][$kategori])) {
             $myMin = (int) $classRanges[$kategori]['kategori'][$kategori]['min'];
             $myMax = (int) $classRanges[$kategori]['kategori'][$kategori]['max'];
             $hasSubRange = true;
@@ -442,7 +452,7 @@ class DashboardController extends Controller
         }
 
         // Fallback: Bonsai/Jumbo disimpan di key khusus (tanpa kelas)
-        if (!$hasSubRange && in_array($kategori, ['Bonsai', 'Jumbo']) && $classRanges && isset($classRanges[$kategori]['kategori'][$kategori])) {
+        if (!$hasSubRange && in_array($kategori, \App\Helpers\Taxonomy::noKelasNames()) && $classRanges && isset($classRanges[$kategori]['kategori'][$kategori])) {
             $myMin = (int) $classRanges[$kategori]['kategori'][$kategori]['min'];
             $myMax = (int) $classRanges[$kategori]['kategori'][$kategori]['max'];
             $hasSubRange = true;
@@ -644,6 +654,13 @@ class DashboardController extends Controller
             'ikan_id' => 'required|exists:ikans,id',
         ]);
 
+        if (!$this->isFeatureEnabled('team_champion_feature_enabled')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fitur Team Champion sedang dinonaktifkan oleh panitia.',
+            ], 403);
+        }
+
         $isOpen = \DB::table('settings')->where('key', 'team_champion_registration_open')->value('value');
         if (!$isOpen || $isOpen === '0') {
             return response()->json([
@@ -702,6 +719,13 @@ class DashboardController extends Controller
 
     public function submitTeamChampionIkan()
     {
+        if (!$this->isFeatureEnabled('team_champion_feature_enabled')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fitur Team Champion sedang dinonaktifkan oleh panitia.',
+            ], 403);
+        }
+
         $peserta = Peserta::where('user_id', Auth::id())->first();
 
         if (!$peserta) {
@@ -752,6 +776,13 @@ class DashboardController extends Controller
         $request->validate([
             'ikan_id' => 'required|exists:ikans,id',
         ]);
+
+        if (!$this->isFeatureEnabled('mvp_feature_enabled')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fitur MVP sedang dinonaktifkan oleh panitia.',
+            ], 403);
+        }
 
         $isOpen = \DB::table('settings')->where('key', 'mvp_registration_open')->value('value');
         if (!$isOpen || $isOpen === '0') {
@@ -810,6 +841,10 @@ class DashboardController extends Controller
     // ★ METHOD BARU: SUBMIT MVP
     public function submitMvpIkan()
     {
+        if (!$this->isFeatureEnabled('mvp_feature_enabled')) {
+            return response()->json(['success' => false, 'message' => 'Fitur MVP sedang dinonaktifkan oleh panitia.'], 403);
+        }
+
         $peserta = Peserta::where('user_id', Auth::id())->first();
         if (!$peserta) return response()->json(['success' => false, 'message' => 'Profil peserta tidak ditemukan.'], 404);
 
@@ -1061,7 +1096,7 @@ class DashboardController extends Controller
                         }
 
                         $groupLabel = $ikan->kategori;
-                        if (!in_array($ikan->kategori, ['Bonsai', 'Jumbo']) && $ikan->kelas) {
+                        if (!in_array($ikan->kategori, \App\Helpers\Taxonomy::noKelasNames()) && $ikan->kelas) {
                             $groupLabel .= ' - Kelas ' . $ikan->kelas;
                         }
 
@@ -1106,7 +1141,7 @@ class DashboardController extends Controller
                         $rankInfo = collect($myResults)->firstWhere('ikan_id', $ikan->id);
 
                         $groupLabel = $ikan->kategori;
-                        if (!in_array($ikan->kategori, ['Bonsai', 'Jumbo']) && $ikan->kelas) {
+                        if (!in_array($ikan->kategori, \App\Helpers\Taxonomy::noKelasNames()) && $ikan->kelas) {
                             $groupLabel .= ' - Kelas ' . $ikan->kelas;
                         }
 
@@ -1141,6 +1176,11 @@ class DashboardController extends Controller
                     ->values()
                     ->toArray();
             }
+        }
+
+        // ★ MODUL 3: sembunyikan hasil MVP di Hasil Juara saat fitur MVP dinonaktifkan
+        if (!$this->isFeatureEnabled('mvp_feature_enabled')) {
+            $myMvpResults = [];
         }
 
         return response()->json([
@@ -1196,7 +1236,7 @@ class DashboardController extends Controller
             ]);
         }
 
-        $noKelas = ['Bonsai', 'Jumbo'];
+        $noKelas = \App\Helpers\Taxonomy::noKelasNames();
 
         $noms = \App\Models\Nominasi::whereIn('status', ['approved', 'rejected'])
             ->with('ikan')
@@ -1345,6 +1385,7 @@ class DashboardController extends Controller
             'user' => $user,
             'peserta' => $peserta,
             'initial' => $initial,
+            'mvpFeatureEnabled' => $this->isFeatureEnabled('mvp_feature_enabled'),
         ]);
     }
 

@@ -16,6 +16,8 @@
     $undianOpen = $undianOpen ?? true; // ★ Dari controller, default true
     $teamChampionOpen = $teamChampionOpen ?? false;
     $mvpOpen = $mvpOpen ?? false;
+    $mvpFeatureEnabled = $mvpFeatureEnabled ?? true;
+    $teamChampionFeatureEnabled = $teamChampionFeatureEnabled ?? true;
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -1938,9 +1940,16 @@
             .nominasi-sheet-wrap{ grid-template-columns:repeat(auto-fill, minmax(110px,1fr)); gap:8px; }
             .nom-rejected-grid{ grid-template-columns:1fr 1fr; }
         }
+        /* ★ MODUL 3: sembunyikan UI MVP / Team Champion saat fitur dinonaktifkan */
+        body.mvp-feature-off #mvpCard { display:none !important; }
+        body.mvp-feature-off .btn-mvp-star { display:none !important; }
+        body.tc-feature-off #teamChampionCard { display:none !important; }
+        body.tc-feature-off .btn-team-champion { display:none !important; }
+        /* Menu gabungan hilang HANYA bila kedua fitur nonaktif */
+        body.mvp-feature-off.tc-feature-off [data-user-page="mvp"] { display:none !important; }
     </style>
 </head>
-<body class="user-page-overview">
+<body class="user-page-overview @if(!$mvpFeatureEnabled) mvp-feature-off @endif @if(!$teamChampionFeatureEnabled) tc-feature-off @endif">
 
     <!-- ATMOSPHERIC BACKGROUND -->
     <div class="ocean-bg"></div>
@@ -2157,13 +2166,7 @@
                                         <div class="input-wrapper">
                                             <select name="kategori" id="ikanKategoriSelect" class="form-select" required style="padding-left:14px;">
                                                 <option value="" disabled selected>Pilih Kategori Ikan</option>
-                                                <option value="Cencu">Cencu</option>
-                                                <option value="Chingwa">Chingwa</option>
-                                                <option value="Freemarking">Freemarking</option>
-                                                <option value="Goldenbase">Goldenbase</option>
-                                                <option value="Klasik">Klasik</option>
-                                                <option value="Bonsai">Bonsai</option>
-                                                <option value="Jumbo">Jumbo</option>
+                                                @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
                                             </select>
                                         </div>
                                     </div>
@@ -2172,11 +2175,7 @@
                                         <div class="input-wrapper">
                                             <select name="kelas" id="ikanKelasSelect" class="form-select" style="padding-left:14px;">
                                                 <option value="" disabled selected>Pilih Kelas</option>
-                                                <option value="A">Kelas A</option>
-                                                <option value="B">Kelas B</option>
-                                                <option value="C">Kelas C</option>
-                                                <option value="D">Kelas D</option>
-                                                <option value="E">Kelas E</option>
+                                                @foreach(\App\Helpers\Taxonomy::classNames() as $namaKelas)<option value="{{ $namaKelas }}">Kelas {{ $namaKelas }}</option>@endforeach
                                             </select>
                                         </div>
                                     </div>
@@ -2463,11 +2462,7 @@
 
                             <select class="fish-filter" id="fishFilterKelas" aria-label="Filter kelas">
                                 <option value="">Semua Kelas</option>
-                                <option value="A">Kelas A</option>
-                                <option value="B">Kelas B</option>
-                                <option value="C">Kelas C</option>
-                                <option value="D">Kelas D</option>
-                                <option value="E">Kelas E</option>
+                                @foreach(\App\Helpers\Taxonomy::classNames() as $namaKelas)<option value="{{ $namaKelas }}">Kelas {{ $namaKelas }}</option>@endforeach
                                 <option value="__no_kelas">Tanpa Kelas</option>
                             </select>
 
@@ -3742,7 +3737,7 @@
         let tankDrawMax = 1000;
 
         // --- HIDE KELAS UNTUK BONSAI/JUMBO ---
-        var noKelasKategori = ['Bonsai', 'Jumbo'];
+        var noKelasKategori = @json(\App\Helpers\Taxonomy::noKelasNames());
         var ikanKategoriSelect = document.getElementById('ikanKategoriSelect');
         var ikanKelasWrap = document.getElementById('ikanKelasWrap');
         var ikanKelasSelectEl = document.getElementById('ikanKelasSelect');

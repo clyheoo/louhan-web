@@ -968,6 +968,7 @@
             <div class="sb-section-label" style="margin-top:8px;">Manajemen</div>
             <a class="sidebar-item" data-page="users"><i class="fas fa-users-gear"></i> Kelola User</a>
             <a class="sidebar-item" data-page="kelola_juri"><i class="fas fa-user-shield"></i> Kelola Juri</a>
+             <a class="sidebar-item" data-page="scoring_config"><i class="fas fa-sliders"></i> Pengaturan Penilaian</a>
             <a class="sidebar-item" data-page="registrasi"><i class="fas fa-database"></i> Registrasi & Undian</a>
             <a class="sidebar-item" data-page="nominasi"><i class="fas fa-award"></i> Nominasi</a>
             <a class="sidebar-item" data-page="mvp"><i class="fas fa-star"></i> Kelola MVP</a>
@@ -981,6 +982,7 @@
             <a class="sidebar-item" data-page="results"><i class="fas fa-paper-plane"></i> Kirim Hasil Juara</a>
             <a class="sidebar-item" data-page="ranking"><i class="fas fa-trophy"></i> Point Ranking</a>
             <a class="sidebar-item" data-page="undian"><i class="fas fa-dice"></i> Kelola Mesin Undian</a>
+            <a class="sidebar-item" data-page="taxonomy"><i class="fas fa-layer-group"></i> Kelola Kategori &amp; Kelas</a>
         </nav>
 
         <div class="sidebar-foot">
@@ -1129,8 +1131,7 @@
                             <div class="search-box" style="max-width:160px;flex:none;"><i class="fas fa-hashtag"></i><input type="text" id="filterTank" placeholder="No. Tank..." inputmode="numeric"></div>
                             <select class="filter-select" id="filterKategori">
                                 <option value="">Semua Kategori</option>
-                                <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
-                                <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                                @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
                             </select>
                             <select class="filter-select" id="filterStatus">
                                 <option value="">Semua Status</option>
@@ -1213,6 +1214,31 @@
                         </p>
                         <div id="kelolaJuriList" style="display:flex;flex-direction:column;gap:12px;">
                             <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ PAGE: PENGATURAN PENILAIAN (SCORING POINT CONFIG) ═══════════ -->
+            <section class="page-section" data-page="scoring_config" style="display:none;">
+                <div class="glass-card">
+                    <div class="card-head">
+                        <h3><span class="ti"><i class="fas fa-sliders"></i></span>Pengaturan Penilaian — Bobot &amp; Persentase Point</h3>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <select id="spcCategorySelect" onchange="onScoringConfigCategoryChange()"
+                                style="padding:8px 12px;font-size:12px;font-weight:700;background:var(--glass-2);border:1px solid var(--bd-2);border-radius:10px;color:var(--text-hi);font-family:inherit;cursor:pointer;outline:none;min-width:190px;">
+                                <option value="">-- Pilih Kategori --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p style="font-size:11.5px;color:var(--text-mid);margin-bottom:14px;line-height:1.6;">
+                            Atur <b style="color:var(--cyan-300);">bobot</b> tiap komponen dan <b style="color:var(--cyan-300);">persentase</b> tiap sub-nilai yang dipakai juri.
+                            Rumus point <b>tidak berubah</b>: <code style="background:rgba(0,0,0,.3);padding:2px 7px;border-radius:6px;color:#A5F3FC;">nilai juri × bobot × persen ÷ 100</code>.
+                            Pilih kategori di kanan atas untuk mulai menyetel.
+                        </p>
+                        <div id="scoringConfigForm">
+                            <div class="empty-state"><i class="fas fa-hand-pointer"></i><p>Pilih kategori untuk mulai menyetel.</p></div>
                         </div>
                     </div>
                 </div>
@@ -1337,15 +1363,14 @@
                                         <label class="form-label">Kategori</label>
                                         <select name="kategori" class="form-control" required>
                                             <option value="" disabled selected>Pilih Kategori</option>
-                                            <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
-                                            <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                                            @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
                                         </select>
                                     </div>
                                     <div class="form-group" style="margin-bottom:0;">
                                         <label class="form-label">Kelas</label>
                                         <select name="kelas" class="form-control" required>
                                             <option value="" disabled selected>Pilih Kelas</option>
-                                            <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                                            @foreach(\App\Helpers\Taxonomy::classNames() as $namaKelas)<option value="{{ $namaKelas }}">{{ $namaKelas }}</option>@endforeach
                                         </select>
                                     </div>
                                 </div>
@@ -1385,7 +1410,19 @@
 
             <!-- ═══════════ PAGE: MVP ═══════════ -->
             <section class="page-section" data-page="mvp" style="display:none;">
-
+                <div class="glass-card" style="margin-bottom:16px;">
+                    <div class="card-head">
+                        <h3><span class="ti" style="background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:#FCA5A5;"><i class="fas fa-power-off"></i></span>Aktivasi Fitur MVP</h3>
+                        <button class="btn-primary" id="btnToggleMvpFeature" onclick="toggleMvpFeature()" style="padding:8px 16px;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
+                    </div>
+                    <div class="card-body">
+                        <div style="font-size:13px;color:var(--text);" id="mvpFeatureText">Memuat status...</div>
+                        <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:11px;padding:10px 14px;margin-top:12px;display:flex;gap:8px;align-items:flex-start;">
+                            <i class="fas fa-circle-info" style="color:#FCA5A5;margin-top:2px;"></i>
+                            <span style="font-size:11px;color:#FCA5A5;line-height:1.5;">Saat dinonaktifkan: menu <b>MVP &amp; Team Champion</b> hilang dari sidebar user (jika Team Champion juga nonaktif), tombol &amp; pendaftaran MVP diblokir, dan hasil MVP disembunyikan di Hasil Juara. Data ikan yang sudah ditandai tidak terhapus.</span>
+                        </div>
+                    </div>
+                </div>
                 <div class="glass-card" style="margin-bottom:16px;">
                     <div class="card-head">
                         <h3><span class="ti" style="background:rgba(245,158,11,.12);border-color:var(--bd-gold);color:var(--gold-400);"><i class="fas fa-star"></i></span>Status Pendaftaran MVP</h3>
@@ -1460,6 +1497,19 @@
             </section>
 
             <section class="page-section" data-page="team_champion" style="display:none;">
+                <div class="glass-card" style="margin-bottom:18px;">
+                    <div class="card-head">
+                        <h3><span class="ti" style="background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:#FCA5A5;"><i class="fas fa-power-off"></i></span>Aktivasi Fitur Team Champion</h3>
+                        <button class="btn-primary" id="btnToggleTeamChampionFeature" onclick="toggleTeamChampionFeature()" style="padding:8px 16px;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
+                    </div>
+                    <div class="card-body">
+                        <div style="font-size:13px;color:var(--text);" id="teamChampionFeatureText">Memuat status...</div>
+                        <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:11px;padding:10px 14px;margin-top:12px;display:flex;gap:8px;align-items:flex-start;">
+                            <i class="fas fa-circle-info" style="color:#FCA5A5;margin-top:2px;"></i>
+                            <span style="font-size:11px;color:#FCA5A5;line-height:1.5;">Saat dinonaktifkan: tombol &amp; pendaftaran Team Champion diblokir untuk user. Bila MVP juga nonaktif, menu <b>MVP &amp; Team Champion</b> hilang sepenuhnya dari sidebar user. Data tidak terhapus.</span>
+                        </div>
+                    </div>
+                </div>
                 <div class="glass-card" style="margin-bottom:18px;">
                     <div class="card-head">
                         <div>
@@ -1642,21 +1692,10 @@
                             </div>
                             <select class="filter-select" id="admPointFilterKategori" onchange="loadAdminPointRanking()">
                                 <option value="">Semua Kategori</option>
-                                <option value="Cencu">Cencu</option>
-                                <option value="Chingwa">Chingwa</option>
-                                <option value="Freemarking">Freemarking</option>
-                                <option value="Goldenbase">Goldenbase</option>
-                                <option value="Klasik">Klasik</option>
-                                <option value="Bonsai">Bonsai</option>
-                                <option value="Jumbo">Jumbo</option>
+                                @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
                             </select>
                             <select class="filter-select" id="admPointFilterKelas" onchange="loadAdminPointRanking()" style="min-width:120px;">
-                                <option value="">Semua Kelas</option>
-                                <option value="A">Kelas A</option>
-                                <option value="B">Kelas B</option>
-                                <option value="C">Kelas C</option>
-                                <option value="D">Kelas D</option>
-                                <option value="E">Kelas E</option>
+                                @foreach(\App\Helpers\Taxonomy::classNames() as $namaKelas)<option value="{{ $namaKelas }}">Kelas {{ $namaKelas }}</option>@endforeach
                             </select>
                         </div>
                         <div id="adminPointRankingContent">
@@ -1715,12 +1754,11 @@
                             </div>
                             <select class="filter-select" id="adminNomFilterKat" onchange="renderAdminNomGrid()">
                                 <option value="">Semua Kategori</option>
-                                <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
-                                <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                                @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
                             </select>
                             <select class="filter-select" id="adminNomFilterKelas" onchange="renderAdminNomGrid()" style="min-width:120px;">
                                 <option value="">Semua Kelas</option>
-                                <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                                @foreach(\App\Helpers\Taxonomy::classNames() as $namaKelas)<option value="{{ $namaKelas }}">{{ $namaKelas }}</option>@endforeach
                             </select>
                         </div>
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
@@ -1745,12 +1783,11 @@
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <select id="adminNomReviewFilterKat" class="filter-select" onchange="adminNomApplyFilter()" style="min-width:140px;padding:7px 30px 7px 10px;font-size:11px;">
                                 <option value="">Semua Kategori</option>
-                                <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
-                                <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                                @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
                             </select>
                             <select id="adminNomReviewFilterKelas" class="filter-select" onchange="adminNomApplyFilter()" style="min-width:100px;padding:7px 30px 7px 10px;font-size:11px;">
                                 <option value="">Semua Kelas</option>
-                                <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                                @foreach(\App\Helpers\Taxonomy::classNames() as $namaKelas)<option value="{{ $namaKelas }}">{{ $namaKelas }}</option>@endforeach
                             </select>
                             <button class="btn-xs" onclick="adminNomResetFilter()" style="background:var(--glass-2);color:var(--text-mid);border:1px solid var(--bd-2);padding:7px 10px;"><i class="fas fa-rotate-left"></i></button>
                             <span style="font-size:10px;font-weight:700;color:var(--gold-300);" id="adminPendingCount">0 pending</span>
@@ -1786,12 +1823,11 @@
                                 style="min-width:125px;padding:7px 10px;font-size:11px;">
                             <select id="adminHistFilterKat" class="filter-select" onchange="adminHistApplyFilter()" style="min-width:130px;padding:7px 30px 7px 10px;font-size:11px;">
                                 <option value="">Semua Kategori</option>
-                                <option>Cencu</option><option>Chingwa</option><option>Freemarking</option>
-                                <option>Goldenbase</option><option>Klasik</option><option>Bonsai</option><option>Jumbo</option>
+                                @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
                             </select>
                             <select id="adminHistFilterKelas" class="filter-select" onchange="adminHistApplyFilter()" style="min-width:95px;padding:7px 30px 7px 10px;font-size:11px;">
                                 <option value="">Semua Kelas</option>
-                                <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+                                @foreach(\App\Helpers\Taxonomy::classNames() as $namaKelas)<option value="{{ $namaKelas }}">{{ $namaKelas }}</option>@endforeach
                             </select>
                             <button class="btn-xs" onclick="adminHistResetFilter()" style="background:var(--glass-2);color:var(--text-mid);border:1px solid var(--bd-2);padding:7px 10px;"><i class="fas fa-rotate-left"></i></button>
                             <div style="display:flex;gap:5px;background:var(--glass-2);padding:3px;border-radius:9px;border:1px solid var(--bd-2);">
@@ -1823,6 +1859,48 @@
                         <div style="background:rgba(34,211,238,.08);border:1px solid var(--bd-cyan);border-radius:11px;padding:10px 14px;margin-top:12px;display:flex;gap:8px;align-items:flex-start;">
                             <i class="fas fa-circle-info" style="color:var(--cyan-400);margin-top:2px;"></i>
                             <span style="font-size:11px;color:var(--cyan-300);line-height:1.5;">Jika dikunci, peserta tetap bisa mendaftarkan ikan, namun tidak bisa mengacak nomor tank. Gunakan ini untuk mengatur jadwal pengundian.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ PAGE: KELOLA KATEGORI & KELAS ═══════════ -->
+            <section class="page-section" data-page="taxonomy" style="display:none;">
+                <div class="glass-card" style="margin-bottom:16px;">
+                    <div class="card-head">
+                        <h3><span class="ti"><i class="fas fa-tags"></i></span>Kelola Kategori</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="font-size:11.5px;color:var(--text-mid);margin-bottom:14px;line-height:1.6;">
+                            Tambah, ubah nama, atur mode kelas, atau hapus kategori. <b style="color:#FCA5A5;">Ubah nama</b> otomatis memperbarui data ikan, konfigurasi point, penugasan juri, dan rentang tank. <b style="color:#FCA5A5;">Hapus</b> hanya bisa jika belum ada ikan terdaftar.
+                        </p>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px;background:rgba(255,255,255,.04);border:1px solid var(--bd-2);border-radius:11px;padding:10px 12px;">
+                            <input type="text" id="newCategoryName" placeholder="Nama kategori baru" style="flex:1;min-width:160px;padding:9px 11px;border-radius:9px;border:1px solid var(--bd-2);background:rgba(0,0,0,.28);color:var(--text-hi);font-family:inherit;font-weight:700;outline:none;">
+                            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-mid);font-weight:700;cursor:pointer;">
+                                <input type="checkbox" id="newCategoryUsesKelas" checked style="width:16px;height:16px;accent-color:var(--cyan-400);cursor:pointer;"> Pakai kelas
+                            </label>
+                            <button type="button" class="btn-primary" onclick="addCategory(this)" style="padding:9px 14px;font-size:11px;"><i class="fas fa-plus"></i> Tambah Kategori</button>
+                        </div>
+                        <div id="categoryList" style="display:flex;flex-direction:column;gap:10px;">
+                            <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-head">
+                        <h3><span class="ti"><i class="fas fa-layer-group"></i></span>Kelola Kelas</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="font-size:11.5px;color:var(--text-mid);margin-bottom:14px;line-height:1.6;">
+                            Kelas dipakai untuk kategori bermode "pakai kelas" (mis. A, B, C). Ubah nama akan memperbarui data ikan, nilai, penugasan juri, dan rentang tank. Hapus hanya bila belum ada ikan terdaftar.
+                        </p>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px;background:rgba(255,255,255,.04);border:1px solid var(--bd-2);border-radius:11px;padding:10px 12px;">
+                            <input type="text" id="newClassName" placeholder="Nama kelas baru (mis. F)" maxlength="10" style="flex:1;min-width:160px;padding:9px 11px;border-radius:9px;border:1px solid var(--bd-2);background:rgba(0,0,0,.28);color:var(--text-hi);font-family:inherit;font-weight:700;outline:none;">
+                            <button type="button" class="btn-primary" onclick="addClass(this)" style="padding:9px 14px;font-size:11px;"><i class="fas fa-plus"></i> Tambah Kelas</button>
+                        </div>
+                        <div id="classList" style="display:flex;flex-wrap:wrap;gap:8px;">
+                            <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>
                         </div>
                     </div>
                 </div>
@@ -2257,13 +2335,7 @@
                 <label class="form-label">Kategori</label>
                 <select id="editKKKat" class="form-control" onchange="onEditKKKatChange()" style="padding-left:14px;">
                     <option value="">-- Pilih Kategori --</option>
-                    <option>Cencu</option>
-                    <option>Chingwa</option>
-                    <option>Freemarking</option>
-                    <option>Goldenbase</option>
-                    <option>Klasik</option>
-                    <option>Bonsai</option>
-                    <option>Jumbo</option>
+                    @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
                 </select>
             </div>
 
