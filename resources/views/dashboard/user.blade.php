@@ -1920,6 +1920,434 @@
             font-size: 12px;
             font-weight: 500;
         }
+        /* ====================================================
+        HASIL JUARA — FILTER & HORIZONTAL TEAM PREVIEW
+        ==================================================== */
+        .result-section-head{
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-end;
+            gap:14px;
+            margin:22px 0 10px;
+        }
+
+        .result-section-head h3{
+            font-size:14px;
+            font-weight:900;
+            color:var(--text-hi);
+            margin:0;
+        }
+
+        .result-section-head p{
+            margin:5px 0 0;
+            font-size:11px;
+            color:var(--text-mid);
+            line-height:1.5;
+        }
+
+        .hasil-ranking-wrap,
+        .hasil-team-wrap{
+            min-width:0;
+        }
+
+        .result-group-picker{
+            display:flex;
+            gap:8px;
+            overflow-x:auto;
+            padding:2px 1px 10px;
+            margin-bottom:10px;
+            scrollbar-width:thin;
+            scrollbar-color:var(--bd-3) transparent;
+        }
+
+        .result-group-picker::-webkit-scrollbar{
+            height:6px;
+        }
+
+        .result-group-picker::-webkit-scrollbar-thumb{
+            background:var(--bd-3);
+            border-radius:999px;
+        }
+
+        .result-group-chip{
+            appearance:none;
+            border:1px solid var(--bd-2);
+            background:var(--glass-2);
+            color:var(--text-mid);
+            border-radius:999px;
+            padding:8px 12px;
+            white-space:nowrap;
+            font-family:inherit;
+            font-size:11px;
+            font-weight:800;
+            cursor:pointer;
+            transition:all .2s ease;
+        }
+
+        .result-group-chip:hover{
+            border-color:var(--bd-cyan);
+            color:var(--cyan-200);
+            background:rgba(34,211,238,.08);
+        }
+
+        .result-group-chip.active{
+            color:var(--text-hi);
+            border-color:var(--bd-cyan);
+            background:linear-gradient(135deg,rgba(34,211,238,.18),rgba(37,99,235,.14));
+            box-shadow:0 8px 20px -14px rgba(34,211,238,.65);
+        }
+
+        .result-preview-info{
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+            align-items:center;
+            margin-bottom:10px;
+            padding:10px 12px;
+            border:1px solid var(--bd-1);
+            border-radius:12px;
+            background:rgba(255,255,255,.025);
+        }
+
+        .result-preview-info strong{
+            color:var(--cyan-200);
+            font-size:12px;
+        }
+
+        .result-preview-info span{
+            color:var(--text-low);
+            font-size:10px;
+            font-weight:800;
+            white-space:nowrap;
+        }
+
+        .result-preview-grid{
+            display:grid;
+            grid-template-columns:repeat(auto-fill,minmax(270px,1fr));
+            gap:10px;
+        }
+
+        .result-preview-card{
+            padding:14px;
+            border:1px solid var(--bd-2);
+            border-radius:16px;
+            background:var(--glass-2);
+            min-width:0;
+        }
+
+        .result-preview-top{
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:12px;
+        }
+
+        .result-preview-name{
+            min-width:0;
+        }
+
+        .result-preview-name strong{
+            display:block;
+            color:var(--text-hi);
+            font-size:13px;
+            font-weight:900;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+
+        .result-preview-name span{
+            display:block;
+            margin-top:4px;
+            color:var(--text-mid);
+            font-size:11px;
+            font-weight:700;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+
+        .result-preview-rank{
+            flex-shrink:0;
+            text-align:right;
+        }
+
+        .result-preview-rank small{
+            display:block;
+            color:var(--text-low);
+            font-size:9px;
+            font-weight:900;
+            text-transform:uppercase;
+            letter-spacing:.08em;
+        }
+
+        .result-preview-rank b{
+            display:block;
+            margin-top:2px;
+            color:var(--gold-300);
+            font-family:'JetBrains Mono',monospace;
+            font-size:22px;
+            line-height:1;
+        }
+
+        .result-preview-rank span{
+            display:block;
+            margin-top:4px;
+            color:var(--cyan-300);
+            font-size:10px;
+            font-weight:800;
+        }
+
+        .ranking-detail{
+            margin-top:12px;
+            border-top:1px dashed var(--bd-1);
+            padding-top:9px;
+        }
+
+        .ranking-detail summary{
+            color:var(--text-mid);
+            cursor:pointer;
+            font-size:10px;
+            font-weight:800;
+            list-style:none;
+        }
+
+        .ranking-detail summary::-webkit-details-marker{
+            display:none;
+        }
+
+        .ranking-detail summary::before{
+            content:'›';
+            display:inline-block;
+            margin-right:6px;
+            color:var(--cyan-300);
+            font-size:15px;
+            line-height:8px;
+            transition:transform .2s ease;
+        }
+
+        .ranking-detail[open] summary::before{
+            transform:rotate(90deg);
+        }
+
+        .team-result-scroller{
+            display:flex;
+            gap:12px;
+            overflow-x:auto;
+            padding:2px 2px 10px;
+            scroll-snap-type:x proximity;
+            overscroll-behavior-x:contain;
+            scrollbar-width:thin;
+            scrollbar-color:var(--bd-3) transparent;
+        }
+
+        .team-result-scroller::-webkit-scrollbar{
+            height:7px;
+        }
+
+        .team-result-scroller::-webkit-scrollbar-thumb{
+            background:var(--bd-3);
+            border-radius:999px;
+        }
+
+        .team-result-card{
+            flex:0 0 360px;
+            max-width:360px;
+            scroll-snap-align:start;
+            border:1px solid var(--bd-2);
+            border-radius:17px;
+            background:var(--glass-2);
+            overflow:hidden;
+        }
+
+        .team-result-card.is-team-champion{
+            border-color:rgba(34,211,238,.28);
+        }
+
+        .team-result-head{
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:12px;
+            padding:14px;
+            border-bottom:1px solid var(--bd-1);
+            background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+        }
+
+        .team-result-head h4{
+            margin:0;
+            color:var(--text-hi);
+            font-size:13px;
+            font-weight:900;
+            overflow-wrap:anywhere;
+        }
+
+        .team-result-head p{
+            margin:4px 0 0;
+            color:var(--text-mid);
+            font-size:10px;
+            font-weight:700;
+        }
+
+        .team-result-position{
+            min-width:48px;
+            flex-shrink:0;
+            text-align:center;
+            padding:7px 6px;
+            border-radius:10px;
+            border:1px solid var(--bd-gold);
+            background:rgba(245,158,11,.08);
+        }
+
+        .team-result-position small{
+            display:block;
+            color:var(--text-low);
+            font-size:8px;
+            font-weight:900;
+            text-transform:uppercase;
+        }
+
+        .team-result-position b{
+            display:block;
+            color:var(--gold-300);
+            font-family:'JetBrains Mono',monospace;
+            font-size:18px;
+            line-height:1.1;
+        }
+
+        .team-result-card.is-team-champion .team-result-position{
+            border-color:var(--bd-cyan);
+            background:rgba(34,211,238,.08);
+        }
+
+        .team-result-card.is-team-champion .team-result-position b{
+            color:var(--cyan-300);
+        }
+
+        .team-result-summary{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:8px;
+            padding:12px 14px;
+        }
+
+        .team-result-metric{
+            padding:9px 10px;
+            border:1px solid var(--bd-1);
+            border-radius:10px;
+            background:rgba(255,255,255,.025);
+        }
+
+        .team-result-metric span{
+            display:block;
+            color:var(--text-low);
+            font-size:9px;
+            font-weight:900;
+            text-transform:uppercase;
+            letter-spacing:.06em;
+        }
+
+        .team-result-metric b{
+            display:block;
+            margin-top:3px;
+            color:var(--gold-300);
+            font-family:'JetBrains Mono',monospace;
+            font-size:15px;
+        }
+
+        .team-result-metric.is-cyan b{
+            color:var(--cyan-300);
+        }
+
+        .team-fish-list{
+            max-height:235px;
+            overflow-y:auto;
+            padding:0 14px 10px;
+            scrollbar-width:thin;
+            scrollbar-color:var(--bd-3) transparent;
+        }
+
+        .team-fish-row{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            padding:10px 0;
+            border-bottom:1px dashed var(--bd-1);
+        }
+
+        .team-fish-row:last-child{
+            border-bottom:0;
+        }
+
+        .team-fish-main{
+            min-width:0;
+        }
+
+        .team-fish-main strong{
+            display:block;
+            color:var(--text);
+            font-size:11px;
+            font-weight:800;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+
+        .team-fish-main span{
+            display:block;
+            margin-top:3px;
+            color:var(--text-low);
+            font-size:10px;
+            font-weight:700;
+        }
+
+        .team-fish-score{
+            flex-shrink:0;
+            text-align:right;
+        }
+
+        .team-fish-score b{
+            display:block;
+            color:var(--gold-300);
+            font-family:'JetBrains Mono',monospace;
+            font-size:12px;
+        }
+
+        .team-fish-score span{
+            display:block;
+            margin-top:2px;
+            color:var(--text-low);
+            font-size:9px;
+            font-weight:800;
+        }
+
+        @media(max-width:640px){
+            .result-section-head{
+                margin-top:18px;
+            }
+
+            .result-section-head p{
+                font-size:10px;
+            }
+
+            .result-preview-grid{
+                grid-template-columns:1fr;
+            }
+
+            .team-result-card{
+                flex-basis:calc(100vw - 64px);
+                max-width:calc(100vw - 64px);
+            }
+
+            .team-fish-row{
+                align-items:flex-start;
+            }
+
+            .team-fish-main strong{
+                white-space:normal;
+            }
+        }
 
         /* ===== SHEET HASIL NOMINASI ===== */
         .nominasi-sheet-wrap{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:12px; }
@@ -2224,7 +2652,7 @@
                                         <div class="stat-card is-gold">
                                             <div class="stat-label">MVP Final</div>
                                             <div class="stat-value" id="hasilTotalMvp">0</div>
-                                            <div class="stat-meta">Data MVP Anda</div>
+                                            <div class="stat-meta">Data MVP semua team</div>
                                         </div>
                                         <div class="stat-card is-success">
                                             <div class="stat-label">Status</div>
@@ -2233,23 +2661,38 @@
                                         </div>
                                     </div>
 
-                                    <h3 style="font-size:14px;font-weight:900;color:var(--text-hi);margin-bottom:10px;">
-                                        <i class="fas fa-medal" style="color:var(--gold-400);margin-right:6px;"></i>
-                                        Ranking Ikan Anda
-                                    </h3>
-                                    <div id="hasilJuaraList" style="display:grid;gap:10px;margin-bottom:20px;"></div>
+                                    <div class="result-section-head">
+                                        <div>
+                                            <h3>
+                                                <i class="fas fa-medal" style="color:var(--gold-400);margin-right:6px;"></i>
+                                                Ranking Ikan Anda
+                                            </h3>
+                                            <p>Pilih kategori dan kelas untuk melihat preview hasil juara yang sudah final.</p>
+                                        </div>
+                                    </div>
+                                    <div id="hasilJuaraList" class="hasil-ranking-wrap"></div>
 
-                                    <h3 style="font-size:14px;font-weight:900;color:var(--text-hi);margin-bottom:10px;">
-                                        <i class="fas fa-star" style="color:var(--gold-400);margin-right:6px;"></i>
-                                        Hasil MVP — Semua Team
-                                    </h3>
-                                    <div id="hasilMvpList" style="display:grid;gap:10px;margin-bottom:20px;"></div>
+                                    <div class="result-section-head">
+                                        <div>
+                                            <h3>
+                                                <i class="fas fa-star" style="color:var(--gold-400);margin-right:6px;"></i>
+                                                Hasil MVP — Semua Team
+                                            </h3>
+                                            <p>MVP dikelompokkan per Team/Kota agar lebih mudah dilihat.</p>
+                                        </div>
+                                    </div>
+                                    <div id="hasilMvpList" class="hasil-team-wrap"></div>
 
-                                    <h3 style="font-size:14px;font-weight:900;color:var(--text-hi);margin-bottom:10px;">
-                                        <i class="fas fa-people-group" style="color:var(--cyan-300);margin-right:6px;"></i>
-                                        Hasil Team Champion — Semua Team
-                                    </h3>
-                                    <div id="hasilTeamChampionList" style="display:grid;gap:10px;"></div>
+                                    <div class="result-section-head">
+                                        <div>
+                                            <h3>
+                                                <i class="fas fa-people-group" style="color:var(--cyan-300);margin-right:6px;"></i>
+                                                Hasil Team Champion — Semua Team
+                                            </h3>
+                                            <p>Geser horizontal untuk melihat hasil setiap team.</p>
+                                        </div>
+                                    </div>
+                                    <div id="hasilTeamChampionList" class="hasil-team-wrap"></div>
                                 </div>
                             </div>
                         </div>
@@ -3308,7 +3751,347 @@
             '</div>';
         }
 
-var _publicResultsLoaded = false;
+        var _publicResultsLoaded = false;
+
+        var publicResultsDashboardData = {
+            results: [],
+            mvp: [],
+            teamChampion: [],
+            activeGroup: ''
+        };
+
+        function publicResultGroupKey(item){
+            return item.group_key || (
+                (item.kategori || '-') + '|' + (item.kelas || '-')
+            );
+        }
+
+        function publicResultGroupLabel(item){
+            if(item.group_label){
+                return item.group_label;
+            }
+
+            var kategori = item.kategori || '-';
+            var kelas = item.kelas || '-';
+
+            if(
+                kategori === 'Bonsai' ||
+                kategori === 'Jumbo' ||
+                kelas === '-' ||
+                kelas === ''
+            ){
+                return kategori;
+            }
+
+            return kategori + ' - Kelas ' + kelas;
+        }
+
+        function publicTeamLabel(item){
+            var label = String(
+                item.asal_label ||
+                item.detail_anggota ||
+                ''
+            ).trim();
+
+            return label || 'Tanpa Team/Kota';
+        }
+
+        function formatPublicPoint(value){
+            var number = parseFloat(value || 0);
+
+            if(Number.isInteger(number)){
+                return String(number);
+            }
+
+            return number.toFixed(2).replace(/\.00$/, '');
+        }
+
+        function getPublicResultGroups(items){
+            var groups = {};
+
+            (items || []).forEach(function(item){
+                var key = publicResultGroupKey(item);
+
+                if(!groups[key]){
+                    groups[key] = {
+                        key: key,
+                        label: publicResultGroupLabel(item)
+                    };
+                }
+            });
+
+            return Object.keys(groups)
+                .map(function(key){
+                    return groups[key];
+                })
+                .sort(function(a, b){
+                    return a.label.localeCompare(b.label);
+                });
+        }
+
+        function setDashboardResultGroup(groupKey){
+            publicResultsDashboardData.activeGroup = groupKey;
+            renderDashboardRankingPreview();
+        }
+
+        function renderDashboardRankingPreview(){
+            var list = document.getElementById('hasilJuaraList');
+            var results = publicResultsDashboardData.results || [];
+
+            if(!list){
+                return;
+            }
+
+            if(!results.length){
+                list.innerHTML =
+                    '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">' +
+                        'Belum ada data hasil juara.' +
+                    '</div>';
+                return;
+            }
+
+            var groups = getPublicResultGroups(results);
+
+            if(
+                !publicResultsDashboardData.activeGroup ||
+                !groups.some(function(group){
+                    return group.key === publicResultsDashboardData.activeGroup;
+                })
+            ){
+                publicResultsDashboardData.activeGroup = groups[0].key;
+            }
+
+            var activeGroup = publicResultsDashboardData.activeGroup;
+
+            var selectedResults = results
+                .filter(function(item){
+                    return publicResultGroupKey(item) === activeGroup;
+                })
+                .sort(function(a, b){
+                    return (parseInt(a.position, 10) || 99999) -
+                        (parseInt(b.position, 10) || 99999);
+                });
+
+            var activeLabel = groups.find(function(group){
+                return group.key === activeGroup;
+            });
+
+            var chips = groups.map(function(group){
+                var activeClass = group.key === activeGroup ? ' active' : '';
+
+                return '<button type="button" class="result-group-chip' + activeClass + '"' +
+                    ' data-group="' + escapeHtml(group.key) + '"' +
+                    ' onclick="setDashboardResultGroup(this.dataset.group)">' +
+                    escapeHtml(group.label) +
+                '</button>';
+            }).join('');
+
+            var cards = selectedResults.map(function(result){
+                var asalText = result.asal_label || result.detail_anggota || '-';
+                var finalPoint = result.final_rank_point || result.rank_point || 0;
+
+                return '<article class="result-preview-card">' +
+                    '<div class="result-preview-top">' +
+                        '<div class="result-preview-name">' +
+                            '<strong>' + escapeHtml(result.nama_peserta || '-') + '</strong>' +
+                            '<span>' + escapeHtml(asalText) + '</span>' +
+                            '<span>' +
+                                escapeHtml(publicResultGroupLabel(result)) +
+                                ' · Tank ' +
+                                escapeHtml(String(result.nomor_tank || '-')) +
+                            '</span>' +
+                        '</div>' +
+                        '<div class="result-preview-rank">' +
+                            '<small>Juara</small>' +
+                            '<b>' + escapeHtml(String(result.position || '-')) + '</b>' +
+                            '<span>' + formatPublicPoint(finalPoint) + ' pts</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<details class="ranking-detail">' +
+                        '<summary>Lihat rincian point</summary>' +
+                        renderComponentSubtotals(result.component_subtotals) +
+                    '</details>' +
+                '</article>';
+            }).join('');
+
+            list.innerHTML =
+                '<div class="result-group-picker" aria-label="Pilih kategori dan kelas hasil juara">' +
+                    chips +
+                '</div>' +
+                '<div class="result-preview-info">' +
+                    '<strong>' + escapeHtml(activeLabel ? activeLabel.label : '-') + '</strong>' +
+                    '<span>' + selectedResults.length + ' ikan final</span>' +
+                '</div>' +
+                '<div class="result-preview-grid">' + cards + '</div>';
+        }
+
+        function groupPublicMvpByTeam(items){
+            var teams = {};
+
+            (items || []).forEach(function(item){
+                var teamName = publicTeamLabel(item);
+
+                if(!teams[teamName]){
+                    teams[teamName] = {
+                        name: teamName,
+                        items: []
+                    };
+                }
+
+                teams[teamName].items.push(item);
+            });
+
+            return Object.keys(teams)
+                .map(function(key){
+                    var team = teams[key];
+
+                    team.items.sort(function(a, b){
+                        return (parseInt(a.position, 10) || 99999) -
+                            (parseInt(b.position, 10) || 99999);
+                    });
+
+                    return team;
+                })
+                .sort(function(a, b){
+                    return a.name.localeCompare(b.name);
+                });
+        }
+
+        function renderDashboardMvpByTeam(){
+            var mvpList = document.getElementById('hasilMvpList');
+            var teams = groupPublicMvpByTeam(publicResultsDashboardData.mvp);
+
+            if(!mvpList){
+                return;
+            }
+
+            if(!teams.length){
+                mvpList.innerHTML =
+                    '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">' +
+                        'Belum ada data MVP.' +
+                    '</div>';
+                return;
+            }
+
+            mvpList.innerHTML =
+                '<div class="team-result-scroller">' +
+                    teams.map(function(team){
+                        var rows = team.items.map(function(item){
+                            var point = item.final_rank_point || item.rank_point || 0;
+
+                            return '<div class="team-fish-row">' +
+                                '<div class="team-fish-main">' +
+                                    '<strong>' + escapeHtml(item.nama_peserta || '-') + '</strong>' +
+                                    '<span>' +
+                                        escapeHtml(publicResultGroupLabel(item)) +
+                                        ' · Tank ' +
+                                        escapeHtml(String(item.nomor_tank || '-')) +
+                                    '</span>' +
+                                '</div>' +
+                                '<div class="team-fish-score">' +
+                                    '<b>#' + escapeHtml(String(item.position || '-')) + '</b>' +
+                                    '<span>' + formatPublicPoint(point) + ' pts</span>' +
+                                '</div>' +
+                            '</div>';
+                        }).join('');
+
+                        var topPoint = team.items.reduce(function(max, item){
+                            var point = parseFloat(item.final_rank_point || item.rank_point || 0);
+                            return Math.max(max, point);
+                        }, 0);
+
+                        return '<article class="team-result-card">' +
+                            '<div class="team-result-head">' +
+                                '<div>' +
+                                    '<h4>' + escapeHtml(team.name) + '</h4>' +
+                                    '<p>' + team.items.length + ' MVP terdaftar</p>' +
+                                '</div>' +
+                                '<div class="team-result-position">' +
+                                    '<small>MVP</small>' +
+                                    '<b>' + team.items.length + '</b>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="team-result-summary">' +
+                                '<div class="team-result-metric">' +
+                                    '<span>Total MVP</span>' +
+                                    '<b>' + team.items.length + '</b>' +
+                                '</div>' +
+                                '<div class="team-result-metric is-cyan">' +
+                                    '<span>Point Tertinggi</span>' +
+                                    '<b>' + formatPublicPoint(topPoint) + '</b>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="team-fish-list">' + rows + '</div>' +
+                        '</article>';
+                    }).join('') +
+                '</div>';
+        }
+
+        function renderDashboardTeamChampion(){
+            var tcList = document.getElementById('hasilTeamChampionList');
+            var teams = publicResultsDashboardData.teamChampion || [];
+
+            if(!tcList){
+                return;
+            }
+
+            if(!teams.length){
+                tcList.innerHTML =
+                    '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">' +
+                        'Belum ada data Team Champion.' +
+                    '</div>';
+                return;
+            }
+
+            tcList.innerHTML =
+                '<div class="team-result-scroller">' +
+                    teams.map(function(team){
+                        var fishes = (team.ikans || [])
+                            .slice()
+                            .sort(function(a, b){
+                                return parseFloat(b.final_rank_point || 0) -
+                                    parseFloat(a.final_rank_point || 0);
+                            });
+
+                        var rows = fishes.map(function(item){
+                            return '<div class="team-fish-row">' +
+                                '<div class="team-fish-main">' +
+                                    '<strong>Tank ' + escapeHtml(String(item.nomor_tank || '-')) + '</strong>' +
+                                    '<span>' + escapeHtml(publicResultGroupLabel(item)) + '</span>' +
+                                '</div>' +
+                                '<div class="team-fish-score">' +
+                                    '<b>' + formatPublicPoint(item.final_rank_point || 0) + ' pts</b>' +
+                                    '<span>Rank point akhir</span>' +
+                                '</div>' +
+                            '</div>';
+                        }).join('');
+
+                        return '<article class="team-result-card is-team-champion">' +
+                            '<div class="team-result-head">' +
+                                '<div>' +
+                                    '<h4>' + escapeHtml(team.detail_anggota || '-') + '</h4>' +
+                                    '<p>' + (team.total_ikan || 0) + ' ikan Team Champion</p>' +
+                                '</div>' +
+                                '<div class="team-result-position">' +
+                                    '<small>Rank</small>' +
+                                    '<b>' + escapeHtml(String(team.position || '-')) + '</b>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="team-result-summary">' +
+                                '<div class="team-result-metric">' +
+                                    '<span>Total Point</span>' +
+                                    '<b>' + formatPublicPoint(team.total_rank_point || 0) + '</b>' +
+                                '</div>' +
+                                '<div class="team-result-metric is-cyan">' +
+                                    '<span>Jumlah Ikan</span>' +
+                                    '<b>' + (team.total_ikan || 0) + '</b>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="team-fish-list">' + rows + '</div>' +
+                        '</article>';
+                    }).join('') +
+                '</div>';
+        }
 
         function renderHasilJuara(response){
             // Hasil Juara kini global (semua team), dimuat dari endpoint khusus (sekali).
@@ -3339,32 +4122,25 @@ var _publicResultsLoaded = false;
                 badge.textContent = 'DIBUKA'; badge.className = 'status-badge success';
                 locked.style.display = 'none'; unlockedBox.style.display = 'block';
 
-                var results = d.results || [], mvp = d.mvp || [], tc = d.team_champion || [];
-                if (totalIkan) totalIkan.textContent = results.length;
-                if (totalMvp) totalMvp.textContent = mvp.length;
+                var results = Array.isArray(d.results) ? d.results : [];
+                var mvp = Array.isArray(d.mvp) ? d.mvp : [];
+                var tc = Array.isArray(d.team_champion) ? d.team_champion : [];
 
-                // Ranking hasil juara (semua team)
-                if (list) {
-                    list.innerHTML = results.length ? results.map(function(r){
-                        var asalText = r.asal_label || r.detail_anggota || '-';
-                        var finalPoint = r.final_rank_point || r.rank_point || 0;
-                        return '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:16px;background:var(--glass-2);">' +
-                            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">' +
-                                '<div style="min-width:0;">' +
-                                    '<div style="font-size:13px;font-weight:900;color:var(--text-hi);">' + escapeHtml(r.nama_peserta || '-') + '</div>' +
-                                    '<div style="font-size:11px;color:var(--text-mid);font-weight:700;margin-top:4px;">' + escapeHtml(asalText) + '</div>' +
-                                    '<div style="font-size:11px;color:var(--text-mid);font-weight:700;margin-top:4px;">' + escapeHtml(r.group_label || r.kategori || '-') + ' • Tank ' + escapeHtml(String(r.nomor_tank || '-')) + '</div>' +
-                                '</div>' +
-                                '<div style="text-align:right;flex-shrink:0;">' +
-                                    '<div style="font-size:10px;color:var(--text-low);font-weight:900;text-transform:uppercase;">Juara</div>' +
-                                    '<div style="font-family:JetBrains Mono,monospace;font-size:24px;font-weight:900;color:var(--gold-300);">' + escapeHtml(String(r.position || '-')) + '</div>' +
-                                    '<div style="font-size:10px;color:var(--cyan-300);font-weight:800;">' + escapeHtml(String(finalPoint)) + ' pts</div>' +
-                                '</div>' +
-                            '</div>' +
-                            renderComponentSubtotals(r.component_subtotals) +
-                        '</div>';
-                    }).join('') : '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">Belum ada data hasil juara.</div>';
+                publicResultsDashboardData.results = results;
+                publicResultsDashboardData.mvp = mvp;
+                publicResultsDashboardData.teamChampion = tc;
+
+                if (totalIkan) {
+                    totalIkan.textContent = results.length;
                 }
+
+                if (totalMvp) {
+                    totalMvp.textContent = mvp.length;
+                }
+
+                renderDashboardRankingPreview();
+                renderDashboardMvpByTeam();
+                renderDashboardTeamChampion();
 
                 // MVP (semua team) — tabel ringkas, scroll horizontal di mobile
                 if (mvpList) {

@@ -700,7 +700,7 @@ var bonusTypes = [
     {key:'best_of_show',     label:'BEST OF SHOW',     icon:'fa-star'},
     {key:'grand_champion',   label:'GRAND CHAMPION',   icon:'fa-crown'},
     {key:'young_champion',   label:'YOUNG CHAMPION',   icon:'fa-medal'},
-    {key:'junior',           label:'JUNIOR',           icon:'fa-award'},
+    {key:'junior',           label:'JUNIOR CHAMPION',  icon:'fa-award'},
     {key:'baby_champion',    label:'BABY CHAMPION',    icon:'fa-baby'},
     {key:'mini_champion',    label:'MINI CHAMPION',    icon:'fa-seedling'},
 ];

@@ -1064,7 +1064,7 @@ class AdminDashboardController extends Controller
         'best_of_show'     => 'BEST OF SHOW',
         'grand_champion'   => 'GRAND CHAMPION',
         'young_champion'   => 'YOUNG CHAMPION',
-        'junior'           => 'JUNIOR',
+        'junior'           => 'JUNIOR CHAMPION',
         'baby_champion'    => 'BABY CHAMPION',
         'mini_champion'    => 'MINI CHAMPION',
     ];
