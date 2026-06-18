@@ -594,8 +594,47 @@ function popupConfirm(title,desc,btnText,callback){
     _confirmCallback=callback;
     showPopup('popupConfirm');
 }
-function executeConfirm(){hidePopup('popupConfirm');if(typeof _confirmCallback==='function')_confirmCallback();_confirmCallback=null;}
-function cancelConfirm(){hidePopup('popupConfirm');_confirmCallback=null;}
+/* ★ Modal prompt kustom (pengganti window.prompt) */
+var _promptCallback = null;
+function popupPromptText(opts){
+    opts = opts || {};
+    document.getElementById('popupPromptTitle').textContent = opts.title || 'Ubah';
+    document.getElementById('popupPromptDesc').innerHTML = opts.desc || '';
+    document.getElementById('popupPromptIcon').className = 'fas ' + (opts.icon || 'fa-pen');
+    var field = document.getElementById('popupPromptField');
+    field.innerHTML = '<input type="text" id="popupPromptInput" class="popup-input">';
+    var inp = document.getElementById('popupPromptInput');
+    inp.placeholder = opts.placeholder || '';
+    inp.value = opts.value || '';
+    inp.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); executePrompt(); } });
+    document.getElementById('popupPromptBtn').innerHTML = '<i class="fas fa-check"></i> ' + (opts.okText || 'Simpan');
+    _promptCallback = function(){ if(opts.onOk) opts.onOk((inp.value || '').trim()); };
+    showPopup('popupPrompt');
+    setTimeout(function(){ inp.focus(); inp.select(); }, 60);
+}
+function popupPromptSelect(opts){
+    opts = opts || {};
+    document.getElementById('popupPromptTitle').textContent = opts.title || 'Pilih';
+    document.getElementById('popupPromptDesc').innerHTML = opts.desc || '';
+    document.getElementById('popupPromptIcon').className = 'fas ' + (opts.icon || 'fa-sliders');
+    var field = document.getElementById('popupPromptField');
+    field.innerHTML = '';
+    var sel = document.createElement('select');
+    sel.id = 'popupPromptSelectEl';
+    sel.className = 'popup-input';
+    (opts.options || []).forEach(function(o){
+        var op = document.createElement('option');
+        op.value = o.value; op.textContent = o.label;
+        if(o.value === opts.value) op.selected = true;
+        sel.appendChild(op);
+    });
+    field.appendChild(sel);
+    document.getElementById('popupPromptBtn').innerHTML = '<i class="fas fa-check"></i> ' + (opts.okText || 'Simpan');
+    _promptCallback = function(){ if(opts.onOk) opts.onOk(sel.value); };
+    showPopup('popupPrompt');
+}
+function executePrompt(){ hidePopup('popupPrompt'); var cb = _promptCallback; _promptCallback = null; if(typeof cb === 'function') cb(); }
+function cancelPrompt(){ hidePopup('popupPrompt'); _promptCallback = null; }
 
 var currentBonusIkanId = null;
 var mvpIkanDataCache = {};
@@ -2375,15 +2414,15 @@ var activeRoleMenu=null;
 function openRoleMenu(e,uid,name,currentRole){
     e.stopPropagation();closeRoleMenu();
     var menu=document.createElement('div');menu.id='roleMenuDropdown';
-    menu.style.cssText='position:fixed;z-index:99999;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);padding:6px;min-width:160px;visibility:hidden;';
+    menu.style.cssText='position:fixed;z-index:99999;background:#131c2e;border:1px solid var(--bd-3);border-radius:10px;box-shadow:0 12px 34px rgba(0,0,0,.55);padding:6px;min-width:172px;visibility:hidden;';
     var roles=[{key:'admin',label:'Admin',color:'#2563eb'},{key:'juri',label:'Juri',color:'#16a34a'},{key:'grand_juri',label:'Grand Juri',color:'#7c3aed'},{key:'user',label:'User Biasa',color:'#94a3b8'}];
     for(var i=0;i<roles.length;i++){
         (function(r){
             var isActive=r.key===currentRole;
             var btn=document.createElement('button');
-            btn.style.cssText='display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:'+(isActive?'800':'600')+';cursor:pointer;background:'+(isActive?'#f1f5f9':'transparent')+';color:var(--text);white-space:nowrap;';
+            btn.style.cssText='display:flex;align-items:center;gap:8px;width:100%;padding:9px 11px;border:none;border-radius:7px;font-family:inherit;font-size:12px;font-weight:'+(isActive?'800':'600')+';cursor:pointer;background:'+(isActive?'rgba(34,211,238,.14)':'transparent')+';color:#F8FAFC;white-space:nowrap;';
             btn.innerHTML='<span style="width:8px;height:8px;border-radius:50%;background:'+r.color+';flex-shrink:0;"></span>'+r.label+(isActive?' <i class="fas fa-check" style="margin-left:auto;font-size:10px;color:var(--primary);"></i>':'');
-            btn.onmouseover=function(){if(!isActive)this.style.background='#f8fafc';};
+            btn.onmouseover=function(){if(!isActive)this.style.background='rgba(255,255,255,.06)';};
             btn.onmouseout=function(){if(!isActive)this.style.background='transparent';};
             btn.onclick=function(ev){
                 ev.stopPropagation();closeRoleMenu();
@@ -6858,6 +6897,7 @@ function toggleTeamChampionFeature(){
    ═══════════════════════════════════════════════ */
 var taxCategories = [];
 var taxClasses = [];
+var taxPresets = [];
 
 function loadTaxonomyManage(){
     var cc = document.getElementById('categoryList');
@@ -6867,8 +6907,10 @@ function loadTaxonomyManage(){
     .then(function(d){
         taxCategories = (d && d.categories) || [];
         taxClasses = (d && d.classes) || [];
+        taxPresets = (d && d.presets) || [];
         renderCategoryList();
         renderClassList();
+        populateCopyFromSelect();
         refreshTaxonomyArrays(); // selaraskan array global utk UI lain
     })
     .catch(function(err){
@@ -6883,14 +6925,19 @@ function renderCategoryList(){
     c.innerHTML = taxCategories.map(function(cat){
         var n = esc(cat.name);
         var safe = n.replace(/'/g,"\\'");
-        var modeLabel = cat.uses_kelas
-            ? '<span style="font-size:10px;font-weight:800;color:#6EE7B7;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);border-radius:6px;padding:2px 8px;">PAKAI KELAS</span>'
-            : '<span style="font-size:10px;font-weight:800;color:#FBBF24;background:rgba(245,158,11,.12);border:1px solid var(--bd-gold);border-radius:6px;padding:2px 8px;">TANPA KELAS</span>';
+        var modeOn = !!cat.uses_kelas;
+        var modeBtn = '<button type="button" onclick="toggleCategoryKelas(\''+safe+'\')" title="Klik untuk menyalakan / mematikan mode kelas" '
+            + 'style="display:inline-flex;align-items:center;gap:6px;padding:7px 11px;font-size:10px;font-weight:800;border-radius:8px;cursor:pointer;'
+            + (modeOn
+                ? 'border:1px solid var(--bd-cyan);background:rgba(34,211,238,.14);color:var(--cyan-300);'
+                : 'border:1px solid var(--bd-2);background:rgba(255,255,255,.03);color:var(--text-low);')
+            + '">'
+            + '<i class="fas '+(modeOn ? 'fa-toggle-on' : 'fa-toggle-off')+'" style="font-size:14px;"></i> Mode Kelas: '+(modeOn ? 'ON' : 'OFF')+'</button>';
         return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--glass-2);border:1px solid var(--bd-2);border-radius:11px;padding:10px 12px;">'
             + '<b style="font-size:13px;color:var(--text-hi);flex:1;min-width:120px;">'+n+'</b>'
-            + modeLabel
+            + modeBtn
             + '<button type="button" onclick="renameCategoryPrompt(\''+safe+'\')" style="padding:7px 11px;font-size:10px;font-weight:700;border-radius:8px;border:1px solid var(--bd-2);background:var(--glass-2);color:var(--cyan-300);cursor:pointer;"><i class="fas fa-pen"></i> Ubah Nama</button>'
-            + '<button type="button" onclick="toggleCategoryKelas(\''+safe+'\')" style="padding:7px 11px;font-size:10px;font-weight:700;border-radius:8px;border:1px solid var(--bd-2);background:var(--glass-2);color:var(--text-mid);cursor:pointer;"><i class="fas fa-toggle-on"></i> Mode Kelas</button>'
+            + '<button type="button" onclick="editCategoryFormulaPrompt(\''+safe+'\')" style="padding:7px 11px;font-size:10px;font-weight:700;border-radius:8px;border:1px solid rgba(168,85,247,.4);background:rgba(168,85,247,.12);color:#D8B4FE;cursor:pointer;"><i class="fas fa-sliders"></i> Edit Rumus</button>'
             + '<button type="button" onclick="deleteCategory(\''+safe+'\')" style="padding:7px 11px;font-size:10px;font-weight:700;border-radius:8px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.12);color:#FCA5A5;cursor:pointer;"><i class="fas fa-trash"></i> Hapus</button>'
             + '</div>';
     }).join('');
@@ -6935,24 +6982,45 @@ function taxPost(url, payload, okTitle, btn){
     });
 }
 
+function populateCopyFromSelect(){
+    var sel = document.getElementById('newCategoryCopyFrom');
+    if(!sel) return;
+    var prev = sel.value;
+    sel.innerHTML = '<option value="">Rumus baru (kosong)</option>';
+    taxPresets.forEach(function(name){
+        var o = document.createElement('option');
+        o.value = name;
+        o.textContent = 'Ikuti rumus: ' + name;
+        sel.appendChild(o);
+    });
+    if(prev) sel.value = prev;
+}
+
 function addCategory(btn){
     var el = document.getElementById('newCategoryName');
     var name = (el.value || '').trim();
     if(!name){ popupError('Nama kosong', 'Isi nama kategori.'); return; }
     var usesKelas = document.getElementById('newCategoryUsesKelas').checked;
-    taxPost('/api/admin/category/add', {name:name, uses_kelas: usesKelas ? 1 : 0}, 'Kategori Ditambahkan', btn)
-        .then(function(){ el.value = ''; });
+    var copyEl = document.getElementById('newCategoryCopyFrom');
+    var copyFrom = copyEl ? copyEl.value : '';
+    taxPost('/api/admin/category/add', {name:name, uses_kelas: usesKelas ? 1 : 0, copy_from: copyFrom}, 'Kategori Ditambahkan', btn)
+        .then(function(){ el.value = ''; if(copyEl) copyEl.value = ''; });
 }
 
 function renameCategoryPrompt(oldName){
-    var nv = window.prompt('Ubah nama kategori "'+oldName+'" menjadi:', oldName);
-    if(nv === null) return;
-    nv = nv.trim();
-    if(!nv || nv === oldName) return;
-    popupConfirm('Ubah Nama Kategori',
-        'Ubah <b>'+esc(oldName)+'</b> menjadi <b>'+esc(nv)+'</b>? Semua data ikan, konfigurasi point, penugasan juri, dan rentang tank akan ikut diperbarui.',
-        'Ya, Ubah',
-        function(){ taxPost('/api/admin/category/rename', {old_name:oldName, new_name:nv}, 'Nama Kategori Diubah'); });
+    popupPromptText({
+        title:'Ubah Nama Kategori',
+        desc:'Ubah nama kategori <b>'+esc(oldName)+'</b>. Data ikan, konfigurasi point, penugasan juri, dan rentang tank ikut diperbarui.',
+        value: oldName,
+        placeholder:'Nama kategori baru',
+        okText:'Simpan Perubahan',
+        icon:'fa-pen',
+        onOk: function(nv){
+            if(!nv){ popupError('Nama kosong','Nama kategori tidak boleh kosong.'); return; }
+            if(nv === oldName) return;
+            taxPost('/api/admin/category/rename', {old_name:oldName, new_name:nv}, 'Nama Kategori Diubah');
+        }
+    });
 }
 
 function toggleCategoryKelas(name){
@@ -6975,14 +7043,37 @@ function addClass(btn){
 }
 
 function renameClassPrompt(oldName){
-    var nv = window.prompt('Ubah nama kelas "'+oldName+'" menjadi:', oldName);
-    if(nv === null) return;
-    nv = nv.trim();
-    if(!nv || nv === oldName) return;
-    popupConfirm('Ubah Nama Kelas',
-        'Ubah kelas <b>'+esc(oldName)+'</b> menjadi <b>'+esc(nv)+'</b>? Data ikan, nilai, penugasan juri, dan rentang tank akan ikut diperbarui.',
-        'Ya, Ubah',
-        function(){ taxPost('/api/admin/class/rename', {old_name:oldName, new_name:nv}, 'Nama Kelas Diubah'); });
+    popupPromptText({
+        title:'Ubah Nama Kelas',
+        desc:'Ubah nama kelas <b>'+esc(oldName)+'</b>. Data ikan, nilai, penugasan juri, dan rentang tank ikut diperbarui.',
+        value: oldName,
+        placeholder:'Nama kelas baru',
+        okText:'Simpan Perubahan',
+        icon:'fa-pen',
+        onOk: function(nv){
+            if(!nv){ popupError('Nama kosong','Nama kelas tidak boleh kosong.'); return; }
+            if(nv === oldName) return;
+            taxPost('/api/admin/class/rename', {old_name:oldName, new_name:nv}, 'Nama Kelas Diubah');
+        }
+    });
+}
+
+function editCategoryFormulaPrompt(name){
+    var options = taxPresets.map(function(p){ return { value: p, label: 'Ikuti rumus: ' + p }; });
+    if(!options.length){ popupError('Belum ada rumus', 'Belum ada rumus tersimpan.'); return; }
+    var hasOwn = options.some(function(o){ return o.value === name; });
+    popupPromptSelect({
+        title: 'Edit Rumus — ' + name,
+        desc: 'Pilih rumus untuk kategori <b>'+esc(name)+'</b>. Semua rumus tersedia (termasuk rumus asli tiap kategori). Pilihan ini menyalin bobot &amp; persen ke kategori ini, dan <b>semua ikan kategori ini otomatis dihitung ulang</b>.',
+        options: options,
+        value: hasOwn ? name : options[0].value,
+        okText: 'Terapkan Rumus',
+        icon: 'fa-sliders',
+        onOk: function(src){
+            if(!src) return;
+            taxPost('/api/admin/category/apply-formula', { name: name, copy_from: src }, 'Rumus Kategori Diperbarui');
+        }
+    });
 }
 
 function deleteClass(name){
@@ -7046,4 +7137,5 @@ window.deleteCategory       = deleteCategory;
 window.addClass             = addClass;
 window.renameClassPrompt    = renameClassPrompt;
 window.deleteClass          = deleteClass;
+window.editCategoryFormulaPrompt = editCategoryFormulaPrompt;
 })();

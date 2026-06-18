@@ -3835,6 +3835,10 @@ class AdminDashboardController extends Controller
             ['kategori' => $kategori],
             $data
         );
+        // ★ Perbarui daftar rumus agar formula kategori ini tersedia untuk kategori lain.
+        $presets = $this->loadFormulaPresets();
+        $presets[$kategori] = $data;
+        $this->saveFormulaPresets($presets);
 
         return response()->json([
             'success' => true,
@@ -3848,9 +3852,13 @@ class AdminDashboardController extends Controller
        ═══════════════════════════════════════════ */
     public function getTaxonomy()
     {
+        $presets = array_keys($this->loadFormulaPresets());
+        sort($presets);
+
         return response()->json([
             'categories' => \App\Helpers\Taxonomy::categories(), // [{name, uses_kelas}]
             'classes'    => \App\Helpers\Taxonomy::classNames(),
+            'presets'    => $presets,
         ]);
     }
 
@@ -3859,25 +3867,45 @@ class AdminDashboardController extends Controller
         $data = $request->validate([
             'name'       => 'required|string|max:255|unique:contest_categories,name',
             'uses_kelas' => 'nullable|boolean',
+            'copy_from'  => 'nullable|string|max:255',
         ]);
         $usesKelas = $request->boolean('uses_kelas', true);
+        $copyFrom  = trim((string) $request->input('copy_from', ''));
         $maxUrutan = (int) \App\Models\ContestCategory::max('urutan');
 
-        \DB::transaction(function () use ($data, $usesKelas, $maxUrutan) {
+        $presets = $this->loadFormulaPresets();
+        $copied  = ($copyFrom !== '' && isset($presets[$copyFrom]));
+
+        \DB::transaction(function () use ($data, $usesKelas, $maxUrutan, $copyFrom, $presets, $copied) {
             \App\Models\ContestCategory::create([
                 'name'       => $data['name'],
                 'uses_kelas' => $usesKelas,
                 'urutan'     => $maxUrutan + 1,
             ]);
-            // Siapkan baris config kosong agar bisa disetel di menu Pengaturan Penilaian.
-            ScoringPointConfig::firstOrCreate(['kategori' => $data['name']]);
+
+            if ($copied) {
+                ScoringPointConfig::updateOrCreate(['kategori' => $data['name']], $presets[$copyFrom]);
+            } else {
+                ScoringPointConfig::firstOrCreate(['kategori' => $data['name']]); // rumus baru (kosong)
+            }
         });
+
+        // Daftarkan rumus kategori baru ke daftar rumus (agar tersedia untuk kategori lain).
+        $cfg = ScoringPointConfig::where('kategori', $data['name'])->first();
+        if ($cfg) {
+            $vals = [];
+            foreach ($this->scoringConfigColumns() as $c) { $vals[$c] = $cfg->{$c} ?? 0; }
+            $presets[$data['name']] = $vals;
+            $this->saveFormulaPresets($presets);
+        }
 
         \App\Helpers\Taxonomy::flush();
 
         return response()->json([
             'success' => true,
-            'message' => 'Kategori "' . $data['name'] . '" ditambahkan. Atur bobot point-nya di menu Pengaturan Penilaian.',
+            'message' => 'Kategori "' . $data['name'] . '" ditambahkan' .
+                ($copied ? ' dengan meniru rumus "' . $copyFrom . '".' : ' dengan rumus baru (kosong).') .
+                ' Cek / setel bobot point di menu Pengaturan Penilaian.',
         ]);
     }
 
@@ -3908,6 +3936,8 @@ class AdminDashboardController extends Controller
             $usesKelas = (bool) $cat->uses_kelas;
             $cat->update(['name' => $new]);
             $this->renameCategoryInTankRanges($old, $new, !$usesKelas);
+            $presets = $this->loadFormulaPresets();
+            if (isset($presets[$old])) { $presets[$new] = $presets[$old]; unset($presets[$old]); $this->saveFormulaPresets($presets); }
         });
 
         \App\Helpers\Taxonomy::flush();
@@ -3915,6 +3945,33 @@ class AdminDashboardController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Kategori "' . $old . '" diubah menjadi "' . $new . '". Data ikan, konfigurasi point, penugasan juri, dan rentang tank ikut diperbarui.',
+        ]);
+    }
+
+    public function applyCategoryFormula(Request $request)
+    {
+        $data = $request->validate([
+            'name'      => 'required|string|max:255',
+            'copy_from' => 'required|string|max:255',
+        ]);
+        $target = trim($data['name']);
+        $source = trim($data['copy_from']);
+
+        if (!\App\Models\ContestCategory::where('name', $target)->exists()) {
+            return response()->json(['success' => false, 'message' => 'Kategori tujuan tidak ditemukan.'], 404);
+        }
+
+        $presets = $this->loadFormulaPresets();
+        if (!isset($presets[$source])) {
+            return response()->json(['success' => false, 'message' => 'Rumus "' . $source . '" tidak ditemukan.'], 404);
+        }
+
+        // Salin nilai PRESET ke config kategori tujuan. Preset sumber tidak berubah.
+        ScoringPointConfig::updateOrCreate(['kategori' => $target], $presets[$source]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori "' . $target . '" sekarang memakai rumus "' . $source . '". Semua ikan kategori "' . $target . '" otomatis dihitung ulang.',
         ]);
     }
 
@@ -3962,6 +4019,8 @@ class AdminDashboardController extends Controller
             ScoringPointConfig::where('kategori', $cat->name)->delete();
             \App\Models\JuriAssignment::where('kategori', $cat->name)->delete();
             $this->deleteCategoryFromTankRanges($cat->name, !$cat->uses_kelas);
+            $presets = $this->loadFormulaPresets();
+            if (isset($presets[$cat->name])) { unset($presets[$cat->name]); $this->saveFormulaPresets($presets); }
             $cat->delete();
         });
 
@@ -4049,6 +4108,48 @@ class AdminDashboardController extends Controller
         $raw = \DB::table('settings')->where('key', 'tank_class_ranges')->value('value');
         $arr = json_decode($raw ?? '', true);
         return is_array($arr) ? $arr : [];
+    }
+
+    /* ─── Daftar rumus (preset) ─── */
+    private function scoringConfigColumns(): array
+    {
+        return [
+            'overall_bobot','overall_point',
+            'head_bobot','head_size_pct','head_bentuk_k_pct',
+            'face_bobot','face_face_pct',
+            'body_bobot','body_bentuk_pct','body_proposional_pct','body_pangkal_pct',
+            'marking_bobot','marking_fullness_pct','marking_contrast_pct','marking_bentuk_pct',
+            'pearl_bobot','pearl_shinning_pct','pearl_fullnes_pct','pearl_bentuk_pearl_pct',
+            'color_bobot','color_komposisi_pct','color_kecerahan_pct','color_fullness_colour_pct',
+            'finnage_bobot','finnage_bentuk_sirip_ekor_pct','finnage_kecerahan_pct',
+        ];
+    }
+
+    private function loadFormulaPresets(): array
+    {
+        $raw = \DB::table('settings')->where('key', 'formula_presets')->value('value');
+        $arr = json_decode($raw ?? '', true);
+        if (!is_array($arr)) $arr = [];
+
+        // Seed sekali dari config kategori yang ada sekarang.
+        if (empty($arr)) {
+            $cols = $this->scoringConfigColumns();
+            foreach (ScoringPointConfig::all() as $cfg) {
+                $preset = [];
+                foreach ($cols as $c) { $preset[$c] = $cfg->{$c} ?? 0; }
+                $arr[$cfg->kategori] = $preset;
+            }
+            if (!empty($arr)) $this->saveFormulaPresets($arr);
+        }
+        return $arr;
+    }
+
+    private function saveFormulaPresets(array $arr): void
+    {
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'formula_presets'],
+            ['value' => json_encode($arr), 'updated_at' => now()]
+        );
     }
 
     private function saveTankRangesArray(array $arr): void

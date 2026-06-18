@@ -943,6 +943,15 @@
         font-weight:800;
         line-height:1.5;
     }
+    /* ★ Perbaikan kontras opsi dropdown native pada tema gelap */
+        select option { background-color:#131c2e; color:#F8FAFC; }
+        select option:checked,
+        select option:hover { background-color:#1d6fb8; color:#FFFFFF; 
+    }
+    /* ★ Field input/select di dalam popup modal */
+    .popup-input{ width:100%; padding:12px 14px; border-radius:11px; border:1px solid var(--bd-2); background:rgba(0,0,0,.32); color:var(--text-hi); font-family:inherit; font-size:14px; font-weight:700; outline:none; }
+    .popup-input:focus{ border-color:var(--cyan-400); 
+    }
     </style>
 </head>
 
@@ -968,7 +977,6 @@
             <div class="sb-section-label" style="margin-top:8px;">Manajemen</div>
             <a class="sidebar-item" data-page="users"><i class="fas fa-users-gear"></i> Kelola User</a>
             <a class="sidebar-item" data-page="kelola_juri"><i class="fas fa-user-shield"></i> Kelola Juri</a>
-             <a class="sidebar-item" data-page="scoring_config"><i class="fas fa-sliders"></i> Pengaturan Penilaian</a>
             <a class="sidebar-item" data-page="registrasi"><i class="fas fa-database"></i> Registrasi & Undian</a>
             <a class="sidebar-item" data-page="nominasi"><i class="fas fa-award"></i> Nominasi</a>
             <a class="sidebar-item" data-page="mvp"><i class="fas fa-star"></i> Kelola MVP</a>
@@ -983,6 +991,7 @@
             <a class="sidebar-item" data-page="ranking"><i class="fas fa-trophy"></i> Point Ranking</a>
             <a class="sidebar-item" data-page="undian"><i class="fas fa-dice"></i> Kelola Mesin Undian</a>
             <a class="sidebar-item" data-page="taxonomy"><i class="fas fa-layer-group"></i> Kelola Kategori &amp; Kelas</a>
+            <a class="sidebar-item" data-page="scoring_config"><i class="fas fa-sliders"></i> Pengaturan Penilaian</a>
         </nav>
 
         <div class="sidebar-foot">
@@ -1879,6 +1888,9 @@
                             <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-mid);font-weight:700;cursor:pointer;">
                                 <input type="checkbox" id="newCategoryUsesKelas" checked style="width:16px;height:16px;accent-color:var(--cyan-400);cursor:pointer;"> Pakai kelas
                             </label>
+                            <select id="newCategoryCopyFrom" title="Pilih rumus penilaian untuk kategori baru" style="padding:9px 11px;border-radius:9px;border:1px solid var(--bd-2);background:rgba(0,0,0,.28);color:var(--text-hi);font-family:inherit;font-weight:700;outline:none;min-width:200px;cursor:pointer;">
+                                <option value="">Rumus baru (kosong)</option>
+                            </select>
                             <button type="button" class="btn-primary" onclick="addCategory(this)" style="padding:9px 14px;font-size:11px;"><i class="fas fa-plus"></i> Tambah Kategori</button>
                         </div>
                         <div id="categoryList" style="display:flex;flex-direction:column;gap:10px;">
@@ -2409,6 +2421,20 @@
         <h2 class="popup-title" id="popupInfoTitle">Informasi</h2>
         <p class="popup-desc" id="popupInfoDesc">Detail informasi.</p>
         <button class="popup-btn info" onclick="hidePopup('popupInfo')"><i class="fas fa-check"></i> OK</button>
+    </div>
+</div>
+
+<!-- ═══════════ POPUP PROMPT (input / pilih) ═══════════ -->
+<div class="popup-overlay" id="popupPrompt">
+    <div class="popup-card">
+        <div class="popup-icon info"><i class="fas fa-pen" id="popupPromptIcon"></i></div>
+        <h2 class="popup-title" id="popupPromptTitle">Ubah</h2>
+        <p class="popup-desc" id="popupPromptDesc"></p>
+        <div id="popupPromptField" style="margin-bottom:22px;text-align:left;"></div>
+        <div class="popup-btn-row">
+            <button class="popup-btn cancel" onclick="cancelPrompt()"><i class="fas fa-xmark"></i> Batal</button>
+            <button class="popup-btn info" id="popupPromptBtn" onclick="executePrompt()"><i class="fas fa-check"></i> Simpan</button>
+        </div>
     </div>
 </div>
 

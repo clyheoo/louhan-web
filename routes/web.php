@@ -112,6 +112,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/category/rename', [AdminDashboardController::class, 'renameCategory']);
     Route::post('/api/admin/category/toggle-kelas', [AdminDashboardController::class, 'toggleCategoryKelas']);
     Route::post('/api/admin/category/delete', [AdminDashboardController::class, 'deleteCategory']);
+    Route::post('/api/admin/category/apply-formula', [AdminDashboardController::class, 'applyCategoryFormula']);
     Route::post('/api/admin/class/add', [AdminDashboardController::class, 'addClass']);
     Route::post('/api/admin/class/rename', [AdminDashboardController::class, 'renameClass']);
     Route::post('/api/admin/class/delete', [AdminDashboardController::class, 'deleteClass']);
