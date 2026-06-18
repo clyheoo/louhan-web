@@ -2322,6 +2322,356 @@
             font-weight:800;
         }
 
+        /* ====================================================
+        MVP PER TEAM — SELECTOR + TABLE RESPONSIVE
+        ==================================================== */
+        .mvp-team-summary{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            margin-bottom:10px;
+            padding:11px 13px;
+            border:1px solid var(--bd-1);
+            border-radius:13px;
+            background:rgba(255,255,255,.025);
+        }
+
+        .mvp-team-summary strong{
+            display:block;
+            color:var(--cyan-200);
+            font-size:13px;
+            font-weight:900;
+            overflow-wrap:anywhere;
+        }
+
+        .mvp-team-summary span{
+            display:block;
+            margin-top:3px;
+            color:var(--text-low);
+            font-size:10px;
+            font-weight:800;
+        }
+
+        .mvp-team-summary-badge{
+            flex-shrink:0;
+            min-width:54px;
+            padding:7px 8px;
+            border:1px solid var(--bd-gold);
+            border-radius:10px;
+            background:rgba(245,158,11,.08);
+            color:var(--gold-300);
+            font-family:'JetBrains Mono', monospace;
+            font-size:15px;
+            font-weight:900;
+            text-align:center;
+        }
+
+        .mvp-team-table-wrap{
+            width:100%;
+            overflow-x:auto;
+            border:1px solid var(--bd-2);
+            border-radius:15px;
+            background:var(--glass-2);
+            scrollbar-width:thin;
+            scrollbar-color:var(--bd-3) transparent;
+        }
+
+        .mvp-team-table-wrap::-webkit-scrollbar{
+            height:7px;
+        }
+
+        .mvp-team-table-wrap::-webkit-scrollbar-thumb{
+            background:var(--bd-3);
+            border-radius:999px;
+        }
+
+        .mvp-team-table{
+            width:100%;
+            min-width:620px;
+            border-collapse:collapse;
+        }
+
+        .mvp-team-table th{
+            padding:11px 13px;
+            border-bottom:1px solid var(--bd-2);
+            background:rgba(255,255,255,.04);
+            color:var(--text-mid);
+            font-size:10px;
+            font-weight:900;
+            text-align:left;
+            text-transform:uppercase;
+            letter-spacing:.06em;
+            white-space:nowrap;
+        }
+
+        .mvp-team-table td{
+            padding:11px 13px;
+            border-bottom:1px solid var(--bd-1);
+            color:var(--text);
+            font-size:12px;
+            font-weight:700;
+            vertical-align:middle;
+        }
+
+        .mvp-team-table tbody tr:last-child td{
+            border-bottom:0;
+        }
+
+        .mvp-team-table tbody tr:hover{
+            background:rgba(34,211,238,.035);
+        }
+
+        .mvp-team-table .mvp-no{
+            width:48px;
+            text-align:center;
+            color:var(--text-low);
+            font-family:'JetBrains Mono', monospace;
+        }
+
+        .mvp-team-table .mvp-kategori{
+            color:var(--cyan-300);
+            white-space:nowrap;
+        }
+
+        .mvp-team-table .mvp-juara{
+            color:var(--gold-300);
+            text-align:center;
+            font-family:'JetBrains Mono', monospace;
+            font-size:15px;
+            font-weight:900;
+        }
+
+        .mvp-team-table .mvp-rank-point{
+            color:var(--cyan-300);
+            text-align:right;
+            font-family:'JetBrains Mono', monospace;
+            font-weight:900;
+            white-space:nowrap;
+        }
+
+        @media(max-width:640px){
+            .mvp-team-summary{
+                align-items:flex-start;
+            }
+
+            .mvp-team-table{
+                min-width:560px;
+            }
+        }
+
+        /* ====================================================
+        TEAM CHAMPION — GRID TABLE RESPONSIVE
+        ==================================================== */
+        .team-champion-grid{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(360px,1fr));
+            gap:12px;
+            align-items:start;
+        }
+
+        .team-champion-card{
+            min-width:0;
+            border:1px solid rgba(34,211,238,.24);
+            border-radius:17px;
+            overflow:hidden;
+            background:var(--glass-2);
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+        }
+
+        .team-champion-card-head{
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:12px;
+            padding:14px;
+            border-bottom:1px solid var(--bd-1);
+            background:linear-gradient(
+                135deg,
+                rgba(34,211,238,.08),
+                rgba(37,99,235,.04)
+            );
+        }
+
+        .team-champion-card-head h4{
+            margin:0;
+            color:var(--text-hi);
+            font-size:14px;
+            font-weight:900;
+            overflow-wrap:anywhere;
+        }
+
+        .team-champion-card-head p{
+            margin:4px 0 0;
+            color:var(--text-mid);
+            font-size:10px;
+            font-weight:800;
+        }
+
+        .team-champion-position{
+            flex-shrink:0;
+            min-width:62px;
+            padding:7px 8px;
+            border:1px solid var(--bd-cyan);
+            border-radius:11px;
+            background:rgba(34,211,238,.08);
+            text-align:center;
+        }
+
+        .team-champion-position small{
+            display:block;
+            color:var(--text-low);
+            font-size:8px;
+            font-weight:900;
+            letter-spacing:.08em;
+            text-transform:uppercase;
+        }
+
+        .team-champion-position b{
+            display:block;
+            margin-top:2px;
+            color:var(--cyan-300);
+            font-family:'JetBrains Mono', monospace;
+            font-size:21px;
+            font-weight:900;
+            line-height:1;
+        }
+
+        .team-champion-metrics{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:8px;
+            padding:12px 14px;
+        }
+
+        .team-champion-metric{
+            padding:9px 10px;
+            border:1px solid var(--bd-1);
+            border-radius:11px;
+            background:rgba(255,255,255,.025);
+        }
+
+        .team-champion-metric span{
+            display:block;
+            color:var(--text-low);
+            font-size:9px;
+            font-weight:900;
+            text-transform:uppercase;
+            letter-spacing:.06em;
+        }
+
+        .team-champion-metric b{
+            display:block;
+            margin-top:4px;
+            color:var(--gold-300);
+            font-family:'JetBrains Mono', monospace;
+            font-size:15px;
+            font-weight:900;
+        }
+
+        .team-champion-metric.is-cyan b{
+            color:var(--cyan-300);
+        }
+
+        .team-champion-table-wrap{
+            max-height:325px;
+            overflow:auto;
+            margin:0 14px 14px;
+            border:1px solid var(--bd-1);
+            border-radius:12px;
+            background:rgba(0,0,0,.10);
+            scrollbar-width:thin;
+            scrollbar-color:var(--bd-3) transparent;
+        }
+
+        .team-champion-table-wrap::-webkit-scrollbar{
+            width:7px;
+            height:7px;
+        }
+
+        .team-champion-table-wrap::-webkit-scrollbar-thumb{
+            background:var(--bd-3);
+            border-radius:999px;
+        }
+
+        .team-champion-table{
+            width:100%;
+            min-width:430px;
+            border-collapse:collapse;
+        }
+
+        .team-champion-table th{
+            position:sticky;
+            top:0;
+            z-index:2;
+            padding:10px 11px;
+            border-bottom:1px solid var(--bd-2);
+            background:var(--ocean-800);
+            color:var(--text-low);
+            font-size:9px;
+            font-weight:900;
+            text-align:left;
+            text-transform:uppercase;
+            letter-spacing:.06em;
+            white-space:nowrap;
+        }
+
+        .team-champion-table td{
+            padding:10px 11px;
+            border-bottom:1px dashed var(--bd-1);
+            color:var(--text-mid);
+            font-size:11px;
+            font-weight:700;
+        }
+
+        .team-champion-table tbody tr:last-child td{
+            border-bottom:0;
+        }
+
+        .team-champion-table tbody tr:hover{
+            background:rgba(34,211,238,.035);
+        }
+
+        .team-champion-table .tc-tank{
+            color:var(--text);
+            font-family:'JetBrains Mono', monospace;
+            font-weight:900;
+            white-space:nowrap;
+        }
+
+        .team-champion-table .tc-category{
+            color:var(--cyan-300);
+            white-space:nowrap;
+        }
+
+        .team-champion-table .tc-point{
+            color:var(--gold-300);
+            text-align:right;
+            font-family:'JetBrains Mono', monospace;
+            font-weight:900;
+            white-space:nowrap;
+        }
+
+        @media(max-width:760px){
+            .team-champion-grid{
+                grid-template-columns:1fr;
+            }
+        }
+
+        @media(max-width:640px){
+            .team-champion-table-wrap{
+                max-height:290px;
+            }
+
+            .team-champion-table{
+                min-width:400px;
+            }
+
+            .team-champion-card-head{
+                padding:13px;
+            }
+        }
+
         @media(max-width:640px){
             .result-section-head{
                 margin-top:18px;
@@ -2678,7 +3028,7 @@
                                                 <i class="fas fa-star" style="color:var(--gold-400);margin-right:6px;"></i>
                                                 Hasil MVP — Semua Team
                                             </h3>
-                                            <p>MVP dikelompokkan per Team/Kota agar lebih mudah dilihat.</p>
+                                            <p>Pilih Team/Kota untuk melihat tabel MVP masing-masing team.</p>
                                         </div>
                                     </div>
                                     <div id="hasilMvpList" class="hasil-team-wrap"></div>
@@ -2689,7 +3039,7 @@
                                                 <i class="fas fa-people-group" style="color:var(--cyan-300);margin-right:6px;"></i>
                                                 Hasil Team Champion — Semua Team
                                             </h3>
-                                            <p>Geser horizontal untuk melihat hasil setiap team.</p>
+                                            <p>Setiap Team ditampilkan dalam tabel ringkas yang mengisi horizontal lalu turun ke bawah.</p>
                                         </div>
                                     </div>
                                     <div id="hasilTeamChampionList" class="hasil-team-wrap"></div>
@@ -3733,21 +4083,83 @@
             renderFishActionButtons();
         }
 
-        function renderComponentSubtotals(items){
+        function renderComponentSubtotals(items, totalPoint){
             if (!items) return '';
 
-            var order = ['overall', 'head', 'face', 'body', 'marking', 'pearl', 'color', 'finnage'];
+            var order = [
+                'overall',
+                'head',
+                'face',
+                'body',
+                'marking',
+                'pearl',
+                'color',
+                'finnage'
+            ];
+
+            var totalNumber = parseFloat(totalPoint || 0);
+            var totalText = Number.isInteger(totalNumber)
+                ? String(totalNumber)
+                : totalNumber.toFixed(2).replace(/\.00$/, '');
+
+            var cards = [];
+
+            /* Kartu tambahan: Total Point seluruh komponen */
+            cards.push(
+                '<div style="' +
+                    'padding:8px 10px;' +
+                    'border:1px solid rgba(245,158,11,.40);' +
+                    'border-radius:10px;' +
+                    'background:rgba(245,158,11,.08);' +
+                '">' +
+                    '<div style="' +
+                        'font-size:9px;' +
+                        'color:var(--gold-300);' +
+                        'font-weight:900;' +
+                        'text-transform:uppercase;' +
+                        'letter-spacing:.08em;' +
+                    '">Total Point</div>' +
+                    '<div style="' +
+                        'font-family:JetBrains Mono,monospace;' +
+                        'font-size:15px;' +
+                        'color:var(--gold-300);' +
+                        'font-weight:900;' +
+                        'margin-top:3px;' +
+                    '">' + escapeHtml(totalText) + '</div>' +
+                '</div>'
+            );
+
+            order.forEach(function(key){
+                var row = items[key];
+                if (!row) return;
+
+                cards.push(
+                    '<div style="' +
+                        'padding:8px 10px;' +
+                        'border:1px solid var(--bd-2);' +
+                        'border-radius:10px;' +
+                        'background:rgba(255,255,255,.035);' +
+                    '">' +
+                        '<div style="' +
+                            'font-size:9px;' +
+                            'color:var(--text-low);' +
+                            'font-weight:900;' +
+                            'text-transform:uppercase;' +
+                            'letter-spacing:.08em;' +
+                        '">' + escapeHtml(row.label || key) + '</div>' +
+                        '<div style="' +
+                            'font-family:JetBrains Mono,monospace;' +
+                            'font-size:15px;' +
+                            'color:var(--cyan-300);' +
+                            'font-weight:900;' +
+                            'margin-top:3px;' +
+                        '">' + escapeHtml(String(row.value ?? 0)) + '</div>' +
+                    '</div>'
+                );
+            });
 
             return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin-top:12px;">' +
-                order.map(function(key){
-                    var row = items[key];
-                    if (!row) return '';
-
-                    return '<div style="padding:8px 10px;border:1px solid var(--bd-2);border-radius:10px;background:rgba(255,255,255,.035);">' +
-                        '<div style="font-size:9px;color:var(--text-low);font-weight:900;text-transform:uppercase;letter-spacing:.08em;">' + escapeHtml(row.label || key) + '</div>' +
-                        '<div style="font-family:JetBrains Mono,monospace;font-size:15px;color:var(--cyan-300);font-weight:900;margin-top:3px;">' + escapeHtml(String(row.value ?? 0)) + '</div>' +
-                    '</div>';
-                }).join('') +
+                cards.join('') +
             '</div>';
         }
 
@@ -3757,7 +4169,8 @@
             results: [],
             mvp: [],
             teamChampion: [],
-            activeGroup: ''
+            activeGroup: '',
+            activeMvpTeamIndex: 0
         };
 
         function publicResultGroupKey(item){
@@ -3909,7 +4322,10 @@
                     '</div>' +
                     '<details class="ranking-detail">' +
                         '<summary>Lihat rincian point</summary>' +
-                        renderComponentSubtotals(result.component_subtotals) +
+                        renderComponentSubtotals(
+                            result.component_subtotals,
+                            result.total_point ?? result.point ?? 0
+                        ) +
                     '</details>' +
                 '</article>';
             }).join('');
@@ -3957,9 +4373,16 @@
                 });
         }
 
+        function setDashboardMvpTeam(index){
+            publicResultsDashboardData.activeMvpTeamIndex =
+                Math.max(0, parseInt(index, 10) || 0);
+
+            renderDashboardMvpByTeam();
+        }
+
         function renderDashboardMvpByTeam(){
             var mvpList = document.getElementById('hasilMvpList');
-            var teams = groupPublicMvpByTeam(publicResultsDashboardData.mvp);
+            var teams = groupPublicMvpByTeam(publicResultsDashboardData.mvp || []);
 
             if(!mvpList){
                 return;
@@ -3973,63 +4396,111 @@
                 return;
             }
 
+            var activeIndex = parseInt(
+                publicResultsDashboardData.activeMvpTeamIndex,
+                10
+            );
+
+            if(
+                isNaN(activeIndex) ||
+                activeIndex < 0 ||
+                activeIndex >= teams.length
+            ){
+                activeIndex = 0;
+            }
+
+            publicResultsDashboardData.activeMvpTeamIndex = activeIndex;
+
+            var activeTeam = teams[activeIndex];
+
+            var chips = teams.map(function(team, index){
+                var activeClass = index === activeIndex ? ' active' : '';
+
+                return '<button type="button" ' +
+                    'class="result-group-chip' + activeClass + '" ' +
+                    'onclick="setDashboardMvpTeam(' + index + ')">' +
+                    escapeHtml(team.name) +
+                    ' <span style="opacity:.7;">(' + team.items.length + ')</span>' +
+                '</button>';
+            }).join('');
+
+            var rows = activeTeam.items
+                .slice()
+                .sort(function(a, b){
+                    var groupCompare = publicResultGroupLabel(a)
+                        .localeCompare(publicResultGroupLabel(b));
+
+                    if(groupCompare !== 0){
+                        return groupCompare;
+                    }
+
+                    return (parseInt(a.position, 10) || 99999) -
+                        (parseInt(b.position, 10) || 99999);
+                })
+                .map(function(item, index){
+                    var point = item.final_rank_point || item.rank_point || 0;
+
+                    return '<tr>' +
+                        '<td class="mvp-no">' + (index + 1) + '</td>' +
+                        '<td>' + escapeHtml(item.nama_peserta || '-') + '</td>' +
+                        '<td class="mvp-kategori">' +
+                            escapeHtml(publicResultGroupLabel(item)) +
+                        '</td>' +
+                        '<td style="text-align:center;font-family:JetBrains Mono,monospace;">' +
+                            escapeHtml(String(item.nomor_tank || '-')) +
+                        '</td>' +
+                        '<td class="mvp-juara">' +
+                            escapeHtml(String(item.position || '-')) +
+                        '</td>' +
+                        '<td class="mvp-rank-point">' +
+                            formatPublicPoint(point) +
+                        '</td>' +
+                    '</tr>';
+                }).join('');
+
             mvpList.innerHTML =
-                '<div class="team-result-scroller">' +
-                    teams.map(function(team){
-                        var rows = team.items.map(function(item){
-                            var point = item.final_rank_point || item.rank_point || 0;
+                '<div class="result-group-picker" aria-label="Pilih Team atau Kota MVP">' +
+                    chips +
+                '</div>' +
 
-                            return '<div class="team-fish-row">' +
-                                '<div class="team-fish-main">' +
-                                    '<strong>' + escapeHtml(item.nama_peserta || '-') + '</strong>' +
-                                    '<span>' +
-                                        escapeHtml(publicResultGroupLabel(item)) +
-                                        ' · Tank ' +
-                                        escapeHtml(String(item.nomor_tank || '-')) +
-                                    '</span>' +
-                                '</div>' +
-                                '<div class="team-fish-score">' +
-                                    '<b>#' + escapeHtml(String(item.position || '-')) + '</b>' +
-                                    '<span>' + formatPublicPoint(point) + ' pts</span>' +
-                                '</div>' +
-                            '</div>';
-                        }).join('');
+                '<div class="mvp-team-summary">' +
+                    '<div>' +
+                        '<strong>' + escapeHtml(activeTeam.name) + '</strong>' +
+                        '<span>' +
+                            activeTeam.items.length +
+                            ' ikan MVP pada Team/Kota ini' +
+                        '</span>' +
+                    '</div>' +
+                    '<div class="mvp-team-summary-badge">' +
+                        activeTeam.items.length +
+                    '</div>' +
+                '</div>' +
 
-                        var topPoint = team.items.reduce(function(max, item){
-                            var point = parseFloat(item.final_rank_point || item.rank_point || 0);
-                            return Math.max(max, point);
-                        }, 0);
-
-                        return '<article class="team-result-card">' +
-                            '<div class="team-result-head">' +
-                                '<div>' +
-                                    '<h4>' + escapeHtml(team.name) + '</h4>' +
-                                    '<p>' + team.items.length + ' MVP terdaftar</p>' +
-                                '</div>' +
-                                '<div class="team-result-position">' +
-                                    '<small>MVP</small>' +
-                                    '<b>' + team.items.length + '</b>' +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="team-result-summary">' +
-                                '<div class="team-result-metric">' +
-                                    '<span>Total MVP</span>' +
-                                    '<b>' + team.items.length + '</b>' +
-                                '</div>' +
-                                '<div class="team-result-metric is-cyan">' +
-                                    '<span>Point Tertinggi</span>' +
-                                    '<b>' + formatPublicPoint(topPoint) + '</b>' +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="team-fish-list">' + rows + '</div>' +
-                        '</article>';
-                    }).join('') +
+                '<div class="mvp-team-table-wrap">' +
+                    '<table class="mvp-team-table">' +
+                        '<thead>' +
+                            '<tr>' +
+                                '<th style="text-align:center;">No</th>' +
+                                '<th>Peserta</th>' +
+                                '<th>Kategori</th>' +
+                                '<th style="text-align:center;">Tank</th>' +
+                                '<th style="text-align:center;">Juara</th>' +
+                                '<th style="text-align:right;">Rank Pt</th>' +
+                            '</tr>' +
+                        '</thead>' +
+                        '<tbody>' + rows + '</tbody>' +
+                    '</table>' +
                 '</div>';
         }
 
         function renderDashboardTeamChampion(){
             var tcList = document.getElementById('hasilTeamChampionList');
-            var teams = publicResultsDashboardData.teamChampion || [];
+            var teams = (publicResultsDashboardData.teamChampion || [])
+                .slice()
+                .sort(function(a, b){
+                    return (parseInt(a.position, 10) || 99999) -
+                        (parseInt(b.position, 10) || 99999);
+                });
 
             if(!tcList){
                 return;
@@ -4044,52 +4515,86 @@
             }
 
             tcList.innerHTML =
-                '<div class="team-result-scroller">' +
-                    teams.map(function(team){
-                        var fishes = (team.ikans || [])
-                            .slice()
-                            .sort(function(a, b){
-                                return parseFloat(b.final_rank_point || 0) -
-                                    parseFloat(a.final_rank_point || 0);
-                            });
+                '<div class="team-champion-grid">' +
 
-                        var rows = fishes.map(function(item){
-                            return '<div class="team-fish-row">' +
-                                '<div class="team-fish-main">' +
-                                    '<strong>Tank ' + escapeHtml(String(item.nomor_tank || '-')) + '</strong>' +
-                                    '<span>' + escapeHtml(publicResultGroupLabel(item)) + '</span>' +
-                                '</div>' +
-                                '<div class="team-fish-score">' +
-                                    '<b>' + formatPublicPoint(item.final_rank_point || 0) + ' pts</b>' +
-                                    '<span>Rank point akhir</span>' +
-                                '</div>' +
-                            '</div>';
-                        }).join('');
+                teams.map(function(team){
+                    var fishes = (team.ikans || [])
+                        .slice()
+                        .sort(function(a, b){
+                            return parseFloat(b.final_rank_point || 0) -
+                                parseFloat(a.final_rank_point || 0);
+                        });
 
-                        return '<article class="team-result-card is-team-champion">' +
-                            '<div class="team-result-head">' +
-                                '<div>' +
-                                    '<h4>' + escapeHtml(team.detail_anggota || '-') + '</h4>' +
-                                    '<p>' + (team.total_ikan || 0) + ' ikan Team Champion</p>' +
-                                '</div>' +
-                                '<div class="team-result-position">' +
-                                    '<small>Rank</small>' +
-                                    '<b>' + escapeHtml(String(team.position || '-')) + '</b>' +
-                                '</div>' +
+                    var rows = fishes.map(function(item){
+                        return '<tr>' +
+                            '<td class="tc-tank">Tank ' +
+                                escapeHtml(String(item.nomor_tank || '-')) +
+                            '</td>' +
+
+                            '<td class="tc-category">' +
+                                escapeHtml(publicResultGroupLabel(item)) +
+                            '</td>' +
+
+                            '<td class="tc-point">' +
+                                formatPublicPoint(item.final_rank_point || 0) +
+                                ' pts' +
+                            '</td>' +
+                        '</tr>';
+                    }).join('');
+
+                    return '<article class="team-champion-card">' +
+                        '<div class="team-champion-card-head">' +
+                            '<div>' +
+                                '<h4>' +
+                                    escapeHtml(team.detail_anggota || 'Tanpa Team') +
+                                '</h4>' +
+                                '<p>' +
+                                    (team.total_ikan || fishes.length || 0) +
+                                    ' ikan terdaftar pada Team Champion' +
+                                '</p>' +
                             '</div>' +
-                            '<div class="team-result-summary">' +
-                                '<div class="team-result-metric">' +
-                                    '<span>Total Point</span>' +
-                                    '<b>' + formatPublicPoint(team.total_rank_point || 0) + '</b>' +
-                                '</div>' +
-                                '<div class="team-result-metric is-cyan">' +
-                                    '<span>Jumlah Ikan</span>' +
-                                    '<b>' + (team.total_ikan || 0) + '</b>' +
-                                '</div>' +
+
+                            '<div class="team-champion-position">' +
+                                '<small>Rank</small>' +
+                                '<b>' +
+                                    escapeHtml(String(team.position || '-')) +
+                                '</b>' +
                             '</div>' +
-                            '<div class="team-fish-list">' + rows + '</div>' +
-                        '</article>';
-                    }).join('') +
+                        '</div>' +
+
+                        '<div class="team-champion-metrics">' +
+                            '<div class="team-champion-metric">' +
+                                '<span>Total Rank Point</span>' +
+                                '<b>' +
+                                    formatPublicPoint(team.total_rank_point || 0) +
+                                '</b>' +
+                            '</div>' +
+
+                            '<div class="team-champion-metric is-cyan">' +
+                                '<span>Jumlah Ikan</span>' +
+                                '<b>' +
+                                    (team.total_ikan || fishes.length || 0) +
+                                '</b>' +
+                            '</div>' +
+                        '</div>' +
+
+                        '<div class="team-champion-table-wrap">' +
+                            '<table class="team-champion-table">' +
+                                '<thead>' +
+                                    '<tr>' +
+                                        '<th>Tank</th>' +
+                                        '<th>Kategori / Kelas</th>' +
+                                        '<th style="text-align:right;">Rank Pt</th>' +
+                                    '</tr>' +
+                                '</thead>' +
+                                '<tbody>' +
+                                    rows +
+                                '</tbody>' +
+                            '</table>' +
+                        '</div>' +
+                    '</article>';
+                }).join('') +
+
                 '</div>';
         }
 
@@ -4141,51 +4646,6 @@
                 renderDashboardRankingPreview();
                 renderDashboardMvpByTeam();
                 renderDashboardTeamChampion();
-
-                // MVP (semua team) — tabel ringkas, scroll horizontal di mobile
-                if (mvpList) {
-                    mvpList.innerHTML = mvp.length ? (
-                        '<div style="overflow-x:auto;border:1px solid var(--bd-2);border-radius:16px;background:var(--glass-2);">' +
-                        '<table style="width:100%;border-collapse:collapse;min-width:640px;font-size:12px;">' +
-                        '<thead><tr style="background:rgba(255,255,255,.04);color:var(--text-hi);">' +
-                            '<th style="padding:10px;text-align:center;">NO</th><th style="padding:10px;text-align:left;">PESERTA</th>' +
-                            '<th style="padding:10px;text-align:left;">TEAM/KOTA</th><th style="padding:10px;text-align:left;">KATEGORI</th>' +
-                            '<th style="padding:10px;text-align:center;">TANK</th><th style="padding:10px;text-align:center;">JUARA</th>' +
-                            '<th style="padding:10px;text-align:center;">RANK PT</th></tr></thead><tbody>' +
-                        mvp.map(function(r, i){
-                            return '<tr>' +
-                                '<td style="padding:10px;border-top:1px solid var(--bd-1);text-align:center;font-weight:900;color:var(--text-hi);">' + (i+1) + '</td>' +
-                                '<td style="padding:10px;border-top:1px solid var(--bd-1);font-weight:800;color:var(--text-hi);">' + escapeHtml(r.nama_peserta || '-') + '</td>' +
-                                '<td style="padding:10px;border-top:1px solid var(--bd-1);color:var(--text-mid);font-weight:700;">' + escapeHtml(r.asal_label || r.detail_anggota || '-') + '</td>' +
-                                '<td style="padding:10px;border-top:1px solid var(--bd-1);color:var(--cyan-300);font-weight:800;">' + escapeHtml(r.group_label || r.kategori || '-') + '</td>' +
-                                '<td style="padding:10px;border-top:1px solid var(--bd-1);text-align:center;font-family:JetBrains Mono,monospace;color:var(--text-hi);font-weight:900;">' + escapeHtml(String(r.nomor_tank || '-')) + '</td>' +
-                                '<td style="padding:10px;border-top:1px solid var(--bd-1);text-align:center;color:var(--gold-300);font-weight:900;">' + escapeHtml(String(r.position || '-')) + '</td>' +
-                                '<td style="padding:10px;border-top:1px solid var(--bd-1);text-align:center;color:var(--text-hi);font-weight:900;">' + escapeHtml(String(r.final_rank_point || r.rank_point || 0)) + '</td>' +
-                            '</tr>';
-                        }).join('') + '</tbody></table></div>'
-                    ) : '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">Belum ada data MVP.</div>';
-                }
-
-                // Team Champion (semua team) — kartu per team
-                if (tcList) {
-                    tcList.innerHTML = tc.length ? tc.map(function(t){
-                        var rows = (t.ikans || []).map(function(ik){
-                            return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--bd-1);font-size:12px;">' +
-                                '<span style="color:var(--text-mid);">Tank ' + escapeHtml(String(ik.nomor_tank || '-')) + ' · ' + escapeHtml(ik.group_label || ik.kategori || '-') + '</span>' +
-                                '<span style="color:var(--gold-300);font-weight:900;white-space:nowrap;">' + escapeHtml(String(ik.final_rank_point || 0)) + ' pts</span>' +
-                            '</div>';
-                        }).join('');
-                        return '<div style="padding:16px;border:1px solid rgba(34,211,238,.25);border-radius:16px;background:var(--glass-2);">' +
-                            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">' +
-                                '<div style="min-width:0;"><div style="font-size:13px;font-weight:900;color:var(--text-hi);">' + escapeHtml(t.detail_anggota || '-') + '</div>' +
-                                    '<div style="font-size:11px;color:var(--text-mid);font-weight:700;margin-top:4px;">' + (t.total_ikan || 0) + ' ikan • Total ' + escapeHtml(String(t.total_rank_point || 0)) + ' pts</div></div>' +
-                                '<div style="text-align:right;flex-shrink:0;"><div style="font-size:10px;color:var(--text-low);font-weight:900;text-transform:uppercase;">Peringkat</div>' +
-                                    '<div style="font-family:JetBrains Mono,monospace;font-size:24px;font-weight:900;color:var(--cyan-300);">' + escapeHtml(String(t.position || '-')) + '</div></div>' +
-                            '</div>' +
-                            '<div style="margin-top:8px;">' + rows + '</div>' +
-                        '</div>';
-                    }).join('') : '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">Belum ada data Team Champion.</div>';
-                }
             })
             .catch(function(){ /* diamkan: badge tetap apa adanya */ });
         }
