@@ -90,7 +90,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/grand-juri/kunci-semua', [GrandJuriController::class, 'kunciSemua']);
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/add-bonus', [AdminDashboardController::class, 'addBonus']);
     Route::post('/api/admin/remove-bonus', [AdminDashboardController::class, 'removeBonus']);
 });

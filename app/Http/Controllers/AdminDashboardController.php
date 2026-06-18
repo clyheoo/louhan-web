@@ -2256,22 +2256,46 @@ class AdminDashboardController extends Controller
     public function getTeamChampionIkan()
     {
         $ikans = Ikan::where('is_team_champion', true)
-            ->with('peserta')
+            ->with(['peserta', 'bonusPoints'])
+            ->withCount('scorings')
             ->orderBy('detail_anggota')
             ->orderBy('kategori')
             ->orderBy('kelas')
             ->get()
             ->map(function ($ikan) {
+                $submitted = (bool) optional($ikan->peserta)->is_team_champion_submitted;
+
+                $isFinal = (bool) $ikan->is_locked
+                    && $ikan->nomor_tank !== null
+                    && (int) $ikan->scorings_count > 0;
+
                 return [
                     'id' => $ikan->id,
                     'nama_peserta' => $ikan->nama_peserta ?? '-',
-                    'detail_anggota' => $ikan->detail_anggota ?? optional($ikan->peserta)->detail_anggota ?? '-',
+                    'detail_anggota' => $ikan->detail_anggota
+                        ?? optional($ikan->peserta)->detail_anggota
+                        ?? '-',
                     'kategori' => $ikan->kategori,
                     'kelas' => $ikan->kelas,
                     'nomor_tank' => $ikan->nomor_tank ?? '-',
                     'is_mvp' => (bool) $ikan->is_mvp,
+
+                    'bonus_list' => $ikan->bonusPoints
+                        ->pluck('bonus_type')
+                        ->values()
+                        ->all(),
+
+                    'total_bonus' => (int) $ikan->bonusPoints->sum('points'),
+
+                    'is_submitted' => $submitted,
+                    'is_final' => $isFinal,
+
+                    // Bonus hanya ditampilkan untuk data TC yang sudah dikirim
+                    // dan sudah final/terkunci.
+                    'can_manage_bonus' => $submitted && $isFinal,
                 ];
-            });
+            })
+            ->values();
 
         return response()->json($ikans);
     }
@@ -2340,8 +2364,8 @@ class AdminDashboardController extends Controller
 
         $ikan->is_team_champion = false;
 
-        // MVP wajib dari Team Champion, jadi saat dicabut dari Team Champion, cabut MVP juga.
-        $ikan->is_mvp = false;
+        // MVP dan Team Champion dipilih secara terpisah pada panel user.
+        // Jangan menghapus status MVP saat Team Champion dicabut.
         $ikan->save();
 
         return response()->json([
@@ -3344,10 +3368,15 @@ class AdminDashboardController extends Controller
             ];
         })->filter()->values();
 
+        $globalPublished = \DB::table('settings')
+        ->where('key', 'results_global_published')
+        ->value('value') === '1';
+
         return response()->json([
-            'users'           => $users,
-            'total_published' => Peserta::whereNotNull('result_unlocked_at')->count(),
-            'total_peserta'   => Peserta::whereHas('user')->count(),
+            'users'            => $users,
+            'total_published'  => Peserta::whereNotNull('result_unlocked_at')->count(),
+            'total_peserta'    => Peserta::whereHas('user')->count(),
+            'global_published' => $globalPublished,
         ]);
     }
 
@@ -3369,6 +3398,11 @@ class AdminDashboardController extends Controller
             })
             ->whereNotNull('user_id')
             ->get();
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'results_global_published'],
+            ['value' => '1', 'updated_at' => now()]
+        );
 
         foreach ($pesertas as $p) {
             $p->update(['result_unlocked_at' => now()]);
@@ -3446,6 +3480,11 @@ class AdminDashboardController extends Controller
 
     public function unpublishResultsAll()
     {
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'results_global_published'],
+            ['value' => '0', 'updated_at' => now()]
+        );
+
         $pesertas = Peserta::whereNotNull('result_unlocked_at')->get();
 
         foreach ($pesertas as $p) {

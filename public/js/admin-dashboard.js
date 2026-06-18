@@ -583,17 +583,73 @@ function popupError(title,desc){
     showPopup('popupError');
 }
 function popupInfo(title,desc){
-    document.getElementById('popupInfoTitle').textContent=title||'Informasi';
-    document.getElementById('popupInfoDesc').innerHTML=desc||'';
+    document.getElementById('popupInfoTitle').textContent = title || 'Informasi';
+    document.getElementById('popupInfoDesc').innerHTML = desc || '';
     showPopup('popupInfo');
 }
-function popupConfirm(title,desc,btnText,callback){
-    document.getElementById('popupConfirmTitle').textContent=title||'Konfirmasi';
-    document.getElementById('popupConfirmDesc').innerHTML=desc||'';
-    document.getElementById('popupConfirmBtn').innerHTML='<i class="fas fa-check"></i> '+(btnText||'Ya, Lanjutkan');
-    _confirmCallback=callback;
+
+/* =========================================================
+   CONFIRM POPUP
+   ========================================================= */
+/* =========================================================
+   CONFIRM POPUP
+   ID modal di Blade: popupConfirm
+   Nama function sengaja berbeda agar tidak bentrok dengan ID.
+   ========================================================= */
+function openConfirmPopup(title, desc, btnText, callback){
+    var modalEl = document.getElementById('popupConfirm');
+    var titleEl = document.getElementById('popupConfirmTitle');
+    var descEl = document.getElementById('popupConfirmDesc');
+    var btnEl = document.getElementById('popupConfirmBtn');
+
+    if(!modalEl){
+        console.error('Modal konfirmasi #popupConfirm tidak ditemukan di admin.blade.php.');
+        popupError(
+            'Modal Tidak Ditemukan',
+            'Elemen popup konfirmasi belum tersedia di halaman admin.'
+        );
+        return;
+    }
+
+    if(titleEl){
+        titleEl.textContent = title || 'Konfirmasi';
+    }
+
+    if(descEl){
+        descEl.innerHTML = desc || '';
+    }
+
+    if(btnEl){
+        btnEl.innerHTML =
+            '<i class="fas fa-check"></i> ' +
+            (btnText || 'Ya, Lanjutkan');
+    }
+
+    _confirmCallback = typeof callback === 'function'
+        ? callback
+        : null;
+
     showPopup('popupConfirm');
 }
+
+function executeConfirm(){
+    var callback = _confirmCallback;
+
+    // Cegah request ganda dari klik tombol berulang.
+    _confirmCallback = null;
+
+    hidePopup('popupConfirm');
+
+    if(typeof callback === 'function'){
+        callback();
+    }
+}
+
+function cancelConfirm(){
+    _confirmCallback = null;
+    hidePopup('popupConfirm');
+}
+
 /* ★ Modal prompt kustom (pengganti window.prompt) */
 var _promptCallback = null;
 function popupPromptText(opts){
@@ -832,6 +888,14 @@ function rerenderBonusModalAfterChange(d){
     } catch(e) {
         console.warn('loadAdminPointRanking background gagal:', e);
     }
+
+    try {
+        if(typeof loadTeamChampionIkan === 'function'){
+            loadTeamChampionIkan();
+        }
+    } catch(e) {
+        console.warn('loadTeamChampionIkan background gagal:', e);
+    }
 }
 
 function addBonus(type, el){
@@ -901,7 +965,7 @@ function removeBonus(type){
 
     var label = getBonusLabel(type);
 
-    popupConfirm(
+    openConfirmPopup(
         'Hapus Bonus',
         'Yakin ingin menghapus bonus <strong>' + esc(label) + '</strong>? Rank point bonus akan dikurangi kembali.',
         'Ya, Hapus',
@@ -1219,7 +1283,7 @@ function kunciSemuaAdmin(){
     var isAllLocked = badge && badge.innerHTML.indexOf('TERKUNCI') !== -1;
 
     if(isAllLocked){
-        popupConfirm(
+        openConfirmPopup(
             'Buka Semua Kunci?',
             'Tindakan ini akan <b>MEMBUKA KUNCI SEMUA peserta</b> yang sudah terkunci. Setelah dibuka, nilai dapat diubah kembali oleh Grand Juri.<br><br>Lanjutkan?',
             'Ya, Buka Semua',
@@ -1253,7 +1317,7 @@ function kunciSemuaAdmin(){
             }
         );
     } else {
-        popupConfirm(
+        openConfirmPopup(
             'Kunci Semua Peserta?',
             'Tindakan ini akan <b>MENGUNCI SEMUA peserta</b> yang sudah dinilai tetapi belum terkunci. Setelah dikunci, nilai tidak dapat diubah lagi.<br><br>Lanjutkan?',
             'Ya, Kunci Semua',
@@ -2247,7 +2311,7 @@ function submitCreateUser(){
 
 /* ★ DELETE USER */
 function deleteUser(uid,name){
-    popupConfirm(
+    openConfirmPopup(
         'Hapus User',
         'Yakin ingin menghapus <strong>'+esc(name)+'</strong>?<br><span style="font-size:11px;color:var(--danger);">Tindakan ini tidak dapat dibatalkan.</span>',
         'Ya, Hapus',
@@ -2452,7 +2516,7 @@ function openRoleMenu(e,uid,name,currentRole){
 function closeRoleMenu(){var m=document.getElementById('roleMenuDropdown');if(m)m.remove();activeRoleMenu=null;}
 
 function changeRole(uid,name,newRole){
-    popupConfirm(
+    openConfirmPopup(
         'Ubah Role User',
         'Ubah role <strong>'+esc(name)+'</strong> menjadi <strong style="color:'+roleColors[newRole]+';">'+roleLabels[newRole]+'</strong>?',
         'Ya, Ubah Role',
@@ -2467,7 +2531,7 @@ function changeRole(uid,name,newRole){
 }
 
 function deleteIkan(ikanId, nama){
-    popupConfirm(
+    openConfirmPopup(
         'Hapus Data Penilaian',
         'Yakin ingin menghapus data ikan milik <strong>'+esc(nama)+'</strong>?<br><span style="font-size:11px;color:var(--danger);">Semua nilai penilaian terkait juga akan dihapus permanen.</span>',
         'Ya, Hapus Permanen',
@@ -2724,7 +2788,7 @@ function bulkDeleteIkan(){
     }
     listHtml += '</div>';
 
-    popupConfirm(
+    openConfirmPopup(
         'Hapus Data Penilaian Massal',
         'Yakin ingin menghapus <strong>' + ids.length + ' data ikan</strong> berikut?' + listHtml +
         '<div style="font-size:11px;color:var(--danger);margin-top:8px;"><i class="fas fa-triangle-exclamation"></i> Semua nilai penilaian terkait juga akan dihapus permanen.</div>',
@@ -2968,7 +3032,7 @@ function submitResetTank() {
         return;
     }
     
-    popupConfirm(
+    openConfirmPopup(
         'Konfirmasi Reset',
         'Anda yakin ingin menghapus <b>SEMUA</b> nomor tank?<br><span style="font-size:11px;color:var(--danger);">Tindakan ini tidak dapat dibatalkan.</span>',
         'Ya, Reset Sekarang',
@@ -3087,7 +3151,7 @@ function submitResetPeserta(){
 
     var label = getResetPesertaModeLabel(mode);
 
-    popupConfirm(
+    openConfirmPopup(
         'Verifikasi 2: ' + label,
         'Anda benar-benar yakin ingin menjalankan aksi <b>' + esc(label) + '</b>?<br>' +
         '<span style="font-size:11px;color:var(--danger);font-weight:800;">Tindakan ini tidak dapat dibatalkan dari aplikasi.</span>',
@@ -3717,7 +3781,7 @@ function openMvpDataBonus(ikanId){
 
 /* ═══ HAPUS IKAN DARI MVP ═══ */
 function deleteMvpIkan(ikanId, nama) {
-    popupConfirm(
+    openConfirmPopup(
         'Hapus dari Pendaftaran MVP',
         'Yakin ingin menghapus ikan milik <strong>' + esc(nama) + '</strong> dari pendaftaran MVP?<br><span style="font-size:11px;color:var(--warning);">Ikan tetap ada di sistem, hanya dihapus dari daftar MVP. Peserta dapat mendaftarkan ulang.</span>',
         'Ya, Hapus dari MVP',
@@ -4042,7 +4106,7 @@ function loadTeamChampionPeserta() {
 }
 
 function unlockTeamChampionPeserta(pesertaId, nama) {
-    popupConfirm(
+    openConfirmPopup(
         'Buka Kunci Team Champion',
         'Yakin ingin membuka kembali Team Champion untuk <strong>' + esc(nama) + '</strong>? MVP peserta ini juga akan dibuka ulang agar data tetap konsisten.',
         'Ya, Buka Kunci',
@@ -4074,13 +4138,64 @@ function unlockTeamChampionPeserta(pesertaId, nama) {
     );
 }
 
+function openTeamChampionBonus(ikanId){
+    function openFromScoringCache(){
+        var idx = allScoringData.findIndex(function(item){
+            return parseInt(item.id, 10) === parseInt(ikanId, 10);
+        });
+
+        if(idx < 0){
+            popupError(
+                'Data Tidak Ditemukan',
+                'Data penilaian ikan belum tersedia. Pastikan ikan sudah final dan memiliki nilai.'
+            );
+            return;
+        }
+
+        openBonusModal(idx);
+    }
+
+    var hasIkan = allScoringData.some(function(item){
+        return parseInt(item.id, 10) === parseInt(ikanId, 10);
+    });
+
+    if(hasIkan){
+        openFromScoringCache();
+        return;
+    }
+
+    fetch('/api/admin/scoring-data', {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(function(r){
+        if(!r.ok){
+            return r.json().then(function(d){ throw d; });
+        }
+
+        return r.json();
+    })
+    .then(function(data){
+        allScoringData = Array.isArray(data) ? data : [];
+        openFromScoringCache();
+    })
+    .catch(function(e){
+        popupError(
+            'Gagal Memuat Data',
+            e && e.message ? e.message : 'Gagal memuat data ranking ikan.'
+        );
+    });
+}
+
 function loadTeamChampionIkan() {
     var tb = document.getElementById('teamChampionIkanBody');
     var countEl = document.getElementById('teamChampionIkanCount');
 
     if (!tb) return;
 
-    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--text-mid);">Memuat data...</td></tr>';
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:var(--text-mid);">Memuat data...</td></tr>';
 
     fetch('/api/admin/team-champion-ikan', {headers:{'Accept':'application/json'}})
     .then(function(r){ return r.json(); })
@@ -4097,6 +4212,29 @@ function loadTeamChampionIkan() {
         data.forEach(function(d, idx){
             var safeName = esc(d.nama_peserta || '-').replace(/'/g, "\\'");
             var tr = document.createElement('tr');
+            var bonusHtml = d.total_bonus > 0
+                ? '<span class="status-badge s-dinilai">+' + esc(d.total_bonus) + ' (' + (d.bonus_list || []).length + ')</span>'
+                : '<span style="color:var(--text-low);">—</span>';
+
+            var statusHtml = d.can_manage_bonus
+                ? '<span class="status-badge s-dinilai">FINAL</span>'
+                : (
+                    !d.is_submitted
+                        ? '<span style="font-size:10px;color:var(--gold-300);">Belum dikirim</span>'
+                        : '<span style="font-size:10px;color:var(--text-low);">Belum final</span>'
+                );
+
+            var actionHtml =
+                (d.can_manage_bonus
+                    ? '<button class="btn-xs gold" onclick="openTeamChampionBonus(' + d.id + ')" title="Kelola Bonus Point">' +
+                        '<i class="fas fa-trophy"></i> Bonus' +
+                    '</button> '
+                    : ''
+                ) +
+                '<button class="btn-xs red" onclick="deleteTeamChampionIkan(' + d.id + ',\'' + safeName + '\')">' +
+                    '<i class="fas fa-trash"></i> Hapus' +
+                '</button>';
+
             tr.innerHTML =
                 '<td>' + (idx + 1) + '</td>' +
                 '<td style="font-weight:800;">' + esc(d.nama_peserta || '-') + '</td>' +
@@ -4104,24 +4242,21 @@ function loadTeamChampionIkan() {
                 '<td>' + esc(d.kategori || '-') + '</td>' +
                 '<td>' + esc(d.kelas || '-') + '</td>' +
                 '<td>' + esc(d.nomor_tank || '-') + '</td>' +
-                '<td>' + (d.is_mvp ? '<span class="status-badge s-dinilai">MVP</span>' : '<span style="color:var(--text-low);">-</span>') + '</td>' +
-                '<td style="text-align:center;">' +
-                    '<button class="btn-xs red" onclick="deleteTeamChampionIkan(' + d.id + ',\'' + safeName + '\')">' +
-                        '<i class="fas fa-trash"></i> Hapus' +
-                    '</button>' +
-                '</td>';
+                '<td style="text-align:center;">' + bonusHtml + '</td>' +
+                '<td style="text-align:center;">' + statusHtml + '</td>' +
+                '<td style="text-align:center;white-space:nowrap;">' + actionHtml + '</td>';
             tb.appendChild(tr);
         });
     })
     .catch(function(){
-        tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:16px;">Gagal memuat data.</td></tr>';
+        tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--danger);padding:16px;">Gagal memuat data.</td></tr>';
     });
 }
 
 function deleteTeamChampionIkan(ikanId, nama) {
-    popupConfirm(
+    openConfirmPopup(
         'Hapus dari Team Champion',
-        'Yakin ingin menghapus ikan milik <strong>' + esc(nama) + '</strong> dari Team Champion? Jika ikan ini juga MVP, status MVP ikut dicabut.',
+        'Yakin ingin menghapus ikan milik <strong>' + esc(nama) + '</strong> dari Team Champion? Status MVP ikan ini tidak akan diubah.',
         'Ya, Hapus',
         function(){
             var fd = new FormData();
@@ -4247,7 +4382,7 @@ function loadMvpPeserta() {
 }
 
 function unlockMvpPeserta(pesertaId, nama) {
-    popupConfirm(
+    openConfirmPopup(
         'Buka Kunci MVP Peserta',
         'Yakin ingin membuka kembali pendaftaran MVP untuk <strong>' + esc(nama) + '</strong>?<br><div style="text-align:left;margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;font-size:11px;line-height:1.6;color:var(--muted);"><i class="fas fa-circle-info" style="color:var(--primary);"></i> Peserta dapat menambah/hapus pilihan ikan MVP mereka sesuai batas yang admin atur. Setelah mereka kirim ulang, akan terkunci otomatis.</div>',
         'Ya, Buka Kunci',
@@ -4294,7 +4429,7 @@ openModal = function(id) {
    RESET SEMUA RENTANG SUB-KATEGORI
    ═══════════════════════════════════════════════ */
 function resetAllRanges(){
-    popupConfirm(
+    openConfirmPopup(
         'Reset Semua Rentang',
         'Yakin ingin menghapus <b>SEMUA</b> pengaturan rentang sub-kategori?<br><span style="font-size:11px;color:var(--warning);">Rentang Global <b>tidak terpengaruh</b>. Hanya sub-rentang per kategori/kelas yang dihapus.</span>',
         'Ya, Hapus Semua',
@@ -4817,7 +4952,7 @@ function loadResultsStatus(){
 }
 
 function unpublishResultSingleUser(userId, userName){
-    popupConfirm(
+    openConfirmPopup(
         'Cabut Akses Hasil Juara?',
         'Cabut akses hasil juara dari <strong>'+esc(userName)+'</strong>?<br><span style="font-size:11px;color:var(--danger);">Peserta tidak akan bisa lagi melihat hasil juara mereka.</span>',
         'Ya, Cabut',
@@ -4854,7 +4989,7 @@ function unpublishResultSingleUser(userId, userName){
 }
 
 function publishResultsAll(){
-    popupConfirm(
+    openConfirmPopup(
         'Publikasikan Hasil ke Semua Peserta?',
         'Tindakan ini akan membuka akses hasil juara untuk semua peserta yang sudah memiliki ikan final/terkunci.<br><span style="font-size:11px;color:var(--warning);">Pastikan semua nilai sudah dikunci dan benar.</span>',
         'Ya, Publikasikan',
@@ -4890,7 +5025,7 @@ function publishResultsAll(){
 }
 
 function unpublishResultsAll(){
-    popupConfirm(
+    openConfirmPopup(
         'Cabut Akses Hasil Juara?',
         'Peserta tidak akan bisa lagi melihat hasil juara mereka.',
         'Ya, Cabut',
@@ -4926,7 +5061,7 @@ function unpublishResultsAll(){
 }
 
 function publishResultSingleUser(userId, userName){
-    popupConfirm(
+    openConfirmPopup(
         'Kirim Hasil ke Peserta?',
         'Kirim hasil juara ke <strong>'+esc(userName)+'</strong>?',
         'Ya, Kirim',
@@ -5107,7 +5242,7 @@ function resetJuriAssignmentForm(jid){
 
 // "Reset Penugasan" global: hapus SEMUA penugasan juri → semua juri kembali ke jam pasir
 function resetAllJuriAssignments(){
-    popupConfirm(
+    openConfirmPopup(
         'Reset Semua Penugasan',
         'Semua penugasan kategori &amp; kelas untuk <strong>SELURUH juri</strong> akan dihapus. Setiap juri akan kembali menunggu (jam pasir) sampai Anda mengaturnya lagi.<br><span style="font-size:11px;color:var(--danger);">Tindakan ini tidak dapat dibatalkan.</span>',
         'Ya, Reset Semua',
@@ -5708,7 +5843,7 @@ function adminShowNomDefect(encoded){
 }
 
 function adminDeleteNominasi(nominasiId, nomorTank){
-    popupConfirm(
+    openConfirmPopup(
         'Hapus Nominasi?',
         'Yakin ingin menghapus nominasi Tank <strong>'+esc(nomorTank || '-')+'</strong>?<br>' +
         '<span style="font-size:11px;color:var(--text-mid);line-height:1.6;display:block;margin-top:6px;">' +
@@ -6228,7 +6363,7 @@ function adminNomSubmit(){
             defectsPayload[id] = adminNomState.defects[id];
         }
     });
-    popupConfirm(
+    openConfirmPopup(
         'Submit Nominasi',
         'Yakin ingin submit <strong>'+ids.length+' tank</strong> sebagai nominasi admin?<br><span style="font-size:11px;color:var(--text-mid);">Tank akan masuk ke daftar pending review dan bisa di-ACC/Tolak oleh admin atau grand juri.</span>',
         'Ya, Submit',
@@ -6323,7 +6458,7 @@ function adminApprovePending(btn, nominasiId){
 }
 
 function adminRejectPending(nominasiId, nomorTank){
-    popupConfirm(
+    openConfirmPopup(
         'Tolak Nominasi?',
         'Yakin ingin menolak Tank <strong>'+nomorTank+'</strong>?<br><span style="font-size:11px;color:var(--text-mid);">Juri akan diminta resubmit nominasi.</span>',
         'Ya, Tolak',
@@ -6507,7 +6642,7 @@ function adminApproveLate(btn, ikanId){
 }
 
 function adminRejectLate(ikanId, nomorTank){
-    popupConfirm(
+    openConfirmPopup(
         'Tolak Ikan Terlambat?',
         'Tolak ikan terlambat Tank <strong>'+nomorTank+'</strong>?',
         'Ya, Tolak',
@@ -6531,7 +6666,7 @@ function adminRejectLate(ikanId, nomorTank){
 }
 
 function adminResetRejected(nominasiId, nomorTank){
-    popupConfirm(
+    openConfirmPopup(
         'Reset Nominasi Ditolak?',
         'Yakin ingin mereset penolakan Tank <strong>'+nomorTank+'</strong>?<br><span style="font-size:11px;color:var(--text-mid);">Data penolakan akan dihapus sehingga Juri dapat mengajukan ulang nominasi tank ini.</span>',
         'Ya, Reset',
@@ -7028,7 +7163,7 @@ function toggleCategoryKelas(name){
 }
 
 function deleteCategory(name){
-    popupConfirm('Hapus Kategori',
+    openConfirmPopup('Hapus Kategori',
         'Hapus kategori <b>'+esc(name)+'</b>? Hanya bisa jika tidak ada ikan terdaftar pada kategori ini.',
         'Ya, Hapus',
         function(){ taxPost('/api/admin/category/delete', {name:name}, 'Kategori Dihapus'); });
@@ -7077,7 +7212,7 @@ function editCategoryFormulaPrompt(name){
 }
 
 function deleteClass(name){
-    popupConfirm('Hapus Kelas',
+    openConfirmPopup('Hapus Kelas',
         'Hapus kelas <b>'+esc(name)+'</b>? Hanya bisa jika tidak ada ikan terdaftar pada kelas ini.',
         'Ya, Hapus',
         function(){ taxPost('/api/admin/class/delete', {name:name}, 'Kelas Dihapus'); });

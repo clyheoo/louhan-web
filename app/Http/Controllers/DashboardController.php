@@ -64,6 +64,13 @@ class DashboardController extends Controller
         return ($val === null) ? true : ($val === '1');
     }
 
+    private function isResultsGloballyPublished(): bool
+    {
+        return DB::table('settings')
+            ->where('key', 'results_global_published')
+            ->value('value') === '1';
+    }
+
     public function index()
     {
         $user = Auth::user()->fresh();
@@ -1115,7 +1122,7 @@ class DashboardController extends Controller
                             'detail_anggota'      => $this->cleanExcelDisplayValue($ikan->detail_anggota, ''), 
                             'point'               => round((float)($r['total_point'] ?? 0), 2),
                             'rank_point'          => $rankPoint,
-                            'position'            => $idx + 1,
+                            'position' => (int) ($r['position'] ?? ($idx + 1)),
                             'nomor_tank'          => $ikan->nomor_tank,
                             'total_bonus'         => $bonusTotal,
                             'final_rank_point'    => $rankPoint + $bonusTotal,
@@ -1222,12 +1229,14 @@ class DashboardController extends Controller
         $mvpFeatureEnabled = $this->isFeatureEnabled('mvp_feature_enabled');
         $tcFeatureEnabled  = $this->isFeatureEnabled('team_champion_feature_enabled');
 
-        $published = Peserta::whereNotNull('result_unlocked_at')->exists();
+        $published = $this->isResultsGloballyPublished();
 
         if (!$published) {
             return response()->json([
                 'published' => false,
-                'results' => [], 'mvp' => [], 'team_champion' => [],
+                'results' => [],
+                'mvp' => [],
+                'team_champion' => [],
                 'mvp_feature_enabled' => $mvpFeatureEnabled,
                 'team_champion_feature_enabled' => $tcFeatureEnabled,
             ]);
@@ -1237,8 +1246,7 @@ class DashboardController extends Controller
         $finalIkans = Ikan::where('is_locked', true)
             ->whereNotNull('nomor_tank')
             ->whereHas('scorings')
-            ->whereHas('peserta', function ($q) { $q->whereNotNull('result_unlocked_at'); })
-            ->with(['scorings', 'bonusPoints'])
+            ->with(['peserta', 'scorings', 'bonusPoints'])
             ->get();
 
         // Kelompokkan per kategori|kelas
@@ -1361,7 +1369,13 @@ class DashboardController extends Controller
         $mvp = [];
         if ($mvpFeatureEnabled) {
             foreach ($finalIkans as $ikan) {
-                if ($ikan->is_mvp && isset($rankByIkan[$ikan->id])) $mvp[] = $rankByIkan[$ikan->id];
+                if (
+                    $ikan->is_mvp &&
+                    optional($ikan->peserta)->is_mvp_submitted &&
+                    isset($rankByIkan[$ikan->id])
+                ) {
+                    $mvp[] = $rankByIkan[$ikan->id];
+                }
             }
             usort($mvp, function ($a, $b) { return $b['final_rank_point'] <=> $a['final_rank_point']; });
         }
@@ -1371,7 +1385,13 @@ class DashboardController extends Controller
         if ($tcFeatureEnabled) {
             $byTeam = [];
             foreach ($finalIkans as $ikan) {
-                if (!$ikan->is_team_champion || !isset($rankByIkan[$ikan->id])) continue;
+                if (
+                    !$ikan->is_team_champion ||
+                    !optional($ikan->peserta)->is_team_champion_submitted ||
+                    !isset($rankByIkan[$ikan->id])
+                ) {
+                    continue;
+                }
                 $info = $rankByIkan[$ikan->id];
                 $team = trim($this->cleanExcelDisplayValue($ikan->detail_anggota, '')) ?: '(Tanpa Team)';
                 if (!isset($byTeam[$team])) $byTeam[$team] = ['detail_anggota' => $team, 'ikans' => [], 'total_rank_point' => 0, 'total_ikan' => 0];

@@ -285,6 +285,48 @@
             .score-row{grid-template-columns:repeat(2,1fr)}
             .component-grid{grid-template-columns:repeat(2,1fr)}
         }
+        .tc-fish-row{
+            display:flex;
+            justify-content:space-between;
+            gap:10px;
+            padding:7px 0;
+            border-bottom:1px dashed var(--bd-1);
+            font-size:12px;
+        }
+
+        .tc-fish-name{
+            color:var(--text-mid);
+            min-width:0;
+            overflow-wrap:anywhere;
+        }
+
+        .tc-fish-point{
+            color:var(--gold-300);
+            font-weight:900;
+            white-space:nowrap;
+            flex-shrink:0;
+        }
+
+        @media(max-width:480px){
+            .tc-fish-row{
+                flex-direction:column;
+                align-items:flex-start;
+                gap:4px;
+            }
+
+            .tc-fish-point{
+                font-size:11px;
+            }
+
+            .simple-result-top{
+                gap:8px;
+            }
+
+            .rank-badge{
+                min-width:48px;
+                padding:7px 8px;
+            }
+        }
 </style>
 </head>
 <body>
@@ -561,10 +603,10 @@
 
     function renderTeamChampionCard(t){
         var ikansHtml = (t.ikans || []).map(function(ik){
-            return '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--bd-1);font-size:12px;">' +
-                '<span style="color:var(--text-mid);min-width:0;">Tank ' + escapeHtml(ik.nomor_tank || '-') + ' · ' + escapeHtml(groupLabel(ik)) + '</span>' +
-                '<span style="color:var(--gold-300);font-weight:900;white-space:nowrap;">' + formatNumber(ik.final_rank_point || 0) + ' pts</span>' +
-            '</div>';
+        return '<div class="tc-fish-row">' +
+            '<span class="tc-fish-name">Tank ' + escapeHtml(ik.nomor_tank || '-') + ' · ' + escapeHtml(groupLabel(ik)) + '</span>' +
+            '<span class="tc-fish-point">' + formatNumber(ik.final_rank_point || 0) + ' pts</span>' +
+        '</div>';
         }).join('');
 
         return '<div class="simple-result-card" style="border-color:rgba(34,211,238,.25);">' +
@@ -592,7 +634,7 @@
             return '<div class="empty-state" style="padding:50px 20px;">'+
                 '<div style="width:80px;height:80px;border-radius:50%;background:var(--glass-2);border:1px solid var(--bd-2);display:grid;place-items:center;margin:0 auto 16px;color:var(--warning);font-size:32px;"><i class="fas fa-circle-exclamation"></i></div>'+
                 '<p style="font-size:14px;font-weight:700;color:var(--text-mid);margin-bottom:6px;">Akses Hasil Sudah Dibuka</p>'+
-                '<p style="font-size:12px;color:var(--text-low);max-width:390px;margin:0 auto;line-height:1.6;">Tetapi belum ada ikan Anda yang memenuhi syarat hasil juara. Syaratnya: punya nomor tank, sudah dinilai, dan sudah dikunci/final oleh Grand Juri/Admin.</p>'+
+                '<p style="font-size:12px;color:var(--text-low);max-width:390px;margin:0 auto;line-height:1.6;">Hasil global sudah dibuka, tetapi belum ada ikan final yang memenuhi syarat publikasi. Ikan harus memiliki nomor tank, nilai, dan status final/terkunci.</p>'+
             '</div>';
         }
 

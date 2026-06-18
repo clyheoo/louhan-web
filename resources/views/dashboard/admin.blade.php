@@ -1596,7 +1596,10 @@
                                 <span class="ti"><i class="fas fa-fish"></i></span>
                                 Data Ikan Team Champion
                             </h3>
-                            <div class="card-sub">Daftar semua ikan yang masuk Team Champion.</div>
+                            <div class="card-sub">
+                                Daftar ikan Team Champion. Bonus memakai aturan yang sama dengan MVP
+                                dan hanya aktif untuk data yang sudah dikirim serta final.
+                            </div>
                         </div>
                         <span class="tb-pill" id="teamChampionIkanCount">0 ikan</span>
                     </div>
@@ -1611,13 +1614,14 @@
                                         <th>Kategori</th>
                                         <th>Kelas</th>
                                         <th>Tank</th>
-                                        <th>MVP</th>
+                                        <th style="text-align:center;">Bonus</th>
+                                        <th style="text-align:center;">Status</th>
                                         <th style="text-align:center;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody id="teamChampionIkanBody">
                                     <tr>
-                                        <td colspan="8" style="text-align:center;padding:16px;color:var(--text-mid);">
+                                        <td colspan="9" style="text-align:center;padding:16px;color:var(--text-mid);">
                                             Memuat data...
                                         </td>
                                     </tr>
