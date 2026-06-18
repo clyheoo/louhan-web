@@ -3529,35 +3529,46 @@
             if (btn) btn.style.display = 'none';
         }
 
-        function openUserSidebar(){
-            document.body.classList.add('user-sidebar-open');
-            updateSidebarToggleIcon();
-        }
-
-        function closeUserSidebar(){
-            document.body.classList.remove('user-sidebar-open');
-            updateSidebarToggleIcon();
-        }
-
-        function toggleUserSidebar(){
-            document.body.classList.toggle('user-sidebar-open');
-            updateSidebarToggleIcon();
-        }
-
-        function updateSidebarToggleIcon(){
+        window.updateSidebarToggleIcon = function(){
             var btnIcon = document.querySelector('.user-mobile-toggle i');
-            if (!btnIcon) return;
 
-            if (document.body.classList.contains('user-sidebar-open')) {
-                btnIcon.className = 'fas fa-xmark';
-            } else {
-                btnIcon.className = 'fas fa-bars';
+            if(!btnIcon){
+                return;
             }
-        }
 
-        function showUserPage(page){
-            var allowedPages = ['overview', 'profile', 'ikan', 'mvp', 'nominasi', 'results'];
-            if (allowedPages.indexOf(page) === -1) page = 'overview';
+            btnIcon.className = document.body.classList.contains('user-sidebar-open')
+                ? 'fas fa-xmark'
+                : 'fas fa-bars';
+        };
+
+        window.openUserSidebar = function(){
+            document.body.classList.add('user-sidebar-open');
+            window.updateSidebarToggleIcon();
+        };
+
+        window.closeUserSidebar = function(){
+            document.body.classList.remove('user-sidebar-open');
+            window.updateSidebarToggleIcon();
+        };
+
+        window.toggleUserSidebar = function(){
+            document.body.classList.toggle('user-sidebar-open');
+            window.updateSidebarToggleIcon();
+        };
+
+        window.showUserPage = function(page){
+            var allowedPages = [
+                'overview',
+                'profile',
+                'ikan',
+                'mvp',
+                'nominasi',
+                'results'
+            ];
+
+            if(allowedPages.indexOf(page) === -1){
+                page = 'overview';
+            }
 
             document.body.classList.remove(
                 'user-page-overview',
@@ -3570,16 +3581,23 @@
 
             document.body.classList.add('user-page-' + page);
 
-            document.querySelectorAll('[data-user-page-section]').forEach(function(section){
-                section.classList.toggle(
-                    'active',
-                    section.getAttribute('data-user-page-section') === page
-                );
-            });
+            document
+                .querySelectorAll('[data-user-page-section]')
+                .forEach(function(section){
+                    section.classList.toggle(
+                        'active',
+                        section.getAttribute('data-user-page-section') === page
+                    );
+                });
 
-            document.querySelectorAll('.user-sidebar-item').forEach(function(item){
-                item.classList.toggle('active', item.dataset.userPage === page);
-            });
+            document
+                .querySelectorAll('.user-sidebar-item')
+                .forEach(function(item){
+                    item.classList.toggle(
+                        'active',
+                        item.dataset.userPage === page
+                    );
+                });
 
             var titleMap = {
                 overview: 'Ringkasan',
@@ -3590,15 +3608,22 @@
                 results: 'Hasil Juara'
             };
 
-            var titleEl = document.getElementById('userMobilePageTitle');
-            if (titleEl) titleEl.textContent = titleMap[page] || 'Ringkasan';
+            var titleEl = document.getElementById('userPageTitleMobile');
 
-            if (page === 'nominasi' && typeof loadUserNominasi === 'function') {
+            if(titleEl){
+                titleEl.textContent = titleMap[page] || 'Ringkasan';
+            }
+
+            if(page === 'nominasi' && typeof loadUserNominasi === 'function'){
                 loadUserNominasi();
             }
 
-            closeUserSidebar();
-        }
+            if(page === 'results' && typeof loadPublicResultsIntoDashboard === 'function'){
+                loadPublicResultsIntoDashboard();
+            }
+
+            window.closeUserSidebar();
+        };
 
         function loadUserNominasi(){
             var badge = document.getElementById('nominasiStatusBadge');
@@ -4495,6 +4520,7 @@
 
         function renderDashboardTeamChampion(){
             var tcList = document.getElementById('hasilTeamChampionList');
+
             var teams = (publicResultsDashboardData.teamChampion || [])
                 .slice()
                 .sort(function(a, b){
@@ -4511,6 +4537,7 @@
                     '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">' +
                         'Belum ada data Team Champion.' +
                     '</div>';
+
                 return;
             }
 
@@ -4521,11 +4548,39 @@
                     var fishes = (team.ikans || [])
                         .slice()
                         .sort(function(a, b){
+                            var finalCompare =
+                                Number(!!b.is_final) - Number(!!a.is_final);
+
+                            if(finalCompare !== 0){
+                                return finalCompare;
+                            }
+
                             return parseFloat(b.final_rank_point || 0) -
                                 parseFloat(a.final_rank_point || 0);
                         });
 
+                    /*
+                    * total_ikan = semua ikan Team Champion yang dikirim.
+                    * total_ikan_final = yang sudah final dan memiliki rank point.
+                    */
+                    var totalTerdaftar = parseInt(
+                        team.total_ikan || fishes.length || 0,
+                        10
+                    );
+
+                    var totalFinal = parseInt(team.total_ikan_final, 10);
+
+                    if(isNaN(totalFinal)){
+                        totalFinal = fishes.filter(function(item){
+                            return item.is_final === true;
+                        }).length;
+                    }
+
                     var rows = fishes.map(function(item){
+                        var pointHtml = item.is_final === false
+                            ? '<span style="color:var(--text-low);font-family:inherit;font-size:10px;">Tidak Masuk Nominasi </span>'
+                            : formatPublicPoint(item.final_rank_point || 0) + ' pts';
+
                         return '<tr>' +
                             '<td class="tc-tank">Tank ' +
                                 escapeHtml(String(item.nomor_tank || '-')) +
@@ -4536,21 +4591,24 @@
                             '</td>' +
 
                             '<td class="tc-point">' +
-                                formatPublicPoint(item.final_rank_point || 0) +
-                                ' pts' +
+                                pointHtml +
                             '</td>' +
                         '</tr>';
                     }).join('');
 
                     return '<article class="team-champion-card">' +
+
                         '<div class="team-champion-card-head">' +
                             '<div>' +
                                 '<h4>' +
                                     escapeHtml(team.detail_anggota || 'Tanpa Team') +
                                 '</h4>' +
+
                                 '<p>' +
-                                    (team.total_ikan || fishes.length || 0) +
-                                    ' ikan terdaftar pada Team Champion' +
+                                    totalTerdaftar +
+                                    ' ikan terdaftar · ' +
+                                    totalFinal +
+                                    ' ikan final dinilai' +
                                 '</p>' +
                             '</div>' +
 
@@ -4571,9 +4629,9 @@
                             '</div>' +
 
                             '<div class="team-champion-metric is-cyan">' +
-                                '<span>Jumlah Ikan</span>' +
+                                '<span>Ikan Terdaftar</span>' +
                                 '<b>' +
-                                    (team.total_ikan || fishes.length || 0) +
+                                    totalTerdaftar +
                                 '</b>' +
                             '</div>' +
                         '</div>' +
@@ -4587,11 +4645,13 @@
                                         '<th style="text-align:right;">Rank Pt</th>' +
                                     '</tr>' +
                                 '</thead>' +
+
                                 '<tbody>' +
                                     rows +
                                 '</tbody>' +
                             '</table>' +
                         '</div>' +
+
                     '</article>';
                 }).join('') +
 

@@ -1381,27 +1381,150 @@ class DashboardController extends Controller
         }
 
         // ── Team Champion global (agregasi per team) ──
+        // ── Team Champion global (agregasi per Team/Kota) ──
+        // Jumlah ikan = semua ikan Team Champion yang SUDAH DIKIRIM peserta.
+        // Total rank point = hanya ikan yang telah FINAL dan masuk ranking.
         $teamChampion = [];
+
         if ($tcFeatureEnabled) {
+            $noKelasKategori = \App\Helpers\Taxonomy::noKelasNames();
+
+            /*
+            * Jangan memakai $finalIkans untuk jumlah Team Champion.
+            * $finalIkans hanya berisi ikan yang sudah terkunci/final.
+            *
+            * Query ini mengambil semua ikan yang dipilih Team Champion
+            * dari peserta yang benar-benar sudah menekan "Kirim Team Champion".
+            */
+            $selectedTeamChampionIkans = Ikan::query()
+                ->where('is_team_champion', true)
+                ->whereHas('peserta', function ($q) {
+                    $q->where('is_team_champion_submitted', true);
+                })
+                ->with('peserta')
+                ->orderBy('detail_anggota')
+                ->orderBy('nomor_tank')
+                ->get();
+
             $byTeam = [];
-            foreach ($finalIkans as $ikan) {
-                if (
-                    !$ikan->is_team_champion ||
-                    !optional($ikan->peserta)->is_team_champion_submitted ||
-                    !isset($rankByIkan[$ikan->id])
-                ) {
-                    continue;
+
+            foreach ($selectedTeamChampionIkans as $ikan) {
+                $team = trim(
+                    $this->cleanExcelDisplayValue($ikan->detail_anggota, '')
+                ) ?: '(Tanpa Team)';
+
+                if (!isset($byTeam[$team])) {
+                    $byTeam[$team] = [
+                        'detail_anggota'   => $team,
+                        'ikans'             => [],
+                        'total_rank_point'  => 0,
+
+                        // Semua ikan Team Champion yang sudah dikirim.
+                        'total_ikan'        => 0,
+
+                        // Hanya ikan yang sudah final / memiliki rank point.
+                        'total_ikan_final'  => 0,
+                    ];
                 }
-                $info = $rankByIkan[$ikan->id];
-                $team = trim($this->cleanExcelDisplayValue($ikan->detail_anggota, '')) ?: '(Tanpa Team)';
-                if (!isset($byTeam[$team])) $byTeam[$team] = ['detail_anggota' => $team, 'ikans' => [], 'total_rank_point' => 0, 'total_ikan' => 0];
-                $byTeam[$team]['ikans'][]          = $info;
-                $byTeam[$team]['total_rank_point'] += (int) $info['final_rank_point'];
+
+                $groupLabel = $ikan->kategori;
+
+                if (
+                    !in_array($ikan->kategori, $noKelasKategori, true) &&
+                    !empty($ikan->kelas)
+                ) {
+                    $groupLabel .= ' - Kelas ' . $ikan->kelas;
+                }
+
+                /*
+                * Jika ikan sudah final, rank info tersedia di $rankByIkan.
+                * Jika belum final, tetap dikirim ke UI dengan status Belum final.
+                */
+                $rankInfo = $rankByIkan[$ikan->id] ?? null;
+
+                $item = [
+                    'ikan_id'          => $ikan->id,
+                    'nama_peserta'     => $this->cleanExcelDisplayValue($ikan->nama_peserta, ''),
+                    'detail_anggota'   => $team,
+                    'kategori'         => $ikan->kategori,
+                    'kelas'            => $ikan->kelas ?? '-',
+                    'group_key'        => $ikan->kategori . '|' . ($ikan->kelas ?? '-'),
+                    'group_label'      => $groupLabel,
+                    'nomor_tank'       => $ikan->nomor_tank,
+                    'is_final'         => false,
+                    'rank_point'       => 0,
+                    'final_rank_point' => 0,
+                    'status'           => 'Belum final',
+                ];
+
+                if ($rankInfo) {
+                    $item = array_merge($item, $rankInfo, [
+                        'is_final' => true,
+                        'status'   => 'Final',
+                    ]);
+
+                    $byTeam[$team]['total_rank_point'] +=
+                        (int) ($rankInfo['final_rank_point'] ?? 0);
+
+                    $byTeam[$team]['total_ikan_final']++;
+                }
+
+                // Selalu bertambah, meskipun ikan belum final.
                 $byTeam[$team]['total_ikan']++;
+
+                $byTeam[$team]['ikans'][] = $item;
             }
+
+            /*
+            * Ikan final ditampilkan lebih dahulu.
+            * Sisanya tetap terlihat di bawah dengan status Belum final.
+            */
+            foreach ($byTeam as &$teamData) {
+                usort($teamData['ikans'], function ($a, $b) {
+                    $aFinal = !empty($a['is_final']);
+                    $bFinal = !empty($b['is_final']);
+
+                    if ($aFinal !== $bFinal) {
+                        return $aFinal ? -1 : 1;
+                    }
+
+                    $pointCompare =
+                        (float) ($b['final_rank_point'] ?? 0)
+                        <=>
+                        (float) ($a['final_rank_point'] ?? 0);
+
+                    if ($pointCompare !== 0) {
+                        return $pointCompare;
+                    }
+
+                    return (int) ($a['nomor_tank'] ?? 0)
+                        <=>
+                        (int) ($b['nomor_tank'] ?? 0);
+                });
+            }
+            unset($teamData);
+
             $teamChampion = array_values($byTeam);
-            usort($teamChampion, function ($a, $b) { return $b['total_rank_point'] <=> $a['total_rank_point']; });
-            foreach ($teamChampion as $i => $t) { $teamChampion[$i]['position'] = $i + 1; }
+
+            usort($teamChampion, function ($a, $b) {
+                $pointCompare =
+                    (int) ($b['total_rank_point'] ?? 0)
+                    <=>
+                    (int) ($a['total_rank_point'] ?? 0);
+
+                if ($pointCompare !== 0) {
+                    return $pointCompare;
+                }
+
+                return strcasecmp(
+                    (string) ($a['detail_anggota'] ?? ''),
+                    (string) ($b['detail_anggota'] ?? '')
+                );
+            });
+
+            foreach ($teamChampion as $index => $team) {
+                $teamChampion[$index]['position'] = $index + 1;
+            }
         }
 
         return response()->json([
