@@ -2241,9 +2241,15 @@
 
                                     <h3 style="font-size:14px;font-weight:900;color:var(--text-hi);margin-bottom:10px;">
                                         <i class="fas fa-star" style="color:var(--gold-400);margin-right:6px;"></i>
-                                        Hasil MVP Anda
+                                        Hasil MVP — Semua Team
                                     </h3>
-                                    <div id="hasilMvpList" style="display:grid;gap:10px;"></div>
+                                    <div id="hasilMvpList" style="display:grid;gap:10px;margin-bottom:20px;"></div>
+
+                                    <h3 style="font-size:14px;font-weight:900;color:var(--text-hi);margin-bottom:10px;">
+                                        <i class="fas fa-people-group" style="color:var(--cyan-300);margin-right:6px;"></i>
+                                        Hasil Team Champion — Semua Team
+                                    </h3>
+                                    <div id="hasilTeamChampionList" style="display:grid;gap:10px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -3302,11 +3308,16 @@
             '</div>';
         }
 
-        function renderHasilJuara(response){
-            var unlocked = !!response.result_unlocked;
-            var results = Array.isArray(response.my_results) ? response.my_results : [];
-            var mvpResults = Array.isArray(response.my_mvp_results) ? response.my_mvp_results : [];
+var _publicResultsLoaded = false;
 
+        function renderHasilJuara(response){
+            // Hasil Juara kini global (semua team), dimuat dari endpoint khusus (sekali).
+            if (_publicResultsLoaded) return;
+            _publicResultsLoaded = true;
+            loadPublicResultsIntoDashboard();
+        }
+
+        function loadPublicResultsIntoDashboard(){
             var badge = document.getElementById('hasilJuaraStatusBadge');
             var locked = document.getElementById('hasilJuaraLockedState');
             var unlockedBox = document.getElementById('hasilJuaraUnlockedState');
@@ -3314,45 +3325,35 @@
             var totalMvp = document.getElementById('hasilTotalMvp');
             var list = document.getElementById('hasilJuaraList');
             var mvpList = document.getElementById('hasilMvpList');
-
+            var tcList = document.getElementById('hasilTeamChampionList');
             if (!badge || !locked || !unlockedBox) return;
 
-            if (!unlocked) {
-                badge.textContent = 'TERKUNCI';
-                badge.className = 'status-badge';
-                locked.style.display = 'block';
-                unlockedBox.style.display = 'none';
-                return;
-            }
+            fetch('/api/user/public-results?_t=' + Date.now(), { headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'} })
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(d){
+                if (!d || !d.published) {
+                    badge.textContent = 'TERKUNCI'; badge.className = 'status-badge';
+                    locked.style.display = 'block'; unlockedBox.style.display = 'none';
+                    return;
+                }
+                badge.textContent = 'DIBUKA'; badge.className = 'status-badge success';
+                locked.style.display = 'none'; unlockedBox.style.display = 'block';
 
-            badge.textContent = 'DIBUKA';
-            badge.className = 'status-badge success';
-            locked.style.display = 'none';
-            unlockedBox.style.display = 'block';
+                var results = d.results || [], mvp = d.mvp || [], tc = d.team_champion || [];
+                if (totalIkan) totalIkan.textContent = results.length;
+                if (totalMvp) totalMvp.textContent = mvp.length;
 
-            if (totalIkan) totalIkan.textContent = results.length;
-            if (totalMvp) totalMvp.textContent = mvpResults.length;
-
-            if (list) {
-                if (!results.length) {
-                    list.innerHTML =
-                        '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">Belum ada data hasil juara yang bisa ditampilkan.</div>';
-                } else {
-                    list.innerHTML = results.map(function(r){
+                // Ranking hasil juara (semua team)
+                if (list) {
+                    list.innerHTML = results.length ? results.map(function(r){
                         var asalText = r.asal_label || r.detail_anggota || '-';
-                        var jenisText = r.jenis_keanggotaan === 'team' ? 'Team/Club' : 'Kota Asal';
                         var finalPoint = r.final_rank_point || r.rank_point || 0;
-
-                        return '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:16px;background:var(--glass-2);margin-bottom:12px;">' +
+                        return '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:16px;background:var(--glass-2);">' +
                             '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">' +
                                 '<div style="min-width:0;">' +
                                     '<div style="font-size:13px;font-weight:900;color:var(--text-hi);">' + escapeHtml(r.nama_peserta || '-') + '</div>' +
-                                    '<div style="font-size:11px;color:var(--text-mid);font-weight:700;margin-top:4px;">' +
-                                        escapeHtml(jenisText) + ': ' + escapeHtml(asalText) +
-                                    '</div>' +
-                                    '<div style="font-size:11px;color:var(--text-mid);font-weight:700;margin-top:4px;">' +
-                                        escapeHtml(r.group_label || r.kategori || '-') + ' • Tank ' + escapeHtml(String(r.nomor_tank || '-')) +
-                                    '</div>' +
+                                    '<div style="font-size:11px;color:var(--text-mid);font-weight:700;margin-top:4px;">' + escapeHtml(asalText) + '</div>' +
+                                    '<div style="font-size:11px;color:var(--text-mid);font-weight:700;margin-top:4px;">' + escapeHtml(r.group_label || r.kategori || '-') + ' • Tank ' + escapeHtml(String(r.nomor_tank || '-')) + '</div>' +
                                 '</div>' +
                                 '<div style="text-align:right;flex-shrink:0;">' +
                                     '<div style="font-size:10px;color:var(--text-low);font-weight:900;text-transform:uppercase;">Juara</div>' +
@@ -3362,77 +3363,55 @@
                             '</div>' +
                             renderComponentSubtotals(r.component_subtotals) +
                         '</div>';
-                    }).join('');
+                    }).join('') : '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">Belum ada data hasil juara.</div>';
                 }
-            }
 
-            if (mvpList) {
-                if (!mvpResults.length) {
-                    mvpList.innerHTML =
-                        '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">Belum ada data MVP yang bisa ditampilkan.</div>';
-                } else {
-                    var totalRankPoint = mvpResults.reduce(function(sum, r){
-                        return sum + Number(r.final_rank_point || r.rank_point || 0);
-                    }, 0);
-
-                    mvpList.innerHTML =
+                // MVP (semua team) — tabel ringkas, scroll horizontal di mobile
+                if (mvpList) {
+                    mvpList.innerHTML = mvp.length ? (
                         '<div style="overflow-x:auto;border:1px solid var(--bd-2);border-radius:16px;background:var(--glass-2);">' +
-                            '<table style="width:100%;border-collapse:collapse;min-width:760px;font-size:12px;">' +
-                                '<thead>' +
-                                    '<tr style="background:rgba(255,255,255,.04);color:var(--text-hi);">' +
-                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:center;">NO</th>' +
-                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:left;">NAMA PESERTA</th>' +
-                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:left;">TEAM/CLUB / KOTA</th>' +
-                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:left;">KATEGORI</th>' +
-                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:center;">NO TANK</th>' +
-                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:center;">JUARA</th>' +
-                                        '<th style="padding:10px;border-bottom:1px solid var(--bd-2);text-align:center;">RANK POINT</th>' +
-                                    '</tr>' +
-                                '</thead>' +
-                                '<tbody>' +
-                                    mvpResults.map(function(r, idx){
-                                        var asalText = r.asal_label || r.detail_anggota || '-';
-                                        var finalPoint = r.final_rank_point || r.rank_point || 0;
-                                        var bonusList = Array.isArray(r.bonus_list) ? r.bonus_list : [];
-                                        var totalBonus = Number(r.total_bonus || 0);
-                                        var bonusHtml = '';
-
-                                        if (bonusList.length || totalBonus > 0) {
-                                            bonusHtml =
-                                                '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:5px;">' +
-                                                    bonusList.map(function(bonus){
-                                                        return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.28);color:var(--gold-300);font-size:10px;font-weight:900;">' +
-                                                            '<i class="fas fa-award"></i>' + escapeHtml(bonus) +
-                                                        '</span>';
-                                                    }).join('') +
-                                                    (totalBonus > 0
-                                                        ? '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;background:rgba(34,211,238,.10);border:1px solid rgba(34,211,238,.22);color:var(--cyan-300);font-size:10px;font-weight:900;">+' + totalBonus + ' Bonus</span>'
-                                                        : '') +
-                                                '</div>';
-                                        }
-
-                                        return '<tr>' +
-                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;font-weight:900;color:var(--text-hi);">' + (idx + 1) + '</td>' +
-                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);font-weight:800;color:var(--text-hi);">' + escapeHtml(r.nama_peserta || '-') + '</td>' +
-                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);color:var(--text-mid);font-weight:700;">' + escapeHtml(asalText) + '</td>' +
-                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);color:var(--cyan-300);font-weight:800;">' +
-                                                escapeHtml(r.group_label || r.kategori || '-') +
-                                                bonusHtml +
-                                            '</td>' +
-                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;font-family:JetBrains Mono,monospace;color:var(--text-hi);font-weight:900;">' + escapeHtml(String(r.nomor_tank || '-')) + '</td>' +
-                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;color:var(--gold-300);font-weight:900;">' + escapeHtml(String(r.position || '-')) + '</td>' +
-                                            '<td style="padding:10px;border-bottom:1px solid var(--bd-1);text-align:center;color:var(--text-hi);font-weight:900;">' + escapeHtml(String(finalPoint)) + '</td>' +
-                                        '</tr>';
-                                    }).join('') +
-                                    '<tr>' +
-                                        '<td colspan="6" style="padding:11px 10px;text-align:right;color:var(--text-hi);font-weight:900;">TOTAL</td>' +
-                                        '<td style="padding:11px 10px;text-align:center;color:var(--gold-300);font-weight:900;">' + totalRankPoint + '</td>' +
-                                    '</tr>' +
-                                '</tbody>' +
-                            '</table>' +
-                        '</div>';
+                        '<table style="width:100%;border-collapse:collapse;min-width:640px;font-size:12px;">' +
+                        '<thead><tr style="background:rgba(255,255,255,.04);color:var(--text-hi);">' +
+                            '<th style="padding:10px;text-align:center;">NO</th><th style="padding:10px;text-align:left;">PESERTA</th>' +
+                            '<th style="padding:10px;text-align:left;">TEAM/KOTA</th><th style="padding:10px;text-align:left;">KATEGORI</th>' +
+                            '<th style="padding:10px;text-align:center;">TANK</th><th style="padding:10px;text-align:center;">JUARA</th>' +
+                            '<th style="padding:10px;text-align:center;">RANK PT</th></tr></thead><tbody>' +
+                        mvp.map(function(r, i){
+                            return '<tr>' +
+                                '<td style="padding:10px;border-top:1px solid var(--bd-1);text-align:center;font-weight:900;color:var(--text-hi);">' + (i+1) + '</td>' +
+                                '<td style="padding:10px;border-top:1px solid var(--bd-1);font-weight:800;color:var(--text-hi);">' + escapeHtml(r.nama_peserta || '-') + '</td>' +
+                                '<td style="padding:10px;border-top:1px solid var(--bd-1);color:var(--text-mid);font-weight:700;">' + escapeHtml(r.asal_label || r.detail_anggota || '-') + '</td>' +
+                                '<td style="padding:10px;border-top:1px solid var(--bd-1);color:var(--cyan-300);font-weight:800;">' + escapeHtml(r.group_label || r.kategori || '-') + '</td>' +
+                                '<td style="padding:10px;border-top:1px solid var(--bd-1);text-align:center;font-family:JetBrains Mono,monospace;color:var(--text-hi);font-weight:900;">' + escapeHtml(String(r.nomor_tank || '-')) + '</td>' +
+                                '<td style="padding:10px;border-top:1px solid var(--bd-1);text-align:center;color:var(--gold-300);font-weight:900;">' + escapeHtml(String(r.position || '-')) + '</td>' +
+                                '<td style="padding:10px;border-top:1px solid var(--bd-1);text-align:center;color:var(--text-hi);font-weight:900;">' + escapeHtml(String(r.final_rank_point || r.rank_point || 0)) + '</td>' +
+                            '</tr>';
+                        }).join('') + '</tbody></table></div>'
+                    ) : '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">Belum ada data MVP.</div>';
                 }
-            }
+
+                // Team Champion (semua team) — kartu per team
+                if (tcList) {
+                    tcList.innerHTML = tc.length ? tc.map(function(t){
+                        var rows = (t.ikans || []).map(function(ik){
+                            return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--bd-1);font-size:12px;">' +
+                                '<span style="color:var(--text-mid);">Tank ' + escapeHtml(String(ik.nomor_tank || '-')) + ' · ' + escapeHtml(ik.group_label || ik.kategori || '-') + '</span>' +
+                                '<span style="color:var(--gold-300);font-weight:900;white-space:nowrap;">' + escapeHtml(String(ik.final_rank_point || 0)) + ' pts</span>' +
+                            '</div>';
+                        }).join('');
+                        return '<div style="padding:16px;border:1px solid rgba(34,211,238,.25);border-radius:16px;background:var(--glass-2);">' +
+                            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">' +
+                                '<div style="min-width:0;"><div style="font-size:13px;font-weight:900;color:var(--text-hi);">' + escapeHtml(t.detail_anggota || '-') + '</div>' +
+                                    '<div style="font-size:11px;color:var(--text-mid);font-weight:700;margin-top:4px;">' + (t.total_ikan || 0) + ' ikan • Total ' + escapeHtml(String(t.total_rank_point || 0)) + ' pts</div></div>' +
+                                '<div style="text-align:right;flex-shrink:0;"><div style="font-size:10px;color:var(--text-low);font-weight:900;text-transform:uppercase;">Peringkat</div>' +
+                                    '<div style="font-family:JetBrains Mono,monospace;font-size:24px;font-weight:900;color:var(--cyan-300);">' + escapeHtml(String(t.position || '-')) + '</div></div>' +
+                            '</div>' +
+                            '<div style="margin-top:8px;">' + rows + '</div>' +
+                        '</div>';
+                    }).join('') : '<div style="padding:16px;border:1px solid var(--bd-2);border-radius:14px;background:var(--glass-2);color:var(--text-mid);font-size:13px;text-align:center;">Belum ada data Team Champion.</div>';
+                }
+            })
+            .catch(function(){ /* diamkan: badge tetap apa adanya */ });
         }
 
         function updateRegistrationLimitTexts() {

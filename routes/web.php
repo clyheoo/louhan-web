@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/acak-nomor-tank-admin', [DashboardController::class, 'acakNomorTankAdmin'])->name('api.acak.tank.admin');
     Route::post('/api/acak-nomor-tank-user', [DashboardController::class, 'acakNomorTankUser'])->name('api.acak.tank.user');
     Route::get('/api/user/my-ikans', [DashboardController::class, 'getMyIkans']);
+    Route::get('/api/user/public-results', [DashboardController::class, 'getPublicResults']);
     Route::get('/api/user/nominasi-results', [DashboardController::class, 'getNominasiResults']); // ★ hasil nominasi utk peserta
     Route::post('/api/toggle-team-champion-ikan', [DashboardController::class, 'toggleTeamChampionIkan'])->name('api.toggle.team_champion');
     Route::post('/api/submit-team-champion-ikan', [DashboardController::class, 'submitTeamChampionIkan'])->name('api.submit.team_champion');

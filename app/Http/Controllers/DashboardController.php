@@ -1209,6 +1209,192 @@ class DashboardController extends Controller
     }
 
     /* ═══════════════════════════════════════════
+       HASIL JUARA GLOBAL — semua team (hasil juara, MVP, Team Champion)
+       Ranking dihitung terhadap seluruh pool (rumus tidak berubah),
+       hanya menampilkan ikan dari peserta yang hasilnya sudah dibuka.
+       ═══════════════════════════════════════════ */
+    public function getPublicResults()
+    {
+        if (!Auth::id()) {
+            return response()->json(['error' => 'unauthenticated', 'message' => 'Sesi telah berakhir. Silakan login kembali.'], 401);
+        }
+
+        $mvpFeatureEnabled = $this->isFeatureEnabled('mvp_feature_enabled');
+        $tcFeatureEnabled  = $this->isFeatureEnabled('team_champion_feature_enabled');
+
+        $published = Peserta::whereNotNull('result_unlocked_at')->exists();
+
+        if (!$published) {
+            return response()->json([
+                'published' => false,
+                'results' => [], 'mvp' => [], 'team_champion' => [],
+                'mvp_feature_enabled' => $mvpFeatureEnabled,
+                'team_champion_feature_enabled' => $tcFeatureEnabled,
+            ]);
+        }
+
+        // Ikan final yang sudah DIPUBLIKASI (peserta-nya sudah dibuka hasilnya).
+        $finalIkans = Ikan::where('is_locked', true)
+            ->whereNotNull('nomor_tank')
+            ->whereHas('scorings')
+            ->whereHas('peserta', function ($q) { $q->whereNotNull('result_unlocked_at'); })
+            ->with(['scorings', 'bonusPoints'])
+            ->get();
+
+        // Kelompokkan per kategori|kelas
+        $groups = [];
+        foreach ($finalIkans as $ikan) {
+            $groups[$ikan->kategori . '|' . ($ikan->kelas ?? '-')][] = $ikan;
+        }
+
+        $results    = [];
+        $rankByIkan = [];
+
+        foreach ($groups as $key => $publishedIkans) {
+            [$kat, $kls] = explode('|', $key, 2);
+            $kls = ($kls === '-') ? null : $kls;
+
+            // Pool peringkat = SEMUA ikan terkunci+dinilai di grup (posisi benar).
+            $poolQuery = Ikan::where('is_locked', true)
+                ->whereNotNull('nomor_tank')
+                ->where('kategori', $kat)
+                ->whereHas('scorings')
+                ->with(['scorings', 'bonusPoints']);
+            if ($kls !== null && $kls !== '') $poolQuery->where('kelas', $kls);
+            else                              $poolQuery->whereNull('kelas');
+            $pool = $poolQuery->get();
+
+            $allItems = [];
+            foreach ($pool as $pi) {
+                $scorings = $pi->scorings;
+                if ($scorings->isEmpty()) continue;
+
+                $avgDetail = [];
+                foreach ($scorings as $s) {
+                    if ($s->nilai_detail && is_array($s->nilai_detail)) {
+                        foreach ($s->nilai_detail as $kt => $fields) {
+                            if (!is_array($fields)) continue;
+                            foreach ($fields as $fid => $val) {
+                                if (!isset($avgDetail[$kt][$fid])) $avgDetail[$kt][$fid] = ['sum' => 0, 'count' => 0];
+                                $avgDetail[$kt][$fid]['sum'] += (float)($val ?? 0);
+                                $avgDetail[$kt][$fid]['count']++;
+                            }
+                        }
+                    }
+                }
+                $finalAvgDetail = [];
+                foreach ($avgDetail as $kt => $fields) {
+                    foreach ($fields as $fid => $d) {
+                        $finalAvgDetail[$kt][$fid] = $d['count'] > 0 ? $d['sum'] / $d['count'] : 0;
+                    }
+                }
+
+                $defectSource = $scorings->first(function ($s) { return $s->edited_by_grand_juri; })
+                    ?: $scorings->sortByDesc('updated_at')->first();
+                $mergedDefect = [
+                    'raw_head_penalty'    => $defectSource ? ($defectSource->raw_head_penalty    ?: ['0']) : ['0'],
+                    'raw_face_penalty'    => $defectSource ? ($defectSource->raw_face_penalty    ?: ['0']) : ['0'],
+                    'raw_body_penalty'    => $defectSource ? ($defectSource->raw_body_penalty    ?: ['0']) : ['0'],
+                    'raw_finnage_penalty' => $defectSource ? ($defectSource->raw_finnage_penalty ?: ['0']) : ['0'],
+                ];
+
+                $allItems[] = [
+                    'ikan_id'             => $pi->id,
+                    'total_point'         => (float) PointCalculator::hitungPoint($pi->kategori, $finalAvgDetail, $mergedDefect),
+                    'total_bonus'         => (int) $pi->bonusPoints->sum('points'),
+                    'component_subtotals' => $this->buildComponentSubtotalsFromBreakdown($pi->kategori, $finalAvgDetail, $mergedDefect),
+                ];
+            }
+
+            $ranked = PointCalculator::hitungRankPoints($allItems, 'total_point');
+            $publishedIds = collect($publishedIkans)->pluck('id')->all();
+
+            foreach ($ranked as $idx => $r) {
+                if (!in_array($r['ikan_id'], $publishedIds)) continue;
+                $ikan = $finalIkans->firstWhere('id', $r['ikan_id']);
+                if (!$ikan) continue;
+
+                $groupLabel = $ikan->kategori;
+                if (!in_array($ikan->kategori, \App\Helpers\Taxonomy::noKelasNames()) && $ikan->kelas) {
+                    $groupLabel .= ' - Kelas ' . $ikan->kelas;
+                }
+                $bonusTotal = (int) $ikan->bonusPoints->sum('points');
+                $rankPoint  = (int) ($r['rank_point'] ?? 0);
+
+                $row = [
+                    'ikan_id'             => $ikan->id,
+                    'nama_peserta'        => $this->cleanExcelDisplayValue($ikan->nama_peserta, ''),
+                    'jenis_keanggotaan'   => $this->cleanExcelDisplayValue($ikan->jenis_keanggotaan, '-'),
+                    'asal_label'          => $this->cleanExcelDisplayValue($ikan->detail_anggota, ''),
+                    'detail_anggota'      => $this->cleanExcelDisplayValue($ikan->detail_anggota, ''),
+                    'kategori'            => $ikan->kategori,
+                    'kelas'               => $ikan->kelas ?? '-',
+                    'group_key'           => $ikan->kategori . '|' . ($ikan->kelas ?? '-'),
+                    'group_label'         => $groupLabel,
+                    'point'               => round((float)($r['total_point'] ?? 0), 2),
+                    'rank_point'          => $rankPoint,
+                    'position'            => $idx + 1,
+                    'nomor_tank'          => $ikan->nomor_tank,
+                    'total_bonus'         => $bonusTotal,
+                    'final_rank_point'    => $rankPoint + $bonusTotal,
+                    'bonus_list'          => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                    'is_mvp'              => (bool) $ikan->is_mvp,
+                    'is_team_champion'    => (bool) $ikan->is_team_champion,
+                    'component_subtotals' => $r['component_subtotals'] ?? [
+                        'overall' => ['label' => 'Overall', 'value' => 0], 'head' => ['label' => 'Head', 'value' => 0],
+                        'face' => ['label' => 'Face', 'value' => 0], 'body' => ['label' => 'Body', 'value' => 0],
+                        'marking' => ['label' => 'Marking', 'value' => 0], 'pearl' => ['label' => 'Pearl', 'value' => 0],
+                        'color' => ['label' => 'Color', 'value' => 0], 'finnage' => ['label' => 'Finnage', 'value' => 0],
+                    ],
+                ];
+                $results[] = $row;
+                $rankByIkan[$ikan->id] = $row;
+            }
+        }
+
+        usort($results, function ($a, $b) {
+            $c = strcmp($a['group_label'], $b['group_label']);
+            return $c !== 0 ? $c : ($a['position'] <=> $b['position']);
+        });
+
+        // ── MVP global ──
+        $mvp = [];
+        if ($mvpFeatureEnabled) {
+            foreach ($finalIkans as $ikan) {
+                if ($ikan->is_mvp && isset($rankByIkan[$ikan->id])) $mvp[] = $rankByIkan[$ikan->id];
+            }
+            usort($mvp, function ($a, $b) { return $b['final_rank_point'] <=> $a['final_rank_point']; });
+        }
+
+        // ── Team Champion global (agregasi per team) ──
+        $teamChampion = [];
+        if ($tcFeatureEnabled) {
+            $byTeam = [];
+            foreach ($finalIkans as $ikan) {
+                if (!$ikan->is_team_champion || !isset($rankByIkan[$ikan->id])) continue;
+                $info = $rankByIkan[$ikan->id];
+                $team = trim($this->cleanExcelDisplayValue($ikan->detail_anggota, '')) ?: '(Tanpa Team)';
+                if (!isset($byTeam[$team])) $byTeam[$team] = ['detail_anggota' => $team, 'ikans' => [], 'total_rank_point' => 0, 'total_ikan' => 0];
+                $byTeam[$team]['ikans'][]          = $info;
+                $byTeam[$team]['total_rank_point'] += (int) $info['final_rank_point'];
+                $byTeam[$team]['total_ikan']++;
+            }
+            $teamChampion = array_values($byTeam);
+            usort($teamChampion, function ($a, $b) { return $b['total_rank_point'] <=> $a['total_rank_point']; });
+            foreach ($teamChampion as $i => $t) { $teamChampion[$i]['position'] = $i + 1; }
+        }
+
+        return response()->json([
+            'published' => true,
+            'results' => $results,
+            'mvp' => $mvp,
+            'team_champion' => $teamChampion,
+            'mvp_feature_enabled' => $mvpFeatureEnabled,
+            'team_champion_feature_enabled' => $tcFeatureEnabled,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
        HASIL NOMINASI UNTUK PESERTA
        Menampilkan SELURUH hasil nominasi (semua peserta):
        - approved → dikelompokkan per Kategori + Kelas (gaya sheet)
@@ -1386,6 +1572,7 @@ class DashboardController extends Controller
             'peserta' => $peserta,
             'initial' => $initial,
             'mvpFeatureEnabled' => $this->isFeatureEnabled('mvp_feature_enabled'),
+            'teamChampionFeatureEnabled' => $this->isFeatureEnabled('team_champion_feature_enabled'),
         ]);
     }
 

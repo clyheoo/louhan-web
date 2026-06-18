@@ -338,9 +338,12 @@
 
 <script>
     var MVP_FEATURE_ENABLED = @json($mvpFeatureEnabled ?? true);
+    var TEAM_CHAMPION_FEATURE_ENABLED = @json($teamChampionFeatureEnabled ?? true);
     var hasilData = {
         results: [],
         mvp: [],
+        team_champion: [],
+        published: false,
         activeResultGroup: 'all',
         activeMvpGroup: 'all'
     };
@@ -556,8 +559,34 @@
         '</div>';
     }
 
+    function renderTeamChampionCard(t){
+        var ikansHtml = (t.ikans || []).map(function(ik){
+            return '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--bd-1);font-size:12px;">' +
+                '<span style="color:var(--text-mid);min-width:0;">Tank ' + escapeHtml(ik.nomor_tank || '-') + ' · ' + escapeHtml(groupLabel(ik)) + '</span>' +
+                '<span style="color:var(--gold-300);font-weight:900;white-space:nowrap;">' + formatNumber(ik.final_rank_point || 0) + ' pts</span>' +
+            '</div>';
+        }).join('');
+
+        return '<div class="simple-result-card" style="border-color:rgba(34,211,238,.25);">' +
+            '<div class="simple-result-top">' +
+                '<div class="simple-result-title">' +
+                    '<h4>' + escapeHtml(t.detail_anggota || '-') + '</h4>' +
+                    '<p>' + (t.total_ikan || 0) + ' ikan Team Champion</p>' +
+                '</div>' +
+                '<div class="rank-badge" style="background:rgba(34,211,238,.10);border-color:rgba(34,211,238,.25);">' +
+                    '<span class="small">Peringkat</span>' + formatJuara(t.position) +
+                '</div>' +
+            '</div>' +
+            '<div class="score-row">' +
+                '<div class="score-box"><div class="label">Total Rank Point</div><div class="value gold">' + formatNumber(t.total_rank_point || 0) + '</div></div>' +
+                '<div class="score-box"><div class="label">Jumlah Ikan</div><div class="value cyan">' + (t.total_ikan || 0) + '</div></div>' +
+            '</div>' +
+            '<div style="margin-top:8px;">' + ikansHtml + '</div>' +
+        '</div>';
+    }
+
     function renderEmptyState(data){
-        var resultUnlocked = !!(data && data.result_unlocked);
+        var resultUnlocked = !!(data && data.published);
 
         if(resultUnlocked){
             return '<div class="empty-state" style="padding:50px 20px;">'+
@@ -605,7 +634,7 @@
 
         if(MVP_FEATURE_ENABLED){
             html += '<div class="result-section-title">';
-            html += '<h3><i class="fas fa-star" style="color:var(--gold-300);"></i> Data MVP Team Anda</h3>';
+            html += '<h3><i class="fas fa-star" style="color:var(--gold-300);"></i> Hasil MVP — Semua Team</h3>';
             html += '<span class="result-count-pill">'+mvp.length+' MVP</span>';
             html += '</div>';
 
@@ -613,6 +642,20 @@
                 html += mvp.map(renderMvpCard).join('');
             } else {
                 html += '<div class="empty-state" style="padding:26px 10px;"><i class="fas fa-star-half-stroke"></i><p>Tidak ada data MVP pada filter ini.</p></div>';
+            }
+        }
+
+        if(TEAM_CHAMPION_FEATURE_ENABLED){
+            var tc = hasilData.team_champion.slice();
+            html += '<div class="result-section-title">';
+            html += '<h3><i class="fas fa-people-group" style="color:var(--cyan-300);"></i> Hasil Team Champion — Semua Team</h3>';
+            html += '<span class="result-count-pill">'+tc.length+' team</span>';
+            html += '</div>';
+
+            if(tc.length > 0){
+                html += tc.map(renderTeamChampionCard).join('');
+            } else {
+                html += '<div class="empty-state" style="padding:26px 10px;"><i class="fas fa-people-group"></i><p>Belum ada data Team Champion.</p></div>';
             }
         }
 
@@ -628,7 +671,7 @@
     function loadHasilJuara(){
         var body = document.getElementById('hasilJuaraBody');
 
-        fetch('/api/user/my-ikans?_t=' + Date.now(), {
+        fetch('/api/user/public-results?_t=' + Date.now(), {
             headers:{
                 'Accept':'application/json',
                 'X-Requested-With':'XMLHttpRequest'
@@ -652,10 +695,12 @@
                 return;
             }
 
-            hasilData.results = Array.isArray(data.my_results) ? data.my_results : [];
-            hasilData.mvp = Array.isArray(data.my_mvp_results) ? data.my_mvp_results : [];
+            hasilData.published = !!data.published;
+            hasilData.results = Array.isArray(data.results) ? data.results : [];
+            hasilData.mvp = Array.isArray(data.mvp) ? data.mvp : [];
+            hasilData.team_champion = Array.isArray(data.team_champion) ? data.team_champion : [];
 
-            if(hasilData.results.length === 0 && hasilData.mvp.length === 0){
+            if(hasilData.results.length === 0 && hasilData.mvp.length === 0 && hasilData.team_champion.length === 0){
                 body.innerHTML = renderEmptyState(data);
                 return;
             }
