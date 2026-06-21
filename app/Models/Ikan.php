@@ -17,6 +17,8 @@ class Ikan extends Model
         'kategori', 
         'kelas', 
         'nomor_tank',
+        'foto_path',
+        'foto_replace_requested',
         'dibuat_oleh',
         'diubah_oleh',
         'is_locked',
@@ -28,6 +30,7 @@ class Ikan extends Model
         'is_locked' => 'boolean',
         'is_mvp' => 'boolean',
         'is_team_champion' => 'boolean',
+        'foto_replace_requested' => 'boolean',
     ];
 
     public function peserta()
@@ -43,5 +46,10 @@ class Ikan extends Model
     public function bonusPoints()
     {
         return $this->hasMany(IkanBonusPoint::class);
+    }
+
+    public function fotos()
+    {
+        return $this->hasMany(IkanFoto::class);
     }
 }

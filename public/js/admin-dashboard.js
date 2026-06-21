@@ -1764,7 +1764,7 @@ function renderTable(data){
         tr.innerHTML=
             '<td style="text-align:center;padding-right:6px;"><input type="checkbox" class="row-check" data-id="'+p.id+'" data-name="'+esc(p.nama_peserta).replace(/"/g,'&quot;')+'" onchange="onRowCheckChange()" style="cursor:pointer;width:15px;height:15px;accent-color:var(--cyan-400);vertical-align:middle;"></td>'+
             '<td style="font-weight:700;color:var(--light);font-size:11px;">'+(i+1)+'</td>'+
-            '<td style="font-weight:700;">'+esc(p.nama_peserta)+'</td>'+
+            '<td style="font-weight:700;">'+esc(p.nama_peserta)+(p.has_foto?' <span title="Sudah mengirim foto" style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;color:#34D399;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);padding:2px 6px;border-radius:999px;vertical-align:middle;"><i class=\'fas fa-camera\' style=\'font-size:8px;\'></i> FOTO</span>':'')+'</td>'+
             '<td style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;">'+esc(p.kategori)+'</td>'+
             '<td style="font-size:11px;color:var(--muted);">'+esc(p.kelas)+'</td>'+
             '<td style="font-weight:700;color:var(--primary);">Tank '+(p.nomor_tank||'—')+'</td>'+
@@ -2083,6 +2083,7 @@ function openDetail(idx){
     var p = allScoringData[idx];
     if(!p){document.getElementById('detailBody').innerHTML='<div class="empty-state">Data tidak ditemukan.</div>';return;}
     renderDetailView(p);
+    loadAdminIkanFotos(p.id);
 }
 
 function renderDetailView(p){
@@ -2095,6 +2096,9 @@ function renderDetailView(p){
     if(p.detail_anggota&&p.detail_anggota!=='—') html+='<span><i class="fas fa-users"></i> '+esc(p.detail_anggota)+'</span>';
     html+='</div></div>';
     html+='<div class="detail-total-chip"><i class="fas fa-star" style="margin-right:4px;"></i> '+p.total_nilai_semua+' <span style="font-size:10px;font-weight:600;opacity:.8;">('+p.jumlah_juri+' juri)</span></div></div>';
+
+    /* Galeri foto ikan (dimuat async) */
+    html+='<div id="admFotoGallery" style="margin-bottom:14px;"><div style="padding:14px;text-align:center;color:var(--text-mid,#94a3b8);font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Memuat foto...</div></div>';
 
     if(p.grand_juri_nama) html+='<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:11px;color:#92400e;margin-bottom:14px;display:flex;gap:6px;align-items:flex-start;"><i class="fas fa-circle-info" style="margin-top:1px;"></i><span>Nilai final oleh <b>'+esc(p.grand_juri_nama)+'</b>.</span></div>';
 
@@ -4327,6 +4331,87 @@ function updateUndianToggleUI(isOpen) {
     }
 }
 
+function loadFotoReplaceStatus(){
+    fetch('/api/admin/foto-replace-status', {headers:{'Accept':'application/json'}})
+    .then(r => r.json())
+    .then(d => updateFotoReplaceToggleUI(!!d.replace_allowed))
+    .catch(() => updateFotoReplaceToggleUI(false));
+}
+
+function toggleFotoReplace(){
+    var btn = document.getElementById('btnToggleFotoReplace');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    fetch('/api/admin/toggle-foto-replace', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}})
+    .then(r => r.json())
+    .then(d => {
+        if(d.success){ updateFotoReplaceToggleUI(d.replace_allowed); popupSuccess('Izin Ganti Foto Diperbarui', d.message); }
+        else popupError('Gagal', d.message);
+    })
+    .catch(() => popupError('Error', 'Gagal menghubungi server'))
+    .finally(() => { btn.disabled = false; });
+}
+
+function updateFotoReplaceToggleUI(allowed){
+    var btn = document.getElementById('btnToggleFotoReplace');
+    var txt = document.getElementById('fotoReplaceStatusText');
+    if(btn) btn.disabled = false;
+    if(allowed){
+        btn.innerHTML = '<i class="fas fa-lock"></i> KUNCI GANTI FOTO';
+        btn.style.background = 'var(--danger)'; btn.style.boxShadow = '0 3px 10px rgba(239,68,68,.2)';
+        txt.innerHTML = '<i class="fas fa-circle-check" style="color:var(--success);"></i> Penggantian foto sedang <b style="color:var(--success);">DIIZINKAN</b>.';
+    } else {
+        btn.innerHTML = '<i class="fas fa-lock-open"></i> IZINKAN GANTI FOTO';
+        btn.style.background = 'var(--success)'; btn.style.boxShadow = '0 3px 10px rgba(34,197,94,.2)';
+        txt.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--danger);"></i> Penggantian foto sedang <b style="color:var(--danger);">DIKUNCI</b>. Peserta hanya bisa unggah 1x.';
+    }
+}
+
+function loadAdminIkanFotos(ikanId){
+    var box = document.getElementById('admFotoGallery');
+    if(!box) return;
+    box.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text-mid,#94a3b8);font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Memuat foto...</div>';
+
+    fetch('/api/admin/ikan-fotos/'+ikanId, {headers:{'Accept':'application/json'}})
+    .then(r => r.json())
+    .then(d => {
+        if(!d || !d.success){ box.innerHTML = '<div style="padding:14px;color:#f87171;font-size:12px;text-align:center;">Gagal memuat foto.</div>'; return; }
+
+        if(!d.fotos || d.fotos.length === 0){
+            box.innerHTML = '<div style="padding:14px;border:1px dashed var(--bd-3,#cbd5e1);border-radius:10px;color:var(--text-mid,#94a3b8);font-size:12px;text-align:center;"><i class="fas fa-image" style="margin-right:6px;"></i>Peserta belum mengunggah foto ikan.</div>';
+            return;
+        }
+
+        var mb = (d.used_bytes/1048576).toFixed(2);
+        var html = '<div style="font-size:11px;color:var(--text-mid,#94a3b8);margin-bottom:8px;font-weight:700;"><i class="fas fa-images" style="margin-right:5px;"></i>'+d.count+' foto · '+mb+' MB / 3 MB</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">';
+        d.fotos.forEach(function(f){
+            html += '<div style="position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--bd-2,#e5e7eb);">'
+                + '<img src="'+f.url+'" title="Klik untuk perbesar" onclick="window.open(this.src,\'_blank\')" style="width:100%;height:96px;object-fit:cover;display:block;cursor:zoom-in;">'
+                + '<button onclick="admDeleteFoto('+f.id+','+ikanId+')" title="Hapus foto ini" style="position:absolute;top:5px;right:5px;width:24px;height:24px;border:none;border-radius:7px;background:rgba(239,68,68,.92);color:#fff;cursor:pointer;font-size:11px;display:grid;place-items:center;"><i class="fas fa-trash-can"></i></button>'
+                + '</div>';
+        });
+        html += '</div>';
+        box.innerHTML = html;
+    })
+    .catch(function(){ box.innerHTML = '<div style="padding:14px;color:#f87171;font-size:12px;text-align:center;">Gagal memuat foto.</div>'; });
+}
+
+function admDeleteFoto(fotoId, ikanId){
+    if(!confirm('Hapus foto ini? Tindakan permanen.')) return;
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('foto_id', fotoId);
+    fetch('/api/admin/delete-foto', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}, body: fd})
+    .then(r => r.json())
+    .then(d => {
+        if(!d.success) throw new Error(d.message || 'Gagal');
+        popupSuccess('Foto Dihapus', d.message);
+        loadAdminIkanFotos(ikanId);
+    })
+    .catch(e => popupError('Gagal', e.message || 'Gagal menghapus foto.'));
+}
+
 function updateMvpToggleUI(isOpen) {
     var btn = document.getElementById('btnToggleMvp');
     var txt = document.getElementById('mvpStatusText');
@@ -5365,7 +5450,7 @@ function saveJuriAssignments(jid,btn){
             if(pageId === 'team_champion'){ loadTeamChampionStatus(); loadTeamChampionPeserta(); loadTeamChampionIkan(); }
             if(pageId === 'results'){ loadResultsStatus(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
-            if(pageId === 'undian'){ loadUndianStatus(); }
+            if(pageId === 'undian'){ loadUndianStatus(); loadFotoReplaceStatus(); }
             if(pageId === 'jumbo_calc'){ loadJumboCalcFish(); }
             if(pageId === 'kelola_juri'){ loadJuriAssignments(); loadJuriScoringLockStatus(); }
             if(pageId === 'taxonomy'){ loadTaxonomyManage(); }
@@ -5378,7 +5463,7 @@ function saveJuriAssignments(jid,btn){
             if(pageId === 'team_champion'){ loadTeamChampionStatus(); loadTeamChampionPeserta(); loadTeamChampionIkan(); }
             if(pageId === 'results'){ loadResultsStatus(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
-            if(pageId === 'undian'){ loadUndianStatus(); }
+            if(pageId === 'undian'){ loadUndianStatus(); loadFotoReplaceStatus(); }
             if(pageId === 'kelola_juri'){ loadJuriScoringLockStatus(); }
         }
 

@@ -97,6 +97,7 @@ class DashboardController extends Controller
 
         $ikansSaya = $pesertaSaya
             ? $pesertaSaya->ikans()
+                ->withCount('fotos')
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($ikan) {
@@ -934,7 +935,7 @@ class DashboardController extends Controller
             ]);
         }
 
-        $ikans = $peserta->ikans()->orderBy('created_at', 'desc')->get()->map(function($ikan) {
+        $ikans = $peserta->ikans()->withCount('fotos')->orderBy('created_at', 'desc')->get()->map(function($ikan) {
             return [
                 'id' => $ikan->id,
                 'nama_peserta' => $this->cleanExcelDisplayValue($ikan->nama_peserta, ''),
@@ -945,6 +946,7 @@ class DashboardController extends Controller
                 'nomor_tank' => $ikan->nomor_tank,
                 'is_team_champion' => (bool) ($ikan->is_team_champion ?? false),
                 'is_mvp' => (bool) ($ikan->is_mvp ?? false),
+                'has_foto' => ($ikan->fotos_count ?? 0) > 0,
                 'dibuat_oleh' => $ikan->dibuat_oleh ?? 'user',
             ];
         });
@@ -1700,6 +1702,171 @@ class DashboardController extends Controller
         }
 
         return $empty;
+    }
+
+public function serveFoto($fotoId)
+    {
+        if (!Auth::id()) {
+            abort(403);
+        }
+
+        $foto = \App\Models\IkanFoto::find($fotoId);
+        if (!$foto || !\Storage::disk('public')->exists($foto->path)) {
+            abort(404);
+        }
+
+        $mime = \Storage::disk('public')->mimeType($foto->path) ?: 'image/jpeg';
+
+        return response(\Storage::disk('public')->get($foto->path), 200)
+            ->header('Content-Type', $mime)
+            ->header('Cache-Control', 'private, max-age=300');
+    }
+
+    public function ikanFotoInfo($id)
+    {
+        $ikan = Ikan::where('id', $id)
+            ->whereHas('peserta', fn($q) => $q->where('user_id', Auth::id()))
+            ->with('fotos')
+            ->first();
+
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan.'], 404);
+        }
+
+        $maxBytes  = 3 * 1024 * 1024;
+        $usedBytes = (int) $ikan->fotos->sum('size');
+
+        $fotos = $ikan->fotos->map(function ($f) {
+            return [
+                'id'   => $f->id,
+                'url'  => route('foto.ikan', ['foto' => $f->id]) . '?v=' . ($f->updated_at ? $f->updated_at->timestamp : time()),
+                'size' => (int) $f->size,
+            ];
+        })->values();
+
+        return response()->json([
+            'success'         => true,
+            'fotos'           => $fotos,
+            'count'           => $fotos->count(),
+            'has_foto'        => $fotos->count() > 0,
+            'used_bytes'      => $usedBytes,
+            'max_bytes'       => $maxBytes,
+            'remaining_bytes' => max(0, $maxBytes - $usedBytes),
+            'can_upload'      => $usedBytes < $maxBytes,
+            'nama'            => $this->cleanExcelDisplayValue($ikan->nama_peserta, ''),
+            'kategori'        => $ikan->kategori,
+        ]);
+    }
+
+    public function uploadFotoIkan(Request $request)
+    {
+        $request->validate([
+            'ikan_id' => 'required|exists:ikans,id',
+            'foto'    => 'required|image|mimes:jpeg,jpg,png|max:3072',
+        ], [
+            'foto.image' => 'File harus berupa gambar.',
+            'foto.mimes' => 'Format foto harus JPG atau PNG.',
+            'foto.max'   => 'Ukuran foto maksimal 3MB.',
+        ]);
+
+        $ikan = Ikan::where('id', $request->ikan_id)
+            ->whereHas('peserta', fn($q) => $q->where('user_id', Auth::id()))
+            ->with('fotos')
+            ->first();
+
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan atau bukan milik Anda.'], 404);
+        }
+
+        $maxBytes  = 3 * 1024 * 1024;
+        $usedBytes = (int) $ikan->fotos->sum('size');
+
+        if ($usedBytes >= $maxBytes) {
+            return response()->json(['success' => false, 'message' => 'Batas total 3MB foto untuk ikan ini sudah tercapai.'], 422);
+        }
+
+        [$path, $size] = $this->simpanFotoBaru($ikan, $request->file('foto'));
+
+        if (($usedBytes + $size) > $maxBytes) {
+            \Storage::disk('public')->delete($path);
+            $sisaKb = round(($maxBytes - $usedBytes) / 1024);
+            return response()->json([
+                'success' => false,
+                'message' => 'Foto melebihi sisa kuota. Sisa kuota Anda ± ' . $sisaKb . ' KB.',
+            ], 422);
+        }
+
+        $foto = $ikan->fotos()->create(['path' => $path, 'size' => $size]);
+
+        $usedAfter = $usedBytes + $size;
+
+        return response()->json([
+            'success'         => true,
+            'message'         => 'Foto berhasil disimpan.',
+            'foto'            => [
+                'id'   => $foto->id,
+                'url'  => route('foto.ikan', ['foto' => $foto->id]) . '?v=' . time(),
+                'size' => $size,
+            ],
+            'used_bytes'      => $usedAfter,
+            'max_bytes'       => $maxBytes,
+            'remaining_bytes' => max(0, $maxBytes - $usedAfter),
+            'can_upload'      => $usedAfter < $maxBytes,
+        ]);
+    }
+
+    private function simpanFotoBaru(Ikan $ikan, $file): array
+    {
+        $ext  = strtolower($file->getClientOriginalExtension()) === 'png' ? 'png' : 'jpg';
+        $name = 'ikan_' . $ikan->id . '_' . uniqid() . '.' . $ext;
+        $relativePath = 'ikan-foto/' . $name;
+
+        $stored = false;
+        try {
+            if (function_exists('imagecreatefromstring')) {
+                $img = @imagecreatefromstring(file_get_contents($file->getRealPath()));
+                if ($img !== false) {
+                    $maxDim = 1600;
+                    $w = imagesx($img);
+                    $h = imagesy($img);
+                    $scale = min(1, $maxDim / max($w, $h));
+
+                    if ($scale < 1) {
+                        $nw = (int) round($w * $scale);
+                        $nh = (int) round($h * $scale);
+                        $resized = imagecreatetruecolor($nw, $nh);
+                        if ($ext === 'png') {
+                            imagealphablending($resized, false);
+                            imagesavealpha($resized, true);
+                        }
+                        imagecopyresampled($resized, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                        imagedestroy($img);
+                        $img = $resized;
+                    }
+
+                    ob_start();
+                    if ($ext === 'png') {
+                        imagepng($img, null, 6);
+                    } else {
+                        imagejpeg($img, null, 80);
+                    }
+                    $binary = ob_get_clean();
+                    imagedestroy($img);
+
+                    \Storage::disk('public')->put($relativePath, $binary);
+                    $stored = true;
+                }
+            }
+        } catch (\Throwable $e) {
+            $stored = false;
+        }
+
+        if (!$stored) {
+            $file->storeAs('ikan-foto', $name, 'public');
+        }
+
+        $size = (int) \Storage::disk('public')->size($relativePath);
+        return [$relativePath, $size];
     }
 
     public function hasilJuara()

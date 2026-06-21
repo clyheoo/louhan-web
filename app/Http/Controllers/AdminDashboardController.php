@@ -485,6 +485,7 @@ class AdminDashboardController extends Controller
     public function getScoringData(Request $request)
     {
     $query = Ikan::query()
+        ->withCount('fotos')
         /* ★ Load SEMUA ikan, termasuk yang belum punya nomor tank */
         ->with(['peserta', 'scorings' => function ($q) {
             $q->orderBy('created_at', 'desc');
@@ -675,6 +676,8 @@ class AdminDashboardController extends Controller
             return [
                 'id'                 => $ikan->id,
                 'peserta_id'         => $ikan->peserta_id,
+                'has_foto'               => ($ikan->fotos_count ?? 0) > 0,
+                'foto_count'             => (int) ($ikan->fotos_count ?? 0),
                 'nama_peserta'      => $ikan->nama_peserta ?? optional($peserta)->nama_peserta ?? 'Unknown',
                 'kategori'          => $ikan->kategori,
                 'kelas'             => $latestKelas ?? $ikan->kelas ?? '-',
@@ -2389,6 +2392,76 @@ class AdminDashboardController extends Controller
             'is_open' => (bool)$newVal,
             'message' => $newVal === '1' ? 'Mesin Undian DIBUKA untuk user.' : 'Mesin Undian DITUTUP untuk user.'
         ]);
+    }
+
+    public function toggleFotoReplace()
+    {
+        $current = \DB::table('settings')->where('key', 'foto_replace_allowed')->value('value');
+        $newVal  = ($current === '1') ? '0' : '1';
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'foto_replace_allowed'],
+            ['value' => $newVal, 'updated_at' => now()]
+        );
+
+        return response()->json([
+            'success'         => true,
+            'replace_allowed' => ($newVal === '1'),
+            'message'         => $newVal === '1'
+                ? 'Penggantian foto DIIZINKAN. Peserta dapat mengganti foto ikan yang sudah diunggah.'
+                : 'Penggantian foto DIKUNCI. Peserta hanya bisa mengunggah 1 foto per ikan.',
+        ]);
+    }
+
+    public function getFotoReplaceStatus()
+    {
+        return response()->json([
+            'replace_allowed' => \DB::table('settings')->where('key', 'foto_replace_allowed')->value('value') === '1',
+        ]);
+    }
+
+public function getIkanFotos($id)
+    {
+        $ikan = Ikan::with('fotos')->find($id);
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan.'], 404);
+        }
+
+        $maxBytes = 3 * 1024 * 1024;
+        $used = (int) $ikan->fotos->sum('size');
+
+        $fotos = $ikan->fotos->map(function ($f) {
+            return [
+                'id'   => $f->id,
+                'url'  => route('foto.ikan', ['foto' => $f->id]) . '?v=' . time(),
+                'size' => (int) $f->size,
+            ];
+        })->values();
+
+        return response()->json([
+            'success'    => true,
+            'fotos'      => $fotos,
+            'count'      => $fotos->count(),
+            'used_bytes' => $used,
+            'max_bytes'  => $maxBytes,
+        ]);
+    }
+
+    public function deleteFoto(Request $request)
+    {
+        $request->validate(['foto_id' => 'required|exists:ikan_fotos,id']);
+
+        $foto = \App\Models\IkanFoto::find($request->foto_id);
+        if (!$foto) {
+            return response()->json(['success' => false, 'message' => 'Foto tidak ditemukan.'], 404);
+        }
+
+        if (\Storage::disk('public')->exists($foto->path)) {
+            \Storage::disk('public')->delete($foto->path);
+        }
+        $foto->delete();
+
+        return response()->json(['success' => true, 'message' => 'Foto berhasil dihapus.']);
     }
 
     public function getUndianStatus()

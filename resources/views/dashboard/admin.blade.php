@@ -1875,6 +1875,20 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="glass-card" style="margin-top:16px;">
+                    <div class="card-head">
+                        <h3><span class="ti"><i class="fas fa-camera"></i></span>Izin Ganti Foto Ikan</h3>
+                        <button class="btn-primary" id="btnToggleFotoReplace" onclick="toggleFotoReplace()" style="padding:8px 16px;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
+                    </div>
+                    <div class="card-body">
+                        <div style="font-size:13px;color:var(--text);" id="fotoReplaceStatusText">Memuat status...</div>
+                        <div style="background:rgba(245,158,11,.08);border:1px solid var(--bd-gold);border-radius:11px;padding:10px 14px;margin-top:12px;display:flex;gap:8px;align-items:flex-start;">
+                            <i class="fas fa-circle-info" style="color:var(--gold-400);margin-top:2px;"></i>
+                            <span style="font-size:11px;color:var(--gold-300);line-height:1.5;">Setiap peserta hanya bisa mengunggah 1 foto per ikan. Jika diizinkan, peserta dapat mengganti foto yang sudah diunggah. Foto bisa dilihat pada Detail ikan di menu Penilaian.</span>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- ═══════════ PAGE: KELOLA KATEGORI & KELAS ═══════════ -->

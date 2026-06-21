@@ -29,6 +29,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/acak-nomor-tank-admin', [DashboardController::class, 'acakNomorTankAdmin'])->name('api.acak.tank.admin');
     Route::post('/api/acak-nomor-tank-user', [DashboardController::class, 'acakNomorTankUser'])->name('api.acak.tank.user');
     Route::get('/api/user/my-ikans', [DashboardController::class, 'getMyIkans']);
+    Route::get('/foto-ikan/{foto}', [DashboardController::class, 'serveFoto'])->name('foto.ikan');
+    Route::get('/api/user/ikan-foto/{id}', [DashboardController::class, 'ikanFotoInfo']);
+    Route::post('/api/user/upload-foto-ikan', [DashboardController::class, 'uploadFotoIkan']);
     Route::get('/api/user/public-results', [DashboardController::class, 'getPublicResults']);
     Route::get('/api/user/nominasi-results', [DashboardController::class, 'getNominasiResults']); // ★ hasil nominasi utk peserta
     Route::post('/api/toggle-team-champion-ikan', [DashboardController::class, 'toggleTeamChampionIkan'])->name('api.toggle.team_champion');
@@ -148,6 +151,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/mvp-registration-max', [AdminDashboardController::class, 'setMvpRegistrationMax']);
     Route::post('/api/admin/toggle-undian-registration', [AdminDashboardController::class, 'toggleUndianRegistration']);
     Route::get('/api/admin/undian-status', [AdminDashboardController::class, 'getUndianStatus']);
+    Route::post('/api/admin/toggle-foto-replace', [AdminDashboardController::class, 'toggleFotoReplace']);
+    Route::get('/api/admin/foto-replace-status', [AdminDashboardController::class, 'getFotoReplaceStatus']);
+    Route::get('/api/admin/ikan-fotos/{id}', [AdminDashboardController::class, 'getIkanFotos']);
+    Route::post('/api/admin/delete-foto', [AdminDashboardController::class, 'deleteFoto']);
     Route::post('/api/admin/delete-mvp-ikan', [AdminDashboardController::class, 'deleteMvpIkan']);
     Route::get('/api/admin/mvp-submitted-peserta', [AdminDashboardController::class, 'getMvpSubmittedPeserta']);
     Route::post('/api/admin/unlock-mvp-peserta', [AdminDashboardController::class, 'unlockMvpPeserta']);

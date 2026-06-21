@@ -2725,6 +2725,41 @@
         body.tc-feature-off .btn-team-champion { display:none !important; }
         /* Menu gabungan hilang HANYA bila kedua fitur nonaktif */
         body.mvp-feature-off.tc-feature-off [data-user-page="mvp"] { display:none !important; }
+
+        /* ===== KLIK IKAN UNTUK UPLOAD FOTO ===== */
+        .ikan-item-info { cursor: pointer; }
+        .ikan-item-info:hover h4 { color: var(--cyan-300); }
+        .foto-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 9px; font-weight: 800;
+            color: #6EE7B7;
+            background: rgba(16,185,129,0.12);
+            border: 1px solid rgba(16,185,129,0.30);
+            padding: 2px 7px; border-radius: 999px;
+            letter-spacing: 0.04em; vertical-align: middle; margin-left: 4px;
+        }
+        .foto-badge i { font-size: 8px; }
+
+        /* Modal foto — kompak & tidak kebesaran */
+        #fotoIkanModal .modal-card {
+            max-width: 360px !important;
+            padding: 22px 22px 20px;
+            max-height: 88vh;
+            overflow-y: auto;
+        }
+        #fotoIkanModal .modal-icon { width: 52px; height: 52px; border-radius: 16px; margin-bottom: 12px; }
+        #fotoIkanModal .modal-icon i { font-size: 20px; }
+        #fotoIkanModal .modal-title { font-size: 19px; margin-bottom: 6px; }
+        #fotoIkanModal .modal-desc { font-size: 12px; margin-bottom: 14px; }
+        #fotoIkanPreviewWrap { margin-bottom: 14px; }
+        #fotoIkanPreview { max-height: 230px; object-fit: cover; }
+        #fotoIkanEmpty { padding: 20px 14px; }
+
+        @media (max-width: 480px) {
+            #fotoIkanModal .modal-card { max-width: 320px !important; padding: 18px 16px 16px; max-height: 86vh; }
+            #fotoIkanModal .modal-title { font-size: 17px; }
+            #fotoIkanPreview { max-height: 190px; }
+        }
     </style>
 </head>
 <body class="user-page-overview @if(!$mvpFeatureEnabled) mvp-feature-off @endif @if(!$teamChampionFeatureEnabled) tc-feature-off @endif">
@@ -3272,13 +3307,18 @@
                             </select>
                         </div>
 
+                        <div style="padding:0 26px 10px;font-size:11px;color:var(--text-mid);">
+                            <i class="fas fa-camera" style="color:var(--cyan-400);margin-right:5px;"></i>
+                            Ketuk nama ikan untuk mengunggah / mengambil foto.
+                        </div>
+
                         <div class="ikan-list-wrapper" id="ikanListWrapper">
                             @if($ikansSaya->count() > 0)
                                 <div class="ikan-list" id="ikanListContainer">
                                     @foreach($ikansSaya as $index => $ikan)
                                         <div class="ikan-item" id="ikan-item-{{ $ikan->id }}">
                                             <div class="ikan-item-info">
-                                                <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>{{ $ikan->nama_peserta ?? $user->name }}@if($ikan->dibuat_oleh === 'admin')<span class="badge-admin"><i class="fas fa-shield-halved"></i> Admin</span>@endif</h4>
+                                                <h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>{{ $ikan->nama_peserta ?? $user->name }}@if($ikan->dibuat_oleh === 'admin')<span class="badge-admin"><i class="fas fa-shield-halved"></i> Admin</span>@endif{!! ($ikan->fotos_count ?? 0) > 0 ? '<span class="foto-badge" title="Foto sudah dikirim"><i class="fas fa-camera"></i> FOTO</span>' : '' !!}</h4>
                                                 @php
                                                     $katKelasText = $ikan->kategori;
                                                     if ($ikan->kelas && !in_array($ikan->kategori, ['Bonsai', 'Jumbo'])) {
@@ -3345,6 +3385,65 @@
                 <button class="modal-close-btn" onclick="document.getElementById('modalConfirmMvp').classList.remove('show')">Batal</button>
                 <button class="btn-submit-mvp" id="btnConfirmSubmitMvp" onclick="submitMvpIkan()" disabled style="width:auto; margin-top:0; padding: 13px 24px;">
                     <i class="fas fa-paper-plane"></i> Ya, Kirim MVP
+                </button>
+            </div>
+        </div>
+    </div>
+
+<!-- ==================== MODAL: FOTO IKAN (MULTI) ==================== -->
+    <div class="modal-overlay" id="fotoIkanModal">
+        <div class="modal-card" style="max-width:460px;">
+            <div class="modal-icon blue"><i class="fas fa-camera"></i></div>
+            <h2 class="modal-title">Foto Ikan</h2>
+            <p class="modal-desc" id="fotoIkanDesc">Unggah atau ambil foto ikan Anda.</p>
+
+            <div id="fotoIkanLoading" style="display:none;padding:34px 16px;text-align:center;color:var(--text-mid);">
+                <i class="fas fa-spinner fa-spin" style="font-size:26px;color:var(--cyan-400);"></i>
+                <div style="margin-top:10px;font-size:12px;">Memuat foto ikan...</div>
+            </div>
+
+            <div id="fotoIkanStatus" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:12px;font-size:12px;font-weight:700;text-align:left;"></div>
+
+            <div id="fotoIkanGallery" style="display:none;margin-bottom:14px;text-align:left;"></div>
+
+            <!-- Kamera live -->
+            <div id="fotoIkanCamera" style="display:none;margin-bottom:14px;">
+                <video id="fotoIkanVideo" autoplay playsinline muted style="width:100%;border-radius:16px;border:1px solid var(--bd-2);background:#000;display:block;"></video>
+                <div style="display:flex;gap:10px;margin-top:10px;">
+                    <button type="button" class="submit-btn" style="flex:1;margin-top:0;" onclick="fotoIkanCapture()"><i class="fas fa-camera" style="margin-right:6px;"></i> Jepret</button>
+                    <button type="button" class="modal-close-btn" style="flex:1;" onclick="fotoIkanCancelCamera()">Batal</button>
+                </div>
+            </div>
+
+            <!-- Preview foto terpilih sebelum simpan -->
+            <div id="fotoIkanPreviewWrap" style="margin-bottom:14px;display:none;">
+                <img id="fotoIkanPreview" src="" alt="Foto terpilih" title="Pratinjau" style="width:100%;border-radius:16px;border:1px solid var(--bd-2);display:block;">
+            </div>
+
+            <div id="fotoIkanQuota" style="display:none;font-size:11px;color:var(--text-mid);margin-bottom:12px;text-align:left;"></div>
+
+            <div id="fotoIkanFullNote" style="display:none;margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(245,158,11,.08);border:1px solid var(--bd-gold);color:var(--gold-300);font-size:12px;line-height:1.55;text-align:left;">
+                <i class="fas fa-circle-check" style="margin-right:6px;"></i> Total foto sudah mencapai batas 3MB. Tidak bisa menambah foto lagi.
+            </div>
+
+            <input type="file" id="fotoIkanInputFile" accept="image/jpeg,image/png" style="display:none;">
+            <input type="file" id="fotoIkanInputCamera" accept="image/*" capture="environment" style="display:none;">
+
+            <div id="fotoIkanUploadActions" style="display:none;gap:10px;margin-bottom:14px;">
+                <button type="button" class="submit-btn" style="flex:1;margin-top:0;" onclick="fotoIkanStartCamera()">
+                    <i class="fas fa-camera" style="margin-right:6px;"></i> Ambil Foto
+                </button>
+                <button type="button" class="modal-close-btn" style="flex:1;" onclick="document.getElementById('fotoIkanInputFile').click()">
+                    <i class="fas fa-image" style="margin-right:6px;"></i> Pilih File
+                </button>
+            </div>
+
+            <div id="fotoIkanFileName" style="display:none;font-size:12px;color:var(--cyan-300);font-weight:700;margin-bottom:14px;text-align:left;"></div>
+
+            <div class="modal-actions">
+                <button class="modal-close-btn" onclick="closeFotoIkanModal()">Tutup</button>
+                <button class="submit-btn" id="btnUploadFotoIkan" style="width:auto;margin-top:0;padding:12px 22px;display:none;" onclick="kirimFotoIkan()">
+                    <i class="fas fa-cloud-arrow-up" style="margin-right:6px;"></i> Simpan Foto
                 </button>
             </div>
         </div>
@@ -4828,7 +4927,8 @@
                         newEl.id = `ikan-item-${ikan.id}`;
                         newEl.style.animation = 'cardEntry 0.5s ease both';
                         const acakBtnHtml = !ikan.nomor_tank ? `<button class="btn-acak-kecil" onclick="mulaiAcak(${ikan.id}, this)" style="${isUndianOpen ? '' : 'display:none;'}"><i class="fas fa-shuffle"></i> ACAK</button>` : `<span style="color:var(--green-500); font-size:14px;"><i class="fas fa-circle-check"></i></span>`;
-                        newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${ikan.nama_peserta || document.getElementById('namaPeserta').value} ${badge}</h4>${kategoriKelasLineHtml(ikan.kategori, ikan.kelas)}</div><div class="ikan-item-right">${teamChampionBtnHtml}${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${acakBtnHtml}</div>`;
+                        const fotoBadge = ikan.has_foto ? ' <span class="foto-badge" title="Foto sudah dikirim"><i class="fas fa-camera"></i> FOTO</span>' : '';
+                        newEl.innerHTML = `<div class="ikan-item-info"><h4><i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>${ikan.nama_peserta || document.getElementById('namaPeserta').value} ${badge}${fotoBadge}</h4>${kategoriKelasLineHtml(ikan.kategori, ikan.kelas)}</div><div class="ikan-item-right">${teamChampionBtnHtml}${mvpBtnHtml}<div class="tank-num ${ikan.nomor_tank ? 'filled' : 'empty'}" id="tank-num-${ikan.id}">${ikan.nomor_tank ?? '--'}</div>${acakBtnHtml}</div>`;
                         listContainer.prepend(newEl);
                         currentIkans[ikan.id] = {
                             id: ikan.id,
@@ -4857,7 +4957,8 @@
 
                         if (existingH4) {
                             var badgeHtml = ikan.dibuat_oleh === 'admin' ? ' <span class="badge-admin"><i class="fas fa-shield-halved"></i> Admin</span>' : '';
-                            existingH4.innerHTML = '<i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>' + (ikan.nama_peserta || document.getElementById('namaPeserta').value) + badgeHtml;
+                            var fotoBadgeHtml = ikan.has_foto ? ' <span class="foto-badge" title="Foto sudah dikirim"><i class="fas fa-camera"></i> FOTO</span>' : '';
+                            existingH4.innerHTML = '<i class="fas fa-fish" style="color:var(--blue-400); margin-right:6px;"></i>' + (ikan.nama_peserta || document.getElementById('namaPeserta').value) + badgeHtml + fotoBadgeHtml;
                         }
 
                         var kategoriKelasText = formatKategoriKelas(ikan.kategori, ikan.kelas);
@@ -5477,6 +5578,262 @@
             teamChampionAgree.addEventListener('change', function() {
                 var btn = document.getElementById('btnConfirmSubmitTeamChampion');
                 if (btn) btn.disabled = !this.checked;
+            });
+        }
+
+/* ============================================================
+           FOTO IKAN (MULTI) — galeri, kamera, kuota 3MB
+           ============================================================ */
+        var fotoIkanCurrentId   = null;
+        var fotoIkanSelectedFile = null;
+        var fotoIkanStream       = null;
+        var fotoIkanCanUpload    = false;
+
+        // Klik nama ikan → buka modal
+        document.addEventListener('click', function(e){
+            var info = e.target.closest('.ikan-item-info');
+            if (!info) return;
+            var item = info.closest('.ikan-item');
+            if (!item || !item.id) return;
+            var id = item.id.replace('ikan-item-', '');
+            if (id) openFotoIkanModal(id);
+        });
+
+        function fotoEl(id){ return document.getElementById(id); }
+
+        function fotoIkanShowStatus(msg, ok){
+            var s = fotoEl('fotoIkanStatus');
+            if(!s) return;
+            s.style.display = 'block';
+            s.style.background = ok ? 'rgba(16,185,129,.12)' : 'rgba(239,68,68,.12)';
+            s.style.border = '1px solid ' + (ok ? 'rgba(16,185,129,.35)' : 'rgba(239,68,68,.35)');
+            s.style.color = ok ? '#6EE7B7' : '#FCA5A5';
+            s.innerHTML = '<i class="fas ' + (ok ? 'fa-circle-check' : 'fa-circle-xmark') + '" style="margin-right:6px;"></i>' + msg;
+        }
+        function fotoIkanHideStatus(){ var s = fotoEl('fotoIkanStatus'); if(s) s.style.display = 'none'; }
+
+        // Tampilkan/sembunyikan tombol Ambil Foto / Pilih File sesuai kuota
+        function fotoIkanShowUploadUI(){
+            var uploadAct = fotoEl('fotoIkanUploadActions');
+            var fullNote  = fotoEl('fotoIkanFullNote');
+            if (fotoIkanCanUpload) {
+                if (uploadAct) uploadAct.style.display = 'flex';
+                if (fullNote)  fullNote.style.display = 'none';
+            } else {
+                if (uploadAct) uploadAct.style.display = 'none';
+                if (fullNote)  fullNote.style.display = 'block';
+            }
+        }
+
+        function fotoIkanClearSelection(){
+            fotoIkanSelectedFile = null;
+            fotoEl('fotoIkanPreviewWrap').style.display = 'none';
+            fotoEl('fotoIkanPreview').src = '';
+            fotoEl('fotoIkanFileName').style.display = 'none';
+            fotoEl('fotoIkanFileName').textContent = '';
+            fotoEl('btnUploadFotoIkan').style.display = 'none';
+        }
+
+        function fotoIkanRenderGallery(data){
+            var g = fotoEl('fotoIkanGallery');
+            var quota = fotoEl('fotoIkanQuota');
+
+            var fotos = data.fotos || [];
+            if (fotos.length > 0) {
+                var inner = '';
+                fotos.forEach(function(f){
+                    inner += '<div style="border-radius:12px;overflow:hidden;border:1px solid var(--bd-2);">'
+                        + '<img src="' + f.url + '" title="Klik untuk lihat penuh" onclick="window.open(this.src,\'_blank\')" style="width:100%;height:92px;object-fit:cover;display:block;cursor:zoom-in;">'
+                        + '</div>';
+                });
+                g.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">' + inner + '</div>';
+            } else {
+                g.innerHTML = '<div style="padding:20px 14px;border:1px dashed var(--bd-3);border-radius:16px;color:var(--text-mid);font-size:13px;text-align:center;"><i class="fas fa-fish" style="font-size:24px;color:var(--cyan-400);display:block;margin-bottom:8px;"></i>Belum ada foto untuk ikan ini.</div>';
+            }
+            g.style.display = 'block';
+
+            var usedMb = ((data.used_bytes || 0) / 1048576).toFixed(2);
+            quota.style.display = 'block';
+            quota.innerHTML = '<i class="fas fa-database" style="margin-right:5px;color:var(--cyan-400);"></i>Terpakai ' + usedMb + ' MB dari 3 MB';
+
+            fotoIkanCanUpload = !!data.can_upload;
+            fotoIkanShowUploadUI();
+        }
+
+        function openFotoIkanModal(id){
+            fotoIkanCurrentId = id;
+            fotoIkanCanUpload = false;
+            fotoIkanStopCamera();        // hentikan kamera bila ada (tanpa restore UI)
+            fotoIkanClearSelection();
+            fotoIkanHideStatus();
+
+            var modal   = fotoEl('fotoIkanModal');
+            var loading = fotoEl('fotoIkanLoading');
+            var desc    = fotoEl('fotoIkanDesc');
+
+            fotoEl('fotoIkanGallery').style.display = 'none';
+            fotoEl('fotoIkanQuota').style.display = 'none';
+            fotoEl('fotoIkanFullNote').style.display = 'none';
+            fotoEl('fotoIkanUploadActions').style.display = 'none';
+            fotoEl('fotoIkanCamera').style.display = 'none';
+            if (loading) loading.style.display = 'block';
+            desc.textContent = 'Memuat info foto...';
+            modal.classList.add('show');
+
+            apiFetch('/api/user/ikan-foto/' + id)
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if (loading) loading.style.display = 'none';
+                if (!d || !d.success) { desc.textContent = 'Gagal memuat info foto.'; return; }
+                desc.textContent = (d.nama ? d.nama + ' — ' : '') + (d.kategori || '');
+                fotoIkanRenderGallery(d);
+            })
+            .catch(function(){
+                if (loading) loading.style.display = 'none';
+                desc.textContent = 'Gagal memuat info foto.';
+            });
+        }
+
+        function closeFotoIkanModal(){
+            fotoIkanStopCamera();
+            fotoEl('fotoIkanModal').classList.remove('show');
+        }
+
+        /* ---- Kamera live (HANYA terbuka saat tombol diklik) ---- */
+        function fotoIkanStartCamera(){
+            fotoIkanHideStatus();
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                fotoEl('fotoIkanInputCamera').click(); // fallback (mis. http non-localhost)
+                return;
+            }
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+            .then(function(stream){
+                fotoIkanStream = stream;
+                var video = fotoEl('fotoIkanVideo');
+                video.srcObject = stream;
+                fotoEl('fotoIkanCamera').style.display = 'block';
+                fotoEl('fotoIkanUploadActions').style.display = 'none';
+                fotoEl('fotoIkanPreviewWrap').style.display = 'none';
+                fotoEl('btnUploadFotoIkan').style.display = 'none';
+            })
+            .catch(function(){
+                fotoEl('fotoIkanInputCamera').click(); // fallback
+            });
+        }
+
+        function fotoIkanCapture(){
+            var video = fotoEl('fotoIkanVideo');
+            if (!video || !video.videoWidth) { fotoIkanCancelCamera(); return; }
+            var canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(function(blob){
+                fotoIkanStopCamera();
+                if (!blob) { fotoIkanShowUploadUI(); return; }
+                var file = new File([blob], 'kamera_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                fotoIkanPick(file);
+            }, 'image/jpeg', 0.85);
+        }
+
+        // Hentikan kamera saja (TIDAK mengubah tombol)
+        function fotoIkanStopCamera(){
+            if (fotoIkanStream) {
+                fotoIkanStream.getTracks().forEach(function(t){ t.stop(); });
+                fotoIkanStream = null;
+            }
+            var video = fotoEl('fotoIkanVideo');
+            if (video) video.srcObject = null;
+            var cam = fotoEl('fotoIkanCamera');
+            if (cam) cam.style.display = 'none';
+        }
+
+        // Tombol Batal: hentikan kamera DAN kembalikan tombol Ambil Foto / Pilih File
+        function fotoIkanCancelCamera(){
+            fotoIkanStopCamera();
+            fotoIkanShowUploadUI();
+        }
+
+        /* ---- Pilih file / hasil jepret ---- */
+        function fotoIkanPick(file){
+            if (!file) return;
+            fotoIkanHideStatus();
+            fotoIkanSelectedFile = file;
+
+            var reader = new FileReader();
+            reader.onload = function(ev){
+                fotoEl('fotoIkanPreview').src = ev.target.result;
+                fotoEl('fotoIkanPreviewWrap').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            fotoEl('fotoIkanFileName').textContent = 'Dipilih: ' + (file.name || 'foto.jpg');
+            fotoEl('fotoIkanFileName').style.display = 'block';
+            fotoEl('btnUploadFotoIkan').style.display = 'inline-flex';
+            fotoIkanShowUploadUI(); // pastikan tombol Ambil Foto / Pilih File tetap ada
+        }
+
+        document.getElementById('fotoIkanInputFile').addEventListener('change', function(){ if(this.files[0]) fotoIkanPick(this.files[0]); this.value = ''; });
+        document.getElementById('fotoIkanInputCamera').addEventListener('change', function(){ if(this.files[0]) fotoIkanPick(this.files[0]); this.value = ''; });
+
+        /* ---- Kompres gambar di browser agar upload cepat ---- */
+        function fotoIkanResize(file, cb){
+            try {
+                var img = new Image();
+                var url = URL.createObjectURL(file);
+                img.onload = function(){
+                    URL.revokeObjectURL(url);
+                    var maxDim = 1280;
+                    var w = img.width, h = img.height;
+                    var scale = Math.min(1, maxDim / Math.max(w, h));
+                    var nw = Math.round(w * scale), nh = Math.round(h * scale);
+                    var canvas = document.createElement('canvas');
+                    canvas.width = nw; canvas.height = nh;
+                    canvas.getContext('2d').drawImage(img, 0, 0, nw, nh);
+                    canvas.toBlob(function(blob){
+                        if (!blob) { cb(file); return; }
+                        var base = (file.name || 'foto').replace(/\.(png|jpe?g)$/i, '');
+                        cb(new File([blob], base + '.jpg', { type: 'image/jpeg' }));
+                    }, 'image/jpeg', 0.82);
+                };
+                img.onerror = function(){ URL.revokeObjectURL(url); cb(file); };
+                img.src = url;
+            } catch (e) { cb(file); }
+        }
+
+        /* ---- Kirim ---- */
+        function kirimFotoIkan(){
+            if (!fotoIkanCurrentId || !fotoIkanSelectedFile) return;
+
+            var btn = fotoEl('btnUploadFotoIkan');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengunggah...';
+
+            fotoIkanResize(fotoIkanSelectedFile, function(uploadFile){
+                var fd = new FormData();
+                fd.append('_token', getCsrf());
+                fd.append('ikan_id', fotoIkanCurrentId);
+                fd.append('foto', uploadFile);
+
+                apiFetch('/api/user/upload-foto-ikan', { method: 'POST', body: fd })
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    if (!d.success) throw new Error(d.message || 'Gagal mengunggah foto.');
+                    fotoIkanClearSelection();
+                    fotoIkanShowStatus('Foto berhasil disimpan.', true);
+                    return apiFetch('/api/user/ikan-foto/' + fotoIkanCurrentId).then(function(r){ return r.json(); });
+                })
+                .then(function(info){ if (info && info.success) fotoIkanRenderGallery(info); })
+                .catch(function(e){
+                    // GAGAL: hilangkan preview & tampilkan status gagal, tombol tetap ada
+                    fotoIkanClearSelection();
+                    fotoIkanShowStatus(e.message || 'Gagal mengunggah foto.', false);
+                    fotoIkanShowUploadUI();
+                })
+                .finally(function(){
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-right:6px;"></i> Simpan Foto';
+                });
             });
         }
     </script>
