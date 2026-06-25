@@ -17,6 +17,10 @@
             <button onclick="switchJuriView('penjurian')" id="nav-btn-penjurian" class="sidebar-nav-btn">
                 <i class="fas fa-pen-ruler w-5 text-center"></i> Penjurian
             </button>
+            <div style="height:1px;background:var(--bd-1);margin:6px 4px;"></div>
+            <button type="button" onclick="switchJuriView('foto')" id="nav-btn-foto" class="sidebar-nav-btn">
+                <i class="fas fa-camera-retro w-5 text-center"></i> Foto Ikan
+            </button>
         </div>
     </div>
 
@@ -308,6 +312,35 @@
             </div>
         </div>
     </div>
+    </div>
+
+    {{-- ════════════════════════════════════════════════════════════
+         LAYER 5: HALAMAN FOTO IKAN (ikan yang sudah di-ACC)
+         ════════════════════════════════════════════════════════════ --}}
+    <div id="foto-page" class="hidden">
+        <style>
+            .fotorow-btn{padding:7px 12px;border-radius:9px;font-size:11px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:filter .15s;}
+            .fotorow-btn:hover{filter:brightness(1.08);}
+        </style>
+        <div class="glass-card p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
+            <h2 class="font-bold flex items-center gap-2 text-sm" style="color:var(--text-hi);">
+                <i class="fas fa-camera-retro" style="color:var(--cyan-400);"></i> Foto Ikan — Ikan Disetujui
+            </h2>
+            <div class="flex items-center gap-2">
+                <input type="text" id="foto-search" oninput="fotoListSearch(this.value)" placeholder="Cari no tank / kategori..." class="px-3 py-2 rounded-lg text-xs font-semibold outline-none" style="border:1px solid var(--bd-2);background:var(--glass-2);color:var(--text-hi);width:170px;">
+                <button onclick="loadFotoIkanList()" class="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5" style="background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+        </div>
+        <div id="foto-loading-list" class="text-center py-16">
+            <i class="fas fa-spinner fa-spin text-2xl" style="color:var(--cyan-400);"></i>
+            <p class="text-xs font-bold mt-3" style="color:var(--text-low);">Memuat data ikan...</p>
+        </div>
+        <div id="foto-list" class="flex flex-col gap-2.5"></div>
+        <div id="foto-list-empty" class="hidden text-center py-16 glass-card">
+            <i class="fas fa-fish text-4xl mb-3" style="color:var(--text-faint);"></i>
+            <p class="text-xs font-bold" style="color:var(--text-low);">Belum ada ikan yang disetujui.</p>
+        </div>
+    </div>
 
 </div>
 @endsection
@@ -383,6 +416,49 @@
             <button onclick="saveNomDefectAll()" class="py-3 rounded-xl font-bold text-xs text-white flex items-center justify-center gap-2" style="background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));box-shadow:0 6px 16px -6px rgba(6,182,212,0.5),inset 0 1px 0 rgba(255,255,255,0.18);">
                 <i class="fas fa-check"></i> Selesai
             </button>
+        </div>
+    </div>
+</div>
+
+{{-- [DIHAPUS] Picker popup diganti view list inline (#foto-page). --}}
+
+{{-- ════════ MODAL FOTO IKAN (JURI) — Galeri + Upload ════════ --}}
+<div id="jf-modal" class="hidden fixed inset-0 z-[290] flex items-center justify-center p-4" style="background:rgba(2,6,14,0.9);backdrop-filter:blur(8px);">
+    <div class="rounded-2xl shadow-2xl w-full max-w-md max-h-[88vh] flex flex-col fade-in" style="background:linear-gradient(180deg,var(--ocean-800),var(--ocean-900));border:1px solid var(--bd-2);">
+        <div class="px-5 py-4 flex items-start justify-between gap-3" style="border-bottom:1px solid var(--bd-1);background:rgba(255,255,255,0.03);">
+            <div class="min-w-0">
+                <h3 class="text-base md:text-lg font-bold flex items-center gap-2" style="color:var(--text-hi);"><i class="fas fa-images" style="color:var(--cyan-400);"></i> Foto Ikan</h3>
+                <p id="jf-desc" class="text-[11px] md:text-xs mt-1" style="color:var(--text-mid);">-</p>
+            </div>
+            <button onclick="closeJuriFotoModal()" class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="px-5 py-4 overflow-y-auto flex-1 custom-scrollbar">
+            <div id="jf-status" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:12px;font-size:12px;font-weight:700;"></div>
+            <div id="jf-gallery" style="margin-bottom:14px;"></div>
+
+            <div id="jf-camera" style="display:none;margin-bottom:14px;">
+                <video id="jf-video" autoplay playsinline muted style="width:100%;border-radius:16px;border:1px solid var(--bd-2);background:#000;display:block;"></video>
+                <div style="display:flex;gap:10px;margin-top:10px;">
+                    <button type="button" onclick="jfCapture()" class="flex-1 py-2.5 rounded-xl font-bold text-xs text-white flex items-center justify-center gap-2" style="background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));"><i class="fas fa-camera"></i> Jepret</button>
+                    <button type="button" onclick="jfCancelCamera()" class="flex-1 py-2.5 rounded-xl font-bold text-xs" style="background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);">Batal</button>
+                </div>
+            </div>
+
+            <div id="jf-preview" style="margin-bottom:14px;display:none;"></div>
+            <div id="jf-quota" style="display:none;font-size:11px;color:var(--text-mid);margin-bottom:12px;"></div>
+            <div id="jf-fullnote" style="display:none;margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);color:var(--gold-300);font-size:12px;line-height:1.55;"><i class="fas fa-circle-check" style="margin-right:6px;"></i> Total foto sudah mencapai batas 3MB.</div>
+
+            <input type="file" id="jf-input-file" accept="image/jpeg,image/png" style="display:none;">
+            <input type="file" id="jf-input-cam" accept="image/*" capture="environment" style="display:none;">
+
+            <div id="jf-upload-actions" style="display:none;gap:10px;">
+                <button type="button" onclick="jfStartCamera()" class="flex-1 py-2.5 rounded-xl font-bold text-xs text-white flex items-center justify-center gap-2" style="background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));"><i class="fas fa-camera"></i> Ambil Foto</button>
+                <button type="button" onclick="document.getElementById('jf-input-file').click()" class="flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2" style="background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);"><i class="fas fa-folder-open"></i> Pilih File</button>
+            </div>
+        </div>
+        <div class="px-5 py-4 flex items-center justify-end gap-3" style="border-top:1px solid var(--bd-1);background:rgba(255,255,255,0.03);">
+            <button onclick="closeJuriFotoModal()" class="py-2.5 px-4 rounded-xl font-bold text-xs" style="background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);">Tutup</button>
+            <button id="jf-btn-save" onclick="jfSubmit()" class="py-2.5 px-5 rounded-xl font-bold text-xs text-white items-center justify-center gap-2" style="display:none;background:linear-gradient(135deg,#10B981,#059669);"><i class="fas fa-cloud-arrow-up" style="margin-right:6px;"></i> Simpan Foto</button>
         </div>
     </div>
 </div>
@@ -903,6 +979,9 @@ async function checkNominasiStatus(attempt = 1) {
         //    jadi snapshot di awal fungsi bisa basi & memunculkan halaman pending
         //    di atas halaman penjurian. Baca currentJuriView yang terbaru di sini.
         const isOnPenjurianTab = (currentJuriView === 'penjurian');
+
+        // ★ Tab Foto: jangan ubah visibilitas halaman nominasi/penjurian (cegah race).
+        if (currentJuriView === 'foto') { nomHide('nom-loading'); return; }
 
         const status = res.status;
         const wasPending = sessionStorage.getItem('nom_was_pending') === '1';
@@ -2324,6 +2403,7 @@ function switchJuriView(view) {
     // Update UI Button
     document.getElementById('nav-btn-nominasi').classList.toggle('active', view === 'nominasi');
     document.getElementById('nav-btn-penjurian').classList.toggle('active', view === 'penjurian');
+    var _fb = document.getElementById('nav-btn-foto'); if (_fb) _fb.classList.toggle('active', view === 'foto');
 
     if (view === 'nominasi') {
         nomHide('scoring-page');
@@ -2347,6 +2427,7 @@ function switchJuriView(view) {
         nomHide('nom-approved-anim');
         nomHide('nom-rejected-anim');
         nomHide('nom-loading');
+        nomHide('foto-page');
         
         nomShow('scoring-page');
         
@@ -2354,11 +2435,206 @@ function switchJuriView(view) {
         //    Lock overlay akan menutupi form jika masih terkunci
         loadJuriDataForPenjurian();
         startScoringLockPolling();
+    } else if (view === 'foto') {
+        if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
+        stopScoringLockPolling();
+        nomHide('nom-page'); nomHide('nom-waiting');
+        nomHide('nom-approved-anim'); nomHide('nom-rejected-anim');
+        nomHide('nom-loading'); nomHide('scoring-page');
+        nomShow('foto-page');
+        loadFotoIkanList();
     }
 }
 
 // Pastikan function bisa dipanggil oleh onclick="" di HTML.
 window.switchJuriView = switchJuriView;
+
+/* ════════ FOTO IKAN (JURI) — upload + galeri, mandiri (tidak tergantung apiFetch layout) ════════ */
+(function(){
+    function _csrf(){ var m=document.querySelector('meta[name=csrf-token]'); return m?m.content:''; }
+    function _el(id){ return document.getElementById(id); }
+    var jf = { currentId:null, stream:null, queue:[], usedBytes:0, maxBytes:3*1024*1024, canUpload:false, canUploadServer:false, locked:false, tanks:[] };
+
+    /* ---------- VIEW LIST FOTO (ikan approved) ---------- */
+    window.loadFotoIkanList = function(){
+        var L=_el('foto-loading-list'), wrap=_el('foto-list'), empty=_el('foto-list-empty');
+        if(L) L.style.display='block'; if(wrap) wrap.innerHTML=''; if(empty) empty.classList.add('hidden');
+        fetch('/api/juri/foto-tanks', {headers:{'Accept':'application/json'}})
+        .then(function(r){return r.json();})
+        .then(function(d){
+            if(L) L.style.display='none';
+            if(!d||!d.success){ wrap.innerHTML='<div class="glass-card p-4 text-center text-xs" style="color:#fca5a5;">Gagal memuat data.</div>'; return; }
+            jf.tanks=d.tanks||[]; renderFotoList('');
+        })
+        .catch(function(){ if(L) L.style.display='none'; wrap.innerHTML='<div class="glass-card p-4 text-center text-xs" style="color:#fca5a5;">Gagal memuat data.</div>'; });
+    };
+    window.fotoListSearch = function(v){ renderFotoList(v||''); };
+
+    function renderFotoList(q){
+        q=(q||'').toLowerCase().trim();
+        var wrap=_el('foto-list'), empty=_el('foto-list-empty');
+        var list=jf.tanks.filter(function(t){ if(!q) return true; return String(t.nomor_tank).indexOf(q)!==-1 || (t.kategori||'').toLowerCase().indexOf(q)!==-1 || (String(t.kelas||'')).toLowerCase().indexOf(q)!==-1; });
+        if(!list.length){ wrap.innerHTML=''; if(empty) empty.classList.remove('hidden'); return; }
+        if(empty) empty.classList.add('hidden');
+        wrap.innerHTML=list.map(function(t){
+            var statusChip = t.foto_count>0
+                ? '<span style="padding:3px 9px;border-radius:8px;background:rgba(16,185,129,.14);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;font-size:10px;font-weight:900;"><i class="fas fa-camera"></i> '+t.foto_count+' Foto</span>'
+                : '<span style="padding:3px 9px;border-radius:8px;background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-low);font-size:10px;font-weight:900;">BELUM ADA</span>';
+            var reFlag = t.reupload_requested ? '<span style="margin-left:6px;padding:2px 7px;border-radius:7px;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.3);color:var(--gold-300);font-size:9px;font-weight:900;"><i class="fas fa-rotate"></i> DIMINTA ULANG</span>' : '';
+            var btnDetail = '<button onclick="openJuriFotoModal('+t.id+')" class="fotorow-btn" style="background:rgba(34,211,238,.10);border:1px solid rgba(34,211,238,.28);color:var(--cyan-300);"><i class="fas fa-eye"></i> Detail</button>';
+            var btnUpload = '';
+            if(t.can_upload){
+                var lbl = t.reupload_requested ? 'Upload Ulang' : 'Upload';
+                btnUpload = '<button onclick="openJuriFotoModal('+t.id+')" class="fotorow-btn" style="background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));border:1px solid transparent;color:#fff;"><i class="fas fa-cloud-arrow-up"></i> '+lbl+'</button>';
+            } else if(t.foto_count>0){
+                btnUpload = '<span class="fotorow-btn" style="background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.28);color:var(--gold-300);cursor:default;"><i class="fas fa-lock"></i> Terkunci</span>';
+            }
+            return '<div class="glass-card" style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+                +'<div style="min-width:0;display:flex;flex-direction:column;gap:3px;">'
+                    +'<div style="font-size:14px;font-weight:800;color:var(--text-hi);">Tank '+t.nomor_tank+reFlag+'</div>'
+                    +'<div style="font-size:11px;color:var(--text-mid);">'+(t.kategori||'-')+(t.kelas?(' · Kelas '+t.kelas):'')+' · '+(t.nama_peserta||'-')+'</div>'
+                +'</div>'
+                +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+statusChip+btnDetail+btnUpload+'</div>'
+            +'</div>';
+        }).join('');
+    }
+
+    /* ---------- MODAL GALERI + UPLOAD ---------- */
+    window.openJuriFotoModal = function(id){
+        jf.currentId=id; jf.canUpload=false; jfStopCamera(); jfClearQueue(); jfHideStatus();
+        _el('jf-modal').classList.remove('hidden');
+        _el('jf-gallery').innerHTML=''; _el('jf-desc').textContent='Memuat info foto...';
+        _el('jf-upload-actions').style.display='none'; _el('jf-camera').style.display='none';
+        _el('jf-quota').style.display='none'; _el('jf-fullnote').style.display='none';
+        fetch('/api/juri/ikan-foto/'+id, {headers:{'Accept':'application/json'}})
+        .then(function(r){return r.json();})
+        .then(function(d){
+            if(!d||!d.success){ _el('jf-desc').textContent=(d&&d.message)||'Gagal memuat foto.'; return; }
+            _el('jf-desc').textContent='Tank '+(d.nomor_tank||'-')+' · '+(d.kategori||'');
+            jfRenderGallery(d);
+        })
+        .catch(function(){ _el('jf-desc').textContent='Gagal memuat foto.'; });
+    };
+    window.closeJuriFotoModal = function(){
+        jfStopCamera(); jfClearQueue(); _el('jf-modal').classList.add('hidden');
+        var fp=_el('foto-page'); if(fp && !fp.classList.contains('hidden') && window.loadFotoIkanList) loadFotoIkanList();
+    };
+
+    function jfBadge(role){
+        if(role==='juri')  return '<span style="position:absolute;left:5px;top:5px;padding:2px 6px;border-radius:6px;background:rgba(34,211,238,.9);color:#04121e;font-size:8px;font-weight:900;">JURI</span>';
+        if(role==='admin') return '<span style="position:absolute;left:5px;top:5px;padding:2px 6px;border-radius:6px;background:rgba(124,58,237,.9);color:#fff;font-size:8px;font-weight:900;">ADMIN</span>';
+        return '<span style="position:absolute;left:5px;top:5px;padding:2px 6px;border-radius:6px;background:rgba(148,163,184,.9);color:#0b1220;font-size:8px;font-weight:900;">LAMA</span>';
+    }
+    function jfRenderGallery(d){
+        var g=_el('jf-gallery'); var fotos=d.fotos||[];
+        if(fotos.length){
+            g.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'+fotos.map(function(f){
+                return '<div style="position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--bd-2);">'+jfBadge(f.role)+'<img src="'+f.url+'" onclick="window.open(this.src,\'_blank\')" style="width:100%;height:92px;object-fit:cover;display:block;cursor:zoom-in;"></div>';
+            }).join('')+'</div>';
+        } else {
+            g.innerHTML='<div style="padding:20px 14px;border:1px dashed var(--bd-2);border-radius:16px;color:var(--text-mid);font-size:13px;text-align:center;"><i class="fas fa-fish" style="font-size:24px;color:var(--cyan-400);display:block;margin-bottom:8px;"></i>Belum ada foto untuk tank ini.</div>';
+        }
+        jf.usedBytes=d.used_bytes||0; if(d.max_bytes) jf.maxBytes=d.max_bytes;
+        jf.canUploadServer = !!d.can_upload;   // ★ izin dari server (kunci juri)
+        jf.locked = !!d.locked;                // ★ sudah dikirim → terkunci utk juri
+        jfRefreshQuota();
+    }
+    function jfQueueBytes(){ return jf.queue.reduce(function(s,it){return s+(it.size||0);},0); }
+    function jfRefreshQuota(){
+        var quota=_el('jf-quota'); var act=_el('jf-upload-actions'); var full=_el('jf-fullnote');
+
+        // ★ Terkunci: foto sudah dikirim, juri tak boleh ubah.
+        if(jf.locked){
+            quota.style.display='block';
+            quota.innerHTML='<i class="fas fa-lock" style="margin-right:5px;color:var(--gold-400);"></i>Foto sudah dikirim. Hanya admin yang dapat menghapus / mengganti / meminta upload ulang.';
+            act.style.display='none'; full.style.display='none'; jf.canUpload=false; return;
+        }
+
+        var camOpen=_el('jf-camera').style.display==='block';
+        var used=jf.usedBytes+jfQueueBytes();
+        var canAddBytes=(jf.maxBytes-used)>1024;
+        var canAdd=canAddBytes && jf.canUploadServer; jf.canUpload=canAdd;
+
+        quota.style.display='block';
+        var txt='Terpakai '+(used/1048576).toFixed(2)+' MB dari 3 MB'; if(jf.queue.length) txt+=' · '+jf.queue.length+' menunggu disimpan';
+        quota.innerHTML='<i class="fas fa-database" style="margin-right:5px;color:var(--cyan-400);"></i>'+txt;
+
+        if(camOpen){ act.style.display='none'; return; }
+        if(canAdd){ act.style.display='flex'; full.style.display='none'; }
+        else { act.style.display='none'; full.style.display = canAddBytes ? 'none' : 'block'; }
+    }
+    function jfRenderQueue(){
+        var wrap=_el('jf-preview'); var btn=_el('jf-btn-save');
+        if(!jf.queue.length){ wrap.innerHTML=''; wrap.style.display='none'; btn.style.display='none'; return; }
+        wrap.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'+jf.queue.map(function(it,idx){
+            return '<div style="position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--bd-2);"><img src="'+it.url+'" style="width:100%;height:80px;object-fit:cover;display:block;"><button type="button" onclick="jfRemoveQueue('+idx+')" style="position:absolute;top:4px;right:4px;width:22px;height:22px;border:none;border-radius:7px;background:rgba(239,68,68,.92);color:#fff;cursor:pointer;font-size:10px;display:grid;place-items:center;"><i class="fas fa-xmark"></i></button></div>';
+        }).join('')+'</div>';
+        wrap.style.display='block'; btn.style.display='inline-flex';
+        btn.innerHTML='<i class="fas fa-cloud-arrow-up" style="margin-right:6px;"></i> Simpan Foto ('+jf.queue.length+')';
+    }
+    window.jfRemoveQueue=function(idx){ var it=jf.queue[idx]; if(it&&it.url){try{URL.revokeObjectURL(it.url);}catch(e){}} jf.queue.splice(idx,1); jfRenderQueue(); jfRefreshQuota(); };
+    function jfClearQueue(){ jf.queue.forEach(function(it){if(it.url){try{URL.revokeObjectURL(it.url);}catch(e){}}}); jf.queue=[]; jfRenderQueue(); }
+    function jfHideStatus(){ var s=_el('jf-status'); if(s) s.style.display='none'; }
+    function jfShowStatus(msg,ok){ var s=_el('jf-status'); if(!s) return; s.style.display='block'; s.style.background=ok?'rgba(16,185,129,.12)':'rgba(239,68,68,.12)'; s.style.border='1px solid '+(ok?'rgba(16,185,129,.35)':'rgba(239,68,68,.35)'); s.style.color=ok?'#6ee7b7':'#fca5a5'; s.innerHTML='<i class="fas '+(ok?'fa-circle-check':'fa-circle-xmark')+'" style="margin-right:6px;"></i>'+msg; }
+
+    window.jfStartCamera=function(){
+        jfHideStatus();
+        if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ _el('jf-input-cam').click(); return; }
+        navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
+        .then(function(stream){ jf.stream=stream; _el('jf-video').srcObject=stream; _el('jf-camera').style.display='block'; _el('jf-upload-actions').style.display='none'; _el('jf-preview').style.display='none'; _el('jf-btn-save').style.display='none'; })
+        .catch(function(){ _el('jf-input-cam').click(); });
+    };
+    window.jfCapture=function(){
+        var v=_el('jf-video'); if(!v||!v.videoWidth){ jfCancelCamera(); return; }
+        var c=document.createElement('canvas'); c.width=v.videoWidth; c.height=v.videoHeight; c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+        c.toBlob(function(b){ jfStopCamera(); if(!b){ jfRenderQueue(); jfRefreshQuota(); return; } jfPick(new File([b],'kamera_'+Date.now()+'.jpg',{type:'image/jpeg'})); },'image/jpeg',0.85);
+    };
+    function jfStopCamera(){ if(jf.stream){jf.stream.getTracks().forEach(function(t){t.stop();});jf.stream=null;} var v=_el('jf-video'); if(v)v.srcObject=null; var cam=_el('jf-camera'); if(cam)cam.style.display='none'; }
+    window.jfCancelCamera=function(){ jfStopCamera(); jfRenderQueue(); jfRefreshQuota(); };
+
+    function jfPick(file){
+        if(!file) return; jfHideStatus();
+        jfResize(file,function(resized){
+            var size=resized.size||0; var used=jf.usedBytes+jfQueueBytes();
+            if(used+size>jf.maxBytes){ jfShowStatus('Foto tidak ditambahkan: melebihi batas total 3 MB.',false); jfRefreshQuota(); return; }
+            jf.queue.push({file:resized,url:URL.createObjectURL(resized),size:size}); jfRenderQueue(); jfRefreshQuota();
+        });
+    }
+    function jfResize(file,cb){
+        try{
+            var img=new Image(); var url=URL.createObjectURL(file);
+            img.onload=function(){ URL.revokeObjectURL(url); var maxDim=1280; var w=img.width,h=img.height; var scale=Math.min(1,maxDim/Math.max(w,h)); var nw=Math.round(w*scale),nh=Math.round(h*scale); var c=document.createElement('canvas'); c.width=nw;c.height=nh; c.getContext('2d').drawImage(img,0,0,nw,nh); c.toBlob(function(b){ if(!b){cb(file);return;} var base=(file.name||'foto').replace(/\.(png|jpe?g)$/i,''); cb(new File([b],base+'.jpg',{type:'image/jpeg'})); },'image/jpeg',0.82); };
+            img.onerror=function(){ URL.revokeObjectURL(url); cb(file); }; img.src=url;
+        }catch(e){ cb(file); }
+    }
+
+    window.jfSubmit=function(){
+        if(!jf.currentId||!jf.queue.length) return;
+        var btn=_el('jf-btn-save'); btn.disabled=true;
+        var items=jf.queue.slice(); var total=items.length; var i=0,ok=0,lastErr=null;
+        function step(){
+            if(i>=items.length){
+                jfClearQueue();
+                if(lastErr) jfShowStatus((ok>0?ok+'/'+total+' foto tersimpan. ':'')+'Sebagian gagal: '+lastErr, ok>0);
+                else jfShowStatus(ok+' foto berhasil disimpan.', true);
+                fetch('/api/juri/ikan-foto/'+jf.currentId,{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(info){ if(info&&info.success) jfRenderGallery(info); }).finally(function(){ btn.disabled=false; });
+                return;
+            }
+            btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Mengunggah '+(i+1)+'/'+total+'...';
+            var fd=new FormData(); fd.append('_token',_csrf()); fd.append('ikan_id',jf.currentId); fd.append('foto',items[i].file);
+            fetch('/api/juri/upload-foto',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':_csrf()},body:fd})
+            .then(function(r){return r.json();})
+            .then(function(d){ if(!d.success) throw new Error(d.message||'gagal'); ok++; })
+            .catch(function(e){ lastErr=e.message||'gagal'; })
+            .finally(function(){ i++; step(); });
+        }
+        step();
+    };
+
+    // pasang listener input (elemen modal sudah ada di DOM saat script ini jalan)
+    var _ff=_el('jf-input-file'); if(_ff) _ff.addEventListener('change', function(){ if(this.files[0]) jfPick(this.files[0]); this.value=''; });
+    var _fc=_el('jf-input-cam');  if(_fc) _fc.addEventListener('change', function(){ if(this.files[0]) jfPick(this.files[0]); this.value=''; });
+})();
 
 function updateScoringLockUI() {
     const lockOverlay = document.getElementById('scoring-lock-overlay');

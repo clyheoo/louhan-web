@@ -4412,6 +4412,67 @@ function admDeleteFoto(fotoId, ikanId){
     .catch(e => popupError('Gagal', e.message || 'Gagal menghapus foto.'));
 }
 
+/* ═══════════════════════════════════════════════
+   GALERI FOTO — semua unggahan (read-only + hapus)
+   ═══════════════════════════════════════════════ */
+function galeriFotoBadge(role){
+    if(role === 'juri')  return '<span style="position:absolute;left:6px;top:6px;padding:2px 7px;border-radius:6px;background:rgba(34,211,238,.9);color:#04121e;font-size:8px;font-weight:900;">JURI</span>';
+    if(role === 'admin') return '<span style="position:absolute;left:6px;top:6px;padding:2px 7px;border-radius:6px;background:rgba(124,58,237,.9);color:#fff;font-size:8px;font-weight:900;">ADMIN</span>';
+    return '<span style="position:absolute;left:6px;top:6px;padding:2px 7px;border-radius:6px;background:rgba(148,163,184,.9);color:#0b1220;font-size:8px;font-weight:900;">LAMA</span>';
+}
+
+function loadGaleriFoto(){
+    var wrap = document.getElementById('galeriFotoWrap');
+    if(!wrap) return;
+    wrap.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat galeri...</p></div>';
+
+    fetch('/api/admin/all-fotos', {headers:{'Accept':'application/json'}})
+    .then(r => r.json())
+    .then(d => {
+        if(!d || !d.success){ wrap.innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat galeri.</p></div>'; return; }
+        if(!d.items || d.items.length === 0){
+            wrap.innerHTML = '<div class="empty-state"><i class="fas fa-image"></i><p>Belum ada foto ikan di sistem.</p></div>';
+            return;
+        }
+        var html = '<div style="display:flex;flex-direction:column;gap:16px;">';
+        d.items.forEach(function(it){
+            var mb = (it.total_size/1048576).toFixed(2);
+            html += '<div style="border:1px solid var(--bd-1);border-radius:14px;overflow:hidden;background:var(--glass-2);">'
+                + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--bd-1);flex-wrap:wrap;">'
+                +   '<div style="font-size:12.5px;font-weight:800;color:var(--text-hi);"><i class="fas fa-hashtag" style="color:var(--cyan-400);margin-right:4px;"></i>Tank ' + (it.nomor_tank || '—') + ' <span style="font-weight:600;color:var(--text-mid);font-size:11px;">· ' + (it.kategori || '-') + (it.kelas ? (' / ' + it.kelas) : '') + ' · ' + (it.nama_peserta || '-') + '</span></div>'
+                +   '<div style="font-size:10.5px;font-weight:700;color:var(--text-mid);white-space:nowrap;"><i class="fas fa-images" style="margin-right:4px;"></i>' + it.foto_count + ' foto · ' + mb + ' MB</div>'
+                + '</div>'
+                + '<div style="padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;">';
+            it.fotos.forEach(function(f){
+                html += '<div style="position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--bd-2);">'
+                    + galeriFotoBadge(f.role)
+                    + '<img src="' + f.url + '" title="Klik untuk perbesar" onclick="window.open(this.src,\'_blank\')" style="width:100%;height:104px;object-fit:cover;display:block;cursor:zoom-in;">'
+                    + '<button onclick="galeriDeleteFoto(' + f.id + ')" title="Hapus foto ini" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border:none;border-radius:7px;background:rgba(239,68,68,.92);color:#fff;cursor:pointer;font-size:11px;display:grid;place-items:center;"><i class="fas fa-trash-can"></i></button>'
+                    + '</div>';
+            });
+            html += '</div></div>';
+        });
+        html += '</div>';
+        wrap.innerHTML = html;
+    })
+    .catch(function(){ wrap.innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat galeri.</p></div>'; });
+}
+
+function galeriDeleteFoto(fotoId){
+    if(!confirm('Hapus foto ini? Tindakan permanen.')) return;
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('foto_id', fotoId);
+    fetch('/api/admin/delete-foto', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}, body: fd})
+    .then(r => r.json())
+    .then(d => {
+        if(!d.success) throw new Error(d.message || 'Gagal');
+        popupSuccess('Foto Dihapus', d.message);
+        loadGaleriFoto();
+    })
+    .catch(e => popupError('Gagal', e.message || 'Gagal menghapus foto.'));
+}
+
 function updateMvpToggleUI(isOpen) {
     var btn = document.getElementById('btnToggleMvp');
     var txt = document.getElementById('mvpStatusText');
@@ -5401,6 +5462,7 @@ function saveJuriAssignments(jid,btn){
     var pageTitles = {
         results:      { title:'Kirim Hasil Juara',              sub:'Kirim data hasil juara ke peserta', icon:'fa-paper-plane' },
         dashboard:    { title:'Dashboard',                       sub:'Ringkasan statistik & grafik kontes', icon:'fa-gauge-high' },
+        galeri:       { title:'Galeri Foto',                     sub:'Semua foto ikan yang diunggah juri (foto lama peserta ditandai)', icon:'fa-images' },
         penilaian:    { title:'Data Penilaian',                  sub:'Semua input nilai dari Juri & Grand Juri', icon:'fa-table-list' },
         users:        { title:'Kelola User',                     sub:'Manajemen akun pengguna sistem', icon:'fa-users-gear' },
         registrasi:   { title:'Registrasi & Undian Tank',        sub:'Pendaftaran peserta, undian, dan rentang nomor', icon:'fa-database' },
@@ -5455,6 +5517,7 @@ function saveJuriAssignments(jid,btn){
             if(pageId === 'kelola_juri'){ loadJuriAssignments(); loadJuriScoringLockStatus(); }
             if(pageId === 'taxonomy'){ loadTaxonomyManage(); }
             if(pageId === 'scoring_config'){ loadScoringConfigs(); }
+            if(pageId === 'galeri'){ loadGaleriFoto(); }
 
         } else {
             // Refresh ringan saat dibuka ulang

@@ -31,7 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/user/my-ikans', [DashboardController::class, 'getMyIkans']);
     Route::get('/foto-ikan/{foto}', [DashboardController::class, 'serveFoto'])->name('foto.ikan');
     Route::get('/api/user/ikan-foto/{id}', [DashboardController::class, 'ikanFotoInfo']);
-    Route::post('/api/user/upload-foto-ikan', [DashboardController::class, 'uploadFotoIkan']);
+    // [DIHAPUS] Upload foto oleh user dipindah ke panel Juri.
     Route::get('/api/user/public-results', [DashboardController::class, 'getPublicResults']);
     Route::get('/api/user/nominasi-results', [DashboardController::class, 'getNominasiResults']); // ★ hasil nominasi utk peserta
     Route::post('/api/toggle-team-champion-ikan', [DashboardController::class, 'toggleTeamChampionIkan'])->name('api.toggle.team_champion');
@@ -52,6 +52,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/juri/tanks-nominasi', [JuriController::class, 'getTanksForNominasi']);
     Route::post('/api/juri/submit-nominasi', [JuriController::class, 'submitNominasi']);
     Route::post('/api/juri/cancel-nominasi', [JuriController::class, 'cancelNominasi']);
+
+    // ★ FOTO IKAN — dikelola oleh juri (menggantikan upload user)
+    Route::get('/api/juri/foto-tanks', [JuriController::class, 'getFotoTanks']);
+    Route::get('/api/juri/ikan-foto/{id}', [JuriController::class, 'getIkanFoto']);
+    Route::post('/api/juri/upload-foto', [JuriController::class, 'uploadFoto']);
 });
 
 Route::get('/juri', function () {
@@ -69,6 +74,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/grand-juri/edit-nilai', [GrandJuriController::class, 'editNilai']);
     Route::get('/api/grand-juri/juri-peserta', [GrandJuriController::class, 'getJuriPeserta']);
     Route::get('/api/grand-juri/rincian-detail', [GrandJuriController::class, 'getRincianDetail']);
+    Route::get('/api/grand-juri/ikan-foto/{id}', [GrandJuriController::class, 'getIkanFoto']); // ★ lihat foto (read-only)
     Route::get('/api/grand-juri/plot-status', [GrandJuriController::class, 'getPlotStatus']);
     Route::post('/api/grand-juri/kunci-nilai', [GrandJuriController::class, 'kunciNilai']);
     Route::get('/api/grand-juri/mvp-ikan', [GrandJuriController::class, 'getMvpIkan']);
@@ -155,6 +161,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/foto-replace-status', [AdminDashboardController::class, 'getFotoReplaceStatus']);
     Route::get('/api/admin/ikan-fotos/{id}', [AdminDashboardController::class, 'getIkanFotos']);
     Route::post('/api/admin/delete-foto', [AdminDashboardController::class, 'deleteFoto']);
+    Route::get('/api/admin/all-fotos', [AdminDashboardController::class, 'getAllFotos']); // ★ galeri foto juri (read-only)
+    Route::post('/api/admin/request-reupload', [AdminDashboardController::class, 'requestReupload']); // ★ minta upload ulang
+    Route::post('/api/admin/upload-foto', [AdminDashboardController::class, 'uploadFotoAdmin']);      // ★ admin upload/ganti
     Route::post('/api/admin/delete-mvp-ikan', [AdminDashboardController::class, 'deleteMvpIkan']);
     Route::get('/api/admin/mvp-submitted-peserta', [AdminDashboardController::class, 'getMvpSubmittedPeserta']);
     Route::post('/api/admin/unlock-mvp-peserta', [AdminDashboardController::class, 'unlockMvpPeserta']);

@@ -786,6 +786,20 @@
     </div><!-- /main-area -->
 </div><!-- /app-shell -->
 
+<!-- ═══════ MODAL FOTO IKAN (READ-ONLY) ═══════ -->
+<div class="modal-bg" id="modalFotoGJ">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-images"></i> Foto Ikan <span id="fotoGJSub" style="font-weight:600;font-size:13px;opacity:.7;"></span></h3>
+            <button class="modal-close" onclick="closeModal('modalFotoGJ')"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="modal-content" id="fotoGJContent"><div class="empty-state">Memuat...</div></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('modalFotoGJ')"><i class="fas fa-xmark"></i> Tutup</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════ MODAL DETAIL ═══════ -->
 <div class="modal-bg" id="modalDetail">
     <div class="modal-box">
@@ -1052,6 +1066,29 @@ function cancelConfirm(){hidePopup('popupConfirm');_confirmCallback=null;}
 function showPopup(id){document.getElementById(id).classList.add('show');}
 function hidePopup(id){document.getElementById(id).classList.remove('show');}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
+function openFotoGJ(id){
+    if(!id){return;}
+    openModal('modalFotoGJ');
+    document.getElementById('fotoGJSub').textContent='';
+    document.getElementById('fotoGJContent').innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:20px;display:block;margin-bottom:8px;"></i>Memuat foto...</div>';
+    fetch('/api/grand-juri/ikan-foto/'+id,{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        var box=document.getElementById('fotoGJContent');
+        if(!d||!d.success){ box.innerHTML='<div class="empty-state">Gagal memuat foto.</div>'; return; }
+        document.getElementById('fotoGJSub').textContent = d.nomor_tank ? ('— Tank '+d.nomor_tank) : '';
+        if(!d.fotos||!d.fotos.length){ box.innerHTML='<div class="empty-state"><i class="fas fa-image" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Belum ada foto untuk tank ini.</div>'; return; }
+        function badge(role){
+            if(role==='juri')  return '<span style="position:absolute;left:6px;top:6px;padding:2px 6px;border-radius:6px;background:rgba(34,211,238,.9);color:#04121e;font-size:8px;font-weight:900;">JURI</span>';
+            if(role==='admin') return '<span style="position:absolute;left:6px;top:6px;padding:2px 6px;border-radius:6px;background:rgba(124,58,237,.9);color:#fff;font-size:8px;font-weight:900;">ADMIN</span>';
+            return '<span style="position:absolute;left:6px;top:6px;padding:2px 6px;border-radius:6px;background:rgba(148,163,184,.9);color:#0b1220;font-size:8px;font-weight:900;">LAMA</span>';
+        }
+        box.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;">'+d.fotos.map(function(f){
+            return '<div style="position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--bd-2);">'+badge(f.role)+'<img src="'+f.url+'" onclick="window.open(this.src,\'_blank\')" style="width:100%;height:110px;object-fit:cover;display:block;cursor:zoom-in;"></div>';
+        }).join('')+'</div>';
+    })
+    .catch(function(){ document.getElementById('fotoGJContent').innerHTML='<div class="empty-state">Gagal memuat foto.</div>'; });
+}
 function getCsrf(){return document.querySelector('meta[name="csrf-token"]').getAttribute('content');}
 function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function openModal(id){document.getElementById(id).classList.add('show');}
@@ -1165,7 +1202,7 @@ function fetchSingle(id,cb){
 /* ================================================================ MODAL DETAIL ================================================================ */
 function openDetail(id){currentId=id;document.getElementById('detailContent').innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:20px;display:block;margin-bottom:8px;"></i>Memuat...</div>';document.getElementById('modalDetail').classList.add('show');fetchSingle(id,function(p){if(!p){document.getElementById('detailContent').innerHTML='<div class="empty-state">Data tidak ditemukan.</div>';return;}currentPData=p;var editBtn=document.getElementById('btnToEdit');if(p.is_locked){editBtn.style.display='none';}else{editBtn.style.display='';editBtn.onclick=function(){closeModal('modalDetail');openEdit(id);};}renderDetail(p);});}
 
-function renderDetail(p){var html='';html+='<div class="detail-info-banner"><div><div class="detail-meta">';html+='<span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span>';html+='<span><i class="fas fa-tag"></i> '+(p.kategori||'—')+' - '+(p.kelas||'—')+'</span>';if(p.detail_anggota&&p.detail_anggota!=='—')html+='<span><i class="fas fa-users"></i> '+esc(p.detail_anggota)+'</span>';html+='</div></div>';var allIn=p.submitted_juri_count>=p.total_juri_all;html+='<span class="juri-submit-chip '+(allIn?'ok':'not-ok')+'"><i class="fas '+(allIn?'fa-check-circle':'fa-clock')+'"></i> '+p.submitted_juri_count+' dari '+p.total_juri_all+' juri kirim</span></div>';
+function renderDetail(p){var html='';html+='<div class="detail-info-banner"><div><div class="detail-meta">';html+='<span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span>';html+='<span><i class="fas fa-tag"></i> '+(p.kategori||'—')+' - '+(p.kelas||'—')+'</span>';if(p.detail_anggota&&p.detail_anggota!=='—')html+='<span><i class="fas fa-users"></i> '+esc(p.detail_anggota)+'</span>';html+='</div></div>';var allIn=p.submitted_juri_count>=p.total_juri_all;html+='<span class="juri-submit-chip '+(allIn?'ok':'not-ok')+'"><i class="fas '+(allIn?'fa-check-circle':'fa-clock')+'"></i> '+p.submitted_juri_count+' dari '+p.total_juri_all+' juri kirim</span></div>';html+='<div style="margin:2px 0 14px;"><button type="button" onclick="openFotoGJ(currentId)" class="btn-sm btn-detail" style="display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-images"></i> Lihat Foto Ikan</button></div>';
 if(p.is_locked){html+='<div class="detail-note purple-note"><i class="fas fa-lock"></i><span>Nilai ini sudah <strong>TERKUNCI (FINAL)</strong> dan tidak dapat diubah.</span></div>';}else if(!allIn){html+='<div class="detail-note"><i class="fas fa-info-circle"></i><span>Masih ada <strong>'+(p.total_juri_all-p.submitted_juri_count)+'</strong> juri yang belum mengirim. Tombol <strong>Kunci</strong> aktif setelah semua juri mengirim.</span></div>';}
 if(!p.all_scorings||p.all_scorings.length===0){html+='<div class="empty-state" style="padding:40px;"><i class="fas fa-clipboard-list" style="font-size:36px;display:block;margin-bottom:10px;color:var(--text-faint);"></i>Belum ada nilai yang dikirim juri.</div>';document.getElementById('detailContent').innerHTML=html;return;}
 p.all_scorings.forEach(function(sc,idx){var uid='dj-'+idx;var iconCls='fas fa-user-pen';var label='Juri: '+esc(sc.juri_name);if(sc.edited_by_grand&&sc.grand_juri_name){label+=' <span style="color:var(--purple);font-size:11px;font-weight:600;"><i class="fas fa-pen-to-square" style="font-size:9px;"></i> diedit: '+esc(sc.grand_juri_name)+'</span>';}html+='<div class="detail-juri-accordion"><div class="detail-juri-toggle" id="'+uid+'-toggle" onclick="toggleJuriDetail(\''+uid+'\')"><span class="dj-name"><i class="'+iconCls+'" style="font-size:11px;"></i> '+label+'</span><span style="display:flex;align-items:center;gap:10px;"><span class="dj-total">'+sc.total_nilai+'</span><i class="fas fa-chevron-down dj-arrow"></i></span></div><div class="detail-juri-scores" id="'+uid+'-scores">';var nd=sc.nilai_detail;if(!nd||typeof nd!=='object'){html+='<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada data nilai.</div>';}else{Object.keys(formFields).forEach(function(kat){var fields=formFields[kat];if(kat==='face'&&nd.face){if(nd.face.face===undefined&&(nd.face.pipi!==undefined||nd.face.mata!==undefined))fields=formFieldsLegacy.face;}html+='<div style="margin-bottom:10px;border:1px solid var(--bd-2);border-radius:10px;overflow:hidden;">';var katNilai=nd[kat]||{};var sub=0;fields.forEach(function(f){if(f.type==='defect')return;var fv=katNilai[f.id];if(fv===undefined&&f.id==='shining'&&katNilai.shinning!==undefined)fv=katNilai.shinning;if(fv!==undefined&&fv!==null)sub+=parseInt(fv)||0;});var defectEval=sc.defect_eval||{};var penaltyKey=kat+'_penalty';var penaltyStr=defectEval[penaltyKey]||'';var defectPersen=0;var hasDefect=false;var defectNames=[];if(penaltyStr&&penaltyStr!==''){hasDefect=true;defectPersen=parseInt(penaltyStr)||0;var rawKey='raw_'+kat+'_penalty';var rawDefs=sc[rawKey];if(rawDefs){if(!Array.isArray(rawDefs))rawDefs=[rawDefs];defectNames=rawDefs.filter(function(v){return v&&v!=='0';});}}var displaySub=sub;if(hasDefect&&defectPersen>0)displaySub=Math.round(sub*(1-defectPersen/100)*10)/10;if(hasDefect&&defectPersen>0){html+='<div class="detail-kat-mini"><span>'+kat.toUpperCase()+'</span><span>Subtotal: <s style="color:var(--text-faint);font-size:10px;">'+sub+'</s> → <strong style="color:var(--purple);">'+displaySub+'</strong> <span style="color:#fca5a5;font-weight:700;">(-'+defectPersen+'%)</span></span></div>';}else{html+='<div class="detail-kat-mini"><span>'+kat.toUpperCase()+'</span><span>Subtotal: '+sub+'</span></div>';}var hasDefectField=fields.some(function(f){return f.type==='defect';});fields.forEach(function(f){if(f.type==='defect')return;var val=katNilai[f.id];if(val===undefined&&f.id==='shining'&&katNilai.shinning!==undefined)val=katNilai.shinning;var has=(val!==undefined&&val!==null&&val!=='');html+='<div class="detail-field-row"><div class="detail-field-left"><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';});if(hasDefectField){if(hasDefect&&defectPersen>0&&defectNames.length>0){var isMayor=defectPersen>=30;html+='<div class="detail-field-row" style="background:'+(isMayor?'var(--danger-lt)':'var(--warning-lt)')+';"><div class="detail-field-left"><div class="detail-field-name" style="color:'+(isMayor?'#fca5a5':'var(--gold-300)')+';"><i class="fas fa-exclamation-triangle" style="margin-right:4px;font-size:10px;"></i>Defect '+(isMayor?'(MAYOR)':'(MINOR)')+'</div><div class="detail-field-meta" style="color:'+(isMayor?'#fca5a5':'var(--gold-300)')+';font-weight:600;">'+defectNames.join(', ')+'</div></div><span class="score-chip" style="background:'+(isMayor?'var(--danger-lt)':'var(--warning-lt)')+';color:'+(isMayor?'#fca5a5':'var(--gold-300)')+';font-weight:800;">-'+defectPersen+'%</span></div>';}else{html+='<div class="detail-field-row" style="background:var(--success-lt);"><div class="detail-field-left"><div class="detail-field-name" style="color:#34D399;"><i class="fas fa-check-circle" style="margin-right:4px;font-size:10px;"></i>Defect</div><div class="detail-field-meta" style="color:#059669;font-weight:600;">Tidak ada defect</div></div><span class="score-chip" style="background:var(--success-lt);color:#34D399;font-weight:800;">AMAN</span></div>';}}html+='</div>';});}html+='</div></div>';});

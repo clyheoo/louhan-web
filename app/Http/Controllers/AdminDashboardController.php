@@ -2464,6 +2464,143 @@ public function getIkanFotos($id)
         return response()->json(['success' => true, 'message' => 'Foto berhasil dihapus.']);
     }
 
+    // ★ GALERI FOTO — semua ikan yang punya foto (read-only untuk admin)
+    public function getAllFotos()
+    {
+        $ikans = Ikan::has('fotos')
+            ->with(['fotos' => function ($q) { $q->orderBy('id'); }])
+            ->orderByRaw('CAST(nomor_tank AS UNSIGNED) ASC')
+            ->get();
+
+        $items = $ikans->map(function ($ikan) {
+            return [
+                'ikan_id'      => $ikan->id,
+                'nomor_tank'   => $ikan->nomor_tank,
+                'kategori'     => $ikan->kategori,
+                'kelas'        => $ikan->kelas,
+                'nama_peserta' => $ikan->nama_peserta ?? '-',
+                'foto_count'   => $ikan->fotos->count(),
+                'total_size'   => (int) $ikan->fotos->sum('size'),
+                'reupload_requested' => (bool) $ikan->foto_reupload_requested,
+                'fotos'        => $ikan->fotos->map(function ($f) {
+                    return [
+                        'id'   => $f->id,
+                        'url'  => route('foto.ikan', ['foto' => $f->id]) . '?v=' . ($f->updated_at ? $f->updated_at->timestamp : time()),
+                        'size' => (int) $f->size,
+                        'role' => $f->uploaded_role ?: 'lama',
+                    ];
+                })->values(),
+            ];
+        });
+
+        return response()->json([
+            'success'    => true,
+            'items'      => $items,
+            'total_ikan' => $items->count(),
+        ]);
+    }
+
+    // ★ Admin minta juri upload ulang (membuka kunci juri). value=0 untuk batal.
+    public function requestReupload(Request $request)
+    {
+        $request->validate([
+            'ikan_id' => 'required|exists:ikans,id',
+            'value'   => 'nullable|boolean',
+        ]);
+
+        $ikan = Ikan::find($request->ikan_id);
+        $val  = $request->has('value') ? (bool) $request->value : true;
+
+        $ikan->foto_reupload_requested = $val;
+        $ikan->save();
+
+        return response()->json([
+            'success'            => true,
+            'reupload_requested' => $val,
+            'message'            => $val
+                ? 'Juri diminta mengunggah ulang foto Tank ' . $ikan->nomor_tank . '.'
+                : 'Permintaan upload ulang Tank ' . $ikan->nomor_tank . ' dibatalkan.',
+        ]);
+    }
+
+    // ★ Admin upload / ganti foto sendiri (tanpa kunci, role = admin).
+    public function uploadFotoAdmin(Request $request)
+    {
+        $request->validate([
+            'ikan_id' => 'required|exists:ikans,id',
+            'foto'    => 'required|image|mimes:jpeg,jpg,png|max:3072',
+        ], [
+            'foto.image' => 'File harus berupa gambar.',
+            'foto.mimes' => 'Format foto harus JPG atau PNG.',
+            'foto.max'   => 'Ukuran foto maksimal 3MB.',
+        ]);
+
+        $ikan = Ikan::with('fotos')->find($request->ikan_id);
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan.'], 404);
+        }
+
+        $maxBytes  = 3 * 1024 * 1024;
+        $usedBytes = (int) $ikan->fotos->sum('size');
+        if ($usedBytes >= $maxBytes) {
+            return response()->json(['success' => false, 'message' => 'Batas total 3MB foto untuk tank ini sudah tercapai. Hapus foto lama dulu.'], 422);
+        }
+
+        [$path, $size] = $this->simpanFotoBaruAdmin($ikan, $request->file('foto'));
+
+        if (($usedBytes + $size) > $maxBytes) {
+            \Storage::disk('public')->delete($path);
+            $sisaKb = round(($maxBytes - $usedBytes) / 1024);
+            return response()->json(['success' => false, 'message' => 'Foto melebihi sisa kuota. Sisa ± ' . $sisaKb . ' KB.'], 422);
+        }
+
+        $ikan->fotos()->create([
+            'path'          => $path,
+            'size'          => $size,
+            'uploaded_by'   => auth()->id(),
+            'uploaded_role' => 'admin',
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Foto admin berhasil disimpan untuk Tank ' . $ikan->nomor_tank . '.']);
+    }
+
+    private function simpanFotoBaruAdmin(Ikan $ikan, $file): array
+    {
+        $ext  = strtolower($file->getClientOriginalExtension()) === 'png' ? 'png' : 'jpg';
+        $name = 'ikan_' . $ikan->id . '_' . uniqid() . '.' . $ext;
+        $relativePath = 'ikan-foto/' . $name;
+
+        $stored = false;
+        try {
+            if (function_exists('imagecreatefromstring')) {
+                $img = @imagecreatefromstring(file_get_contents($file->getRealPath()));
+                if ($img !== false) {
+                    $maxDim = 1600;
+                    $w = imagesx($img); $h = imagesy($img);
+                    $scale = min(1, $maxDim / max($w, $h));
+                    if ($scale < 1) {
+                        $nw = (int) round($w * $scale); $nh = (int) round($h * $scale);
+                        $resized = imagecreatetruecolor($nw, $nh);
+                        if ($ext === 'png') { imagealphablending($resized, false); imagesavealpha($resized, true); }
+                        imagecopyresampled($resized, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                        imagedestroy($img); $img = $resized;
+                    }
+                    ob_start();
+                    if ($ext === 'png') { imagepng($img, null, 6); } else { imagejpeg($img, null, 80); }
+                    $binary = ob_get_clean();
+                    imagedestroy($img);
+                    \Storage::disk('public')->put($relativePath, $binary);
+                    $stored = true;
+                }
+            }
+        } catch (\Throwable $e) { $stored = false; }
+
+        if (!$stored) { $file->storeAs('ikan-foto', $name, 'public'); }
+
+        $size = (int) \Storage::disk('public')->size($relativePath);
+        return [$relativePath, $size];
+    }
+
     public function getUndianStatus()
     {
         $isOpen = (bool)(\DB::table('settings')->where('key', 'undian_registration_open')->value('value') ?? true);

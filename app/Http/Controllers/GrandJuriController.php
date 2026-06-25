@@ -1493,4 +1493,29 @@ public function getMvpIkan()
             'count'   => $count,
         ]);
     }
+    // ★ Lihat foto ikan (read-only). Grand juri melihat semua foto.
+    public function getIkanFoto($id)
+    {
+        $ikan = \App\Models\Ikan::with('fotos')->find($id);
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan.'], 404);
+        }
+
+        $fotos = $ikan->fotos->map(function ($f) {
+            return [
+                'id'   => $f->id,
+                'url'  => route('foto.ikan', ['foto' => $f->id]) . '?v=' . ($f->updated_at ? $f->updated_at->timestamp : time()),
+                'size' => (int) $f->size,
+                'role' => $f->uploaded_role ?: 'lama',
+            ];
+        })->values();
+
+        return response()->json([
+            'success'    => true,
+            'fotos'      => $fotos,
+            'count'      => $fotos->count(),
+            'nomor_tank' => $ikan->nomor_tank,
+            'kategori'   => $ikan->kategori,
+        ]);
+    }
 }

@@ -989,9 +989,10 @@
             </a>
             <a class="sidebar-item" data-page="results"><i class="fas fa-paper-plane"></i> Kirim Hasil Juara</a>
             <a class="sidebar-item" data-page="ranking"><i class="fas fa-trophy"></i> Point Ranking</a>
-            <a class="sidebar-item" data-page="undian"><i class="fas fa-dice"></i> Kelola Mesin Undian</a>
+            <a class="sidebar-item" data-page="undian"><i class="fas fa-dice"></i> Kelola Mesin Undian dan Foto</a>
             <a class="sidebar-item" data-page="taxonomy"><i class="fas fa-layer-group"></i> Kelola Kategori &amp; Kelas</a>
             <a class="sidebar-item" data-page="scoring_config"><i class="fas fa-sliders"></i> Pengaturan Penilaian</a>
+            <a class="sidebar-item" data-page="galeri"><i class="fas fa-images"></i> Galeri Foto</a>
         </nav>
 
         <div class="sidebar-foot">
@@ -1248,6 +1249,27 @@
                         </p>
                         <div id="scoringConfigForm">
                             <div class="empty-state"><i class="fas fa-hand-pointer"></i><p>Pilih kategori untuk mulai menyetel.</p></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ PAGE: GALERI FOTO ═══════════ -->
+            <section class="page-section" data-page="galeri" style="display:none;">
+                <div class="glass-card">
+                    <div class="card-head">
+                        <h3><span class="ti"><i class="fas fa-images"></i></span>Galeri Foto Ikan</h3>
+                        <button onclick="loadGaleriFoto()" style="padding:8px 14px;font-size:12px;font-weight:700;background:var(--glass-2);border:1px solid var(--bd-2);border-radius:10px;color:var(--text-hi);font-family:inherit;cursor:pointer;outline:none;">
+                            <i class="fas fa-sync-alt" style="margin-right:5px;"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <p style="font-size:11.5px;color:var(--text-mid);margin-bottom:14px;line-height:1.6;">
+                            Semua foto ikan di sistem. Label <b style="color:#67e8f9;">JURI</b> = diunggah juri,
+                            <b style="color:#c4b5fd;">LAMA</b> = unggahan lama peserta. Klik gambar untuk memperbesar, ikon <i class="fas fa-trash-can" style="color:#fca5a5;"></i> untuk menghapus.
+                        </p>
+                        <div id="galeriFotoWrap">
+                            <div class="empty-state"><i class="fas fa-images"></i><p>Memuat galeri...</p></div>
                         </div>
                     </div>
                 </div>

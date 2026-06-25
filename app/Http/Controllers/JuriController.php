@@ -683,6 +683,206 @@ class JuriController extends Controller
     }
 
     /* ═══════════════════════════════════════════
+       FOTO IKAN — dikelola juri
+       - List = ikan yang SUDAH APPROVED (di-ACC admin/grand juri).
+       - Juri upload bila: belum ada foto, ATAU admin minta upload ulang.
+       - Setelah foto terkirim → juri TERKUNCI (hanya admin yang ubah).
+       ═══════════════════════════════════════════ */
+    private function ikanSudahApproved($ikanId): bool
+    {
+        return Nominasi::where('ikan_id', $ikanId)->where('status', 'approved')->exists();
+    }
+
+    private function juriBolehUpload(Ikan $ikan): bool
+    {
+        if (!$this->ikanSudahApproved($ikan->id)) return false;
+        if (!$ikan->fotos()->exists()) return true;          // belum ada foto → boleh
+        return (bool) $ikan->foto_reupload_requested;        // ada foto → hanya jika admin minta ulang
+    }
+
+    public function getFotoTanks()
+    {
+        $approvedIds = Nominasi::where('status', 'approved')
+            ->pluck('ikan_id')->unique()->values()->toArray();
+
+        $tanks = Ikan::query()
+            ->select(['id', 'nomor_tank', 'kategori', 'kelas', 'nama_peserta', 'detail_anggota', 'foto_reupload_requested'])
+            ->whereIn('id', $approvedIds)
+            ->whereNotNull('nomor_tank')
+            ->withCount('fotos')
+            ->orderByRaw('CAST(nomor_tank AS UNSIGNED) ASC')
+            ->get()
+            ->map(function ($t) {
+                $hasFoto  = (int) $t->fotos_count > 0;
+                $reupload = (bool) $t->foto_reupload_requested;
+                return [
+                    'id'                 => $t->id,
+                    'nomor_tank'         => $t->nomor_tank,
+                    'kategori'           => $t->kategori,
+                    'kelas'              => $t->kelas,
+                    'nama_peserta'       => $t->nama_peserta ?? '-',
+                    'detail_anggota'     => $t->detail_anggota ?? '-',
+                    'foto_count'         => (int) $t->fotos_count,
+                    'reupload_requested' => $reupload,
+                    'can_upload'         => (!$hasFoto || $reupload),
+                ];
+            })->values();
+
+        return response()->json(['success' => true, 'tanks' => $tanks]);
+    }
+
+    public function getIkanFoto($id)
+    {
+        $ikan = Ikan::with('fotos')->find($id);
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan.'], 404);
+        }
+        if (!$this->ikanSudahApproved($ikan->id)) {
+            return response()->json(['success' => false, 'message' => 'Ikan ini belum disetujui (approved).'], 403);
+        }
+
+        $maxBytes    = 3 * 1024 * 1024;
+        $usedBytes   = (int) $ikan->fotos->sum('size');
+        $bolehUpload = $this->juriBolehUpload($ikan);
+        $count       = $ikan->fotos->count();
+
+        $fotos = $ikan->fotos->map(function ($f) {
+            return [
+                'id'   => $f->id,
+                'url'  => route('foto.ikan', ['foto' => $f->id]) . '?v=' . ($f->updated_at ? $f->updated_at->timestamp : time()),
+                'size' => (int) $f->size,
+                'role' => $f->uploaded_role ?: 'lama',
+            ];
+        })->values();
+
+        return response()->json([
+            'success'            => true,
+            'fotos'              => $fotos,
+            'count'              => $count,
+            'used_bytes'         => $usedBytes,
+            'max_bytes'          => $maxBytes,
+            'remaining_bytes'    => max(0, $maxBytes - $usedBytes),
+            'can_upload'         => $bolehUpload && $usedBytes < $maxBytes,
+            'reupload_requested' => (bool) $ikan->foto_reupload_requested,
+            'locked'             => (!$bolehUpload && $count > 0), // sudah dikirim → terkunci utk juri
+            'nama'               => $ikan->nama_peserta,
+            'kategori'           => $ikan->kategori,
+            'nomor_tank'         => $ikan->nomor_tank,
+        ]);
+    }
+
+    public function uploadFoto(Request $request)
+    {
+        $request->validate([
+            'ikan_id' => 'required|exists:ikans,id',
+            'foto'    => 'required|image|mimes:jpeg,jpg,png|max:3072',
+        ], [
+            'foto.image' => 'File harus berupa gambar.',
+            'foto.mimes' => 'Format foto harus JPG atau PNG.',
+            'foto.max'   => 'Ukuran foto maksimal 3MB.',
+        ]);
+
+        $ikan = Ikan::with('fotos')->find($request->ikan_id);
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan.'], 404);
+        }
+        if (!$this->ikanSudahApproved($ikan->id)) {
+            return response()->json(['success' => false, 'message' => 'Ikan ini belum disetujui (approved).'], 403);
+        }
+        if (!$this->juriBolehUpload($ikan)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Foto sudah dikirim. Hanya admin yang dapat mengganti/menghapus. Tunggu admin meminta upload ulang.',
+            ], 423);
+        }
+
+        $maxBytes  = 3 * 1024 * 1024;
+        $usedBytes = (int) $ikan->fotos->sum('size');
+
+        if ($usedBytes >= $maxBytes) {
+            return response()->json(['success' => false, 'message' => 'Batas total 3MB foto untuk tank ini sudah tercapai.'], 422);
+        }
+
+        [$path, $size] = $this->simpanFotoBaruJuri($ikan, $request->file('foto'));
+
+        if (($usedBytes + $size) > $maxBytes) {
+            \Storage::disk('public')->delete($path);
+            $sisaKb = round(($maxBytes - $usedBytes) / 1024);
+            return response()->json([
+                'success' => false,
+                'message' => 'Foto melebihi sisa kuota. Sisa kuota ± ' . $sisaKb . ' KB.',
+            ], 422);
+        }
+
+        $foto = $ikan->fotos()->create([
+            'path'          => $path,
+            'size'          => $size,
+            'uploaded_by'   => auth()->id(),
+            'uploaded_role' => 'juri',
+        ]);
+
+        // Permintaan upload ulang sudah dipenuhi → matikan flag, juri terkunci lagi.
+        if ($ikan->foto_reupload_requested) {
+            $ikan->foto_reupload_requested = false;
+            $ikan->save();
+        }
+
+        $usedAfter = $usedBytes + $size;
+
+        return response()->json([
+            'success'         => true,
+            'message'         => 'Foto berhasil disimpan.',
+            'foto'            => [
+                'id'   => $foto->id,
+                'url'  => route('foto.ikan', ['foto' => $foto->id]) . '?v=' . time(),
+                'size' => $size,
+                'role' => 'juri',
+            ],
+            'used_bytes'      => $usedAfter,
+            'max_bytes'       => $maxBytes,
+            'remaining_bytes' => max(0, $maxBytes - $usedAfter),
+            'can_upload'      => false, // setelah upload pertama, juri langsung terkunci
+        ]);
+    }
+
+    private function simpanFotoBaruJuri(Ikan $ikan, $file): array
+    {
+        $ext  = strtolower($file->getClientOriginalExtension()) === 'png' ? 'png' : 'jpg';
+        $name = 'ikan_' . $ikan->id . '_' . uniqid() . '.' . $ext;
+        $relativePath = 'ikan-foto/' . $name;
+
+        $stored = false;
+        try {
+            if (function_exists('imagecreatefromstring')) {
+                $img = @imagecreatefromstring(file_get_contents($file->getRealPath()));
+                if ($img !== false) {
+                    $maxDim = 1600;
+                    $w = imagesx($img); $h = imagesy($img);
+                    $scale = min(1, $maxDim / max($w, $h));
+                    if ($scale < 1) {
+                        $nw = (int) round($w * $scale); $nh = (int) round($h * $scale);
+                        $resized = imagecreatetruecolor($nw, $nh);
+                        if ($ext === 'png') { imagealphablending($resized, false); imagesavealpha($resized, true); }
+                        imagecopyresampled($resized, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                        imagedestroy($img); $img = $resized;
+                    }
+                    ob_start();
+                    if ($ext === 'png') { imagepng($img, null, 6); } else { imagejpeg($img, null, 80); }
+                    $binary = ob_get_clean();
+                    imagedestroy($img);
+                    \Storage::disk('public')->put($relativePath, $binary);
+                    $stored = true;
+                }
+            }
+        } catch (\Throwable $e) { $stored = false; }
+
+        if (!$stored) { $file->storeAs('ikan-foto', $name, 'public'); }
+
+        $size = (int) \Storage::disk('public')->size($relativePath);
+        return [$relativePath, $size];
+    }
+
+    /* ═══════════════════════════════════════════
        NOMINASI — CANCEL (juri batalkan nominasi pending)
        ═══════════════════════════════════════════ */
     public function cancelNominasi(Request $request)

@@ -3315,7 +3315,7 @@
 
                         <div style="padding:0 26px 10px;font-size:11px;color:var(--text-mid);">
                             <i class="fas fa-camera" style="color:var(--cyan-400);margin-right:5px;"></i>
-                            Ketuk nama ikan untuk mengunggah / mengambil foto.
+                            Ketuk nama ikan untuk melihat foto yang diunggah juri.
                         </div>
 
                         <div class="ikan-list-wrapper" id="ikanListWrapper">
@@ -3401,7 +3401,7 @@
         <div class="modal-card" style="max-width:460px;">
             <div class="modal-icon blue"><i class="fas fa-camera"></i></div>
             <h2 class="modal-title">Foto Ikan</h2>
-            <p class="modal-desc" id="fotoIkanDesc">Unggah atau ambil foto ikan Anda.</p>
+            <p class="modal-desc" id="fotoIkanDesc">Foto ikan Anda (diunggah oleh juri).</p>
 
             <div id="fotoIkanLoading" style="display:none;padding:34px 16px;text-align:center;color:var(--text-mid);">
                 <i class="fas fa-spinner fa-spin" style="font-size:26px;color:var(--cyan-400);"></i>
@@ -5624,29 +5624,14 @@
 
         // Tampilkan kuota + tombol Ambil Foto / Pilih File sesuai sisa kuota
         function fotoIkanRefreshQuotaUI(){
-            var camOpen = fotoEl('fotoIkanCamera') && fotoEl('fotoIkanCamera').style.display === 'block';
-            var used = fotoIkanUsedBytes + fotoIkanQueueBytes();
-            var canAdd = (fotoIkanMaxBytes - used) > 1024;
-            fotoIkanCanUpload = canAdd;
-
-            var quota = fotoEl('fotoIkanQuota');
-            if (quota) {
-                quota.style.display = 'block';
-                var txt = 'Terpakai ' + (used/1048576).toFixed(2) + ' MB dari 3 MB';
-                if (fotoIkanQueue.length) txt += ' · ' + fotoIkanQueue.length + ' menunggu disimpan';
-                quota.innerHTML = '<i class="fas fa-database" style="margin-right:5px;color:var(--cyan-400);"></i>' + txt;
-            }
-
+            // ★ MODE LIHAT-SAJA: upload foto dipindah ke panel Juri. User hanya bisa melihat.
+            fotoIkanCanUpload = false;
             var uploadAct = fotoEl('fotoIkanUploadActions');
             var fullNote  = fotoEl('fotoIkanFullNote');
-            if (camOpen) { if (uploadAct) uploadAct.style.display = 'none'; return; }
-            if (canAdd) {
-                if (uploadAct) uploadAct.style.display = 'flex';
-                if (fullNote)  fullNote.style.display = 'none';
-            } else {
-                if (uploadAct) uploadAct.style.display = 'none';
-                if (fullNote)  fullNote.style.display = 'block';
-            }
+            var quota     = fotoEl('fotoIkanQuota');
+            if (uploadAct) uploadAct.style.display = 'none';
+            if (fullNote)  fullNote.style.display = 'none';
+            if (quota)     quota.style.display = 'none';
         }
 
         // Render galeri foto yang SUDAH tersimpan
