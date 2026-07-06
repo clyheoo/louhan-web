@@ -2415,8 +2415,40 @@ class AdminDashboardController extends Controller
 
     public function getFotoReplaceStatus()
     {
+        $target = \DB::table('settings')->where('key', 'foto_replace_juri_target')->value('value') ?: 'all';
+        $juris  = \App\Models\User::where('role', 'juri')->orderBy('name')->get(['id', 'name']);
+
         return response()->json([
             'replace_allowed' => \DB::table('settings')->where('key', 'foto_replace_allowed')->value('value') === '1',
+            'juri_target'     => $target,
+            'juris'           => $juris,
+        ]);
+    }
+
+    // ★ Simpan target juri yang boleh ganti/upload ulang foto ('all' atau id juri)
+    public function setFotoReplaceTarget(Request $request)
+    {
+        $request->validate(['juri_target' => 'required|string']);
+        $target = $request->juri_target;
+
+        if ($target !== 'all') {
+            $valid = \App\Models\User::where('id', $target)->where('role', 'juri')->exists();
+            if (!$valid) {
+                return response()->json(['success' => false, 'message' => 'Juri tidak valid.'], 422);
+            }
+        }
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'foto_replace_juri_target'],
+            ['value' => $target, 'updated_at' => now()]
+        );
+
+        $nama = $target === 'all' ? 'Semua Juri' : (\App\Models\User::find($target)->name ?? 'Juri');
+
+        return response()->json([
+            'success'     => true,
+            'juri_target' => $target,
+            'message'     => 'Izin ganti foto diarahkan ke: ' . $nama . '.',
         ]);
     }
 

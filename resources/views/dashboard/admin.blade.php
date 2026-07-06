@@ -989,7 +989,7 @@
             </a>
             <a class="sidebar-item" data-page="results"><i class="fas fa-paper-plane"></i> Kirim Hasil Juara</a>
             <a class="sidebar-item" data-page="ranking"><i class="fas fa-trophy"></i> Point Ranking</a>
-            <a class="sidebar-item" data-page="undian"><i class="fas fa-dice"></i> Kelola Mesin Undian dan Foto</a>
+            <a class="sidebar-item" data-page="undian"><i class="fas fa-dice"></i> Kelola Mesin Undian</a>
             <a class="sidebar-item" data-page="taxonomy"><i class="fas fa-layer-group"></i> Kelola Kategori &amp; Kelas</a>
             <a class="sidebar-item" data-page="scoring_config"><i class="fas fa-sliders"></i> Pengaturan Penilaian</a>
             <a class="sidebar-item" data-page="galeri"><i class="fas fa-images"></i> Galeri Foto</a>
@@ -1259,15 +1259,28 @@
                 <div class="glass-card">
                     <div class="card-head">
                         <h3><span class="ti"><i class="fas fa-images"></i></span>Galeri Foto Ikan</h3>
-                        <button onclick="loadGaleriFoto()" style="padding:8px 14px;font-size:12px;font-weight:700;background:var(--glass-2);border:1px solid var(--bd-2);border-radius:10px;color:var(--text-hi);font-family:inherit;cursor:pointer;outline:none;">
-                            <i class="fas fa-sync-alt" style="margin-right:5px;"></i> Refresh
-                        </button>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span style="font-size:10.5px;font-weight:800;color:var(--text-mid);display:flex;align-items:center;gap:5px;white-space:nowrap;"><i class="fas fa-camera" style="color:var(--gold-400);"></i> Izin Ganti Foto:</span>
+                            <select class="filter-select" id="fotoReplaceJuriTarget" onchange="setFotoReplaceTarget(this.value)" title="Pilih juri yang boleh mengganti/upload ulang foto" style="min-width:140px;font-size:11px;padding:8px 10px;">
+                                <option value="all">Semua Juri</option>
+                            </select>
+                            <button class="btn-primary" id="btnToggleFotoReplace" onclick="toggleFotoReplace()" style="padding:8px 14px;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
+                            <button onclick="loadGaleriFoto()" style="padding:8px 14px;font-size:12px;font-weight:700;background:var(--glass-2);border:1px solid var(--bd-2);border-radius:10px;color:var(--text-hi);font-family:inherit;cursor:pointer;outline:none;">
+                                <i class="fas fa-sync-alt" style="margin-right:5px;"></i> Refresh
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <p style="font-size:11.5px;color:var(--text-mid);margin-bottom:14px;line-height:1.6;">
                             Semua foto ikan di sistem. Label <b style="color:#67e8f9;">JURI</b> = diunggah juri,
-                            <b style="color:#c4b5fd;">LAMA</b> = unggahan lama peserta. Klik gambar untuk memperbesar, ikon <i class="fas fa-trash-can" style="color:#fca5a5;"></i> untuk menghapus.
+                            <b style="color:#c4b5fd;">LAMA</b> = unggahan lama peserta. Klik gambar untuk memperbesar, ikon <i class="fas fa-download" style="color:#67e8f9;"></i> untuk mengunduh, ikon <i class="fas fa-trash-can" style="color:#fca5a5;"></i> untuk menghapus.
                         </p>
+                        <div id="fotoReplaceStatusText" style="font-size:11.5px;color:var(--text);margin-bottom:12px;padding:9px 12px;border-radius:10px;background:var(--glass-2);border:1px solid var(--bd-2);line-height:1.5;">Memuat status izin foto...</div>
+                        <div style="position:relative;margin-bottom:14px;">
+                            <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text-low);"></i>
+                            <input type="text" id="galeriSearchInput" oninput="filterGaleriFoto(this.value)" placeholder="Cari nama peserta, kategori, kelas, atau no. tank..." style="width:100%;padding:10px 88px 10px 38px;border-radius:10px;border:1px solid var(--bd-2);background:rgba(0,0,0,.28);color:var(--text-hi);font-family:inherit;font-size:13px;font-weight:600;outline:none;">
+                            <span id="galeriSearchCount" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:10.5px;font-weight:700;color:var(--text-mid);pointer-events:none;"></span>
+                        </div>
                         <div id="galeriFotoWrap">
                             <div class="empty-state"><i class="fas fa-images"></i><p>Memuat galeri...</p></div>
                         </div>
@@ -1894,20 +1907,6 @@
                         <div style="background:rgba(34,211,238,.08);border:1px solid var(--bd-cyan);border-radius:11px;padding:10px 14px;margin-top:12px;display:flex;gap:8px;align-items:flex-start;">
                             <i class="fas fa-circle-info" style="color:var(--cyan-400);margin-top:2px;"></i>
                             <span style="font-size:11px;color:var(--cyan-300);line-height:1.5;">Jika dikunci, peserta tetap bisa mendaftarkan ikan, namun tidak bisa mengacak nomor tank. Gunakan ini untuk mengatur jadwal pengundian.</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="glass-card" style="margin-top:16px;">
-                    <div class="card-head">
-                        <h3><span class="ti"><i class="fas fa-camera"></i></span>Izin Ganti Foto Ikan</h3>
-                        <button class="btn-primary" id="btnToggleFotoReplace" onclick="toggleFotoReplace()" style="padding:8px 16px;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
-                    </div>
-                    <div class="card-body">
-                        <div style="font-size:13px;color:var(--text);" id="fotoReplaceStatusText">Memuat status...</div>
-                        <div style="background:rgba(245,158,11,.08);border:1px solid var(--bd-gold);border-radius:11px;padding:10px 14px;margin-top:12px;display:flex;gap:8px;align-items:flex-start;">
-                            <i class="fas fa-circle-info" style="color:var(--gold-400);margin-top:2px;"></i>
-                            <span style="font-size:11px;color:var(--gold-300);line-height:1.5;">Setiap peserta hanya bisa mengunggah 1 foto per ikan. Jika diizinkan, peserta dapat mengganti foto yang sudah diunggah. Foto bisa dilihat pada Detail ikan di menu Penilaian.</span>
                         </div>
                     </div>
                 </div>

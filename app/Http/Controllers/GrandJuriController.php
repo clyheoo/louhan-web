@@ -1518,4 +1518,39 @@ public function getMvpIkan()
             'kategori'   => $ikan->kategori,
         ]);
     }
+
+    // ★ GALERI FOTO — read-only untuk Grand Juri (semua ikan yang punya foto)
+    public function getAllFotos()
+    {
+        $ikans = \App\Models\Ikan::has('fotos')
+            ->with(['fotos' => function ($q) { $q->orderBy('id'); }])
+            ->orderByRaw('CAST(nomor_tank AS UNSIGNED) ASC')
+            ->get();
+
+        $items = $ikans->map(function ($ikan) {
+            return [
+                'ikan_id'      => $ikan->id,
+                'nomor_tank'   => $ikan->nomor_tank,
+                'kategori'     => $ikan->kategori,
+                'kelas'        => $ikan->kelas,
+                'nama_peserta' => $ikan->nama_peserta ?? '-',
+                'foto_count'   => $ikan->fotos->count(),
+                'total_size'   => (int) $ikan->fotos->sum('size'),
+                'fotos'        => $ikan->fotos->map(function ($f) {
+                    return [
+                        'id'   => $f->id,
+                        'url'  => route('foto.ikan', ['foto' => $f->id]) . '?v=' . ($f->updated_at ? $f->updated_at->timestamp : time()),
+                        'size' => (int) $f->size,
+                        'role' => $f->uploaded_role ?: 'lama',
+                    ];
+                })->values(),
+            ];
+        });
+
+        return response()->json([
+            'success'    => true,
+            'items'      => $items,
+            'total_ikan' => $items->count(),
+        ]);
+    }
 }

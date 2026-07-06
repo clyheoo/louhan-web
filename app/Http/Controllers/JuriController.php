@@ -697,7 +697,23 @@ class JuriController extends Controller
     {
         if (!$this->ikanSudahApproved($ikan->id)) return false;
         if (!$ikan->fotos()->exists()) return true;          // belum ada foto → boleh
-        return (bool) $ikan->foto_reupload_requested;        // ada foto → hanya jika admin minta ulang
+
+        // ★ Per-ikan: admin minta upload ulang untuk tank ini (mekanisme lama, tetap ada)
+        if ((bool) $ikan->foto_reupload_requested) return true;
+
+        // ★ Global: admin membuka "Izin Ganti Foto" untuk juri ini (atau semua juri)
+        return $this->globalReplaceAllowedForCurrentJuri();
+    }
+
+    private function globalReplaceAllowedForCurrentJuri(): bool
+    {
+        $allowed = \DB::table('settings')->where('key', 'foto_replace_allowed')->value('value') === '1';
+        if (!$allowed) return false;
+
+        $target = \DB::table('settings')->where('key', 'foto_replace_juri_target')->value('value') ?: 'all';
+        if ($target === 'all' || $target === '') return true;
+
+        return (string) auth()->id() === (string) $target;
     }
 
     public function getFotoTanks()
@@ -841,7 +857,7 @@ class JuriController extends Controller
             'used_bytes'      => $usedAfter,
             'max_bytes'       => $maxBytes,
             'remaining_bytes' => max(0, $maxBytes - $usedAfter),
-            'can_upload'      => false, // setelah upload pertama, juri langsung terkunci
+            'can_upload'      => $this->juriBolehUpload($ikan) && $usedAfter < $maxBytes, // ★ tetap terbuka bila izin global aktif
         ]);
     }
 

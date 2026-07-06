@@ -2484,7 +2484,7 @@ window.switchJuriView = switchJuriView;
             var btnDetail = '<button onclick="openJuriFotoModal('+t.id+')" class="fotorow-btn" style="background:rgba(34,211,238,.10);border:1px solid rgba(34,211,238,.28);color:var(--cyan-300);"><i class="fas fa-eye"></i> Detail</button>';
             var btnUpload = '';
             if(t.can_upload){
-                var lbl = t.reupload_requested ? 'Upload Ulang' : 'Upload';
+                var lbl = t.reupload_requested ? 'Upload Ulang' : (t.foto_count>0 ? 'Ganti Foto' : 'Upload');
                 btnUpload = '<button onclick="openJuriFotoModal('+t.id+')" class="fotorow-btn" style="background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));border:1px solid transparent;color:#fff;"><i class="fas fa-cloud-arrow-up"></i> '+lbl+'</button>';
             } else if(t.foto_count>0){
                 btnUpload = '<span class="fotorow-btn" style="background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.28);color:var(--gold-300);cursor:default;"><i class="fas fa-lock"></i> Terkunci</span>';

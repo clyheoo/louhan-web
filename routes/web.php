@@ -75,6 +75,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/grand-juri/juri-peserta', [GrandJuriController::class, 'getJuriPeserta']);
     Route::get('/api/grand-juri/rincian-detail', [GrandJuriController::class, 'getRincianDetail']);
     Route::get('/api/grand-juri/ikan-foto/{id}', [GrandJuriController::class, 'getIkanFoto']); // ★ lihat foto (read-only)
+    Route::get('/api/grand-juri/all-fotos', [GrandJuriController::class, 'getAllFotos']); // ★ galeri foto read-only
     Route::get('/api/grand-juri/plot-status', [GrandJuriController::class, 'getPlotStatus']);
     Route::post('/api/grand-juri/kunci-nilai', [GrandJuriController::class, 'kunciNilai']);
     Route::get('/api/grand-juri/mvp-ikan', [GrandJuriController::class, 'getMvpIkan']);
@@ -159,6 +160,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/undian-status', [AdminDashboardController::class, 'getUndianStatus']);
     Route::post('/api/admin/toggle-foto-replace', [AdminDashboardController::class, 'toggleFotoReplace']);
     Route::get('/api/admin/foto-replace-status', [AdminDashboardController::class, 'getFotoReplaceStatus']);
+    Route::post('/api/admin/foto-replace-target', [AdminDashboardController::class, 'setFotoReplaceTarget']);
     Route::get('/api/admin/ikan-fotos/{id}', [AdminDashboardController::class, 'getIkanFotos']);
     Route::post('/api/admin/delete-foto', [AdminDashboardController::class, 'deleteFoto']);
     Route::get('/api/admin/all-fotos', [AdminDashboardController::class, 'getAllFotos']); // ★ galeri foto juri (read-only)

@@ -4334,7 +4334,17 @@ function updateUndianToggleUI(isOpen) {
 function loadFotoReplaceStatus(){
     fetch('/api/admin/foto-replace-status', {headers:{'Accept':'application/json'}})
     .then(r => r.json())
-    .then(d => updateFotoReplaceToggleUI(!!d.replace_allowed))
+    .then(d => {
+        var sel = document.getElementById('fotoReplaceJuriTarget');
+        if(sel){
+            var target = d.juri_target || 'all';
+            sel.innerHTML = '<option value="all">Semua Juri</option>' + (d.juris||[]).map(function(j){
+                return '<option value="'+j.id+'">'+esc(j.name)+'</option>';
+            }).join('');
+            sel.value = target;
+        }
+        updateFotoReplaceToggleUI(!!d.replace_allowed);
+    })
     .catch(() => updateFotoReplaceToggleUI(false));
 }
 
@@ -4355,15 +4365,18 @@ function toggleFotoReplace(){
 function updateFotoReplaceToggleUI(allowed){
     var btn = document.getElementById('btnToggleFotoReplace');
     var txt = document.getElementById('fotoReplaceStatusText');
-    if(btn) btn.disabled = false;
+    var sel = document.getElementById('fotoReplaceJuriTarget');
+    var targetLabel = (sel && sel.options[sel.selectedIndex]) ? sel.options[sel.selectedIndex].text : 'Semua Juri';
+    if(!btn) return;
+    btn.disabled = false;
     if(allowed){
-        btn.innerHTML = '<i class="fas fa-lock"></i> KUNCI GANTI FOTO';
+        btn.innerHTML = '<i class="fas fa-lock"></i> KUNCI';
         btn.style.background = 'var(--danger)'; btn.style.boxShadow = '0 3px 10px rgba(239,68,68,.2)';
-        txt.innerHTML = '<i class="fas fa-circle-check" style="color:var(--success);"></i> Penggantian foto sedang <b style="color:var(--success);">DIIZINKAN</b>.';
+        if(txt) txt.innerHTML = '<i class="fas fa-circle-check" style="color:var(--success);"></i> Ganti foto <b style="color:var(--success);">DIIZINKAN</b> untuk <b>'+esc(targetLabel)+'</b>. Juri terkait bisa upload/ganti foto ikan yang sudah disetujui (batas 3MB/tank). Tombol <b>Minta Upload Ulang</b> per-tank tetap berfungsi.';
     } else {
-        btn.innerHTML = '<i class="fas fa-lock-open"></i> IZINKAN GANTI FOTO';
+        btn.innerHTML = '<i class="fas fa-lock-open"></i> IZINKAN';
         btn.style.background = 'var(--success)'; btn.style.boxShadow = '0 3px 10px rgba(34,197,94,.2)';
-        txt.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--danger);"></i> Penggantian foto sedang <b style="color:var(--danger);">DIKUNCI</b>. Peserta hanya bisa unggah 1x.';
+        if(txt) txt.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--danger);"></i> Ganti foto <b style="color:var(--danger);">DIKUNCI</b>. Juri hanya bisa upload 1x per tank, kecuali diminta upload ulang per-tank oleh admin.';
     }
 }
 
@@ -4421,6 +4434,12 @@ function galeriFotoBadge(role){
     return '<span style="position:absolute;left:6px;top:6px;padding:2px 7px;border-radius:6px;background:rgba(148,163,184,.9);color:#0b1220;font-size:8px;font-weight:900;">LAMA</span>';
 }
 
+var _galeriItems = []; // ★ cache galeri agar search tidak fetch ulang
+
+function galeriSafeName(s){
+    return String(s || '').trim().replace(/[^a-zA-Z0-9\-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+}
+
 function loadGaleriFoto(){
     var wrap = document.getElementById('galeriFotoWrap');
     if(!wrap) return;
@@ -4429,33 +4448,116 @@ function loadGaleriFoto(){
     fetch('/api/admin/all-fotos', {headers:{'Accept':'application/json'}})
     .then(r => r.json())
     .then(d => {
-        if(!d || !d.success){ wrap.innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat galeri.</p></div>'; return; }
-        if(!d.items || d.items.length === 0){
-            wrap.innerHTML = '<div class="empty-state"><i class="fas fa-image"></i><p>Belum ada foto ikan di sistem.</p></div>';
-            return;
-        }
-        var html = '<div style="display:flex;flex-direction:column;gap:16px;">';
-        d.items.forEach(function(it){
-            var mb = (it.total_size/1048576).toFixed(2);
-            html += '<div style="border:1px solid var(--bd-1);border-radius:14px;overflow:hidden;background:var(--glass-2);">'
-                + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--bd-1);flex-wrap:wrap;">'
-                +   '<div style="font-size:12.5px;font-weight:800;color:var(--text-hi);"><i class="fas fa-hashtag" style="color:var(--cyan-400);margin-right:4px;"></i>Tank ' + (it.nomor_tank || '—') + ' <span style="font-weight:600;color:var(--text-mid);font-size:11px;">· ' + (it.kategori || '-') + (it.kelas ? (' / ' + it.kelas) : '') + ' · ' + (it.nama_peserta || '-') + '</span></div>'
-                +   '<div style="font-size:10.5px;font-weight:700;color:var(--text-mid);white-space:nowrap;"><i class="fas fa-images" style="margin-right:4px;"></i>' + it.foto_count + ' foto · ' + mb + ' MB</div>'
-                + '</div>'
-                + '<div style="padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;">';
-            it.fotos.forEach(function(f){
-                html += '<div style="position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--bd-2);">'
-                    + galeriFotoBadge(f.role)
-                    + '<img src="' + f.url + '" title="Klik untuk perbesar" onclick="window.open(this.src,\'_blank\')" style="width:100%;height:104px;object-fit:cover;display:block;cursor:zoom-in;">'
-                    + '<button onclick="galeriDeleteFoto(' + f.id + ')" title="Hapus foto ini" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border:none;border-radius:7px;background:rgba(239,68,68,.92);color:#fff;cursor:pointer;font-size:11px;display:grid;place-items:center;"><i class="fas fa-trash-can"></i></button>'
-                    + '</div>';
-            });
-            html += '</div></div>';
-        });
-        html += '</div>';
-        wrap.innerHTML = html;
+        if(!d || !d.success){ _galeriItems = []; wrap.innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat galeri.</p></div>'; return; }
+        _galeriItems = d.items || [];
+        var si = document.getElementById('galeriSearchInput');
+        renderGaleriFoto(si ? si.value : '');
     })
-    .catch(function(){ wrap.innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat galeri.</p></div>'; });
+    .catch(function(){ _galeriItems = []; wrap.innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat galeri.</p></div>'; });
+}
+
+function filterGaleriFoto(q){ renderGaleriFoto(q); }
+
+function renderGaleriFoto(filter){
+    var wrap = document.getElementById('galeriFotoWrap');
+    if(!wrap) return;
+    var q = (filter || '').trim().toLowerCase();
+    var items = _galeriItems;
+    if(q){
+        items = items.filter(function(it){
+            var hay = [(it.nama_peserta||''), (it.kategori||''), (it.kelas||''), 'tank '+(it.nomor_tank||''), String(it.nomor_tank||'')].join(' ').toLowerCase();
+            return hay.indexOf(q) !== -1;
+        });
+    }
+    var countEl = document.getElementById('galeriSearchCount');
+    if(countEl) countEl.textContent = _galeriItems.length ? (items.length + ' / ' + _galeriItems.length + ' tank') : '';
+
+    if(!_galeriItems.length){ wrap.innerHTML = '<div class="empty-state"><i class="fas fa-image"></i><p>Belum ada foto ikan di sistem.</p></div>'; return; }
+    if(!items.length){ wrap.innerHTML = '<div class="empty-state"><i class="fas fa-magnifying-glass"></i><p>Tidak ada tank yang cocok dengan pencarian.</p></div>'; return; }
+
+    var html = '<div style="display:flex;flex-direction:column;gap:16px;">';
+    items.forEach(function(it){
+        var mb = (it.total_size/1048576).toFixed(2);
+        var baseName = galeriSafeName(it.nama_peserta || 'peserta') + '_Tank' + (it.nomor_tank || '0') + '_' + galeriSafeName(it.kategori || 'kat') + (it.kelas ? ('_' + galeriSafeName(it.kelas)) : '');
+        html += '<div style="border:1px solid var(--bd-1);border-radius:14px;overflow:hidden;background:var(--glass-2);">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--bd-1);flex-wrap:wrap;">'
+            +   '<div style="font-size:12.5px;font-weight:800;color:var(--text-hi);"><i class="fas fa-hashtag" style="color:var(--cyan-400);margin-right:4px;"></i>Tank ' + (it.nomor_tank || '—') + ' <span style="font-weight:600;color:var(--text-mid);font-size:11px;">· ' + (it.kategori || '-') + (it.kelas ? (' / ' + it.kelas) : '') + ' · ' + (it.nama_peserta || '-') + '</span></div>'
+            +   '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+            +     '<div style="font-size:10.5px;font-weight:700;color:var(--text-mid);white-space:nowrap;"><i class="fas fa-images" style="margin-right:4px;"></i>' + it.foto_count + ' foto · ' + mb + ' MB</div>'
+            +     galeriReupBtn(it)
+            +   '</div>'
+            + '</div>'
+            + '<div style="padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;">';
+        it.fotos.forEach(function(f, fi){
+            var fname = baseName + (it.fotos.length > 1 ? ('_' + (fi+1)) : '');
+            html += '<div style="position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--bd-2);">'
+                + galeriFotoBadge(f.role)
+                + '<img src="' + f.url + '" title="Klik untuk perbesar" onclick="window.open(this.src,\'_blank\')" style="width:100%;height:104px;object-fit:cover;display:block;cursor:zoom-in;">'
+                + '<button onclick="galeriDeleteFoto(' + f.id + ')" title="Hapus foto ini" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border:none;border-radius:7px;background:rgba(239,68,68,.92);color:#fff;cursor:pointer;font-size:11px;display:grid;place-items:center;"><i class="fas fa-trash-can"></i></button>'
+                + '<button onclick="galeriDownloadFoto(\'' + f.url + '\',\'' + fname + '\')" title="Unduh foto ini" style="position:absolute;bottom:6px;right:6px;width:24px;height:24px;border:none;border-radius:7px;background:rgba(34,211,238,.92);color:#04121e;cursor:pointer;font-size:11px;display:grid;place-items:center;"><i class="fas fa-download"></i></button>'
+                + '</div>';
+        });
+        html += '</div></div>';
+    });
+    html += '</div>';
+    wrap.innerHTML = html;
+}
+
+function galeriDownloadFoto(url, filename){
+    fetch(url, {headers:{'Accept':'image/*'}})
+    .then(function(r){ if(!r.ok) throw new Error('fail'); return r.blob(); })
+    .then(function(blob){
+        var ext = (blob.type && blob.type.indexOf('png') !== -1) ? 'png' : 'jpg';
+        var objectUrl = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = (filename || 'foto-ikan') + '.' + ext;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(objectUrl); }, 1500);
+    })
+    .catch(function(){ popupError('Gagal', 'Gagal mengunduh foto. Coba lagi.'); });
+}
+
+function setFotoReplaceTarget(target){
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('juri_target', target);
+    fetch('/api/admin/foto-replace-target', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}, body: fd})
+    .then(r => r.json())
+    .then(d => {
+        if(!d.success) throw new Error(d.message || 'Gagal');
+        popupSuccess('Target Diperbarui', d.message);
+        loadFotoReplaceStatus();
+    })
+    .catch(e => popupError('Gagal', e.message || 'Gagal mengubah target.'));
+}
+
+// ★ Tombol per-ikan: minta / batalkan upload ulang foto tank tertentu
+function galeriReupBtn(it){
+    if(!it.foto_count) return ''; // belum ada foto → juri memang sudah boleh upload
+    if(it.reupload_requested){
+        return '<button onclick="galeriRequestReupload('+it.ikan_id+',0)" title="Batalkan permintaan upload ulang" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.14);color:var(--gold-300);font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fas fa-rotate"></i> Batalkan Upload Ulang</button>';
+    }
+    return '<button onclick="galeriRequestReupload('+it.ikan_id+',1)" title="Minta juri upload ulang foto tank ini" style="padding:5px 10px;border-radius:8px;border:1px solid var(--bd-2);background:var(--glass-2);color:var(--text-mid);font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fas fa-rotate"></i> Minta Upload Ulang</button>';
+}
+
+function galeriRequestReupload(ikanId, want){
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('ikan_id', ikanId);
+    fd.append('value', want);
+    fetch('/api/admin/request-reupload', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}, body: fd})
+    .then(r => r.json())
+    .then(d => {
+        if(!d.success) throw new Error(d.message || 'Gagal');
+        popupSuccess('Berhasil', d.message);
+        for(var i=0;i<_galeriItems.length;i++){ if(_galeriItems[i].ikan_id===ikanId){ _galeriItems[i].reupload_requested = !!Number(want); break; } }
+        var si = document.getElementById('galeriSearchInput');
+        renderGaleriFoto(si ? si.value : '');
+    })
+    .catch(e => popupError('Gagal', e.message || 'Gagal memproses permintaan.'));
 }
 
 function galeriDeleteFoto(fotoId){
@@ -5512,12 +5614,12 @@ function saveJuriAssignments(jid,btn){
             if(pageId === 'team_champion'){ loadTeamChampionStatus(); loadTeamChampionPeserta(); loadTeamChampionIkan(); }
             if(pageId === 'results'){ loadResultsStatus(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
-            if(pageId === 'undian'){ loadUndianStatus(); loadFotoReplaceStatus(); }
+            if(pageId === 'undian'){ loadUndianStatus(); }
             if(pageId === 'jumbo_calc'){ loadJumboCalcFish(); }
             if(pageId === 'kelola_juri'){ loadJuriAssignments(); loadJuriScoringLockStatus(); }
             if(pageId === 'taxonomy'){ loadTaxonomyManage(); }
             if(pageId === 'scoring_config'){ loadScoringConfigs(); }
-            if(pageId === 'galeri'){ loadGaleriFoto(); }
+            if(pageId === 'galeri'){ loadGaleriFoto(); loadFotoReplaceStatus(); }
 
         } else {
             // Refresh ringan saat dibuka ulang
@@ -5526,7 +5628,8 @@ function saveJuriAssignments(jid,btn){
             if(pageId === 'team_champion'){ loadTeamChampionStatus(); loadTeamChampionPeserta(); loadTeamChampionIkan(); }
             if(pageId === 'results'){ loadResultsStatus(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
-            if(pageId === 'undian'){ loadUndianStatus(); loadFotoReplaceStatus(); }
+            if(pageId === 'undian'){ loadUndianStatus(); }
+            if(pageId === 'galeri'){ loadFotoReplaceStatus(); }
             if(pageId === 'kelola_juri'){ loadJuriScoringLockStatus(); }
         }
 
