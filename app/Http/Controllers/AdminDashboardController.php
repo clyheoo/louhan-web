@@ -2415,40 +2415,63 @@ class AdminDashboardController extends Controller
 
     public function getFotoReplaceStatus()
     {
-        $target = \DB::table('settings')->where('key', 'foto_replace_juri_target')->value('value') ?: 'all';
-        $juris  = \App\Models\User::where('role', 'juri')->orderBy('name')->get(['id', 'name']);
+        $raw    = \DB::table('settings')->where('key', 'foto_replace_juri_target')->value('value') ?: 'all';
+        if ($raw === 'all' || $raw === '') {
+            $target = 'all';
+        } else {
+            $decoded = json_decode($raw, true);
+            $target  = is_array($decoded) ? array_map('intval', $decoded) : [(int) $raw]; // kompat single-id lama
+        }
+        $juris = \App\Models\User::where('role', 'juri')->orderBy('name')->get(['id', 'name']);
 
         return response()->json([
             'replace_allowed' => \DB::table('settings')->where('key', 'foto_replace_allowed')->value('value') === '1',
-            'juri_target'     => $target,
+            'juri_target'     => $target, // 'all' atau array id juri
             'juris'           => $juris,
         ]);
     }
 
-    // ★ Simpan target juri yang boleh ganti/upload ulang foto ('all' atau id juri)
+    // ★ Simpan target juri ('all' atau array id) + opsi langsung aktif/nonaktif
     public function setFotoReplaceTarget(Request $request)
     {
-        $request->validate(['juri_target' => 'required|string']);
-        $target = $request->juri_target;
+        $request->validate([
+            'juri_target' => 'required|string',
+            'enable'      => 'nullable|boolean',
+        ]);
 
-        if ($target !== 'all') {
-            $valid = \App\Models\User::where('id', $target)->where('role', 'juri')->exists();
-            if (!$valid) {
-                return response()->json(['success' => false, 'message' => 'Juri tidak valid.'], 422);
+        $raw = trim($request->juri_target);
+
+        if ($raw === 'all') {
+            $store = 'all';
+            $label = 'Semua Juri';
+        } else {
+            $ids = collect(json_decode($raw, true) ?: [])
+                ->map(fn($v) => (int) $v)->filter()->unique()->values();
+            $validIds = \App\Models\User::whereIn('id', $ids)->where('role', 'juri')->pluck('id')->values();
+            if ($validIds->isEmpty()) {
+                return response()->json(['success' => false, 'message' => 'Pilih minimal satu juri yang valid.'], 422);
             }
+            $store = $validIds->toJson(); // contoh: "[3,5]"
+            $label = \App\Models\User::whereIn('id', $validIds)->orderBy('name')->pluck('name')->implode(', ');
         }
 
         \DB::table('settings')->updateOrInsert(
             ['key' => 'foto_replace_juri_target'],
-            ['value' => $target, 'updated_at' => now()]
+            ['value' => $store, 'updated_at' => now()]
         );
 
-        $nama = $target === 'all' ? 'Semua Juri' : (\App\Models\User::find($target)->name ?? 'Juri');
+        if ($request->has('enable')) {
+            \DB::table('settings')->updateOrInsert(
+                ['key' => 'foto_replace_allowed'],
+                ['value' => $request->boolean('enable') ? '1' : '0', 'updated_at' => now()]
+            );
+        }
 
         return response()->json([
-            'success'     => true,
-            'juri_target' => $target,
-            'message'     => 'Izin ganti foto diarahkan ke: ' . $nama . '.',
+            'success'         => true,
+            'juri_target'     => $store === 'all' ? 'all' : json_decode($store, true),
+            'replace_allowed' => \DB::table('settings')->where('key', 'foto_replace_allowed')->value('value') === '1',
+            'message'         => 'Izin ganti foto diaktifkan untuk: ' . $label . '.',
         ]);
     }
 
@@ -2504,7 +2527,12 @@ public function getIkanFotos($id)
             ->orderByRaw('CAST(nomor_tank AS UNSIGNED) ASC')
             ->get();
 
-        $items = $ikans->map(function ($ikan) {
+        // Peta id pengupload -> nama (hindari N+1)
+        $uploaderIds = $ikans->flatMap(fn($ikan) => $ikan->fotos->pluck('uploaded_by'))
+            ->filter()->unique()->values();
+        $uploaderNames = \App\Models\User::whereIn('id', $uploaderIds)->pluck('name', 'id');
+
+        $items = $ikans->map(function ($ikan) use ($uploaderNames) {
             return [
                 'ikan_id'      => $ikan->id,
                 'nomor_tank'   => $ikan->nomor_tank,
@@ -2514,12 +2542,13 @@ public function getIkanFotos($id)
                 'foto_count'   => $ikan->fotos->count(),
                 'total_size'   => (int) $ikan->fotos->sum('size'),
                 'reupload_requested' => (bool) $ikan->foto_reupload_requested,
-                'fotos'        => $ikan->fotos->map(function ($f) {
+                'fotos'        => $ikan->fotos->map(function ($f) use ($uploaderNames) {
                     return [
-                        'id'   => $f->id,
-                        'url'  => route('foto.ikan', ['foto' => $f->id]) . '?v=' . ($f->updated_at ? $f->updated_at->timestamp : time()),
-                        'size' => (int) $f->size,
-                        'role' => $f->uploaded_role ?: 'lama',
+                        'id'       => $f->id,
+                        'url'      => route('foto.ikan', ['foto' => $f->id]) . '?v=' . ($f->updated_at ? $f->updated_at->timestamp : time()),
+                        'size'     => (int) $f->size,
+                        'role'     => $f->uploaded_role ?: 'lama',
+                        'uploader' => $f->uploaded_by ? ($uploaderNames[$f->uploaded_by] ?? null) : null,
                     ];
                 })->values(),
             ];

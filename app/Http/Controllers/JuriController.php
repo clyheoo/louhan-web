@@ -710,10 +710,12 @@ class JuriController extends Controller
         $allowed = \DB::table('settings')->where('key', 'foto_replace_allowed')->value('value') === '1';
         if (!$allowed) return false;
 
-        $target = \DB::table('settings')->where('key', 'foto_replace_juri_target')->value('value') ?: 'all';
-        if ($target === 'all' || $target === '') return true;
+        $raw = \DB::table('settings')->where('key', 'foto_replace_juri_target')->value('value') ?: 'all';
+        if ($raw === 'all' || $raw === '') return true;
 
-        return (string) auth()->id() === (string) $target;
+        $ids = json_decode($raw, true);
+        if (!is_array($ids)) { $ids = [$raw]; } // kompat: dulu tersimpan single-id
+        return in_array((int) auth()->id(), array_map('intval', $ids), true);
     }
 
     public function getFotoTanks()

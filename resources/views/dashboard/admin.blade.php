@@ -1260,11 +1260,7 @@
                     <div class="card-head">
                         <h3><span class="ti"><i class="fas fa-images"></i></span>Galeri Foto Ikan</h3>
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <span style="font-size:10.5px;font-weight:800;color:var(--text-mid);display:flex;align-items:center;gap:5px;white-space:nowrap;"><i class="fas fa-camera" style="color:var(--gold-400);"></i> Izin Ganti Foto:</span>
-                            <select class="filter-select" id="fotoReplaceJuriTarget" onchange="setFotoReplaceTarget(this.value)" title="Pilih juri yang boleh mengganti/upload ulang foto" style="min-width:140px;font-size:11px;padding:8px 10px;">
-                                <option value="all">Semua Juri</option>
-                            </select>
-                            <button class="btn-primary" id="btnToggleFotoReplace" onclick="toggleFotoReplace()" style="padding:8px 14px;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
+                            <button class="btn-primary" id="btnToggleFotoReplace" onclick="onClickFotoReplace()" style="padding:8px 14px;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
                             <button onclick="loadGaleriFoto()" style="padding:8px 14px;font-size:12px;font-weight:700;background:var(--glass-2);border:1px solid var(--bd-2);border-radius:10px;color:var(--text-hi);font-family:inherit;cursor:pointer;outline:none;">
                                 <i class="fas fa-sync-alt" style="margin-right:5px;"></i> Refresh
                             </button>
@@ -1967,6 +1963,24 @@
         <div class="modal-head"><h3><i class="fas fa-eye"></i> Detail Nilai Peserta</h3><button class="modal-close" onclick="closeModal('modalDetail')"><i class="fas fa-xmark"></i></button></div>
         <div class="modal-body" id="detailBody"></div>
         <div class="modal-foot"><button class="btn-cancel" onclick="closeModal('modalDetail')">Tutup</button></div>
+    </div>
+</div>
+
+<div class="modal-bg" id="modalFotoReplace" style="--mw:520px;">
+    <div class="modal-box">
+        <div class="modal-head"><h3><i class="fas fa-camera-retro"></i> Izinkan Ganti / Upload Ulang Foto</h3><button class="modal-close" onclick="closeModal('modalFotoReplace')"><i class="fas fa-xmark"></i></button></div>
+        <div class="modal-body">
+            <p style="font-size:12px;color:var(--text-mid);margin-bottom:14px;line-height:1.6;">Pilih juri yang diizinkan meng-upload ulang / mengganti foto ikan yang sudah disetujui. Batas tetap 3MB per tank.</p>
+            <label style="display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--bd-2);border-radius:11px;background:var(--glass-2);cursor:pointer;margin-bottom:12px;">
+                <input type="checkbox" id="frAllJuri" onchange="frToggleAll(this.checked)" style="width:17px;height:17px;accent-color:var(--gold-500);cursor:pointer;">
+                <span style="font-size:12.5px;font-weight:800;color:var(--text-hi);"><i class="fas fa-users" style="color:var(--gold-400);margin-right:6px;"></i>Semua Juri</span>
+            </label>
+            <div id="frJuriList" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;"></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-cancel" onclick="closeModal('modalFotoReplace')">Batal</button>
+            <button class="btn-primary" id="frSaveBtn" onclick="saveFotoReplace()" style="background:var(--success);"><i class="fas fa-lock-open"></i> Simpan & Izinkan</button>
+        </div>
     </div>
 </div>
 

@@ -194,7 +194,7 @@
         .sidebar-brand{display:flex;align-items:center;gap:12px;}
         .sidebar-mark{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#7c3aed,#A78BFA);box-shadow:0 6px 18px -6px rgba(124,58,237,.5),inset 0 1px 0 rgba(255,255,255,.25);flex-shrink:0;}
         .sidebar-mark i{color:white;font-size:16px;}
-        .sidebar-brand h2{font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--text-hi);line-height:1.05;letter-spacing:-.02em;}
+        .sidebar-brand h2{font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:16px;color:var(--text-hi);line-height:1.05;letter-spacing:-.02em;}
         .sidebar-brand h2 em{font-style:italic;font-weight:400;color:var(--cyan-400);}
         .sidebar-brand p{font-size:9.5px;color:var(--text-muted);margin-top:2px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;}
         .sidebar-nav{flex:1;overflow-y:auto;padding:12px 10px;scrollbar-width:thin;scrollbar-color:var(--glass-strong) transparent;}
@@ -266,14 +266,21 @@
 
         /* ═══════ STATS GRID ═══════ */
         .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-        .stat-card{padding:18px;border-radius:16px;border:1px solid var(--bd-2);background:var(--glass-2);text-align:center;position:relative;overflow:hidden;transition:all .25s;}
+        .stat-card{padding:20px 16px;border-radius:16px;border:1px solid var(--bd-2);background:var(--glass-2);text-align:center;position:relative;overflow:hidden;transition:all .25s;}
+        .stat-ic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:17px;margin:0 auto 12px;}
+        .stat-card.blue .stat-ic{background:rgba(34,211,238,.14);color:var(--cyan-400);}
+        .stat-card.green .stat-ic{background:rgba(52,211,153,.14);color:#34D399;}
+        .stat-card.orange .stat-ic{background:rgba(245,158,11,.14);color:var(--gold-400);}
+        .stat-card.red .stat-ic{background:rgba(239,68,68,.14);color:#fca5a5;}
+        .stat-card.purple .stat-ic{background:rgba(124,58,237,.16);color:var(--purple);}
+        .stat-card:hover{transform:translateY(-3px);box-shadow:0 10px 26px -10px rgba(124,58,237,.22);border-color:var(--bd-3);background:var(--glass-3);}
         .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
         .stat-card.blue::before{background:linear-gradient(90deg,var(--cyan-400),var(--cyan-500));}
         .stat-card.green::before{background:linear-gradient(90deg,#34D399,var(--success));}
         .stat-card.orange::before{background:linear-gradient(90deg,var(--gold-400),var(--gold-600));}
         .stat-card.red::before{background:linear-gradient(90deg,#fca5a5,var(--danger));}
         .stat-card.purple::before{background:linear-gradient(90deg,var(--purple),#7c3aed);}
-        .stat-number{font-family:'Fraunces',serif;font-size:30px;font-weight:500;line-height:1;margin-bottom:4px;color:var(--text-hi);letter-spacing:-.02em;}
+        .stat-number{font-family:'Plus Jakarta Sans',sans-serif;font-size:32px;font-weight:800;line-height:1;margin-bottom:5px;color:var(--text-hi);letter-spacing:-.03em;}
         .stat-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;}
         .stat-click-hint{font-size:9px;color:var(--text-muted);margin-top:6px;opacity:0;transition:opacity .25s;display:flex;align-items:center;justify-content:center;gap:3px;}
         .stat-card.clickable{cursor:pointer;}
@@ -281,14 +288,17 @@
         .stat-card.clickable:hover .stat-click-hint{opacity:1;}
 
         /* ═══════ RINCIAN GRID ═══════ */
-        .rincian-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
-        .rincian-card{background:var(--glass-2);border:1px solid var(--bd-2);border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all .2s;}
+        .rincian-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
+        .rincian-card{background:var(--glass-2);border:1px solid var(--bd-2);border-radius:12px;padding:13px 15px;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;transition:all .2s;}
         .rincian-card:hover{border-color:rgba(124,58,237,.30);box-shadow:0 4px 16px -4px rgba(124,58,237,.12);transform:translateY(-2px);background:var(--glass-3);}
-        .rincian-cat{font-size:12.5px;font-weight:700;color:var(--text-hi);display:flex;align-items:center;gap:6px;}
-        .rincian-cat i{font-size:10px;color:var(--purple);opacity:0;transition:opacity .2s;}
+        .rincian-cat{font-size:12.5px;font-weight:700;color:var(--text-hi);display:flex;align-items:center;gap:7px;min-width:0;flex:1;}
+        .rincian-cat i{font-size:10px;color:var(--purple);flex:0 0 auto;opacity:.55;transition:opacity .2s;}
         .rincian-card:hover .rincian-cat i{opacity:1;}
+        .rincian-cat .rc-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
         .rincian-data{text-align:right;}
-        .rincian-ekor{font-family:'Fraunces',serif;font-size:20px;font-weight:500;color:var(--text-hi);letter-spacing:-.02em;}
+        .rincian-ekor{display:flex;align-items:baseline;gap:4px;white-space:nowrap;flex:0 0 auto;}
+        .re-num{font-family:'Plus Jakarta Sans',sans-serif;font-size:23px;font-weight:800;color:var(--text-hi);letter-spacing:-.03em;line-height:1;}
+        .re-unit{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;}
 
         /* ═══════ JURI CHIPS ═══════ */
         .juri-chip-list{display:flex;flex-wrap:wrap;gap:14px;}
@@ -304,6 +314,10 @@
         .juri-chip .chip-count{opacity:.5;font-size:11px;}
         .juri-chip .chip-arrow{font-size:9px;opacity:0;transition:opacity .2s;margin-left:2px;}
         .juri-chip:hover .chip-arrow{opacity:.6;}
+        .juri-chip>i:first-child{width:30px;height:30px;flex:0 0 30px;border-radius:9px;display:grid;place-items:center;font-size:12px;}
+        .juri-chip.juri-awal>i:first-child{background:rgba(34,211,238,.16);}
+        .juri-chip.juri-grand>i:first-child{background:rgba(124,58,237,.20);}
+        .juri-chip .chip-count{background:rgba(255,255,255,.06);padding:2px 8px;border-radius:20px;font-weight:800;opacity:.85;}
 
         /* ═══════ TOOLBAR & SEARCH ═══════ */
         .toolbar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
@@ -381,7 +395,7 @@
         .juri-cell .grand-line{color:var(--purple);font-size:11px;}
         .juri-cell .grand-line i{font-size:9px;}
         .juri-count-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:var(--primary-light);color:var(--primary);margin-top:4px;}
-        .total-cell{font-family:'Fraunces',serif;font-size:18px;font-weight:500;color:var(--purple);letter-spacing:-.02em;}
+        .total-cell{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:500;color:var(--purple);letter-spacing:-.02em;}
         .total-cell.zero{color:var(--text-faint);font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;}
 
         /* ═══════ FILTER SELECT ═══════ */
@@ -443,7 +457,7 @@
         .detail-juri-toggle:hover{background:rgba(124,58,237,.06);}
         .detail-juri-toggle.open{background:var(--purple-light);border-bottom:1px solid rgba(124,58,237,.20);}
         .detail-juri-toggle .dj-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;color:var(--text-hi);}
-        .detail-juri-toggle .dj-total{font-family:'Fraunces',serif;font-size:16px;font-weight:500;color:var(--purple);letter-spacing:-.02em;}
+        .detail-juri-toggle .dj-total{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:500;color:var(--purple);letter-spacing:-.02em;}
         .detail-juri-toggle .dj-arrow{font-size:12px;color:var(--text-muted);transition:transform .2s;}
         .detail-juri-toggle.open .dj-arrow{transform:rotate(180deg);}
         .detail-juri-scores{display:none;}
@@ -506,7 +520,7 @@
         .popup-icon.success{background:linear-gradient(135deg,var(--purple),#7c3aed);box-shadow:0 8px 24px rgba(124,58,237,.4);}
         .popup-icon.danger{background:linear-gradient(135deg,var(--danger),#dc2626);box-shadow:0 8px 24px rgba(239,68,68,.4);}
         .popup-icon.warning{background:linear-gradient(135deg,var(--warning),#d97706);box-shadow:0 8px 24px rgba(245,158,11,.4);}
-        .popup-title{font-family:'Fraunces',serif;font-weight:500;font-size:22px;color:var(--text-hi);margin-bottom:8px;letter-spacing:-.02em;}
+        .popup-title{font-family:'Plus Jakarta Sans',sans-serif;font-weight:500;font-size:22px;color:var(--text-hi);margin-bottom:8px;letter-spacing:-.02em;}
         .popup-desc{font-size:13.5px;color:var(--text-muted);line-height:1.6;margin-bottom:24px;}
         .popup-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border:none;border-radius:14px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all .3s;color:white;}
         .popup-btn.success{background:linear-gradient(135deg,var(--purple),#7c3aed);box-shadow:0 4px 14px -4px rgba(124,58,237,.5),inset 0 1px 0 rgba(255,255,255,.2);}
@@ -672,28 +686,34 @@
             <div id="sectionStats">
                 <div class="stats-grid">
                     <div class="stat-card blue">
+                        <div class="stat-ic"><i class="fas fa-water"></i></div>
                         <div class="stat-number" id="statTank">0</div>
                         <div class="stat-label">Total Tank</div>
                     </div>
                     <div class="stat-card green">
+                        <div class="stat-ic"><i class="fas fa-users"></i></div>
                         <div class="stat-number" id="statPeserta">0</div>
                         <div class="stat-label">Total Peserta</div>
                     </div>
                     <div class="stat-card orange clickable" onclick="openPlotStatus('sudah_plot')">
+                        <div class="stat-ic"><i class="fas fa-circle-check"></i></div>
                         <div class="stat-number" id="statSudah">0</div>
                         <div class="stat-label">Sudah Plot</div>
                         <div class="stat-click-hint"><i class="fas fa-arrow-up-right-from-square"></i> Lihat Data</div>
                     </div>
                     <div class="stat-card red clickable" onclick="openPlotStatus('belum_plot')">
+                        <div class="stat-ic"><i class="fas fa-hourglass-half"></i></div>
                         <div class="stat-number" id="statBelum">0</div>
                         <div class="stat-label">Belum Plot</div>
                         <div class="stat-click-hint"><i class="fas fa-arrow-up-right-from-square"></i> Lihat Data</div>
                     </div>
                     <div class="stat-card purple">
+                        <div class="stat-ic"><i class="fas fa-layer-group"></i></div>
                         <div class="stat-number" id="statSisa">0</div>
                         <div class="stat-label" id="statSisaLabel">Sisa Tank</div>
                     </div>
                     <div class="stat-card purple clickable" onclick="window.location.href='/grand-juri/nominasi'">
+                        <div class="stat-ic"><i class="fas fa-trophy"></i></div>
                         <div class="stat-number" id="statNominasi">0</div>
                         <div class="stat-label">Nominasi Masuk</div>
                         <div class="stat-click-hint"><i class="fas fa-arrow-up-right-from-square"></i> Review Sekarang</div>
@@ -1177,7 +1197,7 @@ function loadStats(){
         if(!d.total_tank&&d.total_tank!==0)return;
         document.getElementById('statTank').innerText=d.total_tank;document.getElementById('statPeserta').innerText=d.total_peserta;document.getElementById('statSudah').innerText=d.sudah_plot;document.getElementById('statBelum').innerText=d.belum_plot;document.getElementById('statSisa').innerText=d.sisa_tank;document.getElementById('statSisaLabel').innerText='Sisa Tank (Max '+d.max_tank+')';
         var grid=document.getElementById('rincianGrid');grid.innerHTML='';
-        if(d.rincian)d.rincian.forEach(function(r){grid.innerHTML+='<div class="rincian-card" onclick="openRincianDetail(\''+esc(r.kategori)+'\')"><div class="rincian-cat"><i class="fas fa-arrow-up-right-from-square"></i>'+esc(r.kategori)+'</div><div class="rincian-data"><div class="rincian-ekor">'+r.ekor+' Ekor</div></div></div>';});
+        if(d.rincian)d.rincian.forEach(function(r){grid.innerHTML+='<div class="rincian-card" onclick="openRincianDetail(\''+esc(r.kategori)+'\')"><div class="rincian-cat"><i class="fas fa-arrow-up-right-from-square"></i><span class="rc-name">'+esc(r.kategori)+'</span></div><div class="rincian-ekor"><span class="re-num">'+r.ekor+'</span><span class="re-unit">Ekor</span></div></div>';});
     }).catch(function(err){console.error('Gagal load stats:',err);});
 }
 
@@ -1199,7 +1219,7 @@ function buildPesertaRowGJ(p){
     var td5=document.createElement('td');
     if(p.juri_list&&p.juri_list.length>0){var jHtml='<div class="juri-cell">';p.juri_list.forEach(function(j){if(j.is_grand&&j.is_editor){jHtml+='<div class="grand-line"><i class="fas fa-pen-to-square"></i> '+esc(j.name)+' <span style="font-size:9px;opacity:.7;">(edit)</span></div>';}else if(j.is_grand){jHtml+='<div class="grand-line"><i class="fas fa-crown"></i> '+esc(j.name)+'</div>';}else{jHtml+='<div><i class="fas fa-user-pen" style="font-size:10px;margin-right:3px;"></i>'+esc(j.name)+'</div>';}});jHtml+='</div>';td5.innerHTML=jHtml;}else{td5.innerHTML='<span style="font-size:12px;color:var(--text-muted);">—</span>';}tr.appendChild(td5);
     var td6=document.createElement('td');var totalHtml=p.total_nilai_semua>0?'<span class="total-cell">'+p.total_nilai_semua+'</span>':'<span class="total-cell zero">—</span>';if(p.jumlah_juri_yang_nilai>1)totalHtml+='<div style="font-size:9px;color:var(--text-muted);font-weight:600;"><i class="fas fa-users" style="font-size:8px;margin-right:2px;"></i>'+p.jumlah_juri_yang_nilai+' juri</div>';td6.innerHTML=totalHtml;tr.appendChild(td6);
-    var td6b=document.createElement('td');var finalPt=p.final_point||p.total_point||0;var bonusPt=p.total_bonus||0;if(finalPt>0){var ptHtml='<div style="font-family:\'Fraunces\',serif;font-size:16px;font-weight:500;color:'+(bonusPt>0?'#34D399':'var(--primary)')+';letter-spacing:-.02em;">'+finalPt+'</div>';if(bonusPt>0)ptHtml+='<div style="font-size:9px;color:#34D399;font-weight:800;"><i class="fas fa-trophy" style="font-size:7px;"></i> +'+bonusPt+' bonus</div>';td6b.innerHTML=ptHtml;}else{td6b.innerHTML='<span style="font-size:12px;color:var(--text-muted);">—</span>';}tr.appendChild(td6b);
+    var td6b=document.createElement('td');var finalPt=p.final_point||p.total_point||0;var bonusPt=p.total_bonus||0;if(finalPt>0){var ptHtml='<div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:16px;font-weight:500;color:'+(bonusPt>0?'#34D399':'var(--primary)')+';letter-spacing:-.02em;">'+finalPt+'</div>';if(bonusPt>0)ptHtml+='<div style="font-size:9px;color:#34D399;font-weight:800;"><i class="fas fa-trophy" style="font-size:7px;"></i> +'+bonusPt+' bonus</div>';td6b.innerHTML=ptHtml;}else{td6b.innerHTML='<span style="font-size:12px;color:var(--text-muted);">—</span>';}tr.appendChild(td6b);
     var td7=document.createElement('td');if(p.is_locked){td7.innerHTML='<span class="badge badge-success"><i class="fas fa-lock" style="margin-right:3px;font-size:9px;"></i>NILAI FINAL</span>';}else if(p.grand_juri_nama){td7.innerHTML='<span class="badge badge-purple"><i class="fas fa-crown" style="margin-right:3px;font-size:9px;"></i>GRAND EDITED</span>';}else{td7.innerHTML='<span class="badge '+(p.status_class||'badge-success')+'">'+(p.status||'—').toUpperCase()+'</span>';}tr.appendChild(td7);
     var td8=document.createElement('td');if(p.is_locked){td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm btn-lock" style="background:var(--primary-light);color:var(--primary);border-color:rgba(34,211,238,.20);" onclick="kunciNilai('+p.id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button></div>';}else{var lockHtml='<button class="btn-sm btn-lock" onclick="kunciNilai('+p.id+')" title="Kunci nilai (final)"><i class="fas fa-lock-open"></i> Kunci</button>';
         td8.innerHTML='<div class="action-group"><button class="btn-sm btn-detail" onclick="openDetail('+p.id+')"><i class="fas fa-eye"></i> Detail</button><button class="btn-sm btn-edit" onclick="openEdit('+p.id+')"><i class="fas fa-pen-to-square"></i> Edit</button>'+lockHtml+'</div>';}tr.appendChild(td8);
@@ -1264,11 +1284,11 @@ function fetchSingle(id,cb){
 /* ================================================================ MODAL DETAIL ================================================================ */
 function openDetail(id){currentId=id;document.getElementById('detailContent').innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:20px;display:block;margin-bottom:8px;"></i>Memuat...</div>';document.getElementById('modalDetail').classList.add('show');fetchSingle(id,function(p){if(!p){document.getElementById('detailContent').innerHTML='<div class="empty-state">Data tidak ditemukan.</div>';return;}currentPData=p;var editBtn=document.getElementById('btnToEdit');if(p.is_locked){editBtn.style.display='none';}else{editBtn.style.display='';editBtn.onclick=function(){closeModal('modalDetail');openEdit(id);};}renderDetail(p);});}
 
-function renderDetail(p){var html='';html+='<div class="detail-info-banner"><div><div class="detail-meta">';html+='<span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span>';html+='<span><i class="fas fa-tag"></i> '+(p.kategori||'—')+' - '+(p.kelas||'—')+'</span>';if(p.detail_anggota&&p.detail_anggota!=='—')html+='<span><i class="fas fa-users"></i> '+esc(p.detail_anggota)+'</span>';html+='</div></div>';var allIn=p.submitted_juri_count>=p.total_juri_all;html+='<span class="juri-submit-chip '+(allIn?'ok':'not-ok')+'"><i class="fas '+(allIn?'fa-check-circle':'fa-clock')+'"></i> '+p.submitted_juri_count+' dari '+p.total_juri_all+' juri kirim</span></div>';html+='<div style="margin:2px 0 14px;"><button type="button" onclick="openFotoGJ(currentId)" class="btn-sm btn-detail" style="display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-images"></i> Lihat Foto Ikan</button></div>';
+function renderDetail(p){var html='';html+='<div class="detail-info-banner"><div><div class="detail-meta">';html+='<span><i class="fas fa-hashtag"></i> Tank '+(p.nomor_tank||'—')+'</span>';html+='<span><i class="fas fa-tag"></i> '+(p.kategori||'—')+' - '+(p.kelas||'—')+'</span>';if(p.detail_anggota&&p.detail_anggota!=='—')html+='<span><i class="fas fa-users"></i> '+esc(p.detail_anggota)+'</span>';html+='</div></div>';var allIn=p.submitted_juri_count>=p.total_juri_all;html+='<span class="juri-submit-chip '+(allIn?'ok':'not-ok')+'"><i class="fas '+(allIn?'fa-check-circle':'fa-clock')+'"></i> '+p.submitted_juri_count+' dari '+p.total_juri_all+' juri kirim</span></div>';
 if(p.is_locked){html+='<div class="detail-note purple-note"><i class="fas fa-lock"></i><span>Nilai ini sudah <strong>TERKUNCI (FINAL)</strong> dan tidak dapat diubah.</span></div>';}else if(!allIn){html+='<div class="detail-note"><i class="fas fa-info-circle"></i><span>Masih ada <strong>'+(p.total_juri_all-p.submitted_juri_count)+'</strong> juri yang belum mengirim. Tombol <strong>Kunci</strong> aktif setelah semua juri mengirim.</span></div>';}
 if(!p.all_scorings||p.all_scorings.length===0){html+='<div class="empty-state" style="padding:40px;"><i class="fas fa-clipboard-list" style="font-size:36px;display:block;margin-bottom:10px;color:var(--text-faint);"></i>Belum ada nilai yang dikirim juri.</div>';document.getElementById('detailContent').innerHTML=html;return;}
 p.all_scorings.forEach(function(sc,idx){var uid='dj-'+idx;var iconCls='fas fa-user-pen';var label='Juri: '+esc(sc.juri_name);if(sc.edited_by_grand&&sc.grand_juri_name){label+=' <span style="color:var(--purple);font-size:11px;font-weight:600;"><i class="fas fa-pen-to-square" style="font-size:9px;"></i> diedit: '+esc(sc.grand_juri_name)+'</span>';}html+='<div class="detail-juri-accordion"><div class="detail-juri-toggle" id="'+uid+'-toggle" onclick="toggleJuriDetail(\''+uid+'\')"><span class="dj-name"><i class="'+iconCls+'" style="font-size:11px;"></i> '+label+'</span><span style="display:flex;align-items:center;gap:10px;"><span class="dj-total">'+sc.total_nilai+'</span><i class="fas fa-chevron-down dj-arrow"></i></span></div><div class="detail-juri-scores" id="'+uid+'-scores">';var nd=sc.nilai_detail;if(!nd||typeof nd!=='object'){html+='<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">Tidak ada data nilai.</div>';}else{Object.keys(formFields).forEach(function(kat){var fields=formFields[kat];if(kat==='face'&&nd.face){if(nd.face.face===undefined&&(nd.face.pipi!==undefined||nd.face.mata!==undefined))fields=formFieldsLegacy.face;}html+='<div style="margin-bottom:10px;border:1px solid var(--bd-2);border-radius:10px;overflow:hidden;">';var katNilai=nd[kat]||{};var sub=0;fields.forEach(function(f){if(f.type==='defect')return;var fv=katNilai[f.id];if(fv===undefined&&f.id==='shining'&&katNilai.shinning!==undefined)fv=katNilai.shinning;if(fv!==undefined&&fv!==null)sub+=parseInt(fv)||0;});var defectEval=sc.defect_eval||{};var penaltyKey=kat+'_penalty';var penaltyStr=defectEval[penaltyKey]||'';var defectPersen=0;var hasDefect=false;var defectNames=[];if(penaltyStr&&penaltyStr!==''){hasDefect=true;defectPersen=parseInt(penaltyStr)||0;var rawKey='raw_'+kat+'_penalty';var rawDefs=sc[rawKey];if(rawDefs){if(!Array.isArray(rawDefs))rawDefs=[rawDefs];defectNames=rawDefs.filter(function(v){return v&&v!=='0';});}}var displaySub=sub;if(hasDefect&&defectPersen>0)displaySub=Math.round(sub*(1-defectPersen/100)*10)/10;if(hasDefect&&defectPersen>0){html+='<div class="detail-kat-mini"><span>'+kat.toUpperCase()+'</span><span>Subtotal: <s style="color:var(--text-faint);font-size:10px;">'+sub+'</s> → <strong style="color:var(--purple);">'+displaySub+'</strong> <span style="color:#fca5a5;font-weight:700;">(-'+defectPersen+'%)</span></span></div>';}else{html+='<div class="detail-kat-mini"><span>'+kat.toUpperCase()+'</span><span>Subtotal: '+sub+'</span></div>';}var hasDefectField=fields.some(function(f){return f.type==='defect';});fields.forEach(function(f){if(f.type==='defect')return;var val=katNilai[f.id];if(val===undefined&&f.id==='shining'&&katNilai.shinning!==undefined)val=katNilai.shinning;var has=(val!==undefined&&val!==null&&val!=='');html+='<div class="detail-field-row"><div class="detail-field-left"><div class="detail-field-name">'+f.label+'</div><div class="detail-field-meta">'+f.desc+'</div></div><span class="score-chip '+(has?'filled':'empty')+'">'+(has?val:'N/A')+'</span></div>';});if(hasDefectField){if(hasDefect&&defectPersen>0&&defectNames.length>0){var isMayor=defectPersen>=30;html+='<div class="detail-field-row" style="background:'+(isMayor?'var(--danger-lt)':'var(--warning-lt)')+';"><div class="detail-field-left"><div class="detail-field-name" style="color:'+(isMayor?'#fca5a5':'var(--gold-300)')+';"><i class="fas fa-exclamation-triangle" style="margin-right:4px;font-size:10px;"></i>Defect '+(isMayor?'(MAYOR)':'(MINOR)')+'</div><div class="detail-field-meta" style="color:'+(isMayor?'#fca5a5':'var(--gold-300)')+';font-weight:600;">'+defectNames.join(', ')+'</div></div><span class="score-chip" style="background:'+(isMayor?'var(--danger-lt)':'var(--warning-lt)')+';color:'+(isMayor?'#fca5a5':'var(--gold-300)')+';font-weight:800;">-'+defectPersen+'%</span></div>';}else{html+='<div class="detail-field-row" style="background:var(--success-lt);"><div class="detail-field-left"><div class="detail-field-name" style="color:#34D399;"><i class="fas fa-check-circle" style="margin-right:4px;font-size:10px;"></i>Defect</div><div class="detail-field-meta" style="color:#059669;font-weight:600;">Tidak ada defect</div></div><span class="score-chip" style="background:var(--success-lt);color:#34D399;font-weight:800;">AMAN</span></div>';}}html+='</div>';});}html+='</div></div>';});
-if(p.detail_list_per_juri&&p.detail_list_per_juri.length>0){html+='<div style="margin-top:16px;border:2px solid rgba(124,58,237,.25);border-radius:14px;overflow:hidden;">';html+='<div style="padding:12px 16px;background:linear-gradient(135deg,rgba(124,58,237,.10),rgba(124,58,237,.05));border-bottom:2px solid rgba(124,58,237,.25);display:flex;justify-content:space-between;align-items:center;">';html+='<span style="font-size:13px;font-weight:800;color:var(--text-hi);"><i class="fas fa-calculator" style="margin-right:6px;color:var(--purple);"></i>Ringkasan Nilai & Point</span>';html+='<span style="font-size:11px;color:var(--purple);font-weight:700;">'+p.jumlah_juri_yang_nilai+' juri</span></div>';html+='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:rgba(124,58,237,.06);"><th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(124,58,237,.20);">JURI</th><th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(124,58,237,.20);">TOTAL NILAI</th></tr></thead><tbody>';var grandTotalNilai=0;p.detail_list_per_juri.forEach(function(j){if(!j.is_grand){grandTotalNilai+=j.total_nilai;html+='<tr style="background:transparent;"><td style="padding:10px 16px;font-weight:600;border-bottom:1px solid var(--bd-1);color:var(--text);">'+esc(j.juri_name)+'</td><td style="padding:10px 16px;font-weight:800;text-align:right;border-bottom:1px solid var(--bd-1);">'+j.total_nilai+'</td></tr>';}});html+='<tr style="background:rgba(124,58,237,.08);border-top:2px solid rgba(124,58,237,.25);"><td style="padding:12px 16px;font-weight:800;color:var(--purple);font-size:11px;text-transform:uppercase;letter-spacing:.3px;">Total Semua Juri</td><td style="padding:12px 16px;font-family:\'Fraunces\',serif;font-weight:500;text-align:right;color:var(--purple);font-size:16px;letter-spacing:-.02em;">'+grandTotalNilai+'</td></tr></tbody></table>';var basePoint=p.total_point??0;var bonusTotal=p.total_bonus||0;var finalPoint=p.final_point||basePoint;html+='<div style="display:grid;grid-template-columns:1fr auto;border-top:2px solid rgba(124,58,237,.25);"><div style="padding:14px 16px;background:transparent;display:flex;flex-direction:column;justify-content:center;gap:2px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Total Point</div><div style="font-size:10px;color:var(--text-muted);">Dihitung dari rata-rata '+p.jumlah_juri_yang_nilai+' juri</div></div><div style="padding:14px 20px;background:transparent;display:flex;align-items:center;justify-content:flex-end;min-width:160px;"><div style="text-align:right;"><div style="font-family:\'Fraunces\',serif;font-size:22px;font-weight:500;color:'+(bonusTotal>0?'#34D399':'var(--gold-300)')+';line-height:1;letter-spacing:-.02em;">'+finalPoint+'</div>';if(bonusTotal>0)html+='<div style="font-size:9px;color:#34D399;font-weight:700;margin-top:3px;">Dasar '+basePoint+' + Bonus +'+bonusTotal+'</div>';html+='</div></div></div></div>';}document.getElementById('detailContent').innerHTML=html;}
+if(p.detail_list_per_juri&&p.detail_list_per_juri.length>0){html+='<div style="margin-top:16px;border:2px solid rgba(124,58,237,.25);border-radius:14px;overflow:hidden;">';html+='<div style="padding:12px 16px;background:linear-gradient(135deg,rgba(124,58,237,.10),rgba(124,58,237,.05));border-bottom:2px solid rgba(124,58,237,.25);display:flex;justify-content:space-between;align-items:center;">';html+='<span style="font-size:13px;font-weight:800;color:var(--text-hi);"><i class="fas fa-calculator" style="margin-right:6px;color:var(--purple);"></i>Ringkasan Nilai & Point</span>';html+='<span style="font-size:11px;color:var(--purple);font-weight:700;">'+p.jumlah_juri_yang_nilai+' juri</span></div>';html+='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:rgba(124,58,237,.06);"><th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(124,58,237,.20);">JURI</th><th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(124,58,237,.20);">TOTAL NILAI</th></tr></thead><tbody>';var grandTotalNilai=0;p.detail_list_per_juri.forEach(function(j){if(!j.is_grand){grandTotalNilai+=j.total_nilai;html+='<tr style="background:transparent;"><td style="padding:10px 16px;font-weight:600;border-bottom:1px solid var(--bd-1);color:var(--text);">'+esc(j.juri_name)+'</td><td style="padding:10px 16px;font-weight:800;text-align:right;border-bottom:1px solid var(--bd-1);">'+j.total_nilai+'</td></tr>';}});html+='<tr style="background:rgba(124,58,237,.08);border-top:2px solid rgba(124,58,237,.25);"><td style="padding:12px 16px;font-weight:800;color:var(--purple);font-size:11px;text-transform:uppercase;letter-spacing:.3px;">Total Semua Juri</td><td style="padding:12px 16px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:500;text-align:right;color:var(--purple);font-size:16px;letter-spacing:-.02em;">'+grandTotalNilai+'</td></tr></tbody></table>';var basePoint=p.total_point??0;var bonusTotal=p.total_bonus||0;var finalPoint=p.final_point||basePoint;html+='<div style="display:grid;grid-template-columns:1fr auto;border-top:2px solid rgba(124,58,237,.25);"><div style="padding:14px 16px;background:transparent;display:flex;flex-direction:column;justify-content:center;gap:2px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;">Total Point</div><div style="font-size:10px;color:var(--text-muted);">Dihitung dari rata-rata '+p.jumlah_juri_yang_nilai+' juri</div></div><div style="padding:14px 20px;background:transparent;display:flex;align-items:center;justify-content:flex-end;min-width:160px;"><div style="text-align:right;"><div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-size:22px;font-weight:500;color:'+(bonusTotal>0?'#34D399':'var(--gold-300)')+';line-height:1;letter-spacing:-.02em;">'+finalPoint+'</div>';if(bonusTotal>0)html+='<div style="font-size:9px;color:#34D399;font-weight:700;margin-top:3px;">Dasar '+basePoint+' + Bonus +'+bonusTotal+'</div>';html+='</div></div></div></div>';}document.getElementById('detailContent').innerHTML=html;}
 
 function toggleJuriDetail(uid){var t=document.getElementById(uid+'-toggle');var s=document.getElementById(uid+'-scores');if(t.classList.contains('open')){t.classList.remove('open');s.classList.remove('open');}else{t.classList.add('open');s.classList.add('open');}}
 
@@ -1387,7 +1407,7 @@ function loadPointRanking(){
                 if(isGlobal)html+='<td style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">'+esc(d.kategori)+'</td>';
                 html+='<td style="font-weight:700;color:var(--purple);text-align:center;">'+(d.nomor_tank||'—')+'</td><td style="text-align:center;">'+esc(d.kelas)+'</td><td style="font-size:11px;color:var(--text-muted);">'+esc(d.detail_anggota)+'</td>';
                 html+='<td style="text-align:center;"><div style="font-weight:800;">'+(d.total_nilai_semua??0)+'</div>';if(d.jumlah_juri>0)html+='<div style="font-size:9px;color:var(--text-muted);font-weight:600;">'+d.jumlah_juri+' juri</div>';html+='</td>';
-                html+='<td style="text-align:center;"><div style="font-family:\'Fraunces\',serif;font-weight:500;font-size:15px;color:var(--primary);letter-spacing:-.02em;">'+basePt+'</div></td>';
+                html+='<td style="text-align:center;"><div style="font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:500;font-size:15px;color:var(--primary);letter-spacing:-.02em;">'+basePt+'</div></td>';
                 html+='<td style="text-align:center;"><span style="display:inline-block;padding:5px 14px;border-radius:8px;font-size:14px;font-weight:900;background:'+rankBg+';color:'+rankColor+';border:1px solid '+rankBorder+';">'+frp+'</span>';
                 if(bonus>0)html+='<div style="font-size:9px;color:#34D399;font-weight:800;margin-top:3px;"><i class="fas fa-trophy" style="font-size:7px;"></i> '+rankPt+' + '+bonus+'</div>';
                 html+='</td></tr>';
