@@ -317,11 +317,22 @@
     {{-- ════════════════════════════════════════════════════════════
          LAYER 5: HALAMAN FOTO IKAN (ikan yang sudah di-ACC)
          ════════════════════════════════════════════════════════════ --}}
-    <div id="foto-page" class="hidden">
+    <div id="foto-page" class="hidden" style="position:relative;min-height:60vh;">
         <style>
             .fotorow-btn{padding:7px 12px;border-radius:9px;font-size:11px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:filter .15s;}
             .fotorow-btn:hover{filter:brightness(1.08);}
         </style>
+        <div id="foto-lock-overlay" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center rounded-3xl text-center p-8" style="background: rgba(4,7,15,0.92); backdrop-filter: blur(10px); border: 1px solid var(--bd-2);">
+            <div class="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl" style="background: linear-gradient(135deg, #F59E0B, #B45309); box-shadow: 0 0 40px rgba(245,158,11,0.3);">
+                <i class="fas fa-lock text-white text-4xl"></i>
+            </div>
+            <h2 class="text-xl font-extrabold mb-2" style="color: var(--text-hi);">Foto Ikan Terkunci</h2>
+            <p class="text-sm mb-6" style="color: var(--text-mid); max-width: 320px;">Admin belum membuka akses upload foto ikan. Silakan menunggu hingga halaman dibuka.</p>
+            <div class="flex items-center justify-center gap-2 text-xs" style="color:var(--text-faint);">
+                <div class="w-2 h-2 rounded-full animate-pulse" style="background:var(--gold-400);"></div>
+                Auto-refresh saat halaman dibuka kembali
+            </div>
+        </div>
         <div class="glass-card p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
             <h2 class="font-bold flex items-center gap-2 text-sm" style="color:var(--text-hi);">
                 <i class="fas fa-camera-retro" style="color:var(--cyan-400);"></i> Foto Ikan — Ikan Disetujui
@@ -2464,6 +2475,8 @@ window.switchJuriView = switchJuriView;
         .then(function(d){
             if(L) L.style.display='none';
             if(!d||!d.success){ wrap.innerHTML='<div class="glass-card p-4 text-center text-xs" style="color:#fca5a5;">Gagal memuat data.</div>'; return; }
+            var ov=_el('foto-lock-overlay');
+            if(ov){ if(d.foto_page_unlocked===false){ ov.classList.remove('hidden'); } else { ov.classList.add('hidden'); } }
             jf.tanks=d.tanks||[]; renderFotoList('');
         })
         .catch(function(){ if(L) L.style.display='none'; wrap.innerHTML='<div class="glass-card p-4 text-center text-xs" style="color:#fca5a5;">Gagal memuat data.</div>'; });

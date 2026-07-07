@@ -400,6 +400,7 @@ class JuriController extends Controller
 
         $hasJuriAssignment = \App\Models\JuriAssignment::where('juri_id', auth()->id())->exists();
         $globalUnlocked    = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
+        $fotoPageUnlocked  = \DB::table('settings')->where('key', 'foto_page_unlocked')->value('value') === '1';
         // Boleh menilai hanya jika sesi dibuka admin DAN juri sudah ditugaskan.
         $scoringUnlocked   = $globalUnlocked && $hasJuriAssignment;
         // Sesi sudah dibuka admin, tapi juri ini belum diatur kategori/kelasnya.
@@ -409,6 +410,7 @@ class JuriController extends Controller
             return response()->json([
                 'status'             => count($globalApprovedIds) > 0 ? 'approved' : 'none',
                 'scoring_unlocked'   => $scoringUnlocked,
+                'foto_page_unlocked' => $fotoPageUnlocked,
                 'assignment_pending' => $assignmentPending,
                 'nominations'        => [],
                 'approved_ikan_ids'  => $globalApprovedIds,
@@ -441,6 +443,7 @@ class JuriController extends Controller
         return response()->json([
             'status'             => $status,
             'scoring_unlocked'   => $scoringUnlocked,
+            'foto_page_unlocked' => $fotoPageUnlocked,
             'assignment_pending' => $assignmentPending,
             'nominations'        => $nominations->map(function ($n) {
                 return [
@@ -695,6 +698,7 @@ class JuriController extends Controller
 
     private function juriBolehUpload(Ikan $ikan): bool
     {
+        if (!$this->fotoPageUnlocked()) return false;        // ★ master gate: halaman foto dibuka admin
         if (!$this->ikanSudahApproved($ikan->id)) return false;
         if (!$ikan->fotos()->exists()) return true;          // belum ada foto → boleh
 
@@ -703,6 +707,11 @@ class JuriController extends Controller
 
         // ★ Global: admin membuka "Izin Ganti Foto" untuk juri ini (atau semua juri)
         return $this->globalReplaceAllowedForCurrentJuri();
+    }
+
+    private function fotoPageUnlocked(): bool
+    {
+        return \DB::table('settings')->where('key', 'foto_page_unlocked')->value('value') === '1';
     }
 
     private function globalReplaceAllowedForCurrentJuri(): bool
@@ -720,6 +729,7 @@ class JuriController extends Controller
 
     public function getFotoTanks()
     {
+        $pageUnlocked = $this->fotoPageUnlocked(); // ★ master gate
         $approvedIds = Nominasi::where('status', 'approved')
             ->pluck('ikan_id')->unique()->values()->toArray();
 
@@ -730,7 +740,7 @@ class JuriController extends Controller
             ->withCount('fotos')
             ->orderByRaw('CAST(nomor_tank AS UNSIGNED) ASC')
             ->get()
-            ->map(function ($t) {
+            ->map(function ($t) use ($pageUnlocked) {
                 $hasFoto  = (int) $t->fotos_count > 0;
                 $reupload = (bool) $t->foto_reupload_requested;
                 return [
@@ -742,11 +752,11 @@ class JuriController extends Controller
                     'detail_anggota'     => $t->detail_anggota ?? '-',
                     'foto_count'         => (int) $t->fotos_count,
                     'reupload_requested' => $reupload,
-                    'can_upload'         => (!$hasFoto || $reupload),
+                    'can_upload'         => $pageUnlocked && (!$hasFoto || $reupload),
                 ];
             })->values();
 
-        return response()->json(['success' => true, 'tanks' => $tanks]);
+        return response()->json(['success' => true, 'tanks' => $tanks, 'foto_page_unlocked' => $pageUnlocked]);
     }
 
     public function getIkanFoto($id)
@@ -783,6 +793,7 @@ class JuriController extends Controller
             'can_upload'         => $bolehUpload && $usedBytes < $maxBytes,
             'reupload_requested' => (bool) $ikan->foto_reupload_requested,
             'locked'             => (!$bolehUpload && $count > 0), // sudah dikirim → terkunci utk juri
+            'foto_page_unlocked' => $this->fotoPageUnlocked(),
             'nama'               => $ikan->nama_peserta,
             'kategori'           => $ikan->kategori,
             'nomor_tank'         => $ikan->nomor_tank,
@@ -806,6 +817,9 @@ class JuriController extends Controller
         }
         if (!$this->ikanSudahApproved($ikan->id)) {
             return response()->json(['success' => false, 'message' => 'Ikan ini belum disetujui (approved).'], 403);
+        }
+        if (!$this->fotoPageUnlocked()) {
+            return response()->json(['success' => false, 'message' => 'Halaman Foto Ikan sedang DIKUNCI oleh admin.'], 423);
         }
         if (!$this->juriBolehUpload($ikan)) {
             return response()->json([

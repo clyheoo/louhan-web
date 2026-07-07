@@ -1255,12 +1255,18 @@
             </section>
 
             <!-- ═══════════ PAGE: GALERI FOTO ═══════════ -->
+            <style>
+                .gal-anim-btn{transition:transform .1s ease;}
+                .gal-anim-btn:active{transform:scale(.9);}
+                .gal-anim-btn.gal-pop{animation:galPop .42s ease;}
+                @keyframes galPop{0%{transform:scale(.9);}40%{transform:scale(1.06);}100%{transform:scale(1);}}
+            </style>
             <section class="page-section" data-page="galeri" style="display:none;">
                 <div class="glass-card">
                     <div class="card-head">
                         <h3><span class="ti"><i class="fas fa-images"></i></span>Galeri Foto Ikan</h3>
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <button class="btn-primary" id="btnToggleFotoReplace" onclick="onClickFotoReplace()" style="padding:8px 14px;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
+                            <button class="btn-primary" id="btnToggleFotoReplace" onclick="toggleFotoPageLock()" style="padding:8px 14px;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
                             <button onclick="loadGaleriFoto()" style="padding:8px 14px;font-size:12px;font-weight:700;background:var(--glass-2);border:1px solid var(--bd-2);border-radius:10px;color:var(--text-hi);font-family:inherit;cursor:pointer;outline:none;">
                                 <i class="fas fa-sync-alt" style="margin-right:5px;"></i> Refresh
                             </button>
@@ -1963,6 +1969,32 @@
         <div class="modal-head"><h3><i class="fas fa-eye"></i> Detail Nilai Peserta</h3><button class="modal-close" onclick="closeModal('modalDetail')"><i class="fas fa-xmark"></i></button></div>
         <div class="modal-body" id="detailBody"></div>
         <div class="modal-foot"><button class="btn-cancel" onclick="closeModal('modalDetail')">Tutup</button></div>
+    </div>
+</div>
+
+<div class="modal-bg" id="modalAdmUpload" style="--mw:460px;">
+    <div class="modal-box">
+        <div class="modal-head"><h3><i class="fas fa-cloud-arrow-up"></i> Upload Foto Ikan <span id="admUpSub" style="font-weight:600;font-size:12px;opacity:.7;"></span></h3><button class="modal-close" onclick="admCloseUpload()"><i class="fas fa-xmark"></i></button></div>
+        <div class="modal-body">
+            <video id="admUpVideo" autoplay playsinline style="display:none;width:100%;border-radius:12px;background:#000;margin-bottom:12px;max-height:300px;"></video>
+            <img id="admUpPreview" style="display:none;width:100%;border-radius:12px;margin-bottom:12px;object-fit:contain;max-height:300px;background:rgba(0,0,0,.3);">
+            <div id="admUpPlaceholder" style="border:1.5px dashed var(--bd-3);border-radius:12px;padding:28px 14px;text-align:center;color:var(--text-mid);font-size:12px;margin-bottom:12px;">
+                <i class="fas fa-image" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4;"></i>Pilih file atau ambil foto langsung dari kamera
+            </div>
+            <input type="file" id="admUpFile" accept="image/jpeg,image/jpg,image/png" style="display:none;" onchange="admOnFilePicked(this)">
+            <div id="admUpActions" style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn-primary gal-anim-btn" onclick="document.getElementById('admUpFile').click()" style="flex:1;min-width:130px;"><i class="fas fa-folder-open"></i> Pilih File</button>
+                <button class="btn-primary gal-anim-btn" onclick="admStartCamera()" style="flex:1;min-width:130px;background:linear-gradient(135deg,var(--cyan-500),#2563eb);"><i class="fas fa-camera"></i> Ambil Foto</button>
+            </div>
+            <div id="admUpCamActions" style="display:none;gap:8px;margin-top:10px;">
+                <button class="btn-primary gal-anim-btn" onclick="admCapture()" style="flex:1;"><i class="fas fa-camera"></i> Jepret</button>
+                <button class="btn-cancel" onclick="admStopCamera()" style="flex:1;">Batal Kamera</button>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-cancel" onclick="admCloseUpload()">Tutup</button>
+            <button class="btn-primary gal-anim-btn" id="admUpSaveBtn" onclick="admDoUpload()" style="background:var(--success);display:none;"><i class="fas fa-cloud-arrow-up"></i> Simpan Foto</button>
+        </div>
     </div>
 </div>
 

@@ -2396,20 +2396,20 @@ class AdminDashboardController extends Controller
 
     public function toggleFotoReplace()
     {
-        $current = \DB::table('settings')->where('key', 'foto_replace_allowed')->value('value');
+        $current = \DB::table('settings')->where('key', 'foto_page_unlocked')->value('value');
         $newVal  = ($current === '1') ? '0' : '1';
 
         \DB::table('settings')->updateOrInsert(
-            ['key' => 'foto_replace_allowed'],
+            ['key' => 'foto_page_unlocked'],
             ['value' => $newVal, 'updated_at' => now()]
         );
 
         return response()->json([
-            'success'         => true,
-            'replace_allowed' => ($newVal === '1'),
-            'message'         => $newVal === '1'
-                ? 'Penggantian foto DIIZINKAN. Peserta dapat mengganti foto ikan yang sudah diunggah.'
-                : 'Penggantian foto DIKUNCI. Peserta hanya bisa mengunggah 1 foto per ikan.',
+            'success'            => true,
+            'foto_page_unlocked' => ($newVal === '1'),
+            'message'            => $newVal === '1'
+                ? 'Halaman Foto Ikan DIBUKA. Juri dapat mengupload foto ikan yang sudah disetujui.'
+                : 'Halaman Foto Ikan DIKUNCI. Panel foto di dashboard juri ditutup (overlay).',
         ]);
     }
 
@@ -2425,9 +2425,10 @@ class AdminDashboardController extends Controller
         $juris = \App\Models\User::where('role', 'juri')->orderBy('name')->get(['id', 'name']);
 
         return response()->json([
-            'replace_allowed' => \DB::table('settings')->where('key', 'foto_replace_allowed')->value('value') === '1',
-            'juri_target'     => $target, // 'all' atau array id juri
-            'juris'           => $juris,
+            'replace_allowed'    => \DB::table('settings')->where('key', 'foto_replace_allowed')->value('value') === '1',
+            'foto_page_unlocked' => \DB::table('settings')->where('key', 'foto_page_unlocked')->value('value') === '1',
+            'juri_target'        => $target, // 'all' atau array id juri
+            'juris'              => $juris,
         ]);
     }
 

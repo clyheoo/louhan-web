@@ -4331,123 +4331,43 @@ function updateUndianToggleUI(isOpen) {
     }
 }
 
-var _frJuris = [];        // daftar juri {id,name}
-var _frTarget = 'all';    // 'all' atau array id
-var _frAllowed = false;
+var _fotoPageUnlocked = false;
 
 function loadFotoReplaceStatus(){
     fetch('/api/admin/foto-replace-status', {headers:{'Accept':'application/json'}})
     .then(r => r.json())
-    .then(d => {
-        _frJuris   = d.juris || [];
-        _frTarget  = (d.juri_target === 'all') ? 'all' : (Array.isArray(d.juri_target) ? d.juri_target.map(Number) : []);
-        _frAllowed = !!d.replace_allowed;
-        updateFotoReplaceToggleUI(_frAllowed);
-    })
-    .catch(() => { _frAllowed = false; updateFotoReplaceToggleUI(false); });
+    .then(d => { _fotoPageUnlocked = !!d.foto_page_unlocked; updateFotoReplaceToggleUI(_fotoPageUnlocked); })
+    .catch(() => { _fotoPageUnlocked = false; updateFotoReplaceToggleUI(false); });
 }
 
-function onClickFotoReplace(){
-    if(_frAllowed){ lockFotoReplace(); }   // sedang ON → kunci
-    else { openFotoReplaceModal(); }        // sedang OFF → pilih juri dulu
-}
-
-function lockFotoReplace(){
+function toggleFotoPageLock(){
     var btn = document.getElementById('btnToggleFotoReplace');
     if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
     fetch('/api/admin/toggle-foto-replace', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}})
     .then(r => r.json())
     .then(d => {
-        if(d.success){ _frAllowed = !!d.replace_allowed; updateFotoReplaceToggleUI(_frAllowed); popupSuccess('Foto Dikunci', 'Ganti foto dikunci kembali.'); }
-        else popupError('Gagal', d.message);
+        if(!d.success) throw new Error(d.message || 'Gagal');
+        _fotoPageUnlocked = !!d.foto_page_unlocked;
+        updateFotoReplaceToggleUI(_fotoPageUnlocked);
+        popupSuccess(_fotoPageUnlocked ? 'Foto Ikan Dibuka' : 'Foto Ikan Dikunci', d.message);
     })
-    .catch(() => popupError('Error', 'Gagal menghubungi server'))
+    .catch(e => popupError('Gagal', e.message || 'Gagal menghubungi server'))
     .finally(() => { var b=document.getElementById('btnToggleFotoReplace'); if(b) b.disabled=false; });
 }
 
-function openFotoReplaceModal(){
-    renderFrJuriList();
-    openModal('modalFotoReplace');
-}
-
-function renderFrJuriList(){
-    var box = document.getElementById('frJuriList');
-    var allCb = document.getElementById('frAllJuri');
-    if(!box) return;
-    var isAll = (_frTarget === 'all');
-    if(allCb) allCb.checked = isAll;
-    box.innerHTML = _frJuris.map(function(j){
-        var checked = isAll || (Array.isArray(_frTarget) && _frTarget.indexOf(Number(j.id)) !== -1);
-        return '<label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--bd-2);border-radius:10px;background:var(--glass-1);cursor:pointer;">'
-            + '<input type="checkbox" class="fr-juri-cb" value="'+j.id+'" '+(checked?'checked':'')+' onchange="frSyncAllState()" style="width:16px;height:16px;accent-color:var(--cyan-500);cursor:pointer;">'
-            + '<span style="font-size:12.5px;font-weight:700;color:var(--text-hi);"><i class="fas fa-user-pen" style="color:var(--cyan-400);margin-right:6px;font-size:11px;"></i>'+esc(j.name)+'</span></label>';
-    }).join('') || '<div style="font-size:12px;color:var(--text-mid);text-align:center;padding:14px;">Belum ada akun juri.</div>';
-    frSyncAllState();
-}
-
-function frToggleAll(on){
-    document.querySelectorAll('.fr-juri-cb').forEach(function(cb){ cb.checked = on; });
-}
-
-function frSyncAllState(){
-    var cbs = Array.prototype.slice.call(document.querySelectorAll('.fr-juri-cb'));
-    var allCb = document.getElementById('frAllJuri');
-    if(allCb && cbs.length){ allCb.checked = cbs.every(function(cb){ return cb.checked; }); }
-}
-
-function saveFotoReplace(){
-    var allCb = document.getElementById('frAllJuri');
-    var cbs = Array.prototype.slice.call(document.querySelectorAll('.fr-juri-cb'));
-    var ids = cbs.filter(function(cb){ return cb.checked; }).map(function(cb){ return Number(cb.value); });
-    var isAll = allCb && allCb.checked && cbs.length > 0 && ids.length === cbs.length;
-
-    var target;
-    if(isAll){ target = 'all'; }
-    else if(ids.length){ target = JSON.stringify(ids); }
-    else { popupError('Pilih Juri', 'Centang minimal satu juri, atau pilih Semua Juri.'); return; }
-
-    var saveBtn = document.getElementById('frSaveBtn');
-    if(saveBtn){ saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...'; }
-
-    var fd = new FormData();
-    fd.append('_token', getCsrf());
-    fd.append('juri_target', target);
-    fd.append('enable', '1');
-    fetch('/api/admin/foto-replace-target', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}, body: fd})
-    .then(r => r.json())
-    .then(d => {
-        if(!d.success) throw new Error(d.message || 'Gagal');
-        _frTarget  = (d.juri_target === 'all') ? 'all' : (d.juri_target||[]).map(Number);
-        _frAllowed = !!d.replace_allowed;
-        updateFotoReplaceToggleUI(_frAllowed);
-        closeModal('modalFotoReplace');
-        popupSuccess('Izin Diaktifkan', d.message);
-    })
-    .catch(e => popupError('Gagal', e.message || 'Gagal menyimpan.'))
-    .finally(() => { var b=document.getElementById('frSaveBtn'); if(b){ b.disabled=false; b.innerHTML='<i class="fas fa-lock-open"></i> Simpan & Izinkan'; } });
-}
-
-function frTargetLabel(){
-    if(_frTarget === 'all') return 'Semua Juri';
-    if(!_frTarget || !_frTarget.length) return '—';
-    var names = _frJuris.filter(function(j){ return _frTarget.indexOf(Number(j.id)) !== -1; }).map(function(j){ return j.name; });
-    return names.length ? names.join(', ') : (_frTarget.length + ' juri');
-}
-
-function updateFotoReplaceToggleUI(allowed){
+function updateFotoReplaceToggleUI(unlocked){
     var btn = document.getElementById('btnToggleFotoReplace');
     var txt = document.getElementById('fotoReplaceStatusText');
-    var targetLabel = frTargetLabel();
     if(!btn) return;
     btn.disabled = false;
-    if(allowed){
+    if(unlocked){
         btn.innerHTML = '<i class="fas fa-lock"></i> KUNCI';
         btn.style.background = 'var(--danger)'; btn.style.boxShadow = '0 3px 10px rgba(239,68,68,.2)';
-        if(txt) txt.innerHTML = '<i class="fas fa-circle-check" style="color:var(--success);"></i> Ganti foto <b style="color:var(--success);">DIIZINKAN</b> untuk <b>'+esc(targetLabel)+'</b>. Juri terkait bisa upload/ganti foto ikan yang sudah disetujui (batas 3MB/tank). Tombol <b>Minta Upload Ulang</b> per-tank tetap berfungsi.';
+        if(txt) txt.innerHTML = '<i class="fas fa-lock-open" style="color:var(--success);"></i> Halaman Foto Ikan juri <b style="color:var(--success);">TERBUKA</b>. Juri bisa mengupload foto ikan yang sudah disetujui (batas 3MB/tank). Tombol <b>Minta Upload Ulang</b> per-tank tetap berfungsi.';
     } else {
         btn.innerHTML = '<i class="fas fa-lock-open"></i> IZINKAN';
         btn.style.background = 'var(--success)'; btn.style.boxShadow = '0 3px 10px rgba(34,197,94,.2)';
-        if(txt) txt.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--danger);"></i> Ganti foto <b style="color:var(--danger);">DIKUNCI</b>. Juri hanya bisa upload 1x per tank, kecuali diminta upload ulang per-tank oleh admin.';
+        if(txt) txt.innerHTML = '<i class="fas fa-lock" style="color:var(--danger);"></i> Halaman Foto Ikan juri <b style="color:var(--danger);">TERKUNCI</b>. Panel foto di dashboard juri tertutup (overlay), juri tidak bisa upload.';
     }
 }
 
@@ -4554,21 +4474,25 @@ function renderGaleriFoto(filter){
     items.forEach(function(it){
         var mb = (it.total_size/1048576).toFixed(2);
         var baseName = galeriSafeName(it.nama_peserta || 'peserta') + '_Tank' + (it.nomor_tank || '0') + '_' + galeriSafeName(it.kategori || 'kat') + (it.kelas ? ('_' + galeriSafeName(it.kelas)) : '');
+        // ★ #5 nama pengupload (distinct) untuk header
+        var uploaders = [];
+        it.fotos.forEach(function(f){ if(f.uploader && uploaders.indexOf(f.uploader) === -1) uploaders.push(f.uploader); });
+        var uploaderHdr = uploaders.length ? ' <span style="color:var(--cyan-300);font-weight:700;">· <i class="fas fa-camera" style="font-size:9px;margin:0 2px 0 1px;"></i>' + uploaders.map(esc).join(', ') + '</span>' : '';
         html += '<div data-ikan="' + it.ikan_id + '" style="border:1px solid var(--bd-1);border-radius:14px;overflow:hidden;background:var(--glass-2);">'
             + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--bd-1);flex-wrap:wrap;">'
-            +   '<div style="font-size:12.5px;font-weight:800;color:var(--text-hi);"><i class="fas fa-hashtag" style="color:var(--cyan-400);margin-right:4px;"></i>Tank ' + (it.nomor_tank || '—') + ' <span style="font-weight:600;color:var(--text-mid);font-size:11px;">· ' + (it.kategori || '-') + (it.kelas ? (' / ' + it.kelas) : '') + ' · ' + (it.nama_peserta || '-') + '</span></div>'
+            +   '<div style="font-size:12.5px;font-weight:800;color:var(--text-hi);"><i class="fas fa-hashtag" style="color:var(--cyan-400);margin-right:4px;"></i>Tank ' + (it.nomor_tank || '—') + ' <span style="font-weight:600;color:var(--text-mid);font-size:11px;">· ' + (it.kategori || '-') + (it.kelas ? (' / ' + it.kelas) : '') + ' · ' + (it.nama_peserta || '-') + '</span>' + uploaderHdr + '</div>'
             +   '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
             +     '<div style="font-size:10.5px;font-weight:700;color:var(--text-mid);white-space:nowrap;"><i class="fas fa-images" style="margin-right:4px;"></i>' + it.foto_count + ' foto · ' + mb + ' MB</div>'
             +     galeriReupBtn(it)
-            +     '<button onclick="galeriDownloadTank(' + it.ikan_id + ')" title="Unduh semua foto, atau centang beberapa lalu klik ini untuk unduh terpilih" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.12);color:var(--cyan-300);font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fas fa-download"></i> Unduh Semua</button>'
-            +     '<button onclick="admGaleriUpload(' + it.ikan_id + ')" title="Upload foto tank ini (sebagai admin)" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.14);color:#c4b5fd;font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fas fa-cloud-arrow-up"></i> Upload</button>'
+            +     '<button id="dlbtn-' + it.ikan_id + '" class="gal-anim-btn" onclick="galeriDownloadTank(' + it.ikan_id + ')" title="Unduh semua foto, atau centang beberapa lalu klik untuk unduh terpilih" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.12);color:var(--cyan-300);font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fas fa-download"></i> <span class="dl-label">Unduh Semua</span></button>'
+            +     '<button class="gal-anim-btn" onclick="admGaleriUpload(' + it.ikan_id + ')" title="Upload foto tank ini (file atau kamera)" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.14);color:#c4b5fd;font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fas fa-cloud-arrow-up"></i> Upload</button>'
             +   '</div>'
             + '</div>'
             + '<div style="padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;">';
         it.fotos.forEach(function(f, fi){
             var fname = baseName + (it.fotos.length > 1 ? ('_' + (fi+1)) : '');
             html += '<div style="position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--bd-2);">'
-                + '<input type="checkbox" class="gal-cb" data-url="' + f.url + '" data-fname="' + fname + '" title="Pilih foto ini" style="position:absolute;left:6px;top:6px;width:18px;height:18px;accent-color:var(--cyan-500);cursor:pointer;z-index:3;">'
+                + '<input type="checkbox" class="gal-cb" data-url="' + f.url + '" data-fname="' + fname + '" onchange="galeriUpdateDownloadBtn(' + it.ikan_id + ')" title="Pilih foto ini" style="position:absolute;left:6px;top:6px;width:18px;height:18px;accent-color:var(--cyan-500);cursor:pointer;z-index:3;">'
                 + '<button onclick="galeriDeleteFoto(' + f.id + ')" title="Hapus foto ini" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border:none;border-radius:7px;background:rgba(239,68,68,.92);color:#fff;cursor:pointer;font-size:11px;display:grid;place-items:center;z-index:3;"><i class="fas fa-trash-can"></i></button>'
                 + '<img src="' + f.url + '" title="Klik untuk perbesar" onclick="window.open(this.src,\'_blank\')" style="width:100%;height:112px;object-fit:cover;display:block;cursor:zoom-in;">'
                 + '<div style="position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 7px;background:linear-gradient(0deg,rgba(2,6,14,.9),rgba(2,6,14,.35) 70%,transparent);">'
@@ -4584,6 +4508,16 @@ function renderGaleriFoto(filter){
     });
     html += '</div>';
     wrap.innerHTML = html;
+}
+
+// ★ #2: perbarui label tombol unduh sesuai jumlah checkbox tercentang
+function galeriUpdateDownloadBtn(ikanId){
+    var tankEl = document.querySelector('[data-ikan="' + ikanId + '"]');
+    if(!tankEl) return;
+    var cbs = Array.prototype.slice.call(tankEl.querySelectorAll('.gal-cb'));
+    var n = cbs.filter(function(cb){ return cb.checked; }).length;
+    var lbl = document.querySelector('#dlbtn-' + ikanId + ' .dl-label');
+    if(lbl) lbl.textContent = n > 0 ? ('Unduh Terpilih (' + n + ')') : 'Unduh Semua';
 }
 
 function galeriDownloadFoto(url, filename){
@@ -4621,30 +4555,102 @@ function galeriDownloadTank(ikanId){
     })();
 }
 
-// ★ Admin upload foto untuk 1 tank (mirror resize juri: maxDim 1280, jpeg 0.82)
+// ★ Admin upload foto (modal: pilih file ATAU kamera) — mirip panel juri
+var _admUp = {ikanId:null, blob:null, stream:null};
+
 function admGaleriUpload(ikanId){
-    var inp = document.createElement('input');
-    inp.type = 'file';
-    inp.accept = 'image/jpeg,image/jpg,image/png';
-    inp.onchange = function(){
-        var file = inp.files && inp.files[0];
-        if(!file) return;
-        admResizeFoto(file, function(resized){
-            var fd = new FormData();
-            fd.append('_token', getCsrf());
-            fd.append('ikan_id', ikanId);
-            fd.append('foto', resized);
-            fetch('/api/admin/upload-foto', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}, body: fd})
-            .then(r => r.json())
-            .then(d => {
-                if(!d.success) throw new Error(d.message || 'Gagal');
-                popupSuccess('Foto Terunggah', d.message);
-                loadGaleriFoto();
-            })
-            .catch(e => popupError('Gagal', e.message || 'Gagal mengunggah foto.'));
-        });
-    };
-    inp.click();
+    _admUp = {ikanId:ikanId, blob:null, stream:null};
+    var it = null;
+    for(var i=0;i<_galeriItems.length;i++){ if(_galeriItems[i].ikan_id === ikanId){ it = _galeriItems[i]; break; } }
+    var sub = document.getElementById('admUpSub');
+    if(sub) sub.textContent = it ? ('· Tank ' + (it.nomor_tank||'-')) : '';
+    admResetUploadUI();
+    openModal('modalAdmUpload');
+}
+
+function admResetUploadUI(){
+    admStopCamera();
+    _admUp.blob = null;
+    var p=document.getElementById('admUpPreview'); if(p){ p.style.display='none'; p.src=''; }
+    var ph=document.getElementById('admUpPlaceholder'); if(ph) ph.style.display='block';
+    var sb=document.getElementById('admUpSaveBtn'); if(sb) sb.style.display='none';
+    var act=document.getElementById('admUpActions'); if(act) act.style.display='flex';
+}
+
+function admCloseUpload(){ admStopCamera(); closeModal('modalAdmUpload'); }
+
+function admOnFilePicked(inp){
+    var file = inp.files && inp.files[0];
+    inp.value = '';
+    if(!file) return;
+    admResizeFoto(file, function(resized){ admSetPreviewBlob(resized); });
+}
+
+function admSetPreviewBlob(blob){
+    _admUp.blob = blob;
+    var url = URL.createObjectURL(blob);
+    var p = document.getElementById('admUpPreview');
+    if(p){ p.src = url; p.style.display='block'; }
+    var ph=document.getElementById('admUpPlaceholder'); if(ph) ph.style.display='none';
+    var v=document.getElementById('admUpVideo'); if(v) v.style.display='none';
+    var camAct=document.getElementById('admUpCamActions'); if(camAct) camAct.style.display='none';
+    var act=document.getElementById('admUpActions'); if(act) act.style.display='flex';
+    var sb=document.getElementById('admUpSaveBtn'); if(sb) sb.style.display='inline-flex';
+}
+
+function admStartCamera(){
+    var v = document.getElementById('admUpVideo');
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ document.getElementById('admUpFile').click(); return; }
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false})
+    .then(function(stream){
+        _admUp.stream = stream;
+        if(v){ v.srcObject = stream; v.style.display='block'; }
+        var ph=document.getElementById('admUpPlaceholder'); if(ph) ph.style.display='none';
+        var p=document.getElementById('admUpPreview'); if(p) p.style.display='none';
+        var act=document.getElementById('admUpActions'); if(act) act.style.display='none';
+        var camAct=document.getElementById('admUpCamActions'); if(camAct) camAct.style.display='flex';
+        var sb=document.getElementById('admUpSaveBtn'); if(sb) sb.style.display='none';
+    })
+    .catch(function(){ popupError('Kamera', 'Tidak bisa mengakses kamera. Gunakan Pilih File.'); document.getElementById('admUpFile').click(); });
+}
+
+function admCapture(){
+    var v = document.getElementById('admUpVideo');
+    if(!v || !v.videoWidth){ return; }
+    var c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+    c.toBlob(function(b){
+        admStopCamera();
+        if(!b){ return; }
+        var f = new File([b], 'kamera_'+Date.now()+'.jpg', {type:'image/jpeg'});
+        admResizeFoto(f, function(resized){ admSetPreviewBlob(resized); });
+    }, 'image/jpeg', 0.85);
+}
+
+function admStopCamera(){
+    if(_admUp.stream){ _admUp.stream.getTracks().forEach(function(t){ t.stop(); }); _admUp.stream=null; }
+    var v=document.getElementById('admUpVideo'); if(v){ v.srcObject=null; v.style.display='none'; }
+    var camAct=document.getElementById('admUpCamActions'); if(camAct) camAct.style.display='none';
+}
+
+function admDoUpload(){
+    if(!_admUp.blob || !_admUp.ikanId){ popupError('Belum ada foto', 'Pilih file atau ambil foto dulu.'); return; }
+    var sb = document.getElementById('admUpSaveBtn');
+    if(sb){ sb.disabled=true; sb.innerHTML='<i class="fas fa-spinner fa-spin"></i> Mengunggah...'; }
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('ikan_id', _admUp.ikanId);
+    fd.append('foto', _admUp.blob, 'admin_'+Date.now()+'.jpg');
+    fetch('/api/admin/upload-foto', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}, body: fd})
+    .then(r => r.json())
+    .then(d => {
+        if(!d.success) throw new Error(d.message || 'Gagal');
+        popupSuccess('Foto Terunggah', d.message);
+        admCloseUpload();
+        loadGaleriFoto();
+    })
+    .catch(e => popupError('Gagal', e.message || 'Gagal mengunggah foto.'))
+    .finally(() => { var b=document.getElementById('admUpSaveBtn'); if(b){ b.disabled=false; b.innerHTML='<i class="fas fa-cloud-arrow-up"></i> Simpan Foto'; } });
 }
 
 function admResizeFoto(file, cb){
@@ -4669,13 +4675,23 @@ function admResizeFoto(file, cb){
     }catch(e){ cb(file); }
 }
 
+// ★ #4 animasi "pop" saat tombol galeri diklik (delegated, jalan utk elemen dinamis)
+document.addEventListener('click', function(e){
+    var b = e.target && e.target.closest ? e.target.closest('.gal-anim-btn') : null;
+    if(!b) return;
+    b.classList.remove('gal-pop');
+    void b.offsetWidth; // reflow → restart animasi
+    b.classList.add('gal-pop');
+    setTimeout(function(){ b.classList.remove('gal-pop'); }, 420);
+});
+
 // ★ Tombol per-ikan: minta / batalkan upload ulang foto tank tertentu
 function galeriReupBtn(it){
     if(!it.foto_count) return ''; // belum ada foto → juri memang sudah boleh upload
     if(it.reupload_requested){
-        return '<button onclick="galeriRequestReupload('+it.ikan_id+',0)" title="Batalkan permintaan upload ulang" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.14);color:var(--gold-300);font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fas fa-rotate"></i> Batalkan Upload Ulang</button>';
+        return '<button class="gal-anim-btn" onclick="galeriRequestReupload('+it.ikan_id+',0)" title="Batalkan permintaan upload ulang" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.14);color:var(--gold-300);font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fas fa-rotate"></i> Batalkan Upload Ulang</button>';
     }
-    return '<button onclick="galeriRequestReupload('+it.ikan_id+',1)" title="Minta juri upload ulang foto tank ini" style="padding:5px 10px;border-radius:8px;border:1px solid var(--bd-2);background:var(--glass-2);color:var(--text-mid);font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fas fa-rotate"></i> Minta Upload Ulang</button>';
+    return '<button class="gal-anim-btn" onclick="galeriRequestReupload('+it.ikan_id+',1)" title="Minta juri upload ulang foto tank ini" style="padding:5px 10px;border-radius:8px;border:1px solid var(--bd-2);background:var(--glass-2);color:var(--text-mid);font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fas fa-rotate"></i> Minta Upload Ulang</button>';
 }
 
 function galeriRequestReupload(ikanId, want){
