@@ -47,7 +47,9 @@ Route::middleware('auth')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/api/juri/data', [JuriController::class, 'getJuriData']);
     Route::post('/api/juri/simpan-nilai', [JuriController::class, 'simpanNilai']);
+    Route::post('/api/juri/update-nilai', [JuriController::class, 'updateNilai']);       // REVISI
     Route::post('/api/juri/kirim-ke-grand', [JuriController::class, 'kirimKeGrandJuri']);
+    Route::get('/api/juri/point-ranking', [JuriController::class, 'getPointRanking']);   // RANKING ANONIM
     Route::get('/api/juri/nominasi-status', [JuriController::class, 'getNominasiStatus']);
     Route::get('/api/juri/tanks-nominasi', [JuriController::class, 'getTanksForNominasi']);
     Route::post('/api/juri/submit-nominasi', [JuriController::class, 'submitNominasi']);

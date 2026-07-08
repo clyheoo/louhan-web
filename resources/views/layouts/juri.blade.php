@@ -105,6 +105,337 @@
     /* ── APP SHELL ── */
     .app-shell { position: relative; z-index: 10; min-height: 100vh; display: flex; flex-direction: column; }
 
+        /* ===== JURI ADMIN-LIKE SHELL ===== */
+    .juri-shell{
+        position:relative;
+        z-index:10;
+        display:grid;
+        grid-template-columns:240px minmax(0,1fr);
+        min-height:100vh;
+    }
+
+    .sidebar{
+        background:rgba(11,18,32,.85);
+        backdrop-filter:blur(14px);
+        -webkit-backdrop-filter:blur(14px);
+        border-right:1px solid var(--bd-1);
+        display:flex;
+        flex-direction:column;
+        position:sticky;
+        top:0;
+        height:100vh;
+        z-index:90;
+    }
+
+    .sidebar-brand{
+        padding:18px 18px 16px;
+        border-bottom:1px solid var(--bd-1);
+        display:flex;
+        align-items:center;
+        gap:12px;
+    }
+
+    .sb-mark{
+        width:40px;
+        height:40px;
+        border-radius:12px;
+        display:grid;
+        place-items:center;
+        flex-shrink:0;
+        background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));
+        box-shadow:0 6px 18px -6px rgba(6,182,212,.55), inset 0 1px 0 rgba(255,255,255,.25);
+        color:#fff;
+        font-size:16px;
+    }
+
+    .sb-brand-text h1{
+        font-size:14px;
+        font-weight:800;
+        color:var(--text-hi);
+        letter-spacing:-.01em;
+        line-height:1.1;
+    }
+
+    .sb-brand-text p{
+        font-size:9.5px;
+        color:var(--cyan-300);
+        letter-spacing:.12em;
+        text-transform:uppercase;
+        font-weight:700;
+        margin-top:2px;
+    }
+
+    .sidebar-nav{
+        flex:1;
+        overflow-y:auto;
+        padding:14px 12px;
+        display:flex;
+        flex-direction:column;
+        gap:4px;
+    }
+
+    .sidebar-nav::-webkit-scrollbar{ width:4px; }
+    .sidebar-nav::-webkit-scrollbar-thumb{ background:var(--glass-strong); border-radius:10px; }
+
+    .sb-section-label{
+        font-size:9.5px;
+        font-weight:800;
+        color:var(--text-faint);
+        letter-spacing:.18em;
+        text-transform:uppercase;
+        padding:8px 12px 4px;
+    }
+
+    .sidebar-item{
+        display:flex;
+        align-items:center;
+        gap:11px;
+        padding:10px 12px;
+        border-radius:11px;
+        color:var(--text-mid);
+        font-size:13px;
+        font-weight:600;
+        cursor:pointer;
+        transition:all .2s;
+        text-decoration:none;
+        border:1px solid transparent;
+    }
+
+    .sidebar-item i{
+        width:18px;
+        text-align:center;
+        font-size:13px;
+        color:var(--text-low);
+        transition:color .2s;
+    }
+
+    .sidebar-item:hover{
+        background:var(--glass-2);
+        color:var(--text-hi);
+    }
+
+    .sidebar-item:hover i{ color:var(--cyan-400); }
+
+    .sidebar-item.active{
+        background:linear-gradient(135deg,rgba(34,211,238,.18),rgba(37,99,235,.12));
+        color:var(--text-hi);
+        border-color:var(--bd-cyan);
+        box-shadow:0 4px 16px -6px rgba(6,182,212,.35), inset 0 1px 0 rgba(255,255,255,.05);
+    }
+
+    .sidebar-item.active i{ color:var(--cyan-300); }
+
+    .sidebar-foot{
+        padding:14px 14px 18px;
+        border-top:1px solid var(--bd-1);
+    }
+
+    .sb-user{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        padding:8px;
+        border:1px solid var(--bd-2);
+        border-radius:12px;
+        background:var(--glass-2);
+        margin-bottom:10px;
+    }
+
+    .sb-user .avatar{
+        width:34px;
+        height:34px;
+        border-radius:10px;
+        display:grid;
+        place-items:center;
+        background:linear-gradient(135deg,var(--gold-500),#B45309);
+        color:#fff;
+        font-weight:800;
+        font-size:13px;
+        flex-shrink:0;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.3);
+    }
+
+    .sb-user .info{
+        flex:1;
+        min-width:0;
+        line-height:1.1;
+    }
+
+    .sb-user .info b{
+        font-size:12px;
+        color:var(--text-hi);
+        display:block;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+    }
+
+    .sb-user .info span{
+        font-size:9.5px;
+        color:var(--cyan-300);
+        letter-spacing:.05em;
+        text-transform:uppercase;
+        font-weight:700;
+    }
+
+    .sidebar-foot .btn-logout{
+        width:100%;
+        justify-content:center;
+    }
+
+    .sb-overlay{
+        position:fixed;
+        inset:0;
+        background:rgba(2,6,14,.7);
+        backdrop-filter:blur(4px);
+        -webkit-backdrop-filter:blur(4px);
+        z-index:80;
+        opacity:0;
+        pointer-events:none;
+        transition:opacity .25s;
+    }
+
+    body.sidebar-open .sb-overlay{
+        opacity:1;
+        pointer-events:all;
+    }
+
+    .main-area{
+        display:flex;
+        flex-direction:column;
+        min-width:0;
+    }
+
+    .topbar{
+        position:sticky;
+        top:0;
+        z-index:50;
+        background:rgba(11,18,32,.78);
+        backdrop-filter:blur(14px);
+        -webkit-backdrop-filter:blur(14px);
+        border-bottom:1px solid var(--bd-1);
+        padding:14px 24px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:14px;
+        flex-wrap:wrap;
+    }
+
+    .topbar-left{
+        display:flex;
+        align-items:center;
+        gap:14px;
+        min-width:0;
+        flex:1;
+    }
+
+    .menu-toggle{
+        display:none;
+        width:38px;
+        height:38px;
+        border-radius:10px;
+        background:var(--glass-2);
+        border:1px solid var(--bd-2);
+        color:var(--text-hi);
+        cursor:pointer;
+        font-size:14px;
+    }
+
+    .page-title-wrap h2{
+        font-size:18px;
+        font-weight:800;
+        color:var(--text-hi);
+        letter-spacing:-.01em;
+        line-height:1.1;
+        display:flex;
+        align-items:center;
+        gap:9px;
+    }
+
+    .page-title-wrap h2 i{
+        color:var(--cyan-400);
+        font-size:15px;
+    }
+
+    .page-title-wrap p{
+        font-size:11px;
+        color:var(--text-mid);
+        margin-top:3px;
+    }
+
+    .topbar-right{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        flex-shrink:0;
+    }
+
+    .tb-pill{
+        display:inline-flex;
+        align-items:center;
+        gap:7px;
+        padding:7px 13px;
+        border:1px solid var(--bd-2);
+        border-radius:999px;
+        background:var(--glass-2);
+        font-size:11px;
+        font-weight:700;
+        color:var(--text);
+    }
+
+    .tb-pill .live-dot{
+        width:7px;
+        height:7px;
+        border-radius:50%;
+        background:var(--success);
+        box-shadow:0 0 8px var(--success);
+        animation:livePulse 2.4s ease-in-out infinite;
+    }
+
+    .content-wrap{
+        padding:24px;
+        max-width:1500px;
+        margin:0 auto;
+        width:100%;
+    }
+
+    @media (max-width:900px){
+        .juri-shell{ grid-template-columns:1fr; }
+
+        .sidebar{
+            position:fixed;
+            top:0;
+            left:0;
+            width:260px;
+            height:100vh;
+            transform:translateX(-100%);
+            transition:transform .3s cubic-bezier(.16,1,.3,1);
+            box-shadow:0 0 40px rgba(0,0,0,.5);
+        }
+
+        body.sidebar-open .sidebar{ transform:translateX(0); }
+
+        .menu-toggle{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+
+        .topbar{ padding:12px 16px; }
+        .content-wrap{ padding:16px; }
+    }
+
+    @media (max-width:640px){
+        .topbar-right{
+            width:100%;
+            justify-content:space-between;
+        }
+
+        .page-title-wrap h2{ font-size:15px; }
+        .page-title-wrap p{ font-size:10px; }
+    }
+
     /* ── TOP NAV ── */
     .top-nav {
         display: flex; align-items: center; justify-content: space-between;
@@ -561,37 +892,99 @@
     <div class="ocean-bg" aria-hidden="true"></div>
     <div class="bubbles" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
 
-    <div class="app-shell">
-        <nav class="top-nav">
-            <div class="brand">
-                <div class="brand-mark" aria-hidden="true"><i class="fas fa-gavel"></i></div>
-                <div class="brand-text">
-                    <h1>LCI <em>Suite</em></h1>
-                    <p>Panel Penjurian</p>
+    <div class="juri-shell">
+
+        {{-- SIDEBAR JURI — sama konsep seperti sidebar admin --}}
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="sb-mark"><i class="fas fa-gavel"></i></div>
+                <div class="sb-brand-text">
+                    <h1>LCI Juri</h1>
+                    <p>Judge Panel</p>
                 </div>
             </div>
-            <div class="nav-center">
-                <div class="nav-pill"><span class="live-dot"></span>Sesi Aktif</div>
-                <div class="nav-pill" style="color:var(--cyan-300);"><i class="fas fa-water" style="font-size:10px;"></i>Online</div>
-            </div>
-            <div class="nav-user">
-                <div class="user-card">
+
+            <nav class="sidebar-nav">
+                <div class="sb-section-label">Utama</div>
+
+                <a href="#" class="sidebar-item active" id="nav-btn-nominasi" data-juri-view="nominasi">
+                    <i class="fas fa-award"></i>
+                    <span>Nominasi</span>
+                </a>
+
+                <a href="#" class="sidebar-item" id="nav-btn-penjurian" data-juri-view="penjurian">
+                    <i class="fas fa-pen-ruler"></i>
+                    <span>Penjurian</span>
+                </a>
+
+                <a href="#" class="sidebar-item" id="nav-btn-foto" data-juri-view="foto">
+                    <i class="fas fa-camera-retro"></i>
+                    <span>Foto Ikan</span>
+                </a>
+
+                <div class="sb-section-label" style="margin-top:8px;">Evaluasi</div>
+
+                <a href="#" class="sidebar-item" id="nav-btn-revisi" data-juri-view="revisi">
+                    <i class="fas fa-pen-to-square"></i>
+                    <span>Revisi &amp; Ranking</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-foot">
+                <div class="sb-user">
                     <div class="avatar">{{ strtoupper(mb_substr(trim(Auth::user()->name), 0, 1)) }}</div>
-                    <div class="user-info">
-                        <h4>{{ Auth::user()->name }}</h4>
+                    <div class="info">
+                        <b>{{ Auth::user()->name }}</b>
                         <span>Juri Aktif</span>
                     </div>
                 </div>
+
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button type="submit" class="btn-logout"><i class="fas fa-right-from-bracket"></i> Keluar</button>
+                    <button type="submit" class="btn-logout">
+                        <i class="fas fa-right-from-bracket"></i>
+                        Keluar
+                    </button>
                 </form>
             </div>
-        </nav>
+        </aside>
 
-        <main class="max-w-7xl mx-auto px-3 md:px-4 py-4 md:py-6 w-full">
-            @yield('content')
-        </main>
+        <div class="sb-overlay" id="sidebarOverlay"></div>
+
+        {{-- MAIN AREA --}}
+        <div class="main-area">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle" id="menuToggle" type="button">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
+                    <div class="page-title-wrap">
+                        <h2 id="juriPageTitle"><i class="fas fa-award"></i> Nominasi</h2>
+                        <p id="juriPageSubtitle">Pilih tank untuk diajukan ke Grand Juri</p>
+                    </div>
+                </div>
+
+                <div class="topbar-right">
+                    <div class="tb-pill">
+                        <span class="live-dot"></span>
+                        <span>Sesi Aktif</span>
+                    </div>
+
+                    <div class="user-card">
+                        <div class="avatar">{{ strtoupper(mb_substr(trim(Auth::user()->name), 0, 1)) }}</div>
+                        <div class="user-info">
+                            <h4>{{ Auth::user()->name }}</h4>
+                            <span>Juri Aktif</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="content-wrap">
+                @yield('content')
+            </main>
+        </div>
     </div>
 
     <!-- Warning Modal -->
@@ -702,6 +1095,68 @@ async function apiFetch(url, opts = {}) {
 if (typeof window.onFilterChange !== 'function') {
     window.onFilterChange = function() {};
 }
+
+function setJuriTopbar(view) {
+    const map = {
+        nominasi: {
+            icon: 'fa-award',
+            title: 'Nominasi',
+            sub: 'Pilih tank untuk diajukan ke Grand Juri'
+        },
+        penjurian: {
+            icon: 'fa-pen-ruler',
+            title: 'Penjurian',
+            sub: 'Input nilai tank sesuai kategori dan kelas'
+        },
+        foto: {
+            icon: 'fa-camera-retro',
+            title: 'Foto Ikan',
+            sub: 'Kelola foto tank yang sudah disetujui'
+        },
+        revisi: {
+            icon: 'fa-pen-to-square',
+            title: 'Revisi & Ranking',
+            sub: 'Edit nilai tersimpan dan lihat ranking anonim'
+        }
+    };
+
+    const item = map[view] || map.nominasi;
+    const title = document.getElementById('juriPageTitle');
+    const sub = document.getElementById('juriPageSubtitle');
+
+    if (title) title.innerHTML = '<i class="fas ' + item.icon + '"></i> ' + item.title;
+    if (sub) sub.textContent = item.sub;
+}
+
+window.setJuriTopbar = setJuriTopbar;
+
+document.addEventListener('DOMContentLoaded', function () {
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    if (menuToggle) {
+        menuToggle.addEventListener('click', function () {
+            document.body.classList.toggle('sidebar-open');
+        });
+    }
+
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', function () {
+            document.body.classList.remove('sidebar-open');
+        });
+    }
+
+    document.querySelectorAll('.sidebar-item[data-juri-view]').forEach(function (item) {
+        item.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            const view = this.dataset.juriView;
+            if (typeof window.switchJuriView === 'function') {
+                window.switchJuriView(view);
+            }
+        });
+    });
+});
 </script>
 
 @stack('scripts')

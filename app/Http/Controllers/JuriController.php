@@ -328,6 +328,131 @@ class JuriController extends Controller
         return response()->json(['success' => true, 'message' => 'Nilai berhasil disimpan!']);
     }
 
+    /* ═══════════════════════════════════════════
+       REVISI — JURI EDIT NILAI YANG SUDAH TERSIMPAN/TERKIRIM
+       - Hanya milik juri sendiri.
+       - HARD BLOCK bila ikan sudah DIKUNCI Grand Juri (is_locked=true) → final.
+       - Tetap menghormati gate sesi (scoring_unlocked), sama seperti simpanNilai.
+       ═══════════════════════════════════════════ */
+    public function updateNilai(Request $request)
+    {
+        $scoringUnlocked = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
+        if (!$scoringUnlocked) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sesi penjurian sedang TERKUNCI. Revisi hanya bisa saat sesi dibuka admin.',
+            ], 403);
+        }
+
+        $data       = $request->json()->all();
+        $scoringId  = $data['scoring_id'] ?? null;
+        $allScores  = $data['all_scores'] ?? null;
+        $defectData = $data['defect_data'] ?? null;
+
+        if (!$scoringId || !$allScores) {
+            return response()->json(['success' => false, 'message' => 'Data tidak lengkap.'], 422);
+        }
+
+        $scoring = Scoring::where('id', $scoringId)
+            ->where('juri_id', auth()->id())
+            ->with('ikan')
+            ->first();
+
+        if (!$scoring) {
+            return response()->json(['success' => false, 'message' => 'Data penilaian tidak ditemukan atau bukan milik Anda.'], 404);
+        }
+
+        $ikan = $scoring->ikan;
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Data ikan tidak ditemukan.'], 422);
+        }
+
+        // ★ HARD RULE: sudah dikunci Grand Juri = FINAL, tidak boleh direvisi.
+        if ((bool) $ikan->is_locked) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nilai tank ini sudah DIKUNCI (FINAL) oleh Grand Juri dan tidak dapat direvisi.',
+            ], 423);
+        }
+
+        // ★ GATING PENUGASAN (sama seperti simpanNilai)
+        $myAssignments = \App\Models\JuriAssignment::where('juri_id', auth()->id())->get(['kategori', 'kelas']);
+        $bolehNilai = false;
+        foreach ($myAssignments as $a) {
+            if ($a->kategori !== $ikan->kategori) continue;
+            if ($a->kelas === null || $a->kelas === '' || (string) $a->kelas === (string) $ikan->kelas) {
+                $bolehNilai = true; break;
+            }
+        }
+        if (!$bolehNilai) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak ditugaskan pada kategori/kelas tank ini.',
+            ], 403);
+        }
+
+        if (is_string($allScores)) $allScores = json_decode($allScores, true);
+        if (!is_array($allScores)) {
+            return response()->json(['success' => false, 'message' => 'Format all_scores tidak valid.'], 422);
+        }
+
+        // ★ Paksa 0 untuk komponen terkunci per kategori (keamanan backend)
+        $noMarking = in_array($ikan->kategori, ['Freemarking', 'Goldenbase']);
+        $noPearl   = $ikan->kategori === 'Klasik';
+        if ($noMarking && isset($allScores['marking'])) {
+            foreach ($allScores['marking'] as $k => $v) { if ($k !== 'defect') $allScores['marking'][$k] = 0; }
+        }
+        if ($noPearl && isset($allScores['pearl'])) {
+            foreach ($allScores['pearl'] as $k => $v) { if ($k !== 'defect') $allScores['pearl'][$k] = 0; }
+        }
+
+        $totalNilai = 0;
+        foreach ($allScores as $detailNilai) {
+            if (is_array($detailNilai)) {
+                foreach ($detailNilai as $key => $nilai) {
+                    if ($key === 'defect') continue;
+                    $totalNilai += (int) $nilai;
+                }
+            }
+        }
+
+        $totalPoint = PointCalculator::hitungPoint($ikan->kategori, $allScores, $defectData);
+
+        $scoring->nilai_detail = $allScores;
+        $scoring->total_nilai  = $totalNilai;
+        $scoring->total_point  = $totalPoint;
+
+        if ($defectData) {
+            $evaluated = PointCalculator::evaluateDefects($defectData);
+            $scoring->raw_head_penalty    = $defectData['raw_head_penalty']    ?? ['0'];
+            $scoring->raw_face_penalty    = $defectData['raw_face_penalty']    ?? ['0'];
+            $scoring->raw_body_penalty    = $defectData['raw_body_penalty']    ?? ['0'];
+            $scoring->raw_finnage_penalty = $defectData['raw_finnage_penalty'] ?? ['0'];
+            $scoring->keterangan          = $evaluated['keterangan'] ?? '';
+        }
+
+        $scoring->save();
+
+        // ★ Sync sheets setelah response (pola sama seperti simpanNilai)
+        try {
+            app()->terminating(function () {
+                try {
+                    $sync = app(\App\Services\SheetsSyncService::class);
+                    if (!$sync->isReady()) return;
+                    try { $sync->syncCnt();       } catch (\Throwable $e) { \Log::error('Async-sync CNT (revisi): '       . $e->getMessage()); }
+                    try { $sync->syncHasilJuri(); } catch (\Throwable $e) { \Log::error('Async-sync HasilJuri (revisi): ' . $e->getMessage()); }
+                    try { $sync->syncNilaiJuri(); } catch (\Throwable $e) { \Log::error('Async-sync NilaiJuri (revisi): ' . $e->getMessage()); }
+                } catch (\Throwable $e) {
+                    \Log::error('Async-sync outer (revisi): ' . $e->getMessage());
+                }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Gagal register terminating (revisi): ' . $e->getMessage());
+        }
+
+        return response()->json(['success' => true, 'message' => 'Revisi nilai berhasil disimpan.']);
+    }
+
     public function kirimKeGrandJuri(Request $request)
     {
         $scoringId = $request->json('scoring_id');
@@ -966,5 +1091,28 @@ class JuriController extends Controller
             'success' => true,
             'message' => 'Nominasi Tank ' . $nomorTank . ' berhasil dibatalkan.',
         ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       POINT RANKING (READ-ONLY untuk Juri)
+       Memakai ulang logika Grand Juri agar 100% konsisten,
+       lalu MEMBUANG nama_peserta & detail_anggota (anonim).
+       ═══════════════════════════════════════════ */
+    public function getPointRanking(Request $request)
+    {
+        $resp   = app(\App\Http\Controllers\GrandJuriController::class)->getPointRanking($request);
+        $groups = json_decode($resp->getContent(), true);
+        if (!is_array($groups)) $groups = [];
+
+        foreach ($groups as &$g) {
+            if (!isset($g['data']) || !is_array($g['data'])) continue;
+            foreach ($g['data'] as &$item) {
+                unset($item['nama_peserta'], $item['detail_anggota']);
+            }
+            unset($item);
+        }
+        unset($g);
+
+        return response()->json($groups);
     }
 }

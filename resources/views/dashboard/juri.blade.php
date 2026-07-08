@@ -1,31 +1,7 @@
 @extends('layouts.juri')
 
 @section('content')
-<div class="flex flex-col lg:flex-row gap-4 md:gap-6">
-
-    {{-- ════════════════════════════════════════════════════════════
-         SIDEBAR NAVIGASI JURI — Mengambang dengan Sticky
-         ════════════════════════════════════════════════════════════ --}}
-    <div class="lg:w-56 flex-shrink-0">
-        <div class="juri-sidebar-card lg:sticky lg:top-24 p-3 space-y-2">
-            <div class="px-3 py-2 mb-2" style="border-bottom:1px solid var(--bd-1);">
-                <h3 class="text-xs font-black uppercase tracking-widest" style="color:var(--text-low);">Menu Juri</h3>
-            </div>
-            <button onclick="switchJuriView('nominasi')" id="nav-btn-nominasi" class="sidebar-nav-btn active">
-                <i class="fas fa-award w-5 text-center"></i> Nominasi
-            </button>
-            <button onclick="switchJuriView('penjurian')" id="nav-btn-penjurian" class="sidebar-nav-btn">
-                <i class="fas fa-pen-ruler w-5 text-center"></i> Penjurian
-            </button>
-            <div style="height:1px;background:var(--bd-1);margin:6px 4px;"></div>
-            <button type="button" onclick="switchJuriView('foto')" id="nav-btn-foto" class="sidebar-nav-btn">
-                <i class="fas fa-camera-retro w-5 text-center"></i> Foto Ikan
-            </button>
-        </div>
-    </div>
-
-    {{-- MAIN CONTENT AREA --}}
-    <div class="flex-1 min-w-0 relative" style="min-height:70vh;">
+<div class="relative" style="min-height:70vh;">
 
     {{-- ════════════════════════════════════════════════════════════
          LAYER 0: LOADING
@@ -353,6 +329,84 @@
         </div>
     </div>
 
+    {{-- ════════════════════════════════════════════════════════════
+         LAYER 6: HALAMAN REVISI & RANKING (juri)
+         ════════════════════════════════════════════════════════════ --}}
+    <div id="revisi-page" class="hidden relative" style="min-height:60vh;">
+
+        <div class="revisi-hero">
+            <div class="revisi-hero-left">
+                <div class="revisi-hero-icon">
+                    <i class="fas fa-pen-to-square"></i>
+                </div>
+                <div>
+                    <h2>Revisi &amp; Ranking</h2>
+                    <p>Edit nilai yang sudah tersimpan/terkirim dan lihat ranking anonim tanpa nama peserta.</p>
+                </div>
+            </div>
+
+            <button type="button" onclick="loadRevisiView()" class="revisi-refresh-btn">
+                <i class="fas fa-sync-alt"></i>
+                Refresh
+            </button>
+        </div>
+
+        <div class="revisi-subtabs">
+            <button id="revisi-tab-edit-btn" onclick="revisiSwitchTab('edit')" class="revisi-subtab-btn active">
+                <i class="fas fa-list-check"></i>
+                Edit Nilai
+            </button>
+            <button id="revisi-tab-ranking-btn" onclick="revisiSwitchTab('ranking')" class="revisi-subtab-btn">
+                <i class="fas fa-trophy"></i>
+                Ranking &amp; Juara
+            </button>
+        </div>
+
+        <div id="revisi-subtab-edit">
+            <div class="revisi-info-card">
+                <i class="fas fa-circle-info"></i>
+                <span>Nilai yang belum dikunci Grand Juri masih bisa direvisi. Jika sudah final, tombol edit otomatis terkunci.</span>
+            </div>
+
+            <div id="revisi-list" class="revisi-list-wrap"></div>
+        </div>
+
+        <div id="revisi-subtab-ranking" class="hidden">
+            <div class="revisi-filter-card">
+                <div>
+                    <h3><i class="fas fa-filter"></i> Filter Ranking</h3>
+                    <p>Ranking ditampilkan anonim, hanya berdasarkan tank dan point.</p>
+                </div>
+
+                <div class="revisi-filter-actions">
+                    <div class="revisi-scope-wrap">
+                        <button id="revisi-scope-per_kategori_kelas" onclick="setRevisiRankScope('per_kategori_kelas')" class="revisi-scope-btn active">
+                            <i class="fas fa-layer-group"></i>
+                            Per Kat + Kelas
+                        </button>
+                        <button id="revisi-scope-per_kategori" onclick="setRevisiRankScope('per_kategori')" class="revisi-scope-btn">
+                            <i class="fas fa-tags"></i>
+                            Per Kategori
+                        </button>
+                        <button id="revisi-scope-global" onclick="setRevisiRankScope('global')" class="revisi-scope-btn">
+                            <i class="fas fa-globe"></i>
+                            Global
+                        </button>
+                    </div>
+
+                    <div class="revisi-select-wrap">
+                        <select id="revisi-rank-kategori" onchange="loadRevisiRanking()" class="revisi-rank-select"></select>
+                        <span id="revisi-rank-kelas-wrap">
+                            <select id="revisi-rank-kelas" onchange="loadRevisiRanking()" class="revisi-rank-select"></select>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="revisi-ranking-content" class="revisi-ranking-wrap"></div>
+        </div>
+    </div>
+
 </div>
 @endsection
 
@@ -431,6 +485,27 @@
     </div>
 </div>
 
+{{-- MODAL EDIT REVISI --}}
+<div id="revisi-edit-modal" class="hidden fixed inset-0 z-[250] flex items-center justify-center p-4" style="background:rgba(2,6,14,0.88);backdrop-filter:blur(8px);">
+
+{{-- MODAL EDIT REVISI --}}
+<div id="revisi-edit-modal" class="hidden fixed inset-0 z-[250] flex items-center justify-center p-4" style="background:rgba(2,6,14,0.88);backdrop-filter:blur(8px);">
+    <div class="rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col fade-in" style="background:linear-gradient(180deg,var(--ocean-800),var(--ocean-900));border:1px solid var(--bd-2);">
+        <div class="px-5 py-4 flex items-start justify-between gap-3" style="border-bottom:1px solid var(--bd-1);background:rgba(255,255,255,0.03);">
+            <div class="min-w-0">
+                <h3 id="revisi-edit-title" class="text-base font-bold flex items-center gap-2" style="color:var(--text-hi);"><i class="fas fa-pen-to-square" style="color:var(--cyan-400);"></i> Revisi Nilai</h3>
+                <p class="text-[11px] mt-1" style="color:var(--text-mid);">Ubah nilai lalu simpan. Perubahan langsung menggantikan nilai lama.</p>
+            </div>
+            <button onclick="closeRevisiEdit()" class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div id="revisi-form-body" class="px-5 py-4 overflow-y-auto flex-1 custom-scrollbar"></div>
+        <div class="px-5 py-4 flex items-center justify-end gap-3" style="border-top:1px solid var(--bd-1);background:rgba(255,255,255,0.03);">
+            <button onclick="closeRevisiEdit()" class="py-2.5 px-4 rounded-xl font-bold text-xs" style="background:var(--glass-2);border:1px solid var(--bd-2);color:var(--text-mid);">Batal</button>
+            <button id="revisi-submit-btn" onclick="submitRevisi()" class="py-2.5 px-5 rounded-xl font-bold text-xs text-white flex items-center gap-2" style="background:linear-gradient(135deg,#10B981,#059669);box-shadow:0 6px 16px -6px rgba(16,185,129,.5);"><i class="fas fa-floppy-disk"></i> Simpan Revisi</button>
+        </div>
+    </div>
+</div>
+
 {{-- [DIHAPUS] Picker popup diganti view list inline (#foto-page). --}}
 
 {{-- ════════ MODAL FOTO IKAN (JURI) — Galeri + Upload ════════ --}}
@@ -484,50 +559,511 @@
         <div class="overflow-y-auto flex-1 mb-4 space-y-4 custom-scrollbar pr-1" id="defect-modal-body"></div>
         <button onclick="saveDefect()" class="w-full py-3.5 text-white font-bold rounded-xl transition-transform active:scale-95" style="background:linear-gradient(135deg,var(--ocean-600),var(--ocean-700));box-shadow:0 6px 16px -6px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.1);">Selesai & Simpan</button>
     </div>
-    </div>{{-- End flex-1 min-w-0 --}}
-</div>{{-- End flex wrapper --}}
+</div>{{-- End content panel --}}
 @endsection
 
 @push('scripts')
 <style>
-        /* ── SIDEBAR CARD — Tanpa overflow:hidden agar sticky bekerja ── */
-    .juri-sidebar-card {
-        background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%);
-        border: 1px solid var(--bd-1);
-        border-radius: 24px;
-        box-shadow: var(--shadow-card);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        /* ★ TANPA overflow:hidden — ini yang memecahkan sticky */
+    /* ── REVISI & RANKING ── */
+    .revisi-hero{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:14px;
+        flex-wrap:wrap;
+        padding:18px;
+        margin-bottom:16px;
+        border-radius:22px;
+        background:
+            radial-gradient(circle at 0% 0%, rgba(34,211,238,.12), transparent 38%),
+            linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.025));
+        border:1px solid var(--bd-2);
+        box-shadow:var(--shadow-card);
     }
-    
-    /* ── SIDEBAR NAV BUTTONS ── */
-    .sidebar-nav-btn {
-        width: 100%;
-        padding: 12px 16px;
-        border-radius: 12px;
-        text-align: left;
-        font-weight: 700;
-        font-size: 13px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        transition: all 0.2s ease;
-        background: transparent;
-        color: var(--text-mid);
-        border: 1px solid transparent;
-        cursor: pointer;
-        font-family: inherit;
+
+    .revisi-hero-left{
+        display:flex;
+        align-items:center;
+        gap:14px;
+        min-width:0;
     }
-    .sidebar-nav-btn:hover {
-        background: var(--glass-2);
-        color: var(--text-hi);
+
+    .revisi-hero-icon{
+        width:46px;
+        height:46px;
+        border-radius:15px;
+        display:grid;
+        place-items:center;
+        flex-shrink:0;
+        background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));
+        color:#fff;
+        box-shadow:0 8px 22px -8px rgba(6,182,212,.65), inset 0 1px 0 rgba(255,255,255,.25);
     }
-    .sidebar-nav-btn.active {
-        background: linear-gradient(135deg, rgba(37,99,235,0.15), rgba(6,182,212,0.10));
-        border-color: rgba(34,211,238,0.25);
-        color: var(--cyan-300);
-        box-shadow: 0 4px 12px -4px rgba(6,182,212,0.15);
+
+    .revisi-hero h2{
+        font-size:18px;
+        font-weight:900;
+        color:var(--text-hi);
+        letter-spacing:-.02em;
+        line-height:1.1;
+    }
+
+    .revisi-hero p{
+        margin-top:4px;
+        font-size:12px;
+        color:var(--text-mid);
+        line-height:1.45;
+    }
+
+    .revisi-refresh-btn{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:7px;
+        padding:9px 14px;
+        border-radius:12px;
+        border:1px solid var(--bd-2);
+        background:var(--glass-2);
+        color:var(--text);
+        font-size:12px;
+        font-weight:800;
+        cursor:pointer;
+        font-family:inherit;
+        transition:all .18s ease;
+    }
+
+    .revisi-refresh-btn:hover{
+        background:var(--glass-3);
+        color:var(--text-hi);
+        border-color:var(--bd-cyan);
+    }
+
+    .revisi-subtabs{
+        display:flex;
+        gap:8px;
+        margin-bottom:14px;
+        flex-wrap:wrap;
+    }
+
+    .revisi-subtab-btn{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+        padding:10px 16px;
+        border-radius:13px;
+        font-size:12px;
+        font-weight:900;
+        cursor:pointer;
+        font-family:inherit;
+        background:var(--glass-2);
+        border:1px solid var(--bd-2);
+        color:var(--text-mid);
+        transition:all .18s ease;
+    }
+
+    .revisi-subtab-btn:hover{
+        color:var(--text-hi);
+        background:var(--glass-3);
+    }
+
+    .revisi-subtab-btn.active{
+        background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));
+        color:#fff;
+        border-color:transparent;
+        box-shadow:0 8px 20px -8px rgba(6,182,212,.55);
+    }
+
+    .revisi-info-card{
+        display:flex;
+        align-items:flex-start;
+        gap:10px;
+        padding:12px 14px;
+        margin-bottom:14px;
+        border-radius:15px;
+        background:rgba(34,211,238,.07);
+        border:1px solid rgba(34,211,238,.18);
+        color:var(--cyan-300);
+        font-size:12px;
+        font-weight:700;
+        line-height:1.5;
+    }
+
+    .revisi-info-card i{
+        margin-top:2px;
+        color:var(--cyan-400);
+    }
+
+    .revisi-list-wrap{
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+    }
+
+    .revisi-row{
+        display:grid;
+        grid-template-columns:82px minmax(180px,1fr) minmax(120px,auto) minmax(120px,auto) auto;
+        align-items:center;
+        gap:12px;
+        padding:14px;
+        border-radius:18px;
+        background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+        border:1px solid var(--bd-2);
+        box-shadow:0 14px 30px -24px rgba(0,0,0,.65);
+    }
+
+    .revisi-row-tank{
+        min-height:54px;
+        border-radius:15px;
+        display:grid;
+        place-items:center;
+        background:rgba(34,211,238,.10);
+        border:1px solid rgba(34,211,238,.22);
+        font-weight:900;
+        font-size:16px;
+        color:var(--cyan-300);
+        font-family:'JetBrains Mono',monospace;
+    }
+
+    .revisi-row-info{
+        min-width:0;
+    }
+
+    .revisi-row-kat{
+        font-weight:900;
+        font-size:14px;
+        color:var(--text-hi);
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+    }
+
+    .revisi-row-kelas{
+        margin-top:4px;
+        font-size:11px;
+        color:var(--text-mid);
+        font-weight:700;
+    }
+
+    .revisi-row-point{
+        padding:9px 12px;
+        border-radius:13px;
+        background:rgba(255,255,255,.04);
+        border:1px solid var(--bd-1);
+        font-family:'JetBrains Mono',monospace;
+        font-weight:900;
+        font-size:14px;
+        color:var(--text-hi);
+        text-align:center;
+        white-space:nowrap;
+    }
+
+    .revisi-row-point span{
+        display:block;
+        margin-top:2px;
+        font-family:'Plus Jakarta Sans',sans-serif;
+        font-size:9px;
+        font-weight:900;
+        color:var(--text-low);
+        letter-spacing:.10em;
+        text-transform:uppercase;
+    }
+
+    .revisi-row-status,
+    .revisi-row-act{
+        display:flex;
+        justify-content:flex-end;
+    }
+
+    .revisi-badge{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:5px;
+        min-width:92px;
+        font-size:10px;
+        font-weight:900;
+        padding:7px 10px;
+        border-radius:999px;
+        white-space:nowrap;
+    }
+
+    .revisi-badge-lock{
+        background:rgba(245,158,11,.12);
+        color:var(--gold-300);
+        border:1px solid rgba(245,158,11,.30);
+    }
+
+    .revisi-badge-sent{
+        background:rgba(6,182,212,.10);
+        color:var(--cyan-300);
+        border:1px solid var(--bd-cyan);
+    }
+
+    .revisi-badge-saved{
+        background:rgba(16,185,129,.10);
+        color:#6EE7B7;
+        border:1px solid rgba(16,185,129,.25);
+    }
+
+    .revisi-edit-btn{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:7px;
+        min-width:92px;
+        padding:9px 14px;
+        border-radius:12px;
+        font-size:12px;
+        font-weight:900;
+        cursor:pointer;
+        font-family:inherit;
+        color:#fff;
+        border:0;
+        background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));
+        box-shadow:0 6px 16px -8px rgba(6,182,212,.55);
+    }
+
+    .revisi-filter-card{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:16px;
+        flex-wrap:wrap;
+        padding:16px;
+        margin-bottom:16px;
+        border-radius:18px;
+        background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+        border:1px solid var(--bd-2);
+        box-shadow:var(--shadow-card);
+    }
+
+    .revisi-filter-card h3{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        color:var(--text-hi);
+        font-size:14px;
+        font-weight:900;
+    }
+
+    .revisi-filter-card h3 i{
+        color:var(--cyan-400);
+    }
+
+    .revisi-filter-card p{
+        margin-top:4px;
+        color:var(--text-mid);
+        font-size:11px;
+        font-weight:600;
+    }
+
+    .revisi-filter-actions{
+        display:flex;
+        flex-direction:column;
+        align-items:flex-end;
+        gap:10px;
+    }
+
+    .revisi-scope-wrap,
+    .revisi-select-wrap{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:8px;
+        flex-wrap:wrap;
+    }
+
+    .revisi-scope-btn{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:6px;
+        padding:8px 13px;
+        border-radius:11px;
+        font-size:11px;
+        font-weight:800;
+        cursor:pointer;
+        font-family:inherit;
+        background:var(--glass-2);
+        border:1px solid var(--bd-2);
+        color:var(--text-mid);
+        transition:all .18s;
+    }
+
+    .revisi-scope-btn.active{
+        background:linear-gradient(135deg,var(--royal-600),var(--cyan-500));
+        color:#fff;
+        border-color:transparent;
+        box-shadow:0 6px 16px -8px rgba(6,182,212,.55);
+    }
+
+    .revisi-rank-select{
+        min-width:150px;
+        padding:9px 12px;
+        border-radius:11px;
+        font-size:12px;
+        font-weight:800;
+        outline:none;
+        background:rgba(15,23,42,.88);
+        border:1px solid var(--bd-2);
+        color:var(--text-hi);
+        font-family:inherit;
+    }
+
+    .revisi-ranking-wrap{
+        display:flex;
+        flex-direction:column;
+        gap:14px;
+    }
+
+    .revisi-rank-card{
+        overflow:hidden;
+        border-radius:18px;
+        background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+        border:1px solid var(--bd-2);
+        box-shadow:0 16px 32px -26px rgba(0,0,0,.65);
+    }
+
+    .revisi-rank-head{
+        padding:14px 16px;
+        border-bottom:1px solid var(--bd-1);
+        background:rgba(255,255,255,.035);
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:10px;
+        flex-wrap:wrap;
+    }
+
+    .revisi-rank-head-title{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        font-weight:900;
+        font-size:13px;
+        color:var(--text-hi);
+    }
+
+    .revisi-rank-head-title i{
+        color:var(--gold-400);
+    }
+
+    .revisi-rank-table-wrap{
+        overflow:auto;
+    }
+
+    .revisi-rank-table{
+        width:100%;
+        min-width:620px;
+        border-collapse:collapse;
+        font-size:12px;
+    }
+
+    .revisi-rank-table th{
+        padding:10px 12px;
+        background:rgba(255,255,255,.055);
+        color:var(--text-mid);
+        font-size:10px;
+        font-weight:900;
+        letter-spacing:.08em;
+        text-transform:uppercase;
+        text-align:center;
+    }
+
+    .revisi-rank-table td{
+        padding:11px 12px;
+        border-top:1px solid var(--bd-1);
+        text-align:center;
+        color:var(--text);
+    }
+
+    .revisi-rank-top{
+        background:rgba(245,158,11,.06);
+    }
+
+    .revisi-rank-medal{
+        font-size:16px;
+        font-weight:900;
+    }
+
+    .revisi-rank-tank{
+        font-family:'JetBrains Mono',monospace;
+        font-weight:900;
+        color:var(--cyan-300) !important;
+    }
+
+    .revisi-rank-point{
+        font-family:'JetBrains Mono',monospace;
+        font-weight:900;
+        color:var(--text-hi) !important;
+    }
+
+    .revisi-rank-final{
+        font-weight:900;
+        color:#6EE7B7 !important;
+    }
+
+    .revisi-group { margin-bottom:14px; }
+    .revisi-group-title { font-size:10px; font-weight:800; letter-spacing:.12em; color:var(--cyan-300); margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid rgba(34,211,238,.12); }
+    .revisi-fields { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
+    .revisi-field { display:flex; flex-direction:column; gap:4px; }
+    .revisi-field label { font-size:10px; font-weight:700; color:var(--text-mid); text-transform:uppercase; }
+    .revisi-select { padding:8px 10px; border-radius:9px; font-size:13px; font-weight:700; text-align:center; outline:none; background:var(--glass-2); border:1px solid var(--bd-2); color:var(--text-hi); cursor:pointer; font-family:'JetBrains Mono',monospace; }
+    .revisi-locked { padding:8px 10px; border-radius:9px; font-size:12px; font-weight:700; text-align:center; background:rgba(255,255,255,0.02); border:1px solid var(--bd-1); color:var(--text-faint); }
+
+    @media (max-width:900px){
+        .revisi-row{
+            grid-template-columns:72px minmax(0,1fr);
+        }
+
+        .revisi-row-point,
+        .revisi-row-status,
+        .revisi-row-act{
+            grid-column:1 / -1;
+            justify-content:stretch;
+        }
+
+        .revisi-row-status .revisi-badge,
+        .revisi-row-act .revisi-edit-btn{
+            width:100%;
+        }
+
+        .revisi-filter-actions{
+            width:100%;
+            align-items:stretch;
+        }
+
+        .revisi-scope-wrap,
+        .revisi-select-wrap{
+            justify-content:flex-start;
+        }
+    }
+
+    @media (max-width:640px){
+        .revisi-hero{
+            padding:15px;
+        }
+
+        .revisi-hero-left{
+            align-items:flex-start;
+        }
+
+        .revisi-subtab-btn,
+        .revisi-refresh-btn,
+        .revisi-scope-btn,
+        .revisi-rank-select{
+            width:100%;
+        }
+
+        .revisi-scope-wrap,
+        .revisi-select-wrap{
+            width:100%;
+        }
+
+        #revisi-rank-kelas-wrap{
+            width:100%;
+        }
     }
     @keyframes popIn { 0%{transform:scale(0) rotate(-10deg);opacity:0} 60%{transform:scale(1.1) rotate(2deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
     @keyframes fadeUp { from{opacity:0;transform:translateY(15px)} to{opacity:1;transform:translateY(0)} }
@@ -2157,6 +2693,8 @@ function openDefect(tankId, partKey, context) {
     if (context === 'nomination') {
         const d = nomState.defects[tankId] || {};
         vals = d['raw_'+partKey+'_penalty'] || ['0'];
+    } else if (context === 'revisi') {
+        vals = revisiState.defects?.['raw_'+partKey+'_penalty'] || ['0'];
     } else {
         vals = tankScores[tankId]?.defects?.['raw_'+partKey+'_penalty'] || ['0'];
     }
@@ -2182,6 +2720,14 @@ function onDefectCheck(cb) {
 function saveDefect() {
     if (!defectModal) return;
     const { tankId, partKey, values, context } = defectModal;
+
+    if (context === 'revisi') {
+        revisiState.defects['raw_'+partKey+'_penalty'] = values;
+        defectModal = null;
+        document.getElementById('modal-defect').classList.add('hidden');
+        renderRevisiForm();
+        return;
+    }
 
     if (context === 'nomination') {
         if (!nomState.defects[tankId]) {
@@ -2410,50 +2956,61 @@ function initScoringPage() {
 
 function switchJuriView(view) {
     currentJuriView = view;
-    
-    // Update UI Button
-    document.getElementById('nav-btn-nominasi').classList.toggle('active', view === 'nominasi');
-    document.getElementById('nav-btn-penjurian').classList.toggle('active', view === 'penjurian');
-    var _fb = document.getElementById('nav-btn-foto'); if (_fb) _fb.classList.toggle('active', view === 'foto');
+
+    ['nominasi', 'penjurian', 'foto', 'revisi'].forEach(function (v) {
+        var btn = document.getElementById('nav-btn-' + v);
+        if (btn) btn.classList.toggle('active', view === v);
+    });
+
+    if (typeof window.setJuriTopbar === 'function') {
+        window.setJuriTopbar(view);
+    }
+
+    document.body.classList.remove('sidebar-open');
+
+    if (nomState.autoRefreshTimer) {
+        clearInterval(nomState.autoRefreshTimer);
+        nomState.autoRefreshTimer = null;
+    }
+
+    stopScoringLockPolling();
+
+    [
+        'nom-page',
+        'nom-waiting',
+        'nom-approved-anim',
+        'nom-rejected-anim',
+        'nom-loading',
+        'scoring-page',
+        'foto-page',
+        'revisi-page'
+    ].forEach(function (id) {
+        nomHide(id);
+    });
 
     if (view === 'nominasi') {
-        nomHide('scoring-page');
-        stopScoringLockPolling();
-        
-        // ★ STOP timer polling nominasi
-        if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
-        
-        // Reset animasi & tampilkan loading
-        nomHide('nom-approved-anim');
-        nomHide('nom-rejected-anim');
-        nomShow('nom-loading'); 
-        
+        nomShow('nom-loading');
         checkNominasiStatus();
-    } else if (view === 'penjurian') {
-        // ★ STOP timer polling nominasi SAAT pindah ke penjurian
-        if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
-        
-        nomHide('nom-page');
-        nomHide('nom-waiting');
-        nomHide('nom-approved-anim');
-        nomHide('nom-rejected-anim');
-        nomHide('nom-loading');
-        nomHide('foto-page');
-        
+        return;
+    }
+
+    if (view === 'penjurian') {
         nomShow('scoring-page');
-        
-        // ★ SELALU load data penjurian, tidak tergantung lock status
-        //    Lock overlay akan menutupi form jika masih terkunci
         loadJuriDataForPenjurian();
         startScoringLockPolling();
-    } else if (view === 'foto') {
-        if (nomState.autoRefreshTimer) { clearInterval(nomState.autoRefreshTimer); nomState.autoRefreshTimer = null; }
-        stopScoringLockPolling();
-        nomHide('nom-page'); nomHide('nom-waiting');
-        nomHide('nom-approved-anim'); nomHide('nom-rejected-anim');
-        nomHide('nom-loading'); nomHide('scoring-page');
+        return;
+    }
+
+    if (view === 'foto') {
         nomShow('foto-page');
         loadFotoIkanList();
+        return;
+    }
+
+    if (view === 'revisi') {
+        nomShow('revisi-page');
+        loadRevisiView();
+        return;
     }
 }
 
@@ -2831,10 +3388,324 @@ function initJuriSidebar() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    renderTabs(); 
-    initJuriSidebar(); // ★ Sudah memanggil checkNominasiStatus() di dalamnya
-    document.getElementById('modal-defect').addEventListener('click', function(e) { if (e.target === this) saveDefect(); });
-    document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && !document.getElementById('modal-defect').classList.contains('hidden')) saveDefect(); });
+    renderTabs();
+
+    if (typeof initJuriSidebar === 'function') {
+        initJuriSidebar();
+    }
+
+    var modalDefect = document.getElementById('modal-defect');
+
+    if (modalDefect) {
+        modalDefect.addEventListener('click', function(e) {
+            if (e.target === this) saveDefect();
+        });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        var modalDefectNow = document.getElementById('modal-defect');
+
+        if (
+            e.key === 'Escape' &&
+            modalDefectNow &&
+            !modalDefectNow.classList.contains('hidden')
+        ) {
+            saveDefect();
+        }
+    });
 });
+
+/* ════════════════════ REVISI & RANKING (JURI) ════════════════════ */
+let revisiState = { scoringId:null, kategori:'', kelas:'', scores:{}, defects:{} };
+let revisiRankScope = 'per_kategori_kelas';
+
+function loadRevisiView() {
+    populateRevisiRankFilters();
+    revisiSwitchTab('edit');
+}
+
+function populateRevisiRankFilters() {
+    var kat = document.getElementById('revisi-rank-kategori');
+    var kelas = document.getElementById('revisi-rank-kelas');
+    if (kat && !kat.dataset.filled) {
+        kat.innerHTML = '<option value="">Semua Kategori</option>' + ['Bonsai','Cencu','Chingwa','Freemarking','Goldenbase','Jumbo','Klasik'].map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+        kat.dataset.filled = '1';
+    }
+    if (kelas && !kelas.dataset.filled) {
+        kelas.innerHTML = ['A','B','C','D','E'].map(function(c){return '<option value="'+c+'">Kelas '+c+'</option>';}).join('');
+        kelas.dataset.filled = '1';
+    }
+}
+
+function revisiSwitchTab(tab) {
+    var subEdit = document.getElementById('revisi-subtab-edit');
+    var subRank = document.getElementById('revisi-subtab-ranking');
+    var bEdit = document.getElementById('revisi-tab-edit-btn');
+    var bRank = document.getElementById('revisi-tab-ranking-btn');
+
+    if (!subEdit || !subRank || !bEdit || !bRank) {
+        console.warn('Elemen Revisi & Ranking belum ditemukan. Cek posisi #revisi-page di Blade.');
+        return;
+    }
+
+    if (tab === 'ranking') {
+        subEdit.classList.add('hidden');
+        subRank.classList.remove('hidden');
+        bEdit.classList.remove('active');
+        bRank.classList.add('active');
+        loadRevisiRanking();
+    } else {
+        subRank.classList.add('hidden');
+        subEdit.classList.remove('hidden');
+        bRank.classList.remove('active');
+        bEdit.classList.add('active');
+        refreshRevisiScores().then(renderRevisiList);
+    }
+}
+
+async function refreshRevisiScores() {
+    try {
+        var res = await apiFetch('/api/juri/data?_t=' + Date.now());
+        appData.my_scores = res.my_scores || [];
+    } catch(e) {}
+}
+
+function renderRevisiList() {
+    var box = document.getElementById('revisi-list');
+
+    if (!box) {
+        console.warn('Elemen #revisi-list tidak ditemukan.');
+        return;
+    }
+
+    var scores = appData.my_scores || [];
+    if (scores.length === 0) {
+        box.innerHTML = '<div class="text-center py-16 glass-card" style="color:var(--text-low);"><i class="fas fa-inbox" style="font-size:26px;opacity:.4;"></i><p class="mt-2 text-sm font-bold">Belum ada nilai tersimpan untuk direvisi.</p></div>';
+        return;
+    }
+    box.innerHTML = scores.map(function(s){
+        var t = s.ikan || {};
+        var locked = !!(t && t.is_locked);
+        var sent = !!s.submitted_to_grand;
+        var statusHtml = locked
+            ? '<span class="revisi-badge revisi-badge-lock"><i class="fas fa-lock"></i> Dikunci</span>'
+            : (sent ? '<span class="revisi-badge revisi-badge-sent"><i class="fas fa-paper-plane"></i> Terkirim</span>'
+                    : '<span class="revisi-badge revisi-badge-saved"><i class="fas fa-floppy-disk"></i> Tersimpan</span>');
+        var btn = locked
+            ? '<button disabled class="revisi-edit-btn" style="opacity:.45;cursor:not-allowed;"><i class="fas fa-lock"></i> Final</button>'
+            : '<button onclick="openRevisiEdit('+s.id+')" class="revisi-edit-btn"><i class="fas fa-pen-to-square"></i> Edit</button>';
+        return '<div class="revisi-row">'
+            + '<div class="revisi-row-tank">'+(t.nomor_tank || '-')+'</div>'
+            + '<div class="revisi-row-info">'
+                + '<div class="revisi-row-kat">'+(t.kategori || '-')+'</div>'
+                + '<div class="revisi-row-kelas">'+((s.kelas || t.kelas) ? ('Kelas ' + (s.kelas || t.kelas)) : 'Tanpa kelas')+'</div>'
+            + '</div>'
+            + '<div class="revisi-row-point">'+Number(s.total_point || 0).toFixed(2)+'<span>point</span></div>'
+            + '<div class="revisi-row-status">'+statusHtml+'</div>'
+            + '<div class="revisi-row-act">'+btn+'</div>'
+            + '</div>';
+    }).join('');
+}
+
+function openRevisiEdit(scoringId) {
+    var s = (appData.my_scores || []).find(function(x){ return x.id === scoringId; });
+    if (!s) return;
+    if (s.ikan && s.ikan.is_locked) { showToast('Nilai sudah DIKUNCI Grand Juri — tidak dapat direvisi.', 'error'); return; }
+    var nd = s.nilai_detail || {};
+    var g = function(o,k){ return (nd[o] && nd[o][k] != null) ? nd[o][k] : ''; };
+    revisiState.scoringId = s.id;
+    revisiState.kategori  = s.ikan ? s.ikan.kategori : '';
+    revisiState.kelas     = s.kelas || (s.ikan ? s.ikan.kelas : '');
+    revisiState.scores = {
+        overall:{impression:g('overall','impression')},
+        head:{size:g('head','size'), bentuk:g('head','bentuk')},
+        face:{face:g('face','face')},
+        body:{bentuk:g('body','bentuk'), proporsi:g('body','proporsi'), pangkal:g('body','pangkal')},
+        marking:{fullness:g('marking','fullness'), contrast:g('marking','contrast'), bentuk:g('marking','bentuk')},
+        pearl:{shinning:g('pearl','shinning'), fullness:g('pearl','fullness'), bentuk:g('pearl','bentuk')},
+        color:{komposisi:g('color','komposisi'), kecerahan:g('color','kecerahan'), fullness:g('color','fullness')},
+        finnage:{bentuk:g('finnage','bentuk'), kecerahan:g('finnage','kecerahan')}
+    };
+    revisiState.defects = {
+        raw_head_penalty:    normalizeDefectArr(s.raw_head_penalty    || ['0']),
+        raw_face_penalty:    normalizeDefectArr(s.raw_face_penalty    || ['0']),
+        raw_body_penalty:    normalizeDefectArr(s.raw_body_penalty    || ['0']),
+        raw_finnage_penalty: normalizeDefectArr(s.raw_finnage_penalty || ['0'])
+    };
+    document.getElementById('revisi-edit-title').textContent = 'Revisi Tank ' + (s.ikan ? s.ikan.nomor_tank : '-') + ' — ' + revisiState.kategori;
+    renderRevisiForm();
+    document.getElementById('revisi-edit-modal').classList.remove('hidden');
+}
+
+function closeRevisiEdit() {
+    document.getElementById('revisi-edit-modal').classList.add('hidden');
+    revisiState.scoringId = null;
+}
+
+function revisiGetVal(key){ var p=key.split('.'); return (revisiState.scores[p[0]] && revisiState.scores[p[0]][p[1]] != null) ? revisiState.scores[p[0]][p[1]] : ''; }
+function revisiSetVal(key,val){ var p=key.split('.'); if(!revisiState.scores[p[0]]) revisiState.scores[p[0]]={}; revisiState.scores[p[0]][p[1]]=val; }
+
+function revisiDefectBtn(partKey) {
+    var ts = { defects: revisiState.defects };
+    var vals = revisiState.defects['raw_'+partKey+'_penalty'] || ['0'];
+    var isAman = vals.includes('0') || vals.length === 0;
+    var ev = evalDefects(ts);
+    var score = ev[partKey];
+    var cls = (isAman || !score) ? 'defect-btn-aman' : (score === '30%' ? 'defect-btn-30' : 'defect-btn-10');
+    var lbl = (isAman || !score) ? 'Aman' : (score === '30%' ? '30% Defect' : '10% Defect');
+    return '<button type="button" onclick="openDefect(0,\''+partKey+'\',\'revisi\')" class="'+cls+'">'+lbl+'</button>';
+}
+
+function renderRevisiForm() {
+    var kat = revisiState.kategori;
+    var html = '';
+    SCORING_GROUPS.forEach(function(group){
+        html += '<div class="revisi-group"><div class="revisi-group-title">'+group.title+'</div><div class="revisi-fields">';
+        group.fields.forEach(function(f){
+            if (f.type === 'defect') {
+                html += '<div class="revisi-field"><label>Defect</label>'+revisiDefectBtn(f.part)+'</div>';
+                return;
+            }
+            if (isFieldLocked(kat, f.key)) {
+                html += '<div class="revisi-field"><label>'+f.label+'</label><div class="revisi-locked"><i class="fas fa-lock"></i> N/A</div></div>';
+                return;
+            }
+            var val = revisiGetVal(f.key);
+            html += '<div class="revisi-field"><label>'+f.label+'</label><select onchange="revisiSetVal(\''+f.key+'\',this.value)" class="revisi-select">'+buildSelectHtml(val, f.type)+'</select></div>';
+        });
+        html += '</div></div>';
+    });
+    document.getElementById('revisi-form-body').innerHTML = html;
+}
+
+async function submitRevisi() {
+    if (!revisiState.scoringId) return;
+    var missing = [];
+    SCORING_GROUPS.forEach(function(group){
+        group.fields.forEach(function(f){
+            if (f.type === 'defect') return;
+            if (isFieldLocked(revisiState.kategori, f.key)) return;
+            if (revisiGetVal(f.key) === '') missing.push(group.title + ' > ' + f.label);
+        });
+    });
+    if (missing.length) { showWarningModal(missing.map(function(m){return {type:'select',msg:m};})); return; }
+    var btn = document.getElementById('revisi-submit-btn');
+    var old = btn.innerHTML; btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    try {
+        var res = await apiFetch('/api/juri/update-nilai', { method:'POST', body: JSON.stringify({
+            scoring_id: revisiState.scoringId,
+            all_scores: revisiState.scores,
+            defect_data: revisiState.defects
+        })});
+        if (res.success) {
+            closeRevisiEdit();
+            showSuccessPopup('Revisi Tersimpan', res.message || 'Nilai berhasil diperbarui.');
+            await refreshRevisiScores();
+            renderRevisiList();
+        } else {
+            showWarningModal([{type:'select', msg: res.message || 'Gagal menyimpan revisi.'}]);
+        }
+    } catch(e) {
+        showWarningModal([{type:'select', msg:'Koneksi error saat menyimpan revisi.'}]);
+    } finally {
+        btn.disabled = false; btn.innerHTML = old;
+    }
+}
+
+function setRevisiRankScope(scope) {
+    revisiRankScope = scope;
+    ['per_kategori_kelas','per_kategori','global'].forEach(function(sc){
+        var b = document.getElementById('revisi-scope-'+sc);
+        if (b) b.classList.toggle('active', sc === scope);
+    });
+    var kelasWrap = document.getElementById('revisi-rank-kelas-wrap');
+    if (kelasWrap) kelasWrap.style.display = (scope === 'global') ? 'none' : '';
+    loadRevisiRanking();
+}
+
+async function loadRevisiRanking() {
+    var content = document.getElementById('revisi-ranking-content');
+
+    if (!content) {
+        console.warn('Elemen #revisi-ranking-content tidak ditemukan.');
+        return;
+    }
+
+    content.innerHTML = '<div class="text-center py-16" style="color:var(--text-low);"><i class="fas fa-spinner fa-spin"></i> Memuat ranking...</div>';
+    var kat = document.getElementById('revisi-rank-kategori') ? document.getElementById('revisi-rank-kategori').value : '';
+    var kelas = document.getElementById('revisi-rank-kelas') ? document.getElementById('revisi-rank-kelas').value : '';
+    var qs = '?scope=' + encodeURIComponent(revisiRankScope);
+    if (revisiRankScope !== 'global') {
+        if (kat) qs += '&kategori=' + encodeURIComponent(kat);
+        if (kelas) qs += '&kelas=' + encodeURIComponent(kelas);
+    }
+    try {
+        var groups = await apiFetch('/api/juri/point-ranking' + qs);
+        renderRevisiRanking(groups);
+    } catch(e) {
+        content.innerHTML = '<div class="text-center py-16" style="color:var(--danger);">Gagal memuat ranking.</div>';
+    }
+}
+
+function renderRevisiRanking(groups) {
+    var content = document.getElementById('revisi-ranking-content');
+
+    if (!Array.isArray(groups) || groups.length === 0) {
+        content.innerHTML =
+            '<div class="text-center py-16 glass-card" style="color:var(--text-low);">' +
+                '<i class="fas fa-trophy" style="font-size:28px;opacity:.4;"></i>' +
+                '<p class="mt-2 text-sm font-bold">Belum ada data ranking.</p>' +
+                '<p class="mt-1 text-xs font-semibold" style="color:var(--text-faint);">Ranking baru muncul setelah Grand Juri mengunci nilai.</p>' +
+            '</div>';
+        return;
+    }
+
+    content.innerHTML = groups.map(function(gp){
+        var data = gp.data || [];
+
+        var rows = data.map(function(it){
+            var pos = Number(it.position || 0);
+            var medal = pos === 1 ? '🥇' : (pos === 2 ? '🥈' : (pos === 3 ? '🥉' : ('#' + pos)));
+            var finalPoint = it.final_rank_point != null ? it.final_rank_point : (it.rank_point != null ? it.rank_point : 0);
+
+            return '<tr class="'+(pos <= 3 ? 'revisi-rank-top' : '')+'">' +
+                '<td class="revisi-rank-medal">'+medal+'</td>' +
+                '<td class="revisi-rank-tank">'+(it.nomor_tank != null ? it.nomor_tank : '-')+'</td>' +
+                '<td>'+(it.kategori || gp.kategori || '-')+'</td>' +
+                '<td>'+(it.kelas || gp.kelas || '-')+'</td>' +
+                '<td class="revisi-rank-point">'+Number(it.total_point || 0).toFixed(2)+'</td>' +
+                '<td style="color:var(--gold-300);font-weight:900;">'+(it.total_bonus ? ('+' + it.total_bonus) : '-')+'</td>' +
+                '<td class="revisi-rank-final">'+finalPoint+'</td>' +
+            '</tr>';
+        }).join('');
+
+        return '<div class="revisi-rank-card">' +
+            '<div class="revisi-rank-head">' +
+                '<div class="revisi-rank-head-title">' +
+                    '<i class="fas fa-medal"></i>' +
+                    '<span>'+(gp.group_name || 'Ranking')+'</span>' +
+                '</div>' +
+                '<span class="revisi-badge revisi-badge-sent"><i class="fas fa-user-secret"></i> Anonim</span>' +
+            '</div>' +
+            '<div class="revisi-rank-table-wrap custom-scrollbar">' +
+                '<table class="revisi-rank-table">' +
+                    '<thead>' +
+                        '<tr>' +
+                            '<th>Juara</th>' +
+                            '<th>Tank</th>' +
+                            '<th>Kategori</th>' +
+                            '<th>Kelas</th>' +
+                            '<th>Total Point</th>' +
+                            '<th>Bonus</th>' +
+                            '<th>Rank Pt</th>' +
+                        '</tr>' +
+                    '</thead>' +
+                    '<tbody>'+rows+'</tbody>' +
+                '</table>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
 </script>
 @endpush
