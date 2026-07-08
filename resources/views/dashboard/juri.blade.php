@@ -368,6 +368,14 @@
                 <span>Nilai yang belum dikunci Grand Juri masih bisa direvisi. Jika sudah final, tombol edit otomatis terkunci.</span>
             </div>
 
+            <div id="revisi-loading" class="hidden revisi-loading-card">
+                <i class="fas fa-spinner fa-spin"></i>
+                <div>
+                    <b>Memuat data revisi...</b>
+                    <span>Mengambil nilai juri dan komponen penilaian.</span>
+                </div>
+            </div>
+
             <div id="revisi-list" class="revisi-list-wrap"></div>
         </div>
 
@@ -484,9 +492,6 @@
         </div>
     </div>
 </div>
-
-{{-- MODAL EDIT REVISI --}}
-<div id="revisi-edit-modal" class="hidden fixed inset-0 z-[250] flex items-center justify-center p-4" style="background:rgba(2,6,14,0.88);backdrop-filter:blur(8px);">
 
 {{-- MODAL EDIT REVISI --}}
 <div id="revisi-edit-modal" class="hidden fixed inset-0 z-[250] flex items-center justify-center p-4" style="background:rgba(2,6,14,0.88);backdrop-filter:blur(8px);">
@@ -1410,8 +1415,82 @@
         #live-body td { padding: 6px 4px !important; }
     }
         /* ── DETAIL POPUP HIDDEN SCROLLBAR ── */
-    .detail-scroll-hidden::-webkit-scrollbar { display: none; }
-    .detail-scroll-hidden { -ms-overflow-style: none; scrollbar-width: none; }
+        .detail-scroll-hidden::-webkit-scrollbar { display: none; }
+        .detail-scroll-hidden { -ms-overflow-style: none; scrollbar-width: none; }
+        .revisi-loading-card{
+        display:flex;
+        align-items:center;
+        gap:12px;
+        padding:16px;
+        margin-bottom:14px;
+        border-radius:16px;
+        background:rgba(34,211,238,.07);
+        border:1px solid rgba(34,211,238,.20);
+        color:var(--cyan-300);
+    }
+
+    .revisi-loading-card i{
+        font-size:18px;
+        color:var(--cyan-400);
+    }
+
+    .revisi-loading-card b{
+        display:block;
+        color:var(--text-hi);
+        font-size:13px;
+        font-weight:900;
+    }
+
+    .revisi-loading-card span{
+        display:block;
+        margin-top:2px;
+        color:var(--text-mid);
+        font-size:11px;
+        font-weight:700;
+    }
+
+    .revisi-refresh-btn.loading i{
+        animation:spin 1s linear infinite;
+    }
+
+    .revisi-components{
+        grid-column:1 / -1;
+        display:flex;
+        flex-wrap:wrap;
+        gap:7px;
+        padding-top:10px;
+        margin-top:2px;
+        border-top:1px solid var(--bd-1);
+    }
+
+    .revisi-score-chip{
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+        padding:6px 9px;
+        border-radius:10px;
+        background:rgba(255,255,255,.045);
+        border:1px solid var(--bd-1);
+        font-size:10px;
+        font-weight:800;
+        color:var(--text-mid);
+    }
+
+    .revisi-score-chip b{
+        color:var(--cyan-300);
+        font-family:'JetBrains Mono',monospace;
+        font-size:11px;
+    }
+
+    .revisi-score-chip.missing{
+        color:var(--text-faint);
+        opacity:.7;
+    }
+
+    @keyframes spin{
+        from{ transform:rotate(0deg); }
+        to{ transform:rotate(360deg); }
+    }
 </style>
 <script>
 
@@ -2954,6 +3033,20 @@ function initScoringPage() {
     loadJuriDataForPenjurian();
 }
 
+function forceHidePage(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('hidden');
+    el.style.display = 'none';
+}
+
+function forceShowPage(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.style.display = '';
+}
+
 function switchJuriView(view) {
     currentJuriView = view;
 
@@ -2984,31 +3077,29 @@ function switchJuriView(view) {
         'scoring-page',
         'foto-page',
         'revisi-page'
-    ].forEach(function (id) {
-        nomHide(id);
-    });
+    ].forEach(forceHidePage);
 
     if (view === 'nominasi') {
-        nomShow('nom-loading');
+        forceShowPage('nom-loading');
         checkNominasiStatus();
         return;
     }
 
     if (view === 'penjurian') {
-        nomShow('scoring-page');
+        forceShowPage('scoring-page');
         loadJuriDataForPenjurian();
         startScoringLockPolling();
         return;
     }
 
     if (view === 'foto') {
-        nomShow('foto-page');
+        forceShowPage('foto-page');
         loadFotoIkanList();
         return;
     }
 
     if (view === 'revisi') {
-        nomShow('revisi-page');
+        forceShowPage('revisi-page');
         loadRevisiView();
         return;
     }
@@ -3419,9 +3510,24 @@ document.addEventListener('DOMContentLoaded', function() {
 let revisiState = { scoringId:null, kategori:'', kelas:'', scores:{}, defects:{} };
 let revisiRankScope = 'per_kategori_kelas';
 
-function loadRevisiView() {
+async function loadRevisiView() {
     populateRevisiRankFilters();
-    revisiSwitchTab('edit');
+
+    var refreshBtn = document.querySelector('.revisi-refresh-btn');
+    var loading = document.getElementById('revisi-loading');
+    var list = document.getElementById('revisi-list');
+
+    if (refreshBtn) refreshBtn.classList.add('loading');
+    if (loading) loading.classList.remove('hidden');
+    if (list) list.innerHTML = '';
+
+    try {
+        await refreshRevisiScores();
+        renderRevisiList();
+    } finally {
+        if (loading) loading.classList.add('hidden');
+        if (refreshBtn) refreshBtn.classList.remove('loading');
+    }
 }
 
 function populateRevisiRankFilters() {
@@ -3444,7 +3550,7 @@ function revisiSwitchTab(tab) {
     var bRank = document.getElementById('revisi-tab-ranking-btn');
 
     if (!subEdit || !subRank || !bEdit || !bRank) {
-        console.warn('Elemen Revisi & Ranking belum ditemukan. Cek posisi #revisi-page di Blade.');
+        console.warn('Elemen Revisi & Ranking belum ditemukan.');
         return;
     }
 
@@ -3454,20 +3560,55 @@ function revisiSwitchTab(tab) {
         bEdit.classList.remove('active');
         bRank.classList.add('active');
         loadRevisiRanking();
-    } else {
-        subRank.classList.add('hidden');
-        subEdit.classList.remove('hidden');
-        bRank.classList.remove('active');
-        bEdit.classList.add('active');
-        refreshRevisiScores().then(renderRevisiList);
+        return;
     }
+
+    subRank.classList.add('hidden');
+    subEdit.classList.remove('hidden');
+    bRank.classList.remove('active');
+    bEdit.classList.add('active');
+
+    renderRevisiList();
 }
 
 async function refreshRevisiScores() {
-    try {
-        var res = await apiFetch('/api/juri/data?_t=' + Date.now());
-        appData.my_scores = res.my_scores || [];
-    } catch(e) {}
+    var res = await apiFetch('/api/juri/data?_t=' + Date.now());
+    appData.my_scores = res.my_scores || [];
+    appData.available_tanks = res.available_tanks || appData.available_tanks || [];
+    return appData.my_scores;
+}
+
+function revisiScoreValueFromDetail(score, key) {
+    var nd = score.nilai_detail || {};
+    var parts = key.split('.');
+    return nd[parts[0]] && nd[parts[0]][parts[1]] != null ? nd[parts[0]][parts[1]] : '';
+}
+
+function revisiRenderScoreChips(score) {
+    var kategori = score.ikan ? score.ikan.kategori : '';
+    var chips = [];
+
+    SCORING_GROUPS.forEach(function(group) {
+        group.fields.forEach(function(f) {
+            if (f.type === 'defect') return;
+            if (isFieldLocked(kategori, f.key)) return;
+
+            var val = revisiScoreValueFromDetail(score, f.key);
+            var cls = val === '' ? 'revisi-score-chip missing' : 'revisi-score-chip';
+
+            chips.push(
+                '<span class="'+cls+'">' +
+                    f.label + ': <b>' + (val !== '' ? val : '-') + '</b>' +
+                '</span>'
+            );
+        });
+    });
+
+    if (!chips.length) {
+        return '<div class="revisi-components"><span class="revisi-score-chip missing">Tidak ada komponen aktif</span></div>';
+    }
+
+    return '<div class="revisi-components">' + chips.join('') + '</div>';
 }
 
 function renderRevisiList() {
@@ -3479,38 +3620,81 @@ function renderRevisiList() {
     }
 
     var scores = appData.my_scores || [];
+
     if (scores.length === 0) {
-        box.innerHTML = '<div class="text-center py-16 glass-card" style="color:var(--text-low);"><i class="fas fa-inbox" style="font-size:26px;opacity:.4;"></i><p class="mt-2 text-sm font-bold">Belum ada nilai tersimpan untuk direvisi.</p></div>';
+        box.innerHTML =
+            '<div class="text-center py-16 glass-card" style="color:var(--text-low);">' +
+                '<i class="fas fa-inbox" style="font-size:26px;opacity:.4;"></i>' +
+                '<p class="mt-2 text-sm font-bold">Belum ada nilai tersimpan untuk direvisi.</p>' +
+            '</div>';
         return;
     }
-    box.innerHTML = scores.map(function(s){
+
+    box.innerHTML = scores.map(function(s) {
         var t = s.ikan || {};
         var locked = !!(t && t.is_locked);
         var sent = !!s.submitted_to_grand;
+
         var statusHtml = locked
             ? '<span class="revisi-badge revisi-badge-lock"><i class="fas fa-lock"></i> Dikunci</span>'
-            : (sent ? '<span class="revisi-badge revisi-badge-sent"><i class="fas fa-paper-plane"></i> Terkirim</span>'
-                    : '<span class="revisi-badge revisi-badge-saved"><i class="fas fa-floppy-disk"></i> Tersimpan</span>');
+            : (
+                sent
+                    ? '<span class="revisi-badge revisi-badge-sent"><i class="fas fa-paper-plane"></i> Terkirim</span>'
+                    : '<span class="revisi-badge revisi-badge-saved"><i class="fas fa-floppy-disk"></i> Tersimpan</span>'
+            );
+
         var btn = locked
             ? '<button disabled class="revisi-edit-btn" style="opacity:.45;cursor:not-allowed;"><i class="fas fa-lock"></i> Final</button>'
-            : '<button onclick="openRevisiEdit('+s.id+')" class="revisi-edit-btn"><i class="fas fa-pen-to-square"></i> Edit</button>';
-        return '<div class="revisi-row">'
-            + '<div class="revisi-row-tank">'+(t.nomor_tank || '-')+'</div>'
-            + '<div class="revisi-row-info">'
-                + '<div class="revisi-row-kat">'+(t.kategori || '-')+'</div>'
-                + '<div class="revisi-row-kelas">'+((s.kelas || t.kelas) ? ('Kelas ' + (s.kelas || t.kelas)) : 'Tanpa kelas')+'</div>'
-            + '</div>'
-            + '<div class="revisi-row-point">'+Number(s.total_point || 0).toFixed(2)+'<span>point</span></div>'
-            + '<div class="revisi-row-status">'+statusHtml+'</div>'
-            + '<div class="revisi-row-act">'+btn+'</div>'
-            + '</div>';
+            : '<button type="button" onclick="openRevisiEdit('+s.id+')" class="revisi-edit-btn"><i class="fas fa-pen-to-square"></i> Edit</button>';
+
+        return '<div class="revisi-row">' +
+            '<div class="revisi-row-tank">'+(t.nomor_tank || '-')+'</div>' +
+
+            '<div class="revisi-row-info">' +
+                '<div class="revisi-row-kat">'+(t.kategori || '-')+'</div>' +
+                '<div class="revisi-row-kelas">'+((s.kelas || t.kelas) ? ('Kelas ' + (s.kelas || t.kelas)) : 'Tanpa kelas')+'</div>' +
+            '</div>' +
+
+            '<div class="revisi-row-point">'+Number(s.total_point || 0).toFixed(2)+'<span>point</span></div>' +
+            '<div class="revisi-row-status">'+statusHtml+'</div>' +
+            '<div class="revisi-row-act">'+btn+'</div>' +
+
+            revisiRenderScoreChips(s) +
+        '</div>';
     }).join('');
 }
 
 function openRevisiEdit(scoringId) {
-    var s = (appData.my_scores || []).find(function(x){ return x.id === scoringId; });
-    if (!s) return;
-    if (s.ikan && s.ikan.is_locked) { showToast('Nilai sudah DIKUNCI Grand Juri — tidak dapat direvisi.', 'error'); return; }
+    var s = (appData.my_scores || []).find(function(x) {
+        return String(x.id) === String(scoringId);
+    });
+
+    if (!s) {
+        showToast('Data nilai tidak ditemukan. Silakan refresh halaman.', 'error');
+        return;
+    }
+
+    if (s.ikan && s.ikan.is_locked) {
+        showToast('Nilai sudah DIKUNCI Grand Juri — tidak dapat direvisi.', 'error');
+        return;
+    }
+
+    var modal = document.getElementById('revisi-edit-modal');
+    var body = document.getElementById('revisi-form-body');
+
+    if (!modal || !body) {
+        showToast('Modal revisi tidak ditemukan. Cek struktur Blade.', 'error');
+        return;
+    }
+
+    body.innerHTML =
+        '<div class="text-center py-10" style="color:var(--text-mid);">' +
+            '<i class="fas fa-spinner fa-spin text-xl mb-3" style="color:var(--cyan-400);"></i>' +
+            '<p class="text-xs font-bold">Menyiapkan form revisi...</p>' +
+        '</div>';
+
+    modal.classList.remove('hidden');
+
     var nd = s.nilai_detail || {};
     var g = function(o,k){ return (nd[o] && nd[o][k] != null) ? nd[o][k] : ''; };
     revisiState.scoringId = s.id;
@@ -3534,7 +3718,6 @@ function openRevisiEdit(scoringId) {
     };
     document.getElementById('revisi-edit-title').textContent = 'Revisi Tank ' + (s.ikan ? s.ikan.nomor_tank : '-') + ' — ' + revisiState.kategori;
     renderRevisiForm();
-    document.getElementById('revisi-edit-modal').classList.remove('hidden');
 }
 
 function closeRevisiEdit() {
@@ -3559,23 +3742,42 @@ function revisiDefectBtn(partKey) {
 function renderRevisiForm() {
     var kat = revisiState.kategori;
     var html = '';
-    SCORING_GROUPS.forEach(function(group){
-        html += '<div class="revisi-group"><div class="revisi-group-title">'+group.title+'</div><div class="revisi-fields">';
-        group.fields.forEach(function(f){
+
+    SCORING_GROUPS.forEach(function(group) {
+        var groupHtml = '';
+
+        group.fields.forEach(function(f) {
             if (f.type === 'defect') {
-                html += '<div class="revisi-field"><label>Defect</label>'+revisiDefectBtn(f.part)+'</div>';
+                groupHtml += '<div class="revisi-field"><label>Defect</label>'+revisiDefectBtn(f.part)+'</div>';
                 return;
             }
+
             if (isFieldLocked(kat, f.key)) {
-                html += '<div class="revisi-field"><label>'+f.label+'</label><div class="revisi-locked"><i class="fas fa-lock"></i> N/A</div></div>';
                 return;
             }
+
             var val = revisiGetVal(f.key);
-            html += '<div class="revisi-field"><label>'+f.label+'</label><select onchange="revisiSetVal(\''+f.key+'\',this.value)" class="revisi-select">'+buildSelectHtml(val, f.type)+'</select></div>';
+
+            groupHtml +=
+                '<div class="revisi-field">' +
+                    '<label>'+f.label+'</label>' +
+                    '<select onchange="revisiSetVal(\''+f.key+'\',this.value)" class="revisi-select">' +
+                        buildSelectHtml(val, f.type) +
+                    '</select>' +
+                '</div>';
         });
-        html += '</div></div>';
+
+        if (groupHtml !== '') {
+            html += '<div class="revisi-group">' +
+                '<div class="revisi-group-title">'+group.title+'</div>' +
+                '<div class="revisi-fields">'+groupHtml+'</div>' +
+            '</div>';
+        }
     });
-    document.getElementById('revisi-form-body').innerHTML = html;
+
+    document.getElementById('revisi-form-body').innerHTML =
+        html ||
+        '<div class="text-center py-10" style="color:var(--text-low);font-size:12px;font-weight:800;">Tidak ada komponen penilaian aktif untuk kategori ini.</div>';
 }
 
 async function submitRevisi() {
@@ -3626,13 +3828,20 @@ function setRevisiRankScope(scope) {
 
 async function loadRevisiRanking() {
     var content = document.getElementById('revisi-ranking-content');
+    var refreshBtn = document.querySelector('.revisi-refresh-btn');
 
     if (!content) {
         console.warn('Elemen #revisi-ranking-content tidak ditemukan.');
         return;
     }
 
-    content.innerHTML = '<div class="text-center py-16" style="color:var(--text-low);"><i class="fas fa-spinner fa-spin"></i> Memuat ranking...</div>';
+    if (refreshBtn) refreshBtn.classList.add('loading');
+
+    content.innerHTML =
+        '<div class="text-center py-16 glass-card" style="color:var(--text-low);">' +
+            '<i class="fas fa-spinner fa-spin" style="font-size:24px;color:var(--cyan-400);"></i>' +
+            '<p class="mt-3 text-sm font-bold">Memuat ranking...</p>' +
+        '</div>';
     var kat = document.getElementById('revisi-rank-kategori') ? document.getElementById('revisi-rank-kategori').value : '';
     var kelas = document.getElementById('revisi-rank-kelas') ? document.getElementById('revisi-rank-kelas').value : '';
     var qs = '?scope=' + encodeURIComponent(revisiRankScope);
@@ -3644,7 +3853,9 @@ async function loadRevisiRanking() {
         var groups = await apiFetch('/api/juri/point-ranking' + qs);
         renderRevisiRanking(groups);
     } catch(e) {
-        content.innerHTML = '<div class="text-center py-16" style="color:var(--danger);">Gagal memuat ranking.</div>';
+        content.innerHTML = '<div class="text-center py-16 glass-card" style="color:var(--danger);">Gagal memuat ranking.</div>';
+    } finally {
+        if (refreshBtn) refreshBtn.classList.remove('loading');
     }
 }
 
