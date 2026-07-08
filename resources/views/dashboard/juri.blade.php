@@ -345,7 +345,7 @@
                 </div>
             </div>
 
-            <button type="button" onclick="loadRevisiView()" class="revisi-refresh-btn">
+            <button type="button" onclick="loadRevisiView(true)" class="revisi-refresh-btn">
                 <i class="fas fa-sync-alt"></i>
                 Refresh
             </button>
@@ -368,12 +368,24 @@
                 <span>Nilai yang belum dikunci Grand Juri masih bisa direvisi. Jika sudah final, tombol edit otomatis terkunci.</span>
             </div>
 
-            <div id="revisi-loading" class="hidden revisi-loading-card">
-                <i class="fas fa-spinner fa-spin"></i>
-                <div>
-                    <b>Memuat data revisi...</b>
-                    <span>Mengambil nilai juri dan komponen penilaian.</span>
+            <div class="revisi-edit-filter-card">
+                <div class="revisi-edit-search">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input
+                        type="text"
+                        id="revisi-edit-search"
+                        oninput="revisiApplyEditFilter()"
+                        placeholder="Cari nomor tank, kategori, kelas, atau point..."
+                    >
                 </div>
+
+                <div id="revisi-edit-filter-chips" class="revisi-edit-filter-chips"></div>
+            </div>
+
+            <div id="revisi-loading" class="hidden revisi-loading-card">
+                <div class="revisi-loading-spinner"></div>
+                <p>Memuat data revisi...</p>
+                <span>Mengambil nilai juri dan komponen penilaian.</span>
             </div>
 
             <div id="revisi-list" class="revisi-list-wrap"></div>
@@ -1491,6 +1503,137 @@
         from{ transform:rotate(0deg); }
         to{ transform:rotate(360deg); }
     }
+    /* Loading revisi harus benar-benar hilang saat class hidden aktif */
+    .revisi-loading-card.hidden{
+        display:none !important;
+    }
+
+    .revisi-loading-card{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        gap:10px;
+        padding:34px 18px;
+        margin-bottom:14px;
+        border-radius:18px;
+        background:rgba(4,7,15,.72);
+        border:1px solid var(--bd-2);
+        color:var(--text-mid);
+        text-align:center;
+        box-shadow:var(--shadow-card);
+    }
+
+    .revisi-loading-spinner{
+        width:44px;
+        height:44px;
+        border-radius:999px;
+        border:4px solid var(--glass-strong);
+        border-top-color:var(--cyan-400);
+        animation:spin 1s linear infinite;
+    }
+
+    .revisi-loading-card p{
+        margin:0;
+        color:var(--text-hi);
+        font-size:13px;
+        font-weight:900;
+    }
+
+    .revisi-loading-card span{
+        color:var(--text-mid);
+        font-size:11px;
+        font-weight:700;
+    }
+
+    .revisi-refresh-btn.loading i{
+        animation:spin 1s linear infinite;
+    }
+
+    .revisi-edit-filter-card{
+        display:flex;
+        flex-direction:column;
+        gap:12px;
+        padding:14px;
+        margin-bottom:14px;
+        border-radius:18px;
+        background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+        border:1px solid var(--bd-2);
+        box-shadow:0 14px 30px -24px rgba(0,0,0,.65);
+    }
+
+    .revisi-edit-search{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        padding:10px 13px;
+        border-radius:13px;
+        background:rgba(15,23,42,.80);
+        border:1px solid var(--bd-2);
+    }
+
+    .revisi-edit-search i{
+        color:var(--cyan-400);
+        font-size:12px;
+    }
+
+    .revisi-edit-search input{
+        width:100%;
+        background:transparent;
+        border:0;
+        outline:0;
+        color:var(--text-hi);
+        font-family:inherit;
+        font-size:12px;
+        font-weight:800;
+    }
+
+    .revisi-edit-search input::placeholder{
+        color:var(--text-low);
+    }
+
+    .revisi-edit-filter-chips{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        flex-wrap:wrap;
+        max-height:86px;
+        overflow:auto;
+        padding-bottom:2px;
+    }
+
+    .revisi-edit-chip{
+        display:inline-flex;
+        align-items:center;
+        gap:7px;
+        padding:8px 13px;
+        border-radius:999px;
+        background:var(--glass-2);
+        border:1px solid var(--bd-2);
+        color:var(--text-mid);
+        font-family:inherit;
+        font-size:11px;
+        font-weight:900;
+        cursor:pointer;
+        transition:all .18s ease;
+    }
+
+    .revisi-edit-chip:hover{
+        color:var(--text-hi);
+        background:var(--glass-3);
+    }
+
+    .revisi-edit-chip.active{
+        background:linear-gradient(135deg,rgba(34,211,238,.20),rgba(37,99,235,.18));
+        border-color:var(--bd-cyan);
+        color:var(--cyan-300);
+        box-shadow:0 8px 20px -12px rgba(6,182,212,.55);
+    }
+
+    @keyframes spin{
+        from{ transform:rotate(0deg); }
+        to{ transform:rotate(360deg); }
+    }
 </style>
 <script>
 
@@ -1593,8 +1736,26 @@ function setApprovedIkanSig(ids) {
     lastApprovedIkanSig = makeApprovedIkanSig(ids);
 }
 
-function nomShow(id) { document.getElementById(id)?.classList.remove('hidden'); }
-function nomHide(id) { document.getElementById(id)?.classList.add('hidden'); }
+function nomShow(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+
+    el.classList.remove('hidden');
+
+    // Penting: forceHidePage() pernah memberi display:none.
+    // Jadi saat show, display harus dikembalikan.
+    if (el.style.display === 'none') {
+        el.style.display = '';
+    }
+}
+
+function nomHide(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+
+    el.classList.add('hidden');
+    el.style.display = 'none';
+}
 
 async function checkNominasiStatus(attempt = 1) {
     try {
@@ -1606,8 +1767,12 @@ async function checkNominasiStatus(attempt = 1) {
         //    di atas halaman penjurian. Baca currentJuriView yang terbaru di sini.
         const isOnPenjurianTab = (currentJuriView === 'penjurian');
 
-        // ★ Tab Foto: jangan ubah visibilitas halaman nominasi/penjurian (cegah race).
-        if (currentJuriView === 'foto') { nomHide('nom-loading'); return; }
+        // Status nominasi hanya boleh mengubah UI saat tab Nominasi/Penjurian.
+        // Ini mencegah halaman lain ikut berubah karena response lama dari request async.
+        if (currentJuriView !== 'nominasi' && currentJuriView !== 'penjurian') {
+            nomHide('nom-loading');
+            return;
+        }
 
         const status = res.status;
         const wasPending = sessionStorage.getItem('nom_was_pending') === '1';
@@ -3509,21 +3674,41 @@ document.addEventListener('DOMContentLoaded', function() {
 /* ════════════════════ REVISI & RANKING (JURI) ════════════════════ */
 let revisiState = { scoringId:null, kategori:'', kelas:'', scores:{}, defects:{} };
 let revisiRankScope = 'per_kategori_kelas';
+let revisiEditFilter = { key:'', search:'' };
+let revisiLoadedOnce = false;
 
-async function loadRevisiView() {
+async function loadRevisiView(forceRefresh) {
     populateRevisiRankFilters();
 
     var refreshBtn = document.querySelector('.revisi-refresh-btn');
     var loading = document.getElementById('revisi-loading');
     var list = document.getElementById('revisi-list');
 
+    var hasData = Array.isArray(appData.my_scores) && appData.my_scores.length > 0;
+    var shouldShowLoading = forceRefresh === true || !revisiLoadedOnce || !hasData;
+
     if (refreshBtn) refreshBtn.classList.add('loading');
-    if (loading) loading.classList.remove('hidden');
-    if (list) list.innerHTML = '';
+
+    if (shouldShowLoading) {
+        if (loading) loading.classList.remove('hidden');
+        if (list) list.innerHTML = '';
+    }
 
     try {
         await refreshRevisiScores();
+
+        revisiLoadedOnce = true;
+
+        populateRevisiEditFilter();
         renderRevisiList();
+    } catch (e) {
+        if (list) {
+            list.innerHTML =
+                '<div class="text-center py-16 glass-card" style="color:var(--danger);">' +
+                    '<i class="fas fa-triangle-exclamation text-2xl mb-2"></i>' +
+                    '<p class="text-sm font-bold">Gagal memuat data revisi.</p>' +
+                '</div>';
+        }
     } finally {
         if (loading) loading.classList.add('hidden');
         if (refreshBtn) refreshBtn.classList.remove('loading');
@@ -3568,7 +3753,12 @@ function revisiSwitchTab(tab) {
     bRank.classList.remove('active');
     bEdit.classList.add('active');
 
-    renderRevisiList();
+    if (!revisiLoadedOnce) {
+        loadRevisiView(false);
+    } else {
+        populateRevisiEditFilter();
+        renderRevisiList();
+    }
 }
 
 async function refreshRevisiScores() {
@@ -3611,6 +3801,93 @@ function revisiRenderScoreChips(score) {
     return '<div class="revisi-components">' + chips.join('') + '</div>';
 }
 
+function revisiGetScoreFilterKey(score) {
+    var t = score.ikan || {};
+    var kategori = t.kategori || '-';
+    var kelas = score.kelas || t.kelas || '';
+    return kategori + '||' + kelas;
+}
+
+function revisiGetScoreFilterLabel(score) {
+    var t = score.ikan || {};
+    var kategori = t.kategori || '-';
+    var kelas = score.kelas || t.kelas || '';
+
+    return kategori + (kelas ? ' – Kelas ' + kelas : ' – Tanpa Kelas');
+}
+
+function populateRevisiEditFilter() {
+    var wrap = document.getElementById('revisi-edit-filter-chips');
+    if (!wrap) return;
+
+    var scores = appData.my_scores || [];
+    var map = {};
+
+    scores.forEach(function(s) {
+        var key = revisiGetScoreFilterKey(s);
+        if (!map[key]) {
+            map[key] = revisiGetScoreFilterLabel(s);
+        }
+    });
+
+    var chips = [
+        '<button type="button" onclick="setRevisiEditFilter(\'\')" class="revisi-edit-chip '+(revisiEditFilter.key === '' ? 'active' : '')+'">' +
+            '<i class="fas fa-layer-group"></i> Semua' +
+        '</button>'
+    ];
+
+    Object.keys(map).sort(function(a, b) {
+        return map[a].localeCompare(map[b]);
+    }).forEach(function(key) {
+        chips.push(
+            '<button type="button" onclick="setRevisiEditFilter(\''+key.replace(/'/g, "\\'")+'\')" class="revisi-edit-chip '+(revisiEditFilter.key === key ? 'active' : '')+'">' +
+                '<i class="fas fa-fish"></i> ' + map[key] +
+            '</button>'
+        );
+    });
+
+    wrap.innerHTML = chips.join('');
+}
+
+function setRevisiEditFilter(key) {
+    revisiEditFilter.key = key || '';
+    populateRevisiEditFilter();
+    renderRevisiList();
+}
+
+function revisiApplyEditFilter() {
+    var input = document.getElementById('revisi-edit-search');
+    revisiEditFilter.search = input ? input.value.trim().toLowerCase() : '';
+    renderRevisiList();
+}
+
+function revisiFilterScores(scores) {
+    var q = revisiEditFilter.search || '';
+    var key = revisiEditFilter.key || '';
+
+    return (scores || []).filter(function(s) {
+        var t = s.ikan || {};
+        var kategori = t.kategori || '';
+        var kelas = s.kelas || t.kelas || '';
+        var nomor = t.nomor_tank || '';
+        var point = Number(s.total_point || 0).toFixed(2);
+
+        var thisKey = revisiGetScoreFilterKey(s);
+        var haystack = [
+            nomor,
+            kategori,
+            kelas,
+            'kelas ' + kelas,
+            point
+        ].join(' ').toLowerCase();
+
+        if (key && thisKey !== key) return false;
+        if (q && haystack.indexOf(q) === -1) return false;
+
+        return true;
+    });
+}
+
 function renderRevisiList() {
     var box = document.getElementById('revisi-list');
 
@@ -3619,13 +3896,23 @@ function renderRevisiList() {
         return;
     }
 
-    var scores = appData.my_scores || [];
+    var allScores = appData.my_scores || [];
+    var scores = revisiFilterScores(allScores);
 
-    if (scores.length === 0) {
+    if (allScores.length === 0) {
         box.innerHTML =
             '<div class="text-center py-16 glass-card" style="color:var(--text-low);">' +
                 '<i class="fas fa-inbox" style="font-size:26px;opacity:.4;"></i>' +
                 '<p class="mt-2 text-sm font-bold">Belum ada nilai tersimpan untuk direvisi.</p>' +
+            '</div>';
+        return;
+    }
+
+    if (scores.length === 0) {
+        box.innerHTML =
+            '<div class="text-center py-16 glass-card" style="color:var(--text-low);">' +
+                '<i class="fas fa-filter" style="font-size:26px;opacity:.4;"></i>' +
+                '<p class="mt-2 text-sm font-bold">Tidak ada nilai sesuai filter.</p>' +
             '</div>';
         return;
     }
