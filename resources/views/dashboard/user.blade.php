@@ -3052,6 +3052,20 @@
                                         </div>
                                     </div>
 
+                                    {{-- ═══ PIAGAM HASIL JUARA (khusus milik user, ikut gate akses) ═══ --}}
+                                    <div id="hasilPiagamWrap" style="display:none;">
+                                        <div class="result-section-head">
+                                            <div>
+                                                <h3>
+                                                    <i class="fas fa-award" style="color:var(--gold-400);margin-right:6px;"></i>
+                                                    Piagam Hasil Juara
+                                                </h3>
+                                                <p>Piagam yang dikirim panitia khusus untuk Anda. Klik untuk melihat atau mengunduh.</p>
+                                            </div>
+                                        </div>
+                                        <div id="hasilPiagamList"></div>
+                                    </div>
+
                                     <div class="result-section-head">
                                         <div>
                                             <h3>
@@ -4809,8 +4823,52 @@
                 renderDashboardRankingPreview();
                 renderDashboardMvpByTeam();
                 renderDashboardTeamChampion();
+
+                loadMyPiagamDashboard();
             })
             .catch(function(){ /* diamkan: badge tetap apa adanya */ });
+        }
+
+        function loadMyPiagamDashboard(){
+            var wrap = document.getElementById('hasilPiagamWrap');
+            var list = document.getElementById('hasilPiagamList');
+            if (!wrap || !list) return;
+
+            fetch('/api/user/my-piagam?_t=' + Date.now(), { headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'} })
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(d){
+                var items = (d && Array.isArray(d.piagams)) ? d.piagams : [];
+                if (items.length === 0) { wrap.style.display = 'none'; list.innerHTML = ''; return; }
+                wrap.style.display = 'block';
+
+                var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">';
+                items.forEach(function(pg){
+                    var title = pg.judul || pg.original_name || ('Piagam #'+pg.id);
+                    var meta = [];
+                    if (pg.kategori) meta.push(escapeHtml(pg.kategori));
+                    if (pg.kelas) meta.push('Kelas '+escapeHtml(pg.kelas));
+                    var metaLine = meta.length ? '<div style="font-size:10px;color:var(--text-low);margin-top:2px;">'+meta.join(' &bull; ')+'</div>' : '';
+
+                    var preview = pg.is_pdf
+                        ? '<div style="height:150px;display:grid;place-items:center;background:var(--glass-2);border-bottom:1px solid var(--bd-2);color:var(--gold-400);font-size:34px;"><i class="fas fa-file-pdf"></i></div>'
+                        : '<a href="'+pg.view_url+'" target="_blank" rel="noopener"><img src="'+pg.view_url+'" alt="'+escapeHtml(title)+'" style="width:100%;height:150px;object-fit:cover;display:block;border-bottom:1px solid var(--bd-2);"></a>';
+
+                    html += '<div style="border:1px solid var(--bd-2);border-radius:12px;overflow:hidden;background:var(--glass-1);">'
+                        + preview
+                        + '<div style="padding:10px 12px;">'
+                            + '<div style="font-size:12px;font-weight:800;color:var(--text-hi);line-height:1.3;">'+escapeHtml(title)+'</div>'
+                            + metaLine
+                            + '<div style="display:flex;gap:8px;margin-top:10px;">'
+                                + '<a href="'+pg.view_url+'" target="_blank" rel="noopener" style="flex:1;text-align:center;font-size:10px;font-weight:800;padding:7px 8px;border-radius:8px;background:var(--glass-3);border:1px solid var(--bd-2);color:var(--text-mid);text-decoration:none;"><i class="fas fa-eye"></i> Lihat</a>'
+                                + '<a href="'+pg.download_url+'" style="flex:1;text-align:center;font-size:10px;font-weight:800;padding:7px 8px;border-radius:8px;background:linear-gradient(135deg,var(--gold-500),var(--gold-700));border:none;color:#fff;text-decoration:none;"><i class="fas fa-download"></i> Unduh</a>'
+                            + '</div>'
+                        + '</div>'
+                    + '</div>';
+                });
+                html += '</div>';
+                list.innerHTML = html;
+            })
+            .catch(function(){ wrap.style.display = 'none'; });
         }
 
         function updateRegistrationLimitTexts() {

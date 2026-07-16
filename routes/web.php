@@ -31,12 +31,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/user/my-ikans', [DashboardController::class, 'getMyIkans']);
     Route::get('/foto-ikan/{foto}', [DashboardController::class, 'serveFoto'])->name('foto.ikan');
     Route::get('/api/user/ikan-foto/{id}', [DashboardController::class, 'ikanFotoInfo']);
-    // [DIHAPUS] Upload foto oleh user dipindah ke panel Juri.
     Route::get('/api/user/public-results', [DashboardController::class, 'getPublicResults']);
     Route::get('/api/user/nominasi-results', [DashboardController::class, 'getNominasiResults']); // ★ hasil nominasi utk peserta
+    Route::get('/api/user/my-piagam', [DashboardController::class, 'getMyPiagam']);
+    Route::get('/piagam/{id}', [DashboardController::class, 'servePiagam'])->name('piagam.serve');
     Route::post('/api/toggle-team-champion-ikan', [DashboardController::class, 'toggleTeamChampionIkan'])->name('api.toggle.team_champion');
     Route::post('/api/submit-team-champion-ikan', [DashboardController::class, 'submitTeamChampionIkan'])->name('api.submit.team_champion');
-
     Route::post('/api/toggle-mvp-ikan', [DashboardController::class, 'toggleMvpIkan'])->name('api.toggle.mvp');
     Route::post('/api/submit-mvp-ikan', [DashboardController::class, 'submitMvpIkan'])->name('api.submit.mvp');
 });
@@ -188,6 +188,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/unpublish-result-user', [AdminDashboardController::class, 'unpublishResultUser']);
     Route::post('/api/admin/buka-semua-kunci', [AdminDashboardController::class, 'bukaSemuaKunci']);
     Route::post('/api/admin/unpublish-results-all', [AdminDashboardController::class, 'unpublishResultsAll']);
+
+    // ★ PIAGAM HASIL JUARA — kelola sertifikat per peserta/team
+    Route::get('/api/admin/piagam-recipients', [AdminDashboardController::class, 'getPiagamRecipients']);
+    Route::post('/api/admin/upload-piagam', [AdminDashboardController::class, 'uploadPiagam']);
+    Route::post('/api/admin/delete-piagam', [AdminDashboardController::class, 'deletePiagam']);
 
     // ★ NOMINASI — kirim/cabut hasil nominasi ke semua peserta
     Route::post('/api/admin/toggle-nominasi-publish', [AdminDashboardController::class, 'toggleNominasiPublish']);

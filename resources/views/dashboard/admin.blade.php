@@ -1710,6 +1710,51 @@
                         </div>
                     </div>
                 </div>
+            {{-- ═══ Kelola Piagam Hasil Juara ═══ --}}
+                <div class="glass-card">
+                    <div class="card-head">
+                        <h3><span class="ti" style="background:rgba(245,158,11,.12);border-color:var(--bd-gold);color:var(--gold-400);"><i class="fas fa-award"></i></span>Kelola Piagam Hasil Juara</h3>
+                        <button class="btn-xs blue" onclick="loadPiagamRecipients()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    </div>
+                    <div class="card-body">
+                        <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:11px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:var(--gold-300);line-height:1.6;">
+                            <i class="fas fa-circle-info" style="margin-right:6px;"></i>
+                            Unggah <b>foto/PDF piagam</b> per peserta atau per team. Setiap piagam <b>hanya bisa dilihat &amp; diunduh oleh penerima yang dipilih</b> — peserta lain tidak dapat melihat piagam milik orang lain. Bisa unggah beberapa file sekaligus (maks 5MB/file, format jpg/png/webp/pdf).
+                        </div>
+
+                        <div class="filter-bar" style="margin-bottom:14px;">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="piagamSearch" placeholder="Cari nama / email..." oninput="renderPiagamRecipients()">
+                            </div>
+                            <select class="filter-select" id="piagamFilterKat" onchange="renderPiagamRecipients()">
+                                <option value="">Semua Kategori</option>
+                                @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
+                            </select>
+                            <select class="filter-select" id="piagamFilterJenis" onchange="renderPiagamRecipients()" style="min-width:130px;">
+                                <option value="">Semua Jenis</option>
+                                <option value="perorangan">Perorangan</option>
+                                <option value="team">Team</option>
+                            </select>
+                        </div>
+
+                        <div style="max-height:460px;overflow-y:auto;border:1px solid var(--bd-2);border-radius:12px;">
+                            <table class="data-table" style="min-width:auto;">
+                                <thead><tr>
+                                    <th style="width:30px;">#</th>
+                                    <th>PENERIMA</th>
+                                    <th style="text-align:center;width:90px;">JUMLAH PIAGAM</th>
+                                    <th style="text-align:center;width:150px;">AKSI</th>
+                                </tr></thead>
+                                <tbody id="piagamRecipientBody">
+                                    <tr><td colspan="4"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <input type="file" id="piagamFileInput" accept="image/*,application/pdf" multiple style="display:none;" onchange="onPiagamFileChosen(this)">
+                    </div>
+                </div>
             </section>
 
             <!-- ═══════════ PAGE: POINT RANKING ═══════════ -->

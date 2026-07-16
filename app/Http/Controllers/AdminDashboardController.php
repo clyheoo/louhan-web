@@ -3771,6 +3771,140 @@ public function getIkanFotos($id)
         ]);
     }
 
+    /* ═══════════════════════════════════════════
+       PIAGAM HASIL JUARA (sertifikat per peserta/team)
+       ═══════════════════════════════════════════ */
+    public function getPiagamRecipients()
+    {
+        $pesertas = Peserta::with('user')
+            ->whereHas('user')
+            ->orderBy('nama_peserta')
+            ->get();
+
+        $piagamsByPeserta = \App\Models\Piagam::orderByDesc('created_at')
+            ->get()
+            ->groupBy('peserta_id');
+
+        $rows = $pesertas->map(function ($p) use ($piagamsByPeserta) {
+            $u = $p->user;
+            if (!$u) return null;
+
+            $list = ($piagamsByPeserta[$p->id] ?? collect())->map(function ($pg) {
+                return [
+                    'id'            => $pg->id,
+                    'judul'         => $pg->judul,
+                    'original_name' => $pg->original_name,
+                    'kategori'      => $pg->kategori,
+                    'kelas'         => $pg->kelas,
+                    'url'           => route('piagam.serve', $pg->id),
+                    'created_at'    => optional($pg->created_at)->format('d M Y H:i'),
+                ];
+            })->values();
+
+            $displayName = ($p->jenis_keanggotaan === 'team' && $p->detail_anggota)
+                ? $p->detail_anggota
+                : ($p->nama_peserta ?: $u->name);
+
+            // kategori ikan milik peserta → untuk filter "per kategori"
+            $kategoris = $p->ikans()
+                ->whereNotNull('kategori')
+                ->distinct()
+                ->pluck('kategori')
+                ->filter()
+                ->values()
+                ->toArray();
+
+            return [
+                'peserta_id'        => $p->id,
+                'name'              => $displayName,
+                'email'             => $u->email,
+                'jenis_keanggotaan' => $p->jenis_keanggotaan ?? 'perorangan',
+                'kategoris'         => $kategoris,
+                'piagam_count'      => $list->count(),
+                'piagams'           => $list,
+            ];
+        })->filter()->values();
+
+        return response()->json([
+            'recipients'   => $rows,
+            'total_piagam' => \App\Models\Piagam::count(),
+        ]);
+    }
+
+    public function uploadPiagam(Request $request)
+    {
+        $request->validate([
+            'peserta_id' => 'required|integer',
+            'judul'      => 'nullable|string|max:255',
+            'kategori'   => 'nullable|string|max:255',
+            'kelas'      => 'nullable|string|max:20',
+            'files'      => 'required',
+            'files.*'    => 'file|mimes:jpg,jpeg,png,webp,pdf|max:5120', // maks 5MB/file
+        ]);
+
+        $peserta = Peserta::find($request->peserta_id);
+        if (!$peserta) {
+            return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan.'], 404);
+        }
+
+        $files = $request->file('files');
+        if (!is_array($files)) {
+            $files = $files ? [$files] : [];
+        }
+        if (empty($files)) {
+            return response()->json(['success' => false, 'message' => 'Tidak ada file yang diunggah.'], 422);
+        }
+
+        $created = 0;
+        foreach ($files as $file) {
+            $ext  = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+            $name = 'piagam_' . $peserta->id . '_' . now()->format('YmdHis') . '_' . Str::random(6) . '.' . $ext;
+            $path = $file->storeAs('piagam', $name, 'public');
+
+            \App\Models\Piagam::create([
+                'peserta_id'    => $peserta->id,
+                'kategori'      => $request->kategori,
+                'kelas'         => $request->kelas,
+                'judul'         => $request->judul,
+                'path'          => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime'          => $file->getClientMimeType(),
+                'size'          => (int) $file->getSize(),
+                'uploaded_by'   => auth()->id(),
+            ]);
+
+            $created++;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $created . ' piagam berhasil dikirim ke ' . ($peserta->nama_peserta ?: 'peserta') . '.',
+            'count'   => $created,
+        ]);
+    }
+
+    public function deletePiagam(Request $request)
+    {
+        $request->validate(['id' => 'required|integer']);
+
+        $pg = \App\Models\Piagam::find($request->id);
+        if (!$pg) {
+            return response()->json(['success' => false, 'message' => 'Piagam tidak ditemukan.'], 404);
+        }
+
+        try {
+            if ($pg->path && \Storage::disk('public')->exists($pg->path)) {
+                \Storage::disk('public')->delete($pg->path);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Gagal hapus file piagam: ' . $e->getMessage());
+        }
+
+        $pg->delete();
+
+        return response()->json(['success' => true, 'message' => 'Piagam berhasil dihapus.']);
+    }
+
     public function getAvailableTankBlock(Request $request)
     {
         $blockSize = 100;

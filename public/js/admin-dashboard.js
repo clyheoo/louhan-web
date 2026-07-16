@@ -5498,6 +5498,155 @@ function publishResultSingleUser(userId, userName){
 }
 
 /* ═══════════════════════════════════════════════
+   MODUL PIAGAM HASIL JUARA
+   ═══════════════════════════════════════════════ */
+var piagamRecipientsData = [];
+var piagamUploadTarget = null;
+
+function loadPiagamRecipients(){
+    var tb = document.getElementById('piagamRecipientBody');
+    if(!tb) return;
+    tb.innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat penerima...</p></div></td></tr>';
+
+    fetch('/api/admin/piagam-recipients?_t=' + Date.now(), {
+        headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}
+    })
+    .then(function(r){ if(!r.ok){ return r.json().then(function(d){ throw d; }); } return r.json(); })
+    .then(function(d){
+        piagamRecipientsData = Array.isArray(d.recipients) ? d.recipients : [];
+        renderPiagamRecipients();
+    })
+    .catch(function(e){
+        var msg = e && e.message ? e.message : 'Gagal memuat data.';
+        tb.innerHTML = '<tr><td colspan="4"><div class="empty-state" style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i><p>'+esc(msg)+'</p></div></td></tr>';
+    });
+}
+
+function renderPiagamRecipients(){
+    var tb = document.getElementById('piagamRecipientBody');
+    if(!tb) return;
+
+    var q = ((document.getElementById('piagamSearch') || {}).value || '').toLowerCase().trim();
+    var fKat = (document.getElementById('piagamFilterKat') || {}).value || '';
+    var fJenis = (document.getElementById('piagamFilterJenis') || {}).value || '';
+
+    var rows = piagamRecipientsData.filter(function(r){
+        if(fJenis && (r.jenis_keanggotaan || 'perorangan') !== fJenis) return false;
+        if(fKat){
+            var kats = Array.isArray(r.kategoris) ? r.kategoris : [];
+            if(kats.indexOf(fKat) === -1) return false;
+        }
+        if(q){
+            var hay = ((r.name || '') + ' ' + (r.email || '')).toLowerCase();
+            if(hay.indexOf(q) === -1) return false;
+        }
+        return true;
+    });
+
+    if(rows.length === 0){
+        tb.innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-users-slash"></i><p>Tidak ada penerima pada filter ini.</p></div></td></tr>';
+        return;
+    }
+
+    var html = '';
+    rows.forEach(function(r, idx){
+        var nameCell = esc(r.name || '-');
+        if((r.jenis_keanggotaan || '') === 'team'){
+            nameCell += ' <span style="font-size:9px;font-weight:700;color:var(--gold-300);background:rgba(245,158,11,.10);padding:2px 6px;border-radius:4px;border:1px solid rgba(245,158,11,.20);margin-left:4px;vertical-align:middle;">TEAM</span>';
+        }
+        var emailLine = '<div style="font-size:10px;color:var(--text-low);margin-top:2px;">'+esc(r.email || '-')+'</div>';
+
+        var count = parseInt(r.piagam_count || 0, 10);
+        var countBadge = count > 0
+            ? '<span style="font-size:10px;font-weight:800;color:#6EE7B7;background:rgba(16,185,129,.12);padding:4px 10px;border-radius:6px;border:1px solid rgba(16,185,129,.25);">'+count+'</span>'
+            : '<span style="font-size:10px;color:var(--text-faint);">0</span>';
+
+        var chips = '';
+        if(Array.isArray(r.piagams) && r.piagams.length){
+            chips = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">';
+            r.piagams.forEach(function(pg){
+                var label = pg.judul || pg.original_name || ('Piagam #'+pg.id);
+                chips += '<span style="display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:var(--text-mid);background:var(--glass-3);border:1px solid var(--bd-2);border-radius:999px;padding:4px 8px 4px 10px;">'
+                    + '<a href="'+pg.url+'" target="_blank" rel="noopener" style="color:var(--cyan-300);text-decoration:none;"><i class="fas fa-eye" style="font-size:9px;"></i> '+esc(label)+'</a>'
+                    + '<button onclick="deletePiagam('+pg.id+')" title="Hapus" style="border:none;background:transparent;color:var(--danger);cursor:pointer;padding:0;font-size:11px;line-height:1;"><i class="fas fa-times-circle"></i></button>'
+                    + '</span>';
+            });
+            chips += '</div>';
+        }
+
+        html += '<tr>';
+        html += '<td style="font-weight:700;color:var(--text-low);font-size:11px;vertical-align:top;padding-top:12px;">'+(idx+1)+'</td>';
+        html += '<td style="font-weight:700;">'+nameCell+emailLine+chips+'</td>';
+        html += '<td style="text-align:center;vertical-align:top;padding-top:12px;">'+countBadge+'</td>';
+        html += '<td style="text-align:center;vertical-align:top;padding-top:10px;"><button class="btn-xs green" onclick="openPiagamUpload('+r.peserta_id+')" style="padding:6px 12px;font-size:10px;"><i class="fas fa-upload"></i> Kirim Piagam</button></td>';
+        html += '</tr>';
+    });
+
+    tb.innerHTML = html;
+}
+
+function openPiagamUpload(pesertaId){
+    piagamUploadTarget = pesertaId;
+    var inp = document.getElementById('piagamFileInput');
+    if(inp){ inp.value = ''; inp.click(); }
+}
+
+function onPiagamFileChosen(input){
+    if(!input || !input.files || !input.files.length) return;
+    if(!piagamUploadTarget){ popupError('Gagal', 'Penerima tidak dikenali. Klik tombol "Kirim Piagam" lagi.'); return; }
+
+    var files = input.files;
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('peserta_id', piagamUploadTarget);
+    for(var i=0;i<files.length;i++){ fd.append('files[]', files[i]); }
+
+    _exportToast('Mengunggah piagam...', true);
+
+    fetch('/api/admin/upload-piagam', {
+        method:'POST',
+        headers:{'X-CSRF-TOKEN':getCsrf(),'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+        body: fd
+    })
+    .then(function(r){ if(!r.ok){ return r.json().then(function(d){ throw d; }); } return r.json(); })
+    .then(function(d){
+        _exportToastHide(200);
+        if(d.success){
+            popupSuccess('Berhasil', d.message || 'Piagam berhasil dikirim.');
+            loadPiagamRecipients();
+        } else {
+            popupError('Gagal', d.message || 'Gagal mengunggah piagam.');
+        }
+    })
+    .catch(function(e){
+        _exportToastHide(200);
+        var msg = (e && e.message) ? e.message : 'Gagal mengunggah. Pastikan file jpg/png/webp/pdf & maks 5MB.';
+        popupError('Error', msg);
+    });
+}
+
+function deletePiagam(id){
+    openConfirmPopup(
+        'Hapus Piagam?',
+        'Piagam ini akan dihapus permanen dan tidak lagi bisa diunduh oleh penerima.',
+        'Ya, Hapus',
+        function(){
+            fetch('/api/admin/delete-piagam', {
+                method:'POST',
+                headers:{'X-CSRF-TOKEN':getCsrf(),'Accept':'application/json','Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'},
+                body: JSON.stringify({id:id})
+            })
+            .then(function(r){ if(!r.ok){ return r.json().then(function(d){ throw d; }); } return r.json(); })
+            .then(function(d){
+                if(d.success){ popupSuccess('Berhasil', d.message || 'Piagam dihapus.'); loadPiagamRecipients(); }
+                else { popupError('Gagal', d.message || 'Gagal menghapus piagam.'); }
+            })
+            .catch(function(e){ popupError('Error', e && e.message ? e.message : 'Gagal menghubungi server.'); });
+        }
+    );
+}
+
+/* ═══════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════ */
 loadGlobalRangeDisplay();
@@ -5764,7 +5913,7 @@ function saveJuriAssignments(jid,btn){
             if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
             if(pageId === 'mvp'){ loadMvpData(); loadMvpStatus(); loadMvpPeserta(); loadMvpIkanData(); }
             if(pageId === 'team_champion'){ loadTeamChampionStatus(); loadTeamChampionPeserta(); loadTeamChampionIkan(); }
-            if(pageId === 'results'){ loadResultsStatus(); }
+            if(pageId === 'results'){ loadResultsStatus(); loadPiagamRecipients(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
             if(pageId === 'undian'){ loadUndianStatus(); }
             if(pageId === 'jumbo_calc'){ loadJumboCalcFish(); }
@@ -5778,7 +5927,7 @@ function saveJuriAssignments(jid,btn){
             if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
             if(pageId === 'mvp'){ loadMvpStatus(); }
             if(pageId === 'team_champion'){ loadTeamChampionStatus(); loadTeamChampionPeserta(); loadTeamChampionIkan(); }
-            if(pageId === 'results'){ loadResultsStatus(); }
+            if(pageId === 'results'){ loadResultsStatus(); loadPiagamRecipients(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
             if(pageId === 'undian'){ loadUndianStatus(); }
             if(pageId === 'galeri'){ loadFotoReplaceStatus(); }

@@ -1886,4 +1886,86 @@ public function serveFoto($fotoId)
         ]);
     }
 
+    /* ═══════════════════════════════════════════
+       PIAGAM HASIL JUARA (khusus milik peserta login)
+       ═══════════════════════════════════════════ */
+    public function getMyPiagam()
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['error' => 'unauthenticated'], 401);
+        }
+
+        // ★ Ikut gate "Kirim ke Semua Peserta": bila akses hasil belum dibuka, piagam TIDAK ditampilkan.
+        if (!$this->isResultsGloballyPublished()) {
+            return response()->json(['published' => false, 'piagams' => []]);
+        }
+
+        $peserta = Peserta::where('user_id', $user->id)->first();
+        if (!$peserta) {
+            return response()->json(['piagams' => []]);
+        }
+
+        $piagams = \App\Models\Piagam::where('peserta_id', $peserta->id)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($pg) {
+                $isPdf = stripos((string) $pg->mime, 'pdf') !== false
+                    || strtolower(pathinfo($pg->path, PATHINFO_EXTENSION)) === 'pdf';
+
+                return [
+                    'id'            => $pg->id,
+                    'judul'         => $pg->judul,
+                    'original_name' => $pg->original_name,
+                    'kategori'      => $pg->kategori,
+                    'kelas'         => $pg->kelas,
+                    'is_pdf'        => $isPdf,
+                    'view_url'      => route('piagam.serve', $pg->id),
+                    'download_url'  => route('piagam.serve', $pg->id) . '?download=1',
+                    'created_at'    => optional($pg->created_at)->format('d M Y H:i'),
+                ];
+            });
+
+        return response()->json(['piagams' => $piagams]);
+    }
+
+    public function servePiagam($id)
+    {
+        $user = Auth::user();
+        if (!$user) abort(403);
+
+        $pg = \App\Models\Piagam::find($id);
+        if (!$pg || !\Storage::disk('public')->exists($pg->path)) {
+            abort(404);
+        }
+
+        // Hanya pemilik (peserta) atau admin yang boleh mengakses
+        $isAdmin = ($user->role ?? null) === 'admin';
+        $peserta = Peserta::find($pg->peserta_id);
+        $isOwner = $peserta && (int) $peserta->user_id === (int) $user->id;
+
+        if (!$isAdmin && !$isOwner) {
+            abort(403);
+        }
+
+        // ★ Owner hanya boleh mengakses bila akses hasil sudah dibuka (admin tetap bebas).
+        if (!$isAdmin && !$this->isResultsGloballyPublished()) {
+            abort(403);
+        }
+
+        $mime  = \Storage::disk('public')->mimeType($pg->path) ?: 'application/octet-stream';
+        $bytes = \Storage::disk('public')->get($pg->path);
+
+        $filename = $pg->original_name
+            ?: ('piagam-' . $pg->id . '.' . pathinfo($pg->path, PATHINFO_EXTENSION));
+        $filename = str_replace('"', '', $filename);
+
+        $mode = request()->boolean('download') ? 'attachment' : 'inline';
+
+        return response($bytes, 200)
+            ->header('Content-Type', $mime)
+            ->header('Content-Disposition', $mode . '; filename="' . $filename . '"')
+            ->header('Cache-Control', 'private, max-age=300');
+    }
+
 }
