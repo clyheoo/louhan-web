@@ -5506,6 +5506,11 @@ var piagamUploadTarget = null;
 function loadPiagamRecipients(){
     var tb = document.getElementById('piagamRecipientBody');
     if(!tb) return;
+
+    // ★ Cegah autofill browser (mis. email tersimpan) mengisi kolom cari lalu memfilter semua penerima.
+    var _ps = document.getElementById('piagamSearch');
+    if(_ps && _ps.value){ _ps.value = ''; }
+
     tb.innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat penerima...</p></div></td></tr>';
 
     fetch('/api/admin/piagam-recipients?_t=' + Date.now(), {

@@ -1725,7 +1725,7 @@
                         <div class="filter-bar" style="margin-bottom:14px;">
                             <div class="search-box">
                                 <i class="fas fa-search"></i>
-                                <input type="text" id="piagamSearch" placeholder="Cari nama / email..." oninput="renderPiagamRecipients()">
+                                <input type="text" id="piagamSearch" name="piagamCari" placeholder="Cari nama peserta / team..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" oninput="renderPiagamRecipients()">
                             </div>
                             <select class="filter-select" id="piagamFilterKat" onchange="renderPiagamRecipients()">
                                 <option value="">Semua Kategori</option>
