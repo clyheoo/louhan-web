@@ -3899,6 +3899,11 @@ function renderRevisiList() {
     var allScores = appData.my_scores || [];
     var scores = revisiFilterScores(allScores);
 
+    // ★ Urutkan dari point TERTINGGI ke terendah
+    scores = scores.slice().sort(function(a, b) {
+        return (Number(b.total_point) || 0) - (Number(a.total_point) || 0);
+    });
+
     if (allScores.length === 0) {
         box.innerHTML =
             '<div class="text-center py-16 glass-card" style="color:var(--text-low);">' +
