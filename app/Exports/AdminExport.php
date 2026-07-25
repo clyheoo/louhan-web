@@ -15,6 +15,8 @@ use App\Exports\Sheets\TeamChampionSheet;
 use App\Exports\Sheets\PointRankingSubtotalSheet;
 use App\Exports\Sheets\IndividualRankingSheet;
 use App\Exports\Sheets\TeamRankingSheet;
+use App\Exports\Sheets\PemenangKategoriSheet;
+use App\Exports\Sheets\PemenangKategoriPointSheet;
 
 class AdminExport implements WithMultipleSheets
 {
@@ -44,6 +46,10 @@ class AdminExport implements WithMultipleSheets
             $result[] = new JuriAssignmentSheet();
             $result[] = new NilaiMurniJuriSheet();
             $result[] = new PointRankingSubtotalSheet($rankingScope);
+            $result[] = new PemenangKategoriPointSheet(1, 5);
+            $result[] = new PemenangKategoriPointSheet(6, 10);
+            $result[] = new PemenangKategoriSheet(1, 5);
+            $result[] = new PemenangKategoriSheet(6, 10);
         } elseif ($this->sheets === 'daftar') {
             $result[] = new AdminDaftarIkanSheet();
         } elseif ($this->sheets === 'users') {
@@ -75,9 +81,17 @@ class AdminExport implements WithMultipleSheets
             $result[] = new PointRankingSubtotalSheet('global');
         } elseif ($this->sheets === 'juara_peserta') {
             $result[] = new IndividualRankingSheet();
-        } elseif ($this->sheets === 'juara_team') 
+        } elseif ($this->sheets === 'juara_team') {
             $result[] = new TeamRankingSheet();
-
+        } elseif ($this->sheets === 'pemenang_point_1_5') {
+            $result[] = new PemenangKategoriPointSheet(1, 5);
+        } elseif ($this->sheets === 'pemenang_point_6_10') {
+            $result[] = new PemenangKategoriPointSheet(6, 10);
+        } elseif ($this->sheets === 'pemenang_1_5') {
+            $result[] = new PemenangKategoriSheet(1, 5);
+        } elseif ($this->sheets === 'pemenang_6_10') {
+            $result[] = new PemenangKategoriSheet(6, 10);
+        }
 
         return $result;
     }
