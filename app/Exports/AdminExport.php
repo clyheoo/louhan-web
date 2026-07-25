@@ -50,6 +50,8 @@ class AdminExport implements WithMultipleSheets
             $result[] = new PemenangKategoriPointSheet(6, 10);
             $result[] = new PemenangKategoriSheet(1, 5);
             $result[] = new PemenangKategoriSheet(6, 10);
+            $result[] = new PemenangKategoriPointSheet(1, 10);
+            $result[] = new PemenangKategoriSheet(1, 10);
         } elseif ($this->sheets === 'daftar') {
             $result[] = new AdminDaftarIkanSheet();
         } elseif ($this->sheets === 'users') {
@@ -91,6 +93,10 @@ class AdminExport implements WithMultipleSheets
             $result[] = new PemenangKategoriSheet(1, 5);
         } elseif ($this->sheets === 'pemenang_6_10') {
             $result[] = new PemenangKategoriSheet(6, 10);
+        } elseif ($this->sheets === 'pemenang_point_1_10') {
+            $result[] = new PemenangKategoriPointSheet(1, 10);
+        } elseif ($this->sheets === 'pemenang_1_10') {
+            $result[] = new PemenangKategoriSheet(1, 10);
         }
 
         return $result;
