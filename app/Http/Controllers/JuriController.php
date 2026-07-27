@@ -527,6 +527,7 @@ class JuriController extends Controller
         $hasJuriAssignment = \App\Models\JuriAssignment::where('juri_id', auth()->id())->exists();
         $globalUnlocked    = (bool) (\DB::table('settings')->where('key', 'scoring_unlocked')->value('value') ?? false);
         $fotoPageUnlocked  = \DB::table('settings')->where('key', 'foto_page_unlocked')->value('value') === '1';
+        $randomFillEnabled = \DB::table('settings')->where('key', 'juri_random_fill_enabled')->value('value') === '1';
         // Boleh menilai hanya jika sesi dibuka admin DAN juri sudah ditugaskan.
         $scoringUnlocked   = $globalUnlocked && $hasJuriAssignment;
         // Sesi sudah dibuka admin, tapi juri ini belum diatur kategori/kelasnya.
@@ -537,6 +538,7 @@ class JuriController extends Controller
                 'status'             => count($globalApprovedIds) > 0 ? 'approved' : 'none',
                 'scoring_unlocked'   => $scoringUnlocked,
                 'foto_page_unlocked' => $fotoPageUnlocked,
+                'random_fill_enabled' => $randomFillEnabled,
                 'assignment_pending' => $assignmentPending,
                 'nominations'        => [],
                 'approved_ikan_ids'  => $globalApprovedIds,
@@ -570,6 +572,7 @@ class JuriController extends Controller
             'status'             => $status,
             'scoring_unlocked'   => $scoringUnlocked,
             'foto_page_unlocked' => $fotoPageUnlocked,
+            'random_fill_enabled' => $randomFillEnabled,
             'assignment_pending' => $assignmentPending,
             'nominations'        => $nominations->map(function ($n) {
                 return [

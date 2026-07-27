@@ -1136,10 +1136,22 @@ function openDefectModalAdmin(defectKey){
 function closeDefectAdmin(){closeModal('modalDefectAdmin');adminActiveDefectKey=null;renderEditInputsAdmin(adminCurrentKat);}
 function toggleDefectAdmin(defectKey,value){var current=adminEditDefectData[defectKey]||['0'];if(value==='0'){adminEditDefectData[defectKey]=['0'];}else{current=current.filter(function(v){return v!=='0';});if(current.indexOf(value)!==-1){current=current.filter(function(v){return v!==value;});}else{current.push(value);}if(current.length===0)current=['0'];adminEditDefectData[defectKey]=current;}openDefectModalAdmin(defectKey);}
 
+// ★ Buka modal Kelola Bonus Point (identik MVP) dari dalam Edit Nilai — Admin
+function openBonusFromEdit(){
+    for(var i=0;i<allScoringData.length;i++){
+        if(parseInt(allScoringData[i].id,10)===parseInt(adminEditId,10)){
+            var mb=document.getElementById('modalBonus'); if(mb) mb.style.zIndex='99999';
+            openBonusModal(i);
+            return;
+        }
+    }
+    popupError('Data Tidak Ditemukan','Data ikan untuk bonus belum tersedia.');
+}
+
 function openEditAdmin(idx){
     var p=allScoringData[idx];
     if(!p)return;
-    if(p.is_locked){popupError('Nilai Terkunci','Nilai ini sudah <b>TERKUNCI (FINAL)</b> dan tidak dapat diubah.');return;}
+    if(p.is_locked){popupError('Nilai Terkunci','Nilai ini sudah <b>TERKUNCI (FINAL)</b> dan tidak dapat diubah. Buka kunci dulu di Point Ranking untuk mengedit.');return;}
     adminEditId=p.id;adminCurrentKat='overall';adminEditPData=p;
     if(p.nilai_detail&&typeof p.nilai_detail==='object'){adminEditMemory=adminCloneValues(p.nilai_detail);}else{adminEditMemory=adminFreshMemory();}
     adminOrigValues=adminCloneValues(adminEditMemory);
@@ -1159,6 +1171,10 @@ function openEditAdmin(idx){
     if(p.grand_juri_nama){info+='<br><span style="font-size:11px;color:#D8B4FE;"><i class="fas fa-crown" style="margin-right:3px;"></i> Terakhir diedit oleh: <b>'+esc(p.grand_juri_nama)+'</b></span>';}
     document.getElementById('editAdminInfo').innerHTML=info;
     renderEditListAdmin();renderEditInputsAdmin('overall');
+    var _saveBtn=document.getElementById('btnSaveEditAdmin');
+    var _lockWarn=document.getElementById('editAdminLockWarn');
+    if(_saveBtn) _saveBtn.style.display = p.is_locked ? 'none' : '';
+    if(_lockWarn) _lockWarn.style.display = p.is_locked ? 'flex' : 'none';
     openModal('modalEditAdmin');
 }
 
@@ -3683,6 +3699,7 @@ function openMvpDataDetail(idx){
     html += '<div style="overflow-x:auto;border:1px solid var(--bd-2);border-radius:12px;"><table class="data-table" style="min-width:700px;">';
     html += '<thead><tr><th style="width:30px;">#</th><th>PESERTA</th><th>KATEGORI</th><th>KELAS</th><th>NO. TANK</th><th style="text-align:center;">RANK POINT</th><th>BONUS</th><th style="text-align:center;">AKSI</th></tr></thead><tbody>';
 
+    p.ikans.sort(function(a,b){ return ((b.final_rank_point ?? b.rank_point ?? 0) - (a.final_rank_point ?? a.rank_point ?? 0)); });
     p.ikans.forEach(function(ikan, i){
         var bonusCount = (ikan.bonus_list || []).length;
         var bonusHtml = bonusCount > 0
@@ -5143,6 +5160,7 @@ function loadAdminPointRanking(){
             html += '<span style="font-size:11px;color:var(--gold-300);font-weight:700;">'+g.total+' peserta</span></div>';
             html += '<div style="overflow-x:auto;border-radius:0 0 10px 10px;border:1px solid rgba(245,158,11,.20);border-top:none;"><table class="data-table" style="min-width:800px;">';
             html += '<thead><tr><th style="width:40px;text-align:center;">#</th><th>PESERTA</th>'+(isGlobal?'<th>KATEGORI</th>':'')+'<th style="width:70px;">TANK</th><th style="width:50px;">KELAS</th><th>ASAL/TEAM</th><th style="width:90px;text-align:center;">TOTAL NILAI</th><th style="width:80px;text-align:center;">POINT</th><th style="width:100px;text-align:center;">RANK POINT</th><th style="width:130px;text-align:center;">AKSI</th></tr></thead><tbody>';
+            g.data.sort(function(a,b){ return ((b.final_rank_point ?? b.rank_point ?? 0) - (a.final_rank_point ?? a.rank_point ?? 0)); });
             g.data.forEach(function(d,i){
                 var rankPt = d.rank_point ?? 0;
                 var frp = d.final_rank_point ?? rankPt;
@@ -5189,9 +5207,9 @@ function loadAdminPointRanking(){
                 // ★ Tombol Kunci / Buka Kunci di Point Ranking — versi cerah & menonjol
                 // GANTI BLOK TOMBOL KUNCI/BUKA DENGAN INI:
                 if(d.is_locked){
-                    html += '<td style="text-align:center;"><div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:800;color:#FCA5A5;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock" style="font-size:8px;"></i> Terkunci</span></div><div style="display:inline-flex;gap:4px;justify-content:center;"><button class="btn-xs" style="background:rgba(239,68,68,.15);color:#FCA5A5;border:1px solid rgba(239,68,68,.3);font-weight:800;padding:5px 10px;transition:all .2s;" onmouseover="this.style.background=\'var(--danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(239,68,68,.15)\';this.style.color=\'#FCA5A5\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button><button class="btn-xs purple" style="opacity:.35;cursor:not-allowed;padding:5px 9px;" disabled title="Nilai terkunci — buka kunci dulu untuk mengedit"><i class="fas fa-pen-to-square"></i></button></div></td>';
+                    html += '<td style="text-align:center;"><div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:800;color:#FCA5A5;display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock" style="font-size:8px;"></i> Terkunci</span></div><div style="display:inline-flex;gap:4px;justify-content:center;"><button class="btn-xs" style="background:rgba(239,68,68,.15);color:#FCA5A5;border:1px solid rgba(239,68,68,.3);font-weight:800;padding:5px 10px;transition:all .2s;" onmouseover="this.style.background=\'var(--danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(239,68,68,.15)\';this.style.color=\'#FCA5A5\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Buka kunci nilai"><i class="fas fa-lock-open"></i> Buka</button><button class="btn-xs purple" style="opacity:.3;filter:blur(0.8px) grayscale(0.4);cursor:not-allowed;padding:5px 9px;" disabled title="Nilai terkunci — buka kunci dulu untuk mengedit"><i class="fas fa-pen-to-square"></i></button></div></td>';
                 } else {
-                    html += '<td style="text-align:center;"><div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:800;color:var(--gold-300);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock-open" style="font-size:8px;"></i> Terbuka</span></div><div style="display:inline-flex;gap:4px;justify-content:center;"><button class="btn-xs" style="background:rgba(245,158,11,.15);color:var(--gold-300);border:1px solid rgba(245,158,11,.3);font-weight:800;padding:5px 10px;transition:all .2s;" onmouseover="this.style.background=\'var(--gold-500)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(245,158,11,.15)\';this.style.color=\'var(--gold-300)\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Kunci nilai (final)"><i class="fas fa-lock"></i> Kunci</button><button class="btn-xs purple" style="padding:5px 9px;" onclick="openEditAdminFromRanking('+d.ikan_id+')" title="Edit Nilai"><i class="fas fa-pen-to-square"></i></button></div></td>';
+                    html += '<td style="text-align:center;"><div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:800;color:var(--gold-300);display:inline-flex;align-items:center;gap:3px;"><i class="fas fa-lock-open" style="font-size:8px;"></i> Terbuka</span></div><div style="display:inline-flex;gap:4px;justify-content:center;"><button class="btn-xs" style="background:rgba(245,158,11,.15);color:var(--gold-300);border:1px solid rgba(245,158,11,.3);font-weight:800;padding:5px 10px;transition:all .2s;" onmouseover="this.style.background=\'var(--gold-500)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(245,158,11,.15)\';this.style.color=\'var(--gold-300)\'" onclick="kunciNilaiAdmin('+d.ikan_id+')" title="Kunci nilai (final)"><i class="fas fa-lock"></i> Kunci</button><button class="btn-xs purple" style="opacity:1;filter:none;padding:5px 9px;" onclick="openEditAdminFromRanking('+d.ikan_id+')" title="Edit Nilai"><i class="fas fa-pen-to-square"></i></button></div></td>';
                 }
                 html += '</tr>';
             });

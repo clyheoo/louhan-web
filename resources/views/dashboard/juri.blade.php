@@ -3658,6 +3658,10 @@ function startScoringLockPolling() {
             isAssignmentPending = nextPending;
             updateScoringLockUI();
 
+            // ★ Auto show/hide tombol "Isi Acak" tanpa refresh
+            appData.random_fill_enabled = (res.random_fill_enabled === true);
+            if (typeof updateRandomFillBtn === 'function') updateRandomFillBtn();
+
             // Update signature setelah dihitung perbedaannya.
             lastApprovedIkanSig = newApprovedSig;
 

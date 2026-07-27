@@ -2306,6 +2306,10 @@
                 <i class="fas fa-circle-info" style="color:var(--gold-400);"></i>
                 Nilai dari juri sudah terisi. <strong>Ubah hanya komponen yang ingin diperbarui</strong> lalu simpan.
             </div>
+            <div id="editAdminLockWarn" style="display:none;font-size:11px;color:#FCA5A5;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.28);padding:8px 12px;border-radius:10px;margin-bottom:14px;align-items:center;gap:6px;">
+                <i class="fas fa-lock" style="color:#F87171;"></i>
+                Nilai ini <strong>TERKUNCI (FINAL)</strong> — hanya <strong>Kelola Bonus Point</strong> yang aktif. Perubahan nilai dinonaktifkan.
+            </div>
             <div style="display:grid;grid-template-columns:170px 1fr;gap:16px;">
                 <div style="display:flex;flex-direction:column;gap:5px;" id="editAdminKatList"></div>
                 <div id="editAdminFormArea"></div>
@@ -2313,6 +2317,7 @@
         </div>
         <div class="modal-foot">
             <button class="btn-cancel" onclick="closeModal('modalEditAdmin')"><i class="fas fa-xmark"></i> Batal</button>
+            <button class="btn-primary" onclick="openBonusFromEdit()" style="background:linear-gradient(135deg,#F59E0B,#B45309);box-shadow:0 4px 14px -4px rgba(245,158,11,.5),inset 0 1px 0 rgba(255,255,255,.2);"><i class="fas fa-trophy"></i> Kelola Bonus Point</button>
             <button class="btn-primary" id="btnSaveEditAdmin" style="background:linear-gradient(135deg,#7c3aed,#A855F7);box-shadow:0 4px 14px -4px rgba(168,85,247,.5),inset 0 1px 0 rgba(255,255,255,.2);"><i class="fas fa-save"></i> SIMPAN PERUBAHAN</button>
         </div>
     </div>
