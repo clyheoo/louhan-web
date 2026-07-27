@@ -170,6 +170,7 @@ class JuriController extends Controller
             'scored_counts'      => $scoredCounts,
             'nomination_defects' => $nominationDefects,
             'approved_ikan_ids'  => $approvedIkanIds,
+            'random_fill_enabled' => (bool) (\DB::table('settings')->where('key', 'juri_random_fill_enabled')->value('value') === '1'),
         ]);
     }
 

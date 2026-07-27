@@ -2432,6 +2432,33 @@ class AdminDashboardController extends Controller
         ]);
     }
 
+    // ★ FITUR ISI NILAI ACAK (juri) — persetujuan admin
+    public function toggleRandomFill()
+    {
+        $current = \DB::table('settings')->where('key', 'juri_random_fill_enabled')->value('value');
+        $newVal  = ($current === '1') ? '0' : '1';
+
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'juri_random_fill_enabled'],
+            ['value' => $newVal, 'updated_at' => now()]
+        );
+
+        return response()->json([
+            'success'             => true,
+            'random_fill_enabled' => ($newVal === '1'),
+            'message'             => $newVal === '1'
+                ? 'Fitur Isi Nilai Acak DIAKTIFKAN. Tombol "Isi Acak" muncul di Form Penilaian juri.'
+                : 'Fitur Isi Nilai Acak DINONAKTIFKAN. Tombol "Isi Acak" disembunyikan dari juri.',
+        ]);
+    }
+
+    public function getRandomFillStatus()
+    {
+        return response()->json([
+            'random_fill_enabled' => \DB::table('settings')->where('key', 'juri_random_fill_enabled')->value('value') === '1',
+        ]);
+    }
+
     // ★ Simpan target juri ('all' atau array id) + opsi langsung aktif/nonaktif
     public function setFotoReplaceTarget(Request $request)
     {

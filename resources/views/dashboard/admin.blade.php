@@ -1133,6 +1133,7 @@
                         <h3><span class="ti"><i class="fas fa-table-list"></i></span>Data Penilaian Keseluruhan</h3>
                         <div style="display:flex;align-items:center;gap:8px;">
                             <span style="font-size:10px;color:var(--text-low);">Semua input dari Juri & Grand Juri</span>
+                            <button class="btn-primary" id="btnToggleRandomFill" onclick="toggleRandomFill()" style="padding:8px 16px; font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
                         </div>
                     </div>
                     <div class="card-body">

@@ -4371,6 +4371,39 @@ function updateFotoReplaceToggleUI(unlocked){
     }
 }
 
+// ★ FITUR ISI NILAI ACAK — persetujuan
+function loadRandomFillStatus(){
+    fetch('/api/admin/random-fill-status', {headers:{'Accept':'application/json'}})
+    .then(r => r.json())
+    .then(d => updateRandomFillToggleUI(!!d.random_fill_enabled))
+    .catch(() => updateRandomFillToggleUI(false));
+}
+function toggleRandomFill(){
+    var btn = document.getElementById('btnToggleRandomFill');
+    if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    fetch('/api/admin/toggle-random-fill', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}})
+    .then(r => r.json())
+    .then(d => {
+        if(!d.success) throw new Error(d.message || 'Gagal');
+        updateRandomFillToggleUI(!!d.random_fill_enabled);
+        popupSuccess(d.random_fill_enabled ? 'Isi Acak Diaktifkan' : 'Isi Acak Dinonaktifkan', d.message);
+    })
+    .catch(e => popupError('Gagal', e.message || 'Gagal menghubungi server'))
+    .finally(() => { var b=document.getElementById('btnToggleRandomFill'); if(b) b.disabled=false; });
+}
+function updateRandomFillToggleUI(enabled){
+    var btn = document.getElementById('btnToggleRandomFill');
+    if(!btn) return;
+    btn.disabled = false;
+    if(enabled){
+        btn.innerHTML = '<i class="fas fa-toggle-on"></i> ISI ACAK: AKTIF';
+        btn.style.background = 'var(--danger)'; btn.style.boxShadow = '0 3px 10px rgba(239,68,68,.2)';
+    } else {
+        btn.innerHTML = '<i class="fas fa-dice"></i> IZINKAN ISI ACAK';
+        btn.style.background = 'var(--success)'; btn.style.boxShadow = '0 3px 10px rgba(34,197,94,.2)';
+    }
+}
+
 function loadAdminIkanFotos(ikanId){
     var box = document.getElementById('admFotoGallery');
     if(!box) return;
@@ -5912,7 +5945,7 @@ function saveJuriAssignments(jid,btn){
         if(!loaded[pageId]){
             loaded[pageId] = true;
 
-            if(pageId === 'penilaian'){ loadScoringData(); }
+            if(pageId === 'penilaian'){ loadScoringData(); loadRandomFillStatus(); }
             if(pageId === 'users'){ /* loadUsers sudah jalan di init */ }
             if(pageId === 'registrasi'){ loadPesertaOld(); loadTankRange(); loadGlobalRangeDisplay(); }
             if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
@@ -5937,6 +5970,7 @@ function saveJuriAssignments(jid,btn){
             if(pageId === 'undian'){ loadUndianStatus(); }
             if(pageId === 'galeri'){ loadFotoReplaceStatus(); }
             if(pageId === 'kelola_juri'){ loadJuriScoringLockStatus(); }
+            if(pageId === 'penilaian'){ loadRandomFillStatus(); }
         }
 
         // ★ START auto-polling kalau halaman nominasi aktif

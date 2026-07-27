@@ -177,6 +177,9 @@
                             <svg class="w-4 h-4" style="color:var(--cyan-400);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                             Form Penilaian
                         </h2>
+                        <button type="button" id="btn-random-fill" onclick="randomFillAll()" class="items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition shadow-sm" style="display:none;background:linear-gradient(135deg,#7C3AED,#DB2777);color:#fff;border:none;" title="Isi semua nilai & defect secara acak (perlu persetujuan admin)">
+                            <i class="fas fa-dice"></i> Isi Acak
+                        </button>
                     </div>
 
                     {{-- Filter + Kelas --}}
@@ -2802,6 +2805,46 @@ function getVal(tankId, key) { const parts = key.split('.'); if (parts[0] === 'd
 function setVal(tankId, key, val) { const parts = key.split('.'); if (!tankScores[tankId]) return; if (!tankScores[tankId].scores[parts[0]]) tankScores[tankId].scores[parts[0]] = {}; tankScores[tankId].scores[parts[0]][parts[1]] = val; saveDraft(); }
 function getFilteredTanks() { const fKat = document.getElementById('filter-kategori').value; const fKelas = document.getElementById('filter-kelas').value; let tanks = appData.available_tanks; if (fKat) tanks = tanks.filter(t => t.kategori === fKat); if (fKelas && !isNoKelas(fKat)) tanks = tanks.filter(t => t.kelas === fKelas); return tanks.filter(t => !appData.all_scored[t.id]); }
 
+// ═══════════ ISI NILAI ACAK (butuh persetujuan admin) ═══════════
+function updateRandomFillBtn() {
+    var btn = document.getElementById('btn-random-fill');
+    if (!btn) return;
+    btn.style.display = appData.random_fill_enabled ? 'inline-flex' : 'none';
+}
+function _randomStd() {
+    var opts = [];
+    for (var i = 90; i >= 10; i -= 5) opts.push(String(i));
+    return opts[Math.floor(Math.random() * opts.length)];
+}
+function _randomDefectFor(partKey) {
+    var p = DEFECT_MAP[partKey];
+    if (!p) return ['0'];
+    if (Math.random() < 0.8) return ['0']; // 80% aman
+    var pool = (p.minor || []).concat(p.mayor || []);
+    if (!pool.length) return ['0'];
+    return [ pool[Math.floor(Math.random() * pool.length)] ];
+}
+function randomFillAll() {
+    if (!appData.random_fill_enabled) return;
+    var tanks = getFilteredTanks();
+    if (!tanks.length) { showToast('Tidak ada tank untuk diisi pada filter ini.', 'error'); return; }
+    tanks.forEach(function(tank) {
+        var ts = tankScores[tank.id];
+        if (!ts) return;
+        SCORING_GROUPS.forEach(function(group) {
+            group.fields.forEach(function(f) {
+                if (f.type === 'defect') { ts.defects['raw_'+f.part+'_penalty'] = _randomDefectFor(f.part); return; }
+                if (isFieldLocked(tank.kategori, f.key)) return;
+                setVal(tank.id, f.key, _randomStd());
+            });
+        });
+    });
+    saveDraft();
+    renderFormTable();
+    showToast('Nilai acak terisi untuk ' + tanks.length + ' tank. Periksa dulu sebelum menyimpan.', 'success');
+}
+window.randomFillAll = randomFillAll;
+
 // ═══════════════════════════════════════════════════════════════
 // RENDER
 // ═══════════════════════════════════════════════════════════════
@@ -2816,6 +2859,7 @@ function renderTabs() {
 }
 
 function renderFormTable() {
+    updateRandomFillBtn();
     const group = SCORING_GROUPS.find(g => g.id === activeTab);
     const tanks = getFilteredTanks();
     const fKat = document.getElementById('filter-kategori').value;
@@ -3135,6 +3179,7 @@ async function loadJuriData() {
         const res = await apiFetch('/api/juri/data?_t=' + Date.now());
         appData.available_tanks    = res.available_tanks || [];
         appData.my_scores          = res.my_scores || [];
+        appData.random_fill_enabled = !!res.random_fill_enabled;
         appData.all_scored         = res.all_scored || {};
         appData.scored_counts      = res.scored_counts || {};
         appData.nomination_defects = res.nomination_defects || {};
@@ -3511,6 +3556,7 @@ async function loadJuriDataForPenjurian() {
         const dataRes = await apiFetch('/api/juri/data?_t=' + Date.now());
 
         appData.available_tanks    = dataRes.available_tanks || [];
+        appData.random_fill_enabled = !!dataRes.random_fill_enabled;
         appData.my_scores          = dataRes.my_scores || [];
         appData.all_scored         = dataRes.all_scored || {};
         appData.scored_counts      = dataRes.scored_counts || {};
