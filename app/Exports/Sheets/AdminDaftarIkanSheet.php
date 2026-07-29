@@ -206,7 +206,7 @@ class AdminDaftarIkanSheet implements FromArray, WithTitle, WithStyles
                     $d['totalBonus'],
                     ($d['status'] === 'BELUM DINILAI' ? '' : $rankPoint),
                     $d['keteranganBonus'],
-                    $juaraText,
+                    ($d['status'] === 'BELUM DINILAI' ? '' : $juaraText),
                     $d['status'],
                 ];
             }
