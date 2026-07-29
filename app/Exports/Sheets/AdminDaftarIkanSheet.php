@@ -204,7 +204,7 @@ class AdminDaftarIkanSheet implements FromArray, WithTitle, WithStyles
                     $d['totalNilaiSemua'],
                     (float) $d['totalPoint'],
                     $d['totalBonus'],
-                    $rankPoint,
+                    ($d['status'] === 'BELUM DINILAI' ? '' : $rankPoint),
                     $d['keteranganBonus'],
                     $juaraText,
                     $d['status'],
@@ -270,12 +270,18 @@ class AdminDaftarIkanSheet implements FromArray, WithTitle, WithStyles
             }
         }
 
-        // Rank Point column bold (kolom L = ke-12)
+        // Rank Point column bold — hanya untuk baris yang SUDAH ada rank point (bukan BELUM DINILAI)
         $rpCol = 'L';
-        $sheet->getStyle("{$rpCol}2:{$rpCol}{$lastRow}")->applyFromArray([
-            'font' => ['bold' => true, 'size' => 11],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF9C3']], // Warna emas muda
-        ]);
+        for ($r = 2; $r <= $lastRow; $r++) {
+            $rpVal = $sheet->getCell("{$rpCol}{$r}")->getValue();
+            if ($rpVal === null || $rpVal === '') {
+                continue; // BELUM DINILAI → sel dibiarkan kosong tanpa sorotan
+            }
+            $sheet->getStyle("{$rpCol}{$r}")->applyFromArray([
+                'font' => ['bold' => true, 'size' => 11],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF9C3']], // Warna emas muda
+            ]);
+        }
 
         // ★ Juara column styling: angka 1-10 saja, tanpa icon medal
         $juaraCol = 'N';
