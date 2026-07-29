@@ -3059,7 +3059,7 @@ function loadManualTankList(){
                 +'<td style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">'+esc(it.kategori||'-')+'</td>'
                 +'<td style="text-align:center;font-weight:800;color:var(--gold-300);">'+esc(it.kelas||'-')+'</td>'
                 +'<td style="text-align:center;"><div style="display:flex;gap:6px;justify-content:center;">'
-                    +'<input type="number" min="1" id="mtk-'+it.id+'" placeholder="No." class="form-control" style="max-width:92px;text-align:center;font-weight:800;padding:7px 8px;">'
+                    +'<input type="text" inputmode="numeric" maxlength="6" id="mtk-'+it.id+'" placeholder="No." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" data-1p-ignore="true" name="mtk_'+it.id+'_'+Math.random().toString(36).slice(2,7)+'" readonly onfocus="this.removeAttribute(\'readonly\')" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')" class="form-control" style="max-width:92px;text-align:center;font-weight:800;padding:7px 8px;">'
                     +'<button type="button" onclick="submitManualTankRow('+it.id+')" class="btn-primary" style="padding:7px 12px;font-size:11px;white-space:nowrap;background:linear-gradient(135deg,var(--gold-600),var(--gold-700));box-shadow:none;"><i class="fas fa-check"></i> Set</button>'
                 +'</div></td>'
                 +'</tr>';
