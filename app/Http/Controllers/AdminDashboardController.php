@@ -323,6 +323,52 @@ class AdminDashboardController extends Controller
             ->implode(', ');
     }
 
+    // ★ ISI MANUAL NOMOR TANK — validasi identik dengan acak (rentang global + per-kategori) + cek unik
+    public function setTankManual(Request $request)
+    {
+        $ikanId = $request->input('ikan_id');
+        $nomor  = (int) $request->input('nomor_tank');
+
+        $ikan = \App\Models\Ikan::find($ikanId);
+        if (!$ikan) {
+            return response()->json(['success' => false, 'message' => 'Ikan tidak ditemukan.'], 404);
+        }
+        if ($nomor < 1) {
+            return response()->json(['success' => false, 'message' => 'Nomor tank tidak valid.'], 422);
+        }
+
+        // Nomor belum dipakai ikan lain
+        $dipakai = \App\Models\Ikan::where('nomor_tank', $nomor)
+            ->where('id', '!=', $ikan->id)
+            ->exists();
+        if ($dipakai) {
+            return response()->json(['success' => false, 'message' => "Nomor tank {$nomor} sudah dipakai ikan lain."], 422);
+        }
+
+        // Validasi rentang — REUSE helper yang sama dengan acak
+        try {
+            [$availableRanges, $label] = $this->getManualTankAllowedRanges($ikan->kategori, $ikan->kelas);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        if (!$this->tankNumberInsideRanges($nomor, $availableRanges)) {
+            return response()->json([
+                'success' => false,
+                'message' => "Nomor {$nomor} di luar rentang {$label}. Rentang valid: " . $this->formatTankRanges($availableRanges) . '.',
+            ], 422);
+        }
+
+        $ikan->nomor_tank = $nomor;
+        $ikan->save();
+
+        return response()->json([
+            'success'    => true,
+            'nomor_tank' => $nomor,
+            'message'    => "Nomor tank {$nomor} berhasil ditetapkan untuk {$ikan->nama_peserta}.",
+        ]);
+    }
+
     public function getDashboardStats()
     {
         $totalIkan = Ikan::whereNotNull('nomor_tank')->count();

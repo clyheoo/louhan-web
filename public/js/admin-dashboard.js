@@ -3037,6 +3037,63 @@ document.getElementById('btnAcakOld').addEventListener('click',function(){
     });
 });
 
+// ★ ISI MANUAL NOMOR TANK — daftar ikan belum bertank + set per baris
+function loadManualTankList(){
+    var box=document.getElementById('manualTankList');
+    if(!box) return;
+    box.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div>';
+    fetch(window.ADMIN_ROUTES.pesertaBelumTank,{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(data){
+        if(!data || !data.length){
+            box.innerHTML='<div class="empty-state"><i class="fas fa-check-circle" style="font-size:26px;display:block;margin-bottom:8px;color:#22c55e;opacity:.7;"></i>Semua ikan sudah mendapat nomor tank.</div>';
+            return;
+        }
+        var html='<div style="overflow-x:auto;"><table class="data-table" style="min-width:660px;"><thead><tr>'
+            +'<th style="width:40px;text-align:center;">#</th><th>NAMA PENDAFTAR</th><th>KATEGORI</th><th style="text-align:center;">KELAS</th><th style="width:200px;text-align:center;">NOMOR TANK</th>'
+            +'</tr></thead><tbody>';
+        data.forEach(function(it,i){
+            html+='<tr>'
+                +'<td style="text-align:center;color:var(--text-muted);font-weight:700;">'+(i+1)+'</td>'
+                +'<td style="font-weight:800;color:var(--text-hi);">'+esc(it.nama_peserta||'-')+'</td>'
+                +'<td style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">'+esc(it.kategori||'-')+'</td>'
+                +'<td style="text-align:center;font-weight:800;color:var(--gold-300);">'+esc(it.kelas||'-')+'</td>'
+                +'<td style="text-align:center;"><div style="display:flex;gap:6px;justify-content:center;">'
+                    +'<input type="number" min="1" id="mtk-'+it.id+'" placeholder="No." class="form-control" style="max-width:92px;text-align:center;font-weight:800;padding:7px 8px;">'
+                    +'<button type="button" onclick="submitManualTankRow('+it.id+')" class="btn-primary" style="padding:7px 12px;font-size:11px;white-space:nowrap;background:linear-gradient(135deg,var(--gold-600),var(--gold-700));box-shadow:none;"><i class="fas fa-check"></i> Set</button>'
+                +'</div></td>'
+                +'</tr>';
+        });
+        html+='</tbody></table></div>';
+        box.innerHTML=html;
+    })
+    .catch(function(){ box.innerHTML='<div class="empty-state" style="color:var(--danger);">Gagal memuat data.</div>'; });
+}
+
+function submitManualTankRow(ikanId){
+    var inp=document.getElementById('mtk-'+ikanId);
+    if(!inp) return;
+    var nomor=parseInt(inp.value,10);
+    if(!nomor || nomor<1){ popupError('Nomor Tidak Valid','Masukkan nomor tank yang benar (angka ≥ 1).'); return; }
+    var btn=inp.nextElementSibling;
+    var old=btn?btn.innerHTML:'';
+    if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; }
+    var fd=new FormData();
+    fd.append('_token',getCsrf());
+    fd.append('ikan_id',ikanId);
+    fd.append('nomor_tank',nomor);
+    fetch('/api/admin/set-tank-manual',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(!d.success) throw new Error(d.message);
+        popupSuccess('Nomor Tank Ditetapkan',esc(d.message));
+        loadManualTankList();
+        if(typeof loadPesertaOld==='function') loadPesertaOld();
+        if(typeof loadDashboard==='function') loadDashboard();
+    })
+    .catch(function(e){ popupError('Gagal',esc(e.message||'Gagal menetapkan nomor tank.')); if(btn){ btn.disabled=false; btn.innerHTML=old; } });
+}
+
 /* ═══════════════════════════════════════════════
    RESET NOMOR TANK (JS)
    ═══════════════════════════════════════════════ */
@@ -3142,6 +3199,7 @@ function openResetPesertaModal(){
 
 function getResetPesertaModeLabel(mode){
     var labels = {
+        reset_tank: 'Reset semua nomor tank',
         scores_only: 'Hapus nilai user',
         users_only: 'Hapus user dengan role user',
         all: 'Hapus nilai beserta usernya'
@@ -3156,6 +3214,13 @@ function submitResetPeserta(){
 
     if(!mode){
         popupError('Aksi Belum Dipilih', 'Pilih salah satu aksi reset terlebih dahulu.');
+        return;
+    }
+
+    // ★ Reset Nomor Tank: pakai flow khusus (alasan + konfirmasi sendiri)
+    if(mode === 'reset_tank'){
+        closeModal('modalResetPeserta');
+        openResetTankModal();
         return;
     }
 
@@ -5965,7 +6030,7 @@ function saveJuriAssignments(jid,btn){
 
             if(pageId === 'penilaian'){ loadScoringData(); loadRandomFillStatus(); }
             if(pageId === 'users'){ /* loadUsers sudah jalan di init */ }
-            if(pageId === 'registrasi'){ loadPesertaOld(); loadTankRange(); loadGlobalRangeDisplay(); }
+            if(pageId === 'registrasi'){ loadPesertaOld(); loadTankRange(); loadGlobalRangeDisplay(); loadManualTankList(); }
             if(pageId === 'nominasi'){ loadAdminNominasiAll(); }
             if(pageId === 'mvp'){ loadMvpData(); loadMvpStatus(); loadMvpPeserta(); loadMvpIkanData(); }
             if(pageId === 'team_champion'){ loadTeamChampionStatus(); loadTeamChampionPeserta(); loadTeamChampionIkan(); }

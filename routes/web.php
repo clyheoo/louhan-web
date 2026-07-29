@@ -162,6 +162,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/undian-status', [AdminDashboardController::class, 'getUndianStatus']);
     Route::post('/api/admin/toggle-foto-replace', [AdminDashboardController::class, 'toggleFotoReplace']);
     Route::get('/api/admin/foto-replace-status', [AdminDashboardController::class, 'getFotoReplaceStatus']);
+    Route::post('/api/admin/set-tank-manual', [AdminDashboardController::class, 'setTankManual']);
     Route::post('/api/admin/toggle-random-fill', [AdminDashboardController::class, 'toggleRandomFill']);
     Route::get('/api/admin/random-fill-status', [AdminDashboardController::class, 'getRandomFillStatus']);
     Route::post('/api/admin/foto-replace-target', [AdminDashboardController::class, 'setFotoReplaceTarget']);

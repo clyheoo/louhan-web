@@ -1446,12 +1446,21 @@
                             <button class="btn-primary" id="btnAcakOld" style="width:100%;justify-content:center;">
                                 <i class="fas fa-shuffle"></i> Acak Nomor Tank
                             </button>
-                            <button type="button" onclick="openResetTankModal()" style="width:100%; margin-top:10px; padding:10px; border-radius:11px; border:1px solid rgba(239,68,68,.3); background:rgba(239,68,68,.1); color:#FCA5A5; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:6px;">
-                                <i class="fas fa-rotate-left"></i> Reset Semua Nomor Tank
-                            </button>
                         </div>
                     </div>
 
+                </div>
+
+                <!-- ★ Isi Nomor Tank Manual (kartu tersendiri) -->
+                <div class="glass-card" style="margin-top:16px;">
+                    <div class="card-head">
+                        <h3><span class="ti" style="background:rgba(245,158,11,.12);border-color:var(--bd-gold);color:var(--gold-400);"><i class="fas fa-pen"></i></span>Isi Nomor Tank Manual</h3>
+                        <button type="button" onclick="loadManualTankList()" class="btn-xs blue" style="padding:8px 14px;font-size:11px;"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    </div>
+                    <div class="card-body">
+                        <div style="font-size:11.5px;color:var(--text-mid);margin-bottom:14px;line-height:1.6;">Daftar ikan yang <b>belum mendapat nomor tank</b>. Ketik nomor lalu <b>Set</b> — tetap tunduk <b>Rentang Global</b> &amp; <b>Rentang Per Kategori</b>, dan tidak boleh bentrok dengan nomor lain.</div>
+                        <div id="manualTankList"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Memuat...</p></div></div>
+                    </div>
                 </div>
             </section>
 
@@ -2200,6 +2209,7 @@
                 <label class="form-label">Pilih Aksi Reset *</label>
                 <select id="resetPesertaMode" class="form-control">
                     <option value="">-- Pilih aksi --</option>
+                    <option value="reset_tank">Reset semua nomor tank</option>
                     <option value="scores_only">Hapus nilai user</option>
                     <option value="users_only">Hapus user dengan role user</option>
                     <option value="all">Hapus nilai beserta usernya</option>
