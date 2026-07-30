@@ -2942,6 +2942,7 @@ public function getIkanFotos($id)
             'detail_anggota'     => ['detail_anggota', 'detailanggota', 'detail anggota', 'asal', 'kota', 'team', 'club'],
             'kategori'           => ['kategori', 'category', 'kat'],
             'kelas'              => ['kelas', 'class', 'kls'],
+            'nomor_tank'         => ['nomor_tank', 'nomortank', 'no_tank', 'notank', 'nomor tank', 'no tank', 'tank'],
         ];
 
         $rows = $rows->map(function ($row) use ($headerAliases) {
@@ -3009,6 +3010,9 @@ public function getIkanFotos($id)
             ->get()
             ->keyBy(function ($u) { return strtolower($u->email); });
 
+        // ★ Nomor tank terpakai (validasi kolom opsional Nomor Tank)
+        $usedTanksAdmin = Ikan::whereNotNull('nomor_tank')->pluck('nomor_tank')->map(fn($n) => (int) $n)->flip()->toArray();
+
         \DB::beginTransaction();
         try {
             foreach ($rows as $rowIndex => $row) {
@@ -3029,11 +3033,12 @@ public function getIkanFotos($id)
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) { $errors[] = "Baris {$rowNum}: Email tidak valid ({$email})."; $skipped++; continue; }
                 if (!$namaPeserta) { $errors[] = "Baris {$rowNum}: Nama peserta kosong."; $skipped++; continue; }
                 if (!$kategori) { $errors[] = "Baris {$rowNum}: Kategori kosong."; $skipped++; continue; }
-                if (!in_array($kategori, $validKategori)) { $errors[] = "Baris {$rowNum}: Kategori '{$kategori}' tidak valid."; $skipped++; continue; }
+                $katMatch = null;
+                foreach ($validKategori as $vk) { if (strcasecmp($vk, $kategori) === 0) { $katMatch = $vk; break; } }
+                if ($katMatch === null) { $errors[] = "Baris {$rowNum}: Kategori '{$kategori}' tidak dikenal."; $skipped++; continue; }
+                $kategori = $katMatch;
 
-                if (!in_array($jenisKeanggotaan, ['perorangan', 'team'])) {
-                    $jenisKeanggotaan = 'perorangan';
-                }
+                $jenisKeanggotaan = 'team'; // ★ Peserta hasil import selalu TEAM
                 if (!$detailAnggota) $detailAnggota = '-';
 
                 if (in_array($kategori, $noKelasKategori)) {
@@ -3043,6 +3048,23 @@ public function getIkanFotos($id)
                         $errors[] = "Baris {$rowNum}: Kelas wajib (A-E) untuk kategori {$kategori}."; $skipped++; continue;
                     }
                     $kelas = strtoupper($kelas);
+                }
+
+                // ── Nomor Tank (opsional) ──
+                $nomorTankVal = null;
+                $tankRawAdmin = trim((string) $row->get('nomor_tank', ''));
+                if ($tankRawAdmin !== '') {
+                    if (!ctype_digit($tankRawAdmin)) { $errors[] = "Baris {$rowNum}: Nomor tank tidak valid."; $skipped++; continue; }
+                    $nAdmin = (int) $tankRawAdmin;
+                    if (isset($usedTanksAdmin[$nAdmin])) { $errors[] = "Baris {$rowNum} (Kategori {$kategori}): Nomor tank {$nAdmin} sudah dipakai."; $skipped++; continue; }
+                    try {
+                        [$rngAdmin, $lblAdmin] = $this->getManualTankAllowedRanges($kategori, $kelas);
+                    } catch (\Throwable $e) { $errors[] = "Baris {$rowNum}: " . $e->getMessage(); $skipped++; continue; }
+                    if (!$this->tankNumberInsideRanges($nAdmin, $rngAdmin)) {
+                        $errors[] = "Baris {$rowNum} (Kategori {$kategori}): Nomor {$nAdmin} di luar rentang {$lblAdmin} (" . $this->formatTankRanges($rngAdmin) . ")."; $skipped++; continue;
+                    }
+                    $usedTanksAdmin[$nAdmin] = true;
+                    $nomorTankVal = $nAdmin;
                 }
 
                 // ── Cari user ──
@@ -3091,6 +3113,7 @@ public function getIkanFotos($id)
                     'jenis_keanggotaan' => $peserta->jenis_keanggotaan,
                     'kategori'          => $kategori,
                     'kelas'             => $kelas,
+                    'nomor_tank'        => $nomorTankVal,
                     'dibuat_oleh'       => 'admin_import',
                 ]);
 
@@ -3137,10 +3160,10 @@ public function getIkanFotos($id)
     public function downloadImportTemplate()
     {
         $data = [
-            ['Email', 'Nama Peserta', 'Jenis Keanggotaan', 'Detail Anggota', 'Kategori', 'Kelas'],
-            ['contoh@email.com', 'John Doe', 'perorangan', 'Jakarta', 'Cencu', 'A'],
-            ['team@email.com', 'Louhan Club', 'team', 'Louhan Fanatic Jakarta', 'Chingwa', 'B'],
-            ['bonsai@email.com', 'Bonsai Lover', 'perorangan', 'Surabaya', 'Bonsai', ''],
+            ['Email', 'Nama Peserta', 'Jenis Keanggotaan', 'Detail Anggota', 'Kategori', 'Kelas', 'Nomor Tank'],
+            ['contoh@email.com', 'John Doe', 'perorangan', 'Jakarta', 'Cencu', 'A', ''],
+            ['team@email.com', 'Louhan Club', 'team', 'Louhan Fanatic Jakarta', 'Chingwa', 'B', ''],
+            ['bonsai@email.com', 'Bonsai Lover', 'perorangan', 'Surabaya', 'Bonsai', '', ''],
         ];
 
         return Excel::download(new ArrayExport($data), 'Template_Import_Peserta_Ikan.xlsx');

@@ -28,6 +28,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/peserta-belum-tidak', [DashboardController::class, 'getPesertaBelumDapatTank'])->name('api.peserta.belum.tank');
     Route::post('/api/acak-nomor-tank-admin', [DashboardController::class, 'acakNomorTankAdmin'])->name('api.acak.tank.admin');
     Route::post('/api/acak-nomor-tank-user', [DashboardController::class, 'acakNomorTankUser'])->name('api.acak.tank.user');
+    Route::post('/api/user/import-ikan', [DashboardController::class, 'importIkanUser'])->name('api.user.import.ikan');
+    Route::get('/api/user/import-template', [DashboardController::class, 'downloadUserImportTemplate'])->name('api.user.import.template');
     Route::get('/api/user/my-ikans', [DashboardController::class, 'getMyIkans']);
     Route::get('/foto-ikan/{foto}', [DashboardController::class, 'serveFoto'])->name('foto.ikan');
     Route::get('/api/user/ikan-foto/{id}', [DashboardController::class, 'ikanFotoInfo']);
@@ -175,6 +177,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/mvp-submitted-peserta', [AdminDashboardController::class, 'getMvpSubmittedPeserta']);
     Route::post('/api/admin/unlock-mvp-peserta', [AdminDashboardController::class, 'unlockMvpPeserta']);
     Route::post('/api/admin/import-excel', [AdminDashboardController::class, 'importExcel']);
+    Route::post('/api/admin/import-to-user', [DashboardController::class, 'importIkanToUser']);
     Route::get('/api/admin/import-template', [AdminDashboardController::class, 'downloadImportTemplate']);
     Route::get('/api/admin/stat-detail', [AdminDashboardController::class, 'getStatDetail']);
     Route::get('/api/admin/point-ranking', [AdminDashboardController::class, 'getPointRanking']);

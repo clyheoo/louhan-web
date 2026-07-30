@@ -3325,6 +3325,9 @@
                                 <option value="diundi">Sudah Diundi</option>
                                 <option value="belum">Belum Diundi</option>
                             </select>
+                            <button type="button" class="fish-filter" onclick="openImportIkan()" style="cursor:pointer;background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;border:none;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;">
+                                <i class="fas fa-file-excel"></i> Import Excel
+                            </button>
                         </div>
 
                         <div style="padding:0 26px 10px;font-size:11px;color:var(--text-mid);">
@@ -5183,6 +5186,85 @@
         function resetIkanFormState() {
             if(ikanKelasWrap) ikanKelasWrap.style.display = '';
             if(ikanKelasSelectEl) ikanKelasSelectEl.value = '';
+        }
+
+        // ═══════════ IMPORT IKAN VIA EXCEL (USER) ═══════════
+        var _importIkanFile = null;
+        function openImportIkan(){
+            var m = document.getElementById('userImportModal');
+            if(!m){
+                m = document.createElement('div');
+                m.id = 'userImportModal';
+                m.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(3,7,18,.82);backdrop-filter:blur(6px);';
+                m.innerHTML =
+                    '<div style="width:100%;max-width:560px;max-height:90vh;overflow:auto;background:linear-gradient(180deg,#0b1220,#0a0f1c);border:1px solid rgba(255,255,255,.12);border-radius:20px;box-shadow:0 25px 60px -15px rgba(0,0,0,.7);">'
+                    + '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08);">'
+                        + '<h3 style="margin:0;font-size:15px;font-weight:800;color:#e5edff;"><i class="fas fa-file-excel" style="color:#4ade80;margin-right:6px;"></i> Import Ikan dari Excel</h3>'
+                        + '<button onclick="closeImportIkan()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#cbd5e1;width:34px;height:34px;border-radius:9px;cursor:pointer;"><i class="fas fa-xmark"></i></button>'
+                    + '</div>'
+                    + '<div style="padding:18px 20px;">'
+                        + '<div style="font-size:12px;color:#94a3b8;line-height:1.6;margin-bottom:12px;">Kolom Excel: <b style="color:#e5edff;">Nama</b>, <b style="color:#e5edff;">Nama Team / Club</b>, <b style="color:#e5edff;">Kategori</b>, <b style="color:#e5edff;">Kelas</b>, <b style="color:#e5edff;">Nomor Tank</b>. Kategori/kelas boleh huruf kecil (mis. <i>cencu, a</i>). Peserta hasil import otomatis jadi <b style="color:#e5edff;">TEAM</b>. <b style="color:#fca5a5;">Jika ada satu saja yang salah/bentrok, tidak ada data yang tersimpan.</b>'
+                            + '<div style="margin-top:8px;"><a href="/api/user/import-template" style="color:#67e8f9;font-weight:700;text-decoration:underline;"><i class="fas fa-download"></i> Download Template</a></div>'
+                        + '</div>'
+                        + '<div onclick="document.getElementById(\'userImportFile\').click()" style="border:2px dashed rgba(255,255,255,.18);border-radius:12px;padding:26px 14px;text-align:center;cursor:pointer;background:rgba(255,255,255,.03);">'
+                            + '<i class="fas fa-cloud-arrow-up" style="font-size:26px;color:#64748b;"></i>'
+                            + '<div id="userImportLabel" style="font-size:12px;color:#94a3b8;font-weight:600;margin-top:8px;">Klik untuk pilih file (.xlsx / .xls / .csv)</div>'
+                            + '<input type="file" id="userImportFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="onUserImportFile(this)">'
+                        + '</div>'
+                        + '<div id="userImportResult" style="display:none;margin-top:14px;"></div>'
+                    + '</div>'
+                    + '<div style="display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);">'
+                        + '<button onclick="closeImportIkan()" style="padding:10px 16px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#cbd5e1;font-weight:700;cursor:pointer;">Tutup</button>'
+                        + '<button id="userImportSubmit" onclick="submitImportIkan()" style="padding:10px 18px;border-radius:10px;background:linear-gradient(135deg,#16A34A,#15803D);border:none;color:#fff;font-weight:800;cursor:pointer;"><i class="fas fa-upload"></i> Import Sekarang</button>'
+                    + '</div>'
+                    + '</div>';
+                document.body.appendChild(m);
+                m.addEventListener('click', function(e){ if(e.target === m) closeImportIkan(); });
+            }
+            _importIkanFile = null;
+            var lbl=document.getElementById('userImportLabel'); if(lbl) lbl.textContent='Klik untuk pilih file (.xlsx / .xls / .csv)';
+            var res=document.getElementById('userImportResult'); if(res){ res.style.display='none'; res.innerHTML=''; }
+            m.style.display='flex';
+        }
+        function closeImportIkan(){ var m=document.getElementById('userImportModal'); if(m) m.style.display='none'; }
+        function onUserImportFile(input){
+            if(input.files && input.files[0]){
+                _importIkanFile = input.files[0];
+                var lbl=document.getElementById('userImportLabel');
+                if(lbl) lbl.innerHTML='<i class="fas fa-file-excel" style="color:#4ade80;"></i> '+_importIkanFile.name;
+            }
+        }
+        function submitImportIkan(){
+            if(!_importIkanFile){ alert('Pilih file Excel terlebih dahulu.'); return; }
+            var btn=document.getElementById('userImportSubmit');
+            var old=btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Mengimpor...';
+            var res=document.getElementById('userImportResult'); res.style.display='none';
+            var fd=new FormData();
+            fd.append('_token', getCsrf());
+            fd.append('file', _importIkanFile);
+            fetch('/api/user/import-ikan', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}, body:fd})
+            .then(function(r){ return r.json().then(function(d){ return d; }); })
+            .then(function(d){
+                if(d.success){
+                    res.innerHTML='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.35);border-radius:11px;padding:14px 16px;color:#6ee7b7;font-size:13px;font-weight:700;"><i class="fas fa-check-circle"></i> '+d.message+'</div>';
+                    res.style.display='block';
+                    setTimeout(function(){ location.reload(); }, 1400);
+                    return;
+                }
+                var html='<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:11px;padding:14px 16px;">'
+                    +'<div style="font-size:13px;font-weight:800;color:#fca5a5;margin-bottom:'+((d.errors&&d.errors.length)?'8px':'0')+';"><i class="fas fa-triangle-exclamation"></i> '+(d.message||'Import gagal.')+'</div>';
+                if(d.errors && d.errors.length){
+                    html+='<div style="font-size:11.5px;color:#fecaca;line-height:1.7;max-height:220px;overflow:auto;">';
+                    var mx=Math.min(d.errors.length,50);
+                    for(var i=0;i<mx;i++){ html+='<div>• '+String(d.errors[i]).replace(/</g,'&lt;')+'</div>'; }
+                    if(d.errors.length>50) html+='<div style="opacity:.7;font-style:italic;">... dan '+(d.errors.length-50)+' lainnya</div>';
+                    html+='</div>';
+                }
+                html+='</div>';
+                res.innerHTML=html; res.style.display='block';
+            })
+            .catch(function(){ res.innerHTML='<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:11px;padding:14px 16px;color:#fca5a5;font-size:13px;">Koneksi error. Coba lagi.</div>'; res.style.display='block'; })
+            .finally(function(){ btn.disabled=false; btn.innerHTML=old; });
         }
 
         function openModalIkan() {

@@ -2266,13 +2266,34 @@
             <button class="modal-close" onclick="closeModal('modalImport')"><i class="fas fa-xmark"></i></button>
         </div>
         <div class="modal-body" id="importModalBody">
-            <div style="background:rgba(245,158,11,.08);border:1px solid var(--bd-gold);border-radius:11px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:var(--gold-300);line-height:1.6;">
-                <div style="font-weight:800;margin-bottom:6px;"><i class="fas fa-circle-info"></i> Format Excel</div>
+            {{-- ★ PILIHAN MODE --}}
+            <div style="display:flex;gap:8px;margin-bottom:14px;">
+                <button type="button" id="importTab1" onclick="setImportMode(1)" class="btn-primary" style="flex:1;font-size:11px;padding:9px;">Peserta Baru (Email)</button>
+                <button type="button" id="importTab2" onclick="setImportMode(2)" class="btn-cancel" style="flex:1;font-size:11px;padding:9px;">Import Ikan ke User (Nomor Tank)</button>
+            </div>
+
+            {{-- MODE 1 --}}
+            <div id="importMode1Hint" style="background:rgba(245,158,11,.08);border:1px solid var(--bd-gold);border-radius:11px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:var(--gold-300);line-height:1.6;">
+                <div style="font-weight:800;margin-bottom:6px;"><i class="fas fa-circle-info"></i> Format Excel — Peserta Baru</div>
                 <div>Header wajib: <b>Email, Nama Peserta, Jenis Keanggotaan, Detail Anggota, Kategori, Kelas</b></div>
-                <div style="margin-top:4px;">Kategori valid: Cencu, Chingwa, Freemarking, Goldenbase, Klasik, Bonsai, Jumbo</div>
-                <div>Kelas: A–E (kosongkan untuk Bonsai/Jumbo)</div>
+                <div style="margin-top:4px;">Kategori boleh huruf kecil (mis. <i>cencu</i>). Kelas: A–E (kosongkan untuk Bonsai/Jumbo).</div>
                 <div style="margin-top:6px;"><a href="/api/admin/import-template" style="color:var(--cyan-300);font-weight:700;text-decoration:underline;" onclick="event.stopPropagation();"><i class="fas fa-download"></i> Download Template</a></div>
             </div>
+
+            {{-- MODE 2 --}}
+            <div id="importMode2Box" style="display:none;">
+                <div style="background:rgba(34,211,238,.06);border:1px solid var(--bd-cyan);border-radius:11px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:var(--cyan-300);line-height:1.6;">
+                    <div style="font-weight:800;margin-bottom:6px;"><i class="fas fa-circle-info"></i> Format Excel — Ke User</div>
+                    <div>Header: <b>Nama, Nama Team / Club, Kategori, Kelas, Nomor Tank</b>. Peserta otomatis jadi <b>TEAM</b>. Nomor tank tunduk rentang & tak boleh bentrok.</div>
+                    <div style="margin-top:6px;"><a href="/api/user/import-template" style="color:var(--cyan-300);font-weight:700;text-decoration:underline;" onclick="event.stopPropagation();"><i class="fas fa-download"></i> Download Template</a></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Pilih User Tujuan</label>
+                    <select id="importTargetUser" class="form-control"><option value="">Memuat daftar user...</option></select>
+                </div>
+            </div>
+
+            {{-- DROPZONE (dipakai kedua mode) --}}
             <div class="form-group">
                 <label class="form-label">File Excel (.xlsx / .xls / .csv)</label>
                 <div id="importDropZone" style="border:2px dashed var(--bd-2);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;background:var(--glass-1);" onclick="document.getElementById('importFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--cyan-400)';this.style.background='rgba(34,211,238,.06)'" ondragleave="this.style.borderColor='var(--bd-2)';this.style.background='var(--glass-1)'" ondrop="event.preventDefault();handleImportDrop(event)">
@@ -2281,16 +2302,20 @@
                     <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleImportFileSelect(this)">
                 </div>
             </div>
-            <div class="form-group">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text);font-weight:600;">
-                    <input type="checkbox" id="importAutoCreate" onchange="toggleImportAutoCreate()" style="accent-color:var(--cyan-400);width:16px;height:16px;cursor:pointer;">
-                    Buat akun user baru jika email belum terdaftar
-                </label>
-            </div>
-            <div class="form-group" id="importPasswordWrap" style="display:none;">
-                <label class="form-label">Password Default untuk User Baru</label>
-                <input type="text" id="importDefaultPassword" class="form-control" value="LCI_2024!" placeholder="Min. 8 karakter">
-                <div style="font-size:10px;color:var(--text-low);margin-top:4px;">Wajib: huruf besar, kecil, angka, simbol</div>
+
+            {{-- MODE 1 tambahan --}}
+            <div id="importMode1Extra">
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text);font-weight:600;">
+                        <input type="checkbox" id="importAutoCreate" onchange="toggleImportAutoCreate()" style="accent-color:var(--cyan-400);width:16px;height:16px;cursor:pointer;">
+                        Buat akun user baru jika email belum terdaftar
+                    </label>
+                </div>
+                <div class="form-group" id="importPasswordWrap" style="display:none;">
+                    <label class="form-label">Password Default untuk User Baru</label>
+                    <input type="text" id="importDefaultPassword" class="form-control" value="LCI_2024!" placeholder="Min. 8 karakter">
+                    <div style="font-size:10px;color:var(--text-low);margin-top:4px;">Wajib: huruf besar, kecil, angka, simbol</div>
+                </div>
             </div>
             <div id="importResultBox" style="display:none;"></div>
         </div>

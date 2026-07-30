@@ -5045,7 +5045,68 @@ function toggleImportAutoCreate() {
     wrap.style.display = document.getElementById('importAutoCreate').checked ? 'block' : 'none';
 }
 
+var currentImportMode = 1;
+function setImportMode(m){
+    currentImportMode = m;
+    var t1=document.getElementById('importTab1'), t2=document.getElementById('importTab2');
+    if(t1){ t1.className = (m===1?'btn-primary':'btn-cancel'); t1.style.cssText='flex:1;font-size:11px;padding:9px;'; }
+    if(t2){ t2.className = (m===2?'btn-primary':'btn-cancel'); t2.style.cssText='flex:1;font-size:11px;padding:9px;'; }
+    var show=function(id,on){ var e=document.getElementById(id); if(e) e.style.display = on?'':'none'; };
+    show('importMode1Hint', m===1); show('importMode1Extra', m===1); show('importMode2Box', m===2);
+    if(m===2) loadImportTargetUsers();
+}
+function loadImportTargetUsers(){
+    var sel=document.getElementById('importTargetUser');
+    if(!sel || sel.dataset.filled==='1') return;
+    fetch(window.ADMIN_ROUTES.listUsers, {headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(list){
+        var opts='<option value="">-- Pilih user --</option>';
+        (list||[]).forEach(function(u){ opts+='<option value="'+u.id+'">'+esc((u.name||'-')+' ('+(u.email||'')+')')+'</option>'; });
+        sel.innerHTML=opts; sel.dataset.filled='1';
+    })
+    .catch(function(){ sel.innerHTML='<option value="">Gagal memuat user</option>'; });
+}
+function submitImportToUser(){
+    var sel=document.getElementById('importTargetUser');
+    if(!sel || !sel.value){ popupError('User Belum Dipilih','Pilih user tujuan terlebih dahulu.'); return; }
+    if(!importSelectedFile){ popupError('File Belum Dipilih','Silakan pilih file Excel.'); return; }
+    var btn=document.getElementById('btnSubmitImport');
+    var origHtml=btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Mengimpor...';
+    document.getElementById('importResultBox').style.display='none';
+    var fd=new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('file', importSelectedFile);
+    fd.append('user_id', sel.value);
+    fetch('/api/admin/import-to-user', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}, body:fd})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        var box=document.getElementById('importResultBox');
+        if(d.success){
+            box.innerHTML='<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:11px;padding:14px 16px;color:#6EE7B7;font-size:13px;font-weight:700;"><i class="fas fa-check-circle"></i> '+d.message+'</div>';
+            if(typeof loadUsers==='function') loadUsers();
+            if(typeof loadDashboard==='function') loadDashboard();
+        } else {
+            var html='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:11px;padding:14px 16px;">'
+                +'<div style="font-size:13px;font-weight:800;color:#fca5a5;margin-bottom:'+((d.errors&&d.errors.length)?'8px':'0')+';"><i class="fas fa-triangle-exclamation"></i> '+(d.message||'Import gagal.')+'</div>';
+            if(d.errors && d.errors.length){
+                html+='<div style="font-size:11px;color:var(--text-mid);line-height:1.7;max-height:220px;overflow:auto;">';
+                var mx=Math.min(d.errors.length,50);
+                for(var i=0;i<mx;i++){ html+='<div>• '+esc(d.errors[i])+'</div>'; }
+                if(d.errors.length>50) html+='<div style="opacity:.7;font-style:italic;">... dan '+(d.errors.length-50)+' lainnya</div>';
+                html+='</div>';
+            }
+            html+='</div>';
+            box.innerHTML=html;
+        }
+        box.style.display='block';
+    })
+    .catch(function(){ popupError('Gagal','Koneksi error saat import.'); })
+    .finally(function(){ btn.disabled=false; btn.innerHTML=origHtml; });
+}
+
 function submitImport() {
+    if (currentImportMode === 2) { submitImportToUser(); return; }
     if (!importSelectedFile) {
         popupError('File Belum Dipilih', 'Silakan pilih file Excel terlebih dahulu.');
         return;

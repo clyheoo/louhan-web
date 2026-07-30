@@ -255,6 +255,197 @@ class DashboardController extends Controller
         ]);
     }
 
+// ═══════════ IMPORT IKAN VIA EXCEL (USER & ADMIN-KE-USER) ═══════════
+
+    private function userTankSubRanges($kategori, $kelas)
+    {
+        $globalMin = (int) (\DB::table('settings')->where('key', 'tank_range_min')->value('value') ?? 1);
+        $globalMax = (int) (\DB::table('settings')->where('key', 'tank_range_max')->value('value') ?? 1000);
+        $classRanges = json_decode(\DB::table('settings')->where('key', 'tank_class_ranges')->value('value'), true);
+
+        $myMin = $globalMin; $myMax = $globalMax; $hasSub = false;
+        if ($classRanges && isset($classRanges[$kelas]['kategori'][$kategori])) {
+            $myMin = (int) $classRanges[$kelas]['kategori'][$kategori]['min'];
+            $myMax = (int) $classRanges[$kelas]['kategori'][$kategori]['max'];
+            $hasSub = true;
+        }
+        if (!$hasSub && in_array($kategori, \App\Helpers\Taxonomy::noKelasNames()) && $classRanges && isset($classRanges[$kategori]['kategori'][$kategori])) {
+            $myMin = (int) $classRanges[$kategori]['kategori'][$kategori]['min'];
+            $myMax = (int) $classRanges[$kategori]['kategori'][$kategori]['max'];
+            $hasSub = true;
+        }
+        $excluded = [];
+        if ($classRanges) {
+            foreach ($classRanges as $oKelas => $oData) {
+                if (!isset($oData['kategori']) || !is_array($oData['kategori'])) continue;
+                foreach ($oData['kategori'] as $oKat => $oRange) {
+                    if ($oKelas === $kelas && $oKat === $kategori) continue;
+                    $oMin = (int) ($oRange['min'] ?? 0); $oMax = (int) ($oRange['max'] ?? 0);
+                    if ($oMin > $myMin && $oMax < $myMax) $excluded[] = ['min' => $oMin, 'max' => $oMax];
+                }
+            }
+        }
+        usort($excluded, fn($a, $b) => $a['min'] <=> $b['min']);
+        $subRanges = []; $cursor = $myMin;
+        foreach ($excluded as $ex) {
+            if ($ex['min'] > $cursor) $subRanges[] = ['min' => $cursor, 'max' => $ex['min'] - 1];
+            $cursor = $ex['max'] + 1;
+        }
+        if ($cursor <= $myMax) $subRanges[] = ['min' => $cursor, 'max' => $myMax];
+        $label = $hasSub ? ($kelas ? "Kategori {$kategori} Kelas {$kelas}" : "Kategori {$kategori}") : "Rentang Global {$myMin}-{$myMax}";
+        return [$subRanges, $label];
+    }
+
+    private function numberInSubRanges($n, array $subRanges)
+    {
+        foreach ($subRanges as $r) { if ($n >= (int) $r['min'] && $n <= (int) $r['max']) return true; }
+        return false;
+    }
+
+    /** Cocokkan kategori/kelas case-insensitive ke bentuk kanonik. Return [kat|null, kelas|null, error|null]. */
+    private function normalizeKatKelas($katInput, $kelasInput)
+    {
+        $validKategori = \App\Helpers\Taxonomy::categoryNames();
+        $noKelas       = \App\Helpers\Taxonomy::noKelasNames();
+        $katInput = trim((string) $katInput);
+        if ($katInput === '') return [null, null, "Kategori kosong."];
+        $kat = null;
+        foreach ($validKategori as $vk) { if (strcasecmp($vk, $katInput) === 0) { $kat = $vk; break; } }
+        if ($kat === null) return [null, null, "Kategori '{$katInput}' tidak dikenal."];
+        if (in_array($kat, $noKelas)) return [$kat, null, null];
+        $kelasInput = strtoupper(trim((string) $kelasInput));
+        if ($kelasInput === '' || !in_array($kelasInput, ['A','B','C','D','E'])) return [$kat, null, "Kelas wajib A-E untuk kategori {$kat}."];
+        return [$kat, $kelasInput, null];
+    }
+
+    private function parseIkanImportRows($rows)
+    {
+        $headerAliases = [
+            'nama'       => ['nama', 'nama_peserta', 'namapeserta', 'nama peserta', 'name'],
+            'team'       => ['team', 'club', 'nama_team', 'namateam', 'nama team', 'nama_club', 'namaclub', 'nama club', 'nama team / club', 'namateamclub', 'detail_anggota', 'detailanggota', 'detail anggota', 'asal'],
+            'kategori'   => ['kategori', 'category', 'kat'],
+            'kelas'      => ['kelas', 'class', 'kls'],
+            'nomor_tank' => ['nomor_tank', 'nomortank', 'no_tank', 'notank', 'nomor tank', 'no tank', 'tank'],
+        ];
+        $rows = $rows->map(function ($row) use ($headerAliases) {
+            $normalized = [];
+            foreach ($row as $key => $value) {
+                $found = false;
+                $cleanKey = strtolower(preg_replace('/[^a-z0-9]/', '', (string) $key));
+                foreach ($headerAliases as $target => $aliases) {
+                    foreach ($aliases as $alias) {
+                        if ($cleanKey === strtolower(preg_replace('/[^a-z0-9]/', '', $alias))) { $normalized[$target] = $value; $found = true; break 2; }
+                    }
+                }
+                if (!$found) $normalized[$key] = $value;
+            }
+            return collect($normalized);
+        });
+        $errors = []; $toCreate = []; $seenInFile = [];
+        $usedTanks = Ikan::whereNotNull('nomor_tank')->pluck('nomor_tank')->map(fn($n) => (int) $n)->flip()->toArray();
+        foreach ($rows as $rowIndex => $row) {
+            $rowNum = $rowIndex + 2;
+            $namaRow = trim((string) $row->get('nama', ''));
+            $teamRow = trim((string) $row->get('team', ''));
+            $katRaw  = trim((string) $row->get('kategori', ''));
+            $kelasRaw= trim((string) $row->get('kelas', ''));
+            $tankRaw = trim((string) $row->get('nomor_tank', ''));
+            if ($namaRow === '' && $teamRow === '' && $katRaw === '' && $kelasRaw === '' && $tankRaw === '') continue;
+            [$kat, $kelas, $err] = $this->normalizeKatKelas($katRaw, $kelasRaw);
+            if ($err) { $errors[] = "Baris {$rowNum}: {$err}"; continue; }
+            $katLabel = "Kategori {$kat}" . ($kelas ? " Kelas {$kelas}" : "");
+            if ($tankRaw === '' || !ctype_digit($tankRaw)) { $errors[] = "Baris {$rowNum} ({$katLabel}): Nomor tank tidak valid."; continue; }
+            $nomor = (int) $tankRaw;
+            if (isset($seenInFile[$nomor])) { $errors[] = "Baris {$rowNum} ({$katLabel}): Nomor tank {$nomor} ditulis lebih dari sekali di file."; continue; }
+            if (isset($usedTanks[$nomor])) { $errors[] = "Baris {$rowNum} ({$katLabel}): Nomor tank {$nomor} sudah dipakai. Pilih nomor lain."; continue; }
+            [$subRanges, $rangeLabel] = $this->userTankSubRanges($kat, $kelas);
+            if (!$this->numberInSubRanges($nomor, $subRanges)) {
+                $rangeStr = collect($subRanges)->map(fn($r) => $r['min'] . '-' . $r['max'])->implode(', ');
+                $errors[] = "Baris {$rowNum} ({$katLabel}): Nomor {$nomor} di luar rentang {$rangeLabel}. Rentang valid: {$rangeStr}.";
+                continue;
+            }
+            $seenInFile[$nomor] = true;
+            $toCreate[] = ['nama' => $namaRow, 'team' => $teamRow, 'kategori' => $kat, 'kelas' => $kelas, 'nomor_tank' => $nomor];
+        }
+        return ['toCreate' => $toCreate, 'errors' => $errors];
+    }
+
+    private function commitIkanImport($peserta, array $toCreate)
+    {
+        \DB::beginTransaction();
+        try {
+            $usedNow = Ikan::whereNotNull('nomor_tank')->lockForUpdate()->pluck('nomor_tank')->map(fn($n) => (int) $n)->flip()->toArray();
+            foreach ($toCreate as $c) {
+                if (isset($usedNow[$c['nomor_tank']])) {
+                    \DB::rollBack();
+                    return ['success' => false, 'code' => 409, 'message' => 'Import dibatalkan: Nomor tank ' . $c['nomor_tank'] . ' (Kategori ' . $c['kategori'] . ') baru saja terpakai. Coba lagi.'];
+                }
+                $usedNow[$c['nomor_tank']] = true;
+            }
+            foreach ($toCreate as $c) {
+                Ikan::create([
+                    'peserta_id'        => $peserta->id,
+                    'nama_peserta'      => $c['nama'] !== '' ? $c['nama'] : $this->cleanExcelDisplayValue($peserta->nama_peserta, ''),
+                    'detail_anggota'    => $c['team'] !== '' ? $c['team'] : $this->cleanExcelDisplayValue($peserta->detail_anggota, ''),
+                    'jenis_keanggotaan' => 'team', // ★ Import selalu TEAM
+                    'kategori'          => $c['kategori'],
+                    'kelas'             => $c['kelas'],
+                    'nomor_tank'        => $c['nomor_tank'],
+                    'dibuat_oleh'       => 'user_import',
+                ]);
+            }
+            \DB::commit();
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return ['success' => false, 'code' => 500, 'message' => 'Gagal menyimpan: ' . $e->getMessage()];
+        }
+        try { app(\App\Services\SheetsSyncService::class)->syncSemuaPeserta(); } catch (\Exception $e) { \Log::error('Sync peserta gagal (import): ' . $e->getMessage()); }
+        return ['success' => true, 'code' => 200, 'message' => 'Berhasil mengimpor ' . count($toCreate) . ' ikan beserta nomor tank.', 'imported' => count($toCreate)];
+    }
+
+    public function importIkanUser(Request $request)
+    {
+        $request->validate(['file' => 'required|file|mimes:xlsx,xls,csv|max:10240']);
+        $peserta = Peserta::where('user_id', Auth::id())->first();
+        if (!$peserta) return response()->json(['success' => false, 'message' => 'Silakan lengkapi profil peserta terlebih dahulu.'], 400);
+        return $this->doIkanImport($request, $peserta);
+    }
+
+    public function importIkanToUser(Request $request)
+    {
+        $request->validate(['file' => 'required|file|mimes:xlsx,xls,csv|max:10240', 'user_id' => 'required']);
+        $user = User::find($request->input('user_id'));
+        if (!$user) return response()->json(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+        $peserta = Peserta::firstOrCreate(['user_id' => $user->id], ['nama_peserta' => $user->name, 'jenis_keanggotaan' => 'team', 'detail_anggota' => '-']);
+        return $this->doIkanImport($request, $peserta);
+    }
+
+    private function doIkanImport(Request $request, $peserta)
+    {
+        try {
+            $import = new \App\Imports\GenericImport();
+            \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('file'));
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Gagal membaca file Excel: ' . $e->getMessage()], 422);
+        }
+        $rows = $import->data;
+        if (!$rows || $rows->isEmpty()) return response()->json(['success' => false, 'message' => 'File Excel kosong.'], 422);
+        if ($rows->count() > 1000) return response()->json(['success' => false, 'message' => 'Maksimal 1.000 baris per import.'], 422);
+        $res = $this->parseIkanImportRows($rows);
+        if (!empty($res['errors'])) {
+            return response()->json(['success' => false, 'message' => 'Import dibatalkan. Ada ' . count($res['errors']) . ' masalah — tidak ada data yang disimpan. Perbaiki lalu unggah ulang.', 'errors' => $res['errors']], 422);
+        }
+        if (empty($res['toCreate'])) return response()->json(['success' => false, 'message' => 'Tidak ada baris data yang bisa diimpor.'], 422);
+        $out = $this->commitIkanImport($peserta, $res['toCreate']);
+        return response()->json(['success' => $out['success'], 'message' => $out['message'], 'imported' => $out['imported'] ?? 0], $out['code']);
+    }
+
+    public function downloadUserImportTemplate()
+    {
+        $data = [['Nama', 'Nama Team / Club', 'Kategori', 'Kelas', 'Nomor Tank'], ['Budi', 'Louhan Jakarta', 'Cencu', 'A', '10'], ['Sari', 'Louhan Bandung', 'Chingwa', 'B', '25'], ['Andi', 'Bonsai Club', 'Bonsai', '', '210']];
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\ArrayExport($data), 'Template_Import_Ikan_Saya.xlsx');
+    }
+
     public function acakNomorTankAdmin(Request $request)
     {
         $request->validate(['ikan_id' => 'required|exists:ikans,id']);
