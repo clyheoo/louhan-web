@@ -9,6 +9,8 @@ use App\Exports\Sheets\PointRankingSheet;
 use App\Exports\Sheets\RumusPenilaianSheet;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use App\Exports\Sheets\NominasiSheet;
+use App\Exports\Sheets\NominasiDefectSheet;
+use App\Exports\Sheets\NominasiFixSheet;
 use App\Exports\Sheets\JuriAssignmentSheet;
 use App\Exports\Sheets\NilaiMurniJuriSheet;
 use App\Exports\Sheets\TeamChampionSheet;
@@ -78,6 +80,8 @@ public function sheets(): array
             new PointRankingSheet($rankingScope),
             new RumusPenilaianSheet(),
             new NominasiSheet(),
+            new NominasiDefectSheet(),
+            new NominasiFixSheet(),
             new JuriAssignmentSheet(),
             new NilaiMurniJuriSheet(),
             new PointRankingSubtotalSheet($rankingScope),
@@ -105,6 +109,8 @@ public function sheets(): array
             'ranking_k'               => [new PointRankingSheet('per_kategori')],
             'ranking_global'          => [new PointRankingSheet('global')],
             'nominasi'                => [new NominasiSheet()],
+            'nominasi_defect'         => [new NominasiDefectSheet()],
+            'nominasi_fix'            => [new NominasiFixSheet()],
             'nilai_murni'             => [new NilaiMurniJuriSheet()],
             'juri_assignment'         => [new JuriAssignmentSheet()],
             'rumus'                   => [new RumusPenilaianSheet()],

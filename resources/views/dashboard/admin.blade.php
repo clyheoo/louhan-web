@@ -1064,6 +1064,8 @@
                             <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="ranking_subtotal_global"><i class="fas fa-calculator" style="color:#FCA5A5"></i> Subtotal: Global</label>
                             <div class="export-dd-sep"></div>
                             <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="nominasi"><i class="fas fa-clipboard-list txt-cyan"></i> Nominasi</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="nominasi_defect"><i class="fas fa-triangle-exclamation" style="color:#FCA5A5"></i> Nominasi Defect</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="nominasi_fix"><i class="fas fa-clipboard-check txt-success"></i> Nominasi Fix (Kat & Kelas)</label>
                             <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="juri_assignment"><i class="fas fa-user-pen txt-gold"></i> Penugasan Juri</label>
                             <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="nilai_murni"><i class="fas fa-scroll txt-success"></i> Nilai Murni Juri</label>
                             <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="rumus"><i class="fas fa-square-root-variable txt-cyan"></i> Rumus Penilaian</label>
