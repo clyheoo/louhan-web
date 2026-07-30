@@ -2912,14 +2912,40 @@ function renderLiveTable() {
 }
 
 function populateFilter() {
-    document.getElementById('filter-kategori').innerHTML = '<option value="">Cek Kategori</option>' + ['Bonsai','Cencu','Chingwa','Freemarking','Goldenbase','Jumbo','Klasik'].map(c => '<option value="'+c+'">'+c+'</option>').join('');
-    document.getElementById('filter-kelas').innerHTML = '<option value="">Cek Kelas</option>' + ['A','B','C','D','E'].map(c => '<option value="'+c+'">Kelas '+c+'</option>').join('');
-    document.getElementById('filter-kategori').onchange = function() {
+    // ★ Ekstrak kategori & kelas unik dari available_tanks (selalu update dengan data terbaru)
+    var kategoris = [];
+    var kelass = [];
+    (appData.available_tanks || []).forEach(function(t) {
+        if (t.kategori && kategoris.indexOf(t.kategori) === -1) kategoris.push(t.kategori);
+        if (t.kelas && kelass.indexOf(t.kelas) === -1) kelass.push(t.kelas);
+    });
+    kategoris.sort();
+    kelass.sort();
+
+    var katSel = document.getElementById('filter-kategori');
+    var kelasSel = document.getElementById('filter-kelas');
+
+    // ★ Simpan selection sebelum re-render agar tidak reset saat auto-refresh / polling
+    var prevKat = katSel ? katSel.value : '';
+    var prevKelas = kelasSel ? kelasSel.value : '';
+
+    katSel.innerHTML = '<option value="">Cek Kategori</option>' + kategoris.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+    kelasSel.innerHTML = '<option value="">Cek Kelas</option>' + kelass.map(function(c) { return '<option value="' + c + '">Kelas ' + c + '</option>'; }).join('');
+
+    // ★ Restore selection jika masih valid di data baru
+    if (prevKat && kategoris.indexOf(prevKat) !== -1) katSel.value = prevKat;
+    if (prevKelas && kelass.indexOf(prevKelas) !== -1) kelasSel.value = prevKelas;
+
+    katSel.onchange = function() {
         var kelasWrap = document.getElementById('scoring-kelas-wrap');
         if(kelasWrap) kelasWrap.style.display = isNoKelas(this.value) ? 'none' : '';
-        if(isNoKelas(this.value)) document.getElementById('filter-kelas').value = '';
+        if(isNoKelas(this.value)) kelasSel.value = '';
         onFilterChange();
     };
+
+    // ★ Sinkronkan visibility kelas wrap dengan kategori yang sedang terpilih (saat init / restore)
+    var kelasWrap = document.getElementById('scoring-kelas-wrap');
+    if (kelasWrap) kelasWrap.style.display = isNoKelas(katSel.value) ? 'none' : '';
 }
 function onFilterChange() { renderFormTable(); }
 
