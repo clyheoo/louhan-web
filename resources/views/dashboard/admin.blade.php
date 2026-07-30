@@ -661,6 +661,20 @@
     .export-dd-item:hover{ background:var(--glass-3); color:var(--cyan-300); }
     .export-dd-item i{ width:16px; text-align:center; }
     .export-dd-sep{ height:1px; background:var(--bd-1); margin:4px 0; }
+    /* ===== EXPORT MULTI-SELECT ===== */
+    .export-dd-scroll{ max-height:280px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--bd-2) transparent; }
+    .export-dd-scroll::-webkit-scrollbar{ width:7px; }
+    .export-dd-scroll::-webkit-scrollbar-thumb{ background:var(--bd-2); border-radius:8px; }
+    .export-dd-scroll::-webkit-scrollbar-track{ background:transparent; }
+    .export-dd-check{ padding:9px 16px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:background .12s; font-weight:600; color:var(--text); user-select:none; }
+    .export-dd-check:hover{ background:var(--glass-3); color:var(--cyan-300); }
+    .export-dd-check input{ width:15px; height:15px; accent-color:var(--success); cursor:pointer; flex:0 0 auto; margin:0; }
+    .export-dd-check i{ width:16px; text-align:center; }
+    .export-dd-foot{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; border-top:1px solid var(--bd-1); background:var(--glass-1); }
+    .export-dd-count{ font-size:11px; color:var(--text-dim,#94A3B8); font-weight:600; }
+    .export-dd-count b{ color:#6EE7B7; }
+    .export-dd-go{ padding:7px 12px; border-radius:9px; border:1px solid rgba(16,185,129,.35); background:rgba(16,185,129,.14); color:#6EE7B7; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-family:inherit; transition:all .18s; }
+    .export-dd-go:hover{ background:var(--success); color:#fff; }
 
     /* ===== DARK INPUT AREA (UNDIAN) ===== */
     .dark-input-area .form-control{ background:rgba(0,0,0,.4); color:#fff; border-color:rgba(255,255,255,.12); font-weight:700; }
@@ -1032,14 +1046,40 @@
                     <div class="export-dd" id="exportDD">
                         <div class="export-dd-item" onclick="doExport('all')"><i class="fas fa-layer-group txt-cyan"></i> Semua Data</div>
                         <div class="export-dd-sep"></div>
-                        <div class="export-dd-item" onclick="doExport('daftar')"><i class="fas fa-list txt-cyan"></i> Daftar Ikan</div>
-                        <div class="export-dd-item" onclick="doExport('mvp')"><i class="fas fa-star txt-gold"></i> Data Ikan MVP</div>
-                        <div class="export-dd-sep"></div>
-                        <div class="export-dd-item" onclick="doExport('ranking_kk')"><i class="fas fa-layer-group txt-success"></i> Ranking: Kat + Kelas</div>
-                        <div class="export-dd-item" onclick="doExport('ranking_k')"><i class="fas fa-tags txt-gold"></i> Ranking: Kategori</div>
-                        <div class="export-dd-item" onclick="doExport('ranking_global')"><i class="fas fa-globe" style="color:#FCA5A5"></i> Ranking: Global</div>
-                        <div class="export-dd-sep"></div>
-                        <div class="export-dd-item" onclick="doExport('users')"><i class="fas fa-users" style="color:#D8B4FE"></i> Detail Pengguna</div>
+                        <div class="export-dd-scroll">
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="daftar"><i class="fas fa-list txt-cyan"></i> Daftar Ikan</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="users"><i class="fas fa-users" style="color:#D8B4FE"></i> Detail Pengguna</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="mvp"><i class="fas fa-star txt-gold"></i> Data Ikan MVP</label>
+                            <div class="export-dd-sep"></div>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="juara_peserta"><i class="fas fa-medal txt-gold"></i> Juara Perorangan</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="juara_team"><i class="fas fa-people-group txt-cyan"></i> Juara Team</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="team_champion"><i class="fas fa-trophy txt-gold"></i> Team Champion</label>
+                            <div class="export-dd-sep"></div>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="ranking_kk"><i class="fas fa-layer-group txt-success"></i> Ranking: Kat + Kelas</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="ranking_k"><i class="fas fa-tags txt-gold"></i> Ranking: Kategori</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="ranking_global"><i class="fas fa-globe" style="color:#FCA5A5"></i> Ranking: Global</label>
+                            <div class="export-dd-sep"></div>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="ranking_subtotal_kk"><i class="fas fa-calculator txt-success"></i> Subtotal: Kat + Kelas</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="ranking_subtotal_k"><i class="fas fa-calculator txt-gold"></i> Subtotal: Kategori</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="ranking_subtotal_global"><i class="fas fa-calculator" style="color:#FCA5A5"></i> Subtotal: Global</label>
+                            <div class="export-dd-sep"></div>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="nominasi"><i class="fas fa-clipboard-list txt-cyan"></i> Nominasi</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="juri_assignment"><i class="fas fa-user-pen txt-gold"></i> Penugasan Juri</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="nilai_murni"><i class="fas fa-scroll txt-success"></i> Nilai Murni Juri</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="rumus"><i class="fas fa-square-root-variable txt-cyan"></i> Rumus Penilaian</label>
+                            <div class="export-dd-sep"></div>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="pemenang_point_1_5"><i class="fas fa-award txt-gold"></i> Pemenang Point (Kat 1–5)</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="pemenang_point_6_10"><i class="fas fa-award txt-gold"></i> Pemenang Point (Kat 6–10)</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="pemenang_point_1_10"><i class="fas fa-award txt-gold"></i> Pemenang Point (Kat 1–10)</label>
+                            <div class="export-dd-sep"></div>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="pemenang_1_5"><i class="fas fa-crown txt-gold"></i> Pemenang (Kat 1–5)</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="pemenang_6_10"><i class="fas fa-crown txt-gold"></i> Pemenang (Kat 6–10)</label>
+                            <label class="export-dd-check"><input type="checkbox" class="exp-chk" value="pemenang_1_10"><i class="fas fa-crown txt-gold"></i> Pemenang (Kat 1–10)</label>
+                        </div>
+                        <div class="export-dd-foot">
+                            <span class="export-dd-count"><b id="expSelCount">0</b> dipilih</span>
+                            <button type="button" class="export-dd-go" onclick="doExportSelected()"><i class="fas fa-file-excel"></i> Export Terpilih</button>
+                        </div>
                     </div>
                 </div>
             </div>

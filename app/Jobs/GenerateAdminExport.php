@@ -36,8 +36,21 @@ class GenerateAdminExport implements ShouldQueue
         Cache::put("export:{$this->token}", [
             'status' => 'ready',
             'path'   => $path,
-            'name'   => 'LCI_Admin_Semua_Data_' . now()->format('Y-m-d_His') . '.xlsx',
+            'name'   => 'LCI_Admin_' . $this->exportLabel() . '_' . now()->format('Y-m-d_His') . '.xlsx',
         ], now()->addHours(2));
+    }
+
+    private function exportLabel(): string
+    {
+        if ($this->sheets === 'all' || $this->sheets === '') {
+            return 'Semua_Data';
+        }
+        $keys = is_array($this->sheets) ? $this->sheets : explode(',', $this->sheets);
+        $keys = array_values(array_filter(array_map('trim', $keys)));
+        if (empty($keys) || in_array('all', $keys, true)) {
+            return 'Semua_Data';
+        }
+        return count($keys) === 1 ? $keys[0] : (count($keys) . '_Sheet_Terpilih');
     }
 
     public function failed(\Throwable $e): void

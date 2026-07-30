@@ -2933,6 +2933,29 @@ function doExport(sheets){
     })
     .catch(function(){ _exportToast('Kesalahan jaringan saat memulai export.', false); _exportToastHide(5000); });
 }
+
+/* Multi-select export: gabungkan key terpilih -> string koma, pakai alur doExport lama */
+function doExportSelected(){
+    var boxes = document.querySelectorAll('#exportDD .exp-chk:checked');
+    if(!boxes.length){
+        _exportToast('Pilih minimal satu data untuk di-export.', false);
+        _exportToastHide(3500);
+        return;
+    }
+    var keys = Array.prototype.map.call(boxes, function(b){ return b.value; });
+    doExport(keys.join(','));   // contoh: "daftar,mvp,ranking_kk"
+}
+function updateExportSelCount(){
+    var n = document.querySelectorAll('#exportDD .exp-chk:checked').length;
+    var el = document.getElementById('expSelCount');
+    if(el) el.textContent = n;
+}
+document.addEventListener('change', function(e){
+    if(e.target && e.target.classList && e.target.classList.contains('exp-chk')){
+        updateExportSelCount();
+    }
+});
+
 document.addEventListener('click',function(e){
     if(!e.target.closest('.export-wrap')){
         document.getElementById('exportDD').classList.remove('show');
