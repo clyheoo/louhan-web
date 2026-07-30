@@ -97,44 +97,47 @@ class NominasiDefectSheet implements WithTitle, WithEvents
                     })
                     ->values();
 
-                $sheet->mergeCells('A1:C1');
+                $sheet->mergeCells('A1:D1');
                 $sheet->setCellValue('A1', 'NOMINASI TERKENA DEFECT  |  Total: ' . $rows->count());
-                $sheet->getStyle('A1:C1')->applyFromArray($styleTitle);
+                $sheet->getStyle('A1:D1')->applyFromArray($styleTitle);
                 $sheet->getRowDimension(1)->setRowHeight(22);
 
                 $headerRow = 3;
-                $sheet->fromArray([['NO TANK', 'KATEGORI', 'DEFECT']], null, "A{$headerRow}");
-                $sheet->getStyle("A{$headerRow}:C{$headerRow}")->applyFromArray($styleHeader);
+                $sheet->fromArray([['NO TANK', 'KATEGORI', 'KELAS', 'DEFECT']], null, "A{$headerRow}");
+                $sheet->getStyle("A{$headerRow}:D{$headerRow}")->applyFromArray($styleHeader);
                 $sheet->getRowDimension($headerRow)->setRowHeight(24);
 
                 $row = $headerRow + 1;
                 $start = $row;
                 foreach ($rows as $x) {
-                    $ik = $x['ikan'];
+                    $ik    = $x['ikan'];
+                    $kelas = trim((string) ($ik->kelas ?? ''));
                     $sheet->setCellValue("A{$row}", $ik->nomor_tank ?? '-');
                     $sheet->setCellValue("B{$row}", $ik->kategori ?? '-');
-                    $sheet->setCellValue("C{$row}", $x['defect']);
-                    $sheet->getStyle("C{$row}")->applyFromArray($styleDefectCell);
+                    $sheet->setCellValue("C{$row}", $kelas !== '' ? $kelas : '-');
+                    $sheet->setCellValue("D{$row}", $x['defect']);
+                    $sheet->getStyle("D{$row}")->applyFromArray($styleDefectCell);
                     $row++;
                 }
 
                 if ($row === $start) {
-                    $sheet->mergeCells("A{$row}:C{$row}");
+                    $sheet->mergeCells("A{$row}:D{$row}");
                     $sheet->setCellValue("A{$row}", 'Tidak ada nominasi yang terkena defect.');
-                    $sheet->getStyle("A{$row}:C{$row}")->applyFromArray($styleBorder);
+                    $sheet->getStyle("A{$row}:D{$row}")->applyFromArray($styleBorder);
                     $row++;
                 }
 
                 if ($row > $start) {
-                    $sheet->getStyle("A{$start}:C" . ($row - 1))->applyFromArray($styleBorder);
+                    $sheet->getStyle("A{$start}:D" . ($row - 1))->applyFromArray($styleBorder);
                 }
 
                 $sheet->getColumnDimension('A')->setWidth(12);
                 $sheet->getColumnDimension('B')->setWidth(20);
-                $sheet->getColumnDimension('C')->setWidth(70);
+                $sheet->getColumnDimension('C')->setWidth(8);
+                $sheet->getColumnDimension('D')->setWidth(70);
 
-                $sheet->getStyle('A:B')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_TOP);
-                $sheet->getStyle('C:C')->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_TOP);
+                $sheet->getStyle('A:C')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_TOP);
+                $sheet->getStyle('D:D')->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_TOP);
                 $sheet->freezePane('A4');
             },
         ];
