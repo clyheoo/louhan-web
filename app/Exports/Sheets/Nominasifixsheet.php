@@ -23,6 +23,43 @@ class NominasiFixSheet implements WithTitle, WithEvents
         return 'NOMINASI FIX (KAT & KELAS)';
     }
 
+    private function normalizeDefectArray($value): array
+    {
+        if (is_string($value)) {
+            $value = [$value];
+        }
+        if (!is_array($value)) {
+            return [];
+        }
+        return collect($value)
+            ->map(function ($v) {
+                $v = trim((string) $v);
+                $v = preg_replace('/\s+Sempurna/u', '', $v) ?? $v;
+                return $v;
+            })
+            ->filter(fn ($v) => $v !== '' && $v !== '0')
+            ->unique()
+            ->values()
+            ->toArray();
+    }
+
+    private function formatNominasiDefect(Nominasi $n): string
+    {
+        $parts = [
+            'HEAD'    => $this->normalizeDefectArray($n->raw_head_penalty ?? ['0']),
+            'FACE'    => $this->normalizeDefectArray($n->raw_face_penalty ?? ['0']),
+            'BODY'    => $this->normalizeDefectArray($n->raw_body_penalty ?? ['0']),
+            'FINNAGE' => $this->normalizeDefectArray($n->raw_finnage_penalty ?? ['0']),
+        ];
+        $out = [];
+        foreach ($parts as $label => $items) {
+            if (!empty($items)) {
+                $out[] = $label . ': ' . implode(', ', $items);
+            }
+        }
+        return empty($out) ? '-' : implode(' | ', $out);
+    }
+
     public function registerEvents(): array
     {
         return [
@@ -53,6 +90,11 @@ class NominasiFixSheet implements WithTitle, WithEvents
                 $styleAlt = [
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'F0FDFA']],
                 ];
+                $styleDefectCell = [
+                    'fill'      => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FDE68A']],
+                    'font'      => ['color' => ['rgb' => '92400E'], 'bold' => true, 'size' => 9],
+                    'alignment' => ['wrapText' => true, 'vertical' => 'top'],
+                ];
 
                 // ── DATA & GROUPING ───────────────────────
                 $noms = Nominasi::whereIn('status', $this->statusFilter)
@@ -70,7 +112,10 @@ class NominasiFixSheet implements WithTitle, WithEvents
                     if (!isset($groups[$key])) {
                         $groups[$key] = ['kategori' => $kat, 'kelas' => $kelas, 'items' => []];
                     }
-                    $groups[$key]['items'][] = $ik;
+                    $groups[$key]['items'][] = [
+                        'ikan'   => $ik,
+                        'defect' => $this->formatNominasiDefect($n),
+                    ];
                 }
                 uasort($groups, fn ($a, $b) => [$a['kategori'], $a['kelas']] <=> [$b['kategori'], $b['kelas']]);
 
@@ -107,8 +152,8 @@ class NominasiFixSheet implements WithTitle, WithEvents
                     $c4   = $col($c0i + 4);
                     $r    = $bandTop;
 
-                    $items = collect($g['items'])->sortBy(function ($ik) {
-                        $t = $ik->nomor_tank;
+                    $items = collect($g['items'])->sortBy(function ($it) {
+                        $t = $it['ikan']->nomor_tank;
                         return is_numeric($t) ? (int) $t : 999999;
                     })->values();
 
@@ -130,14 +175,19 @@ class NominasiFixSheet implements WithTitle, WithEvents
                     // data
                     $no        = 1;
                     $dataStart = $r;
-                    foreach ($items as $ik) {
+                    foreach ($items as $it) {
+                        $ik     = $it['ikan'];
+                        $defect = $it['defect'];
                         $sheet->setCellValue($col($c0i + 0) . $r, $no);
                         $sheet->setCellValue($col($c0i + 1) . $r, $g['kategori']);
                         $sheet->setCellValue($col($c0i + 2) . $r, $g['kelas'] !== '' ? $g['kelas'] : '-');
                         $sheet->setCellValue($col($c0i + 3) . $r, $ik->nomor_tank ?? '-');
-                        $sheet->setCellValue($col($c0i + 4) . $r, '');
+                        $sheet->setCellValue($col($c0i + 4) . $r, $defect !== '-' ? $defect : '');
                         if ($no % 2 === 0) {
                             $sheet->getStyle("{$c0}{$r}:{$c4}{$r}")->applyFromArray($styleAlt);
+                        }
+                        if ($defect !== '-') {
+                            $sheet->getStyle($col($c0i + 4) . $r)->applyFromArray($styleDefectCell);
                         }
                         $no++;
                         $r++;
@@ -170,7 +220,7 @@ class NominasiFixSheet implements WithTitle, WithEvents
                     $sheet->getColumnDimension($col($base + 1))->setWidth(18);
                     $sheet->getColumnDimension($col($base + 2))->setWidth(7);
                     $sheet->getColumnDimension($col($base + 3))->setWidth(10);
-                    $sheet->getColumnDimension($col($base + 4))->setWidth(16);
+                    $sheet->getColumnDimension($col($base + 4))->setWidth(30);
                     if ($p < $perRow - 1) {
                         $sheet->getColumnDimension($col($base + 5))->setWidth(3);
                     }
