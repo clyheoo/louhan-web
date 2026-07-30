@@ -900,7 +900,7 @@
                 <div class="sb-mark"><i class="fas fa-gavel"></i></div>
                 <div class="sb-brand-text">
                     <h1>LCI Juri</h1>
-                    <p>Judge Panel</p>
+                    <p>Juri Panel</p>
                 </div>
             </div>
 

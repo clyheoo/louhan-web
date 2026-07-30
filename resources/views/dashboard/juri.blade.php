@@ -3363,7 +3363,7 @@ window.switchJuriView = switchJuriView;
             return '<div class="glass-card" style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
                 +'<div style="min-width:0;display:flex;flex-direction:column;gap:3px;">'
                     +'<div style="font-size:14px;font-weight:800;color:var(--text-hi);">Tank '+t.nomor_tank+reFlag+'</div>'
-                    +'<div style="font-size:11px;color:var(--text-mid);">'+(t.kategori||'-')+(t.kelas?(' · Kelas '+t.kelas):'')+' · '+(t.nama_peserta||'-')+'</div>'
+                    +'<div style="font-size:11px;color:var(--text-mid);">'+(t.kategori||'-')+(t.kelas?(' · Kelas '+t.kelas):'')+'</div>'
                 +'</div>'
                 +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+statusChip+btnDetail+btnUpload+'</div>'
             +'</div>';
