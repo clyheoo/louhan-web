@@ -1761,21 +1761,15 @@ class AdminDashboardController extends Controller
 
     // ★ Jika array kosong = reset semua, langsung simpan tanpa validasi
     if (is_array($ranges) && empty($ranges)) {
+        // ★ Reset sub-rentang per kategori/kelas → benar-benar kosongkan tank_class_ranges
         \DB::table('settings')->updateOrInsert(
-            ['key' => 'tank_reset_info'],
-            [
-                'value' => json_encode([
-                    'reason'   => $request->reason,
-                    'reset_at' => now()->toDateTimeString(),
-                ]),
-                'updated_at' => now(),
-            ]
+            ['key' => 'tank_class_ranges'],
+            ['value' => json_encode([]), 'updated_at' => now()]
         );
 
-        // ★ AUTO-SYNC PESERTA (karena nomor tank dihapus)
-        try { $this->sheetsSync->syncSemuaPeserta(); } catch (\Exception $e) { \Log::warning('Sheets sync peserta gagal (reset tank): ' . $e->getMessage()); }
+        try { if ($this->sheetsSync->isReady()) $this->sheetsSync->syncPlotingTank(); } catch (\Exception $e) { \Log::warning('Sheets sync ploting gagal (reset rentang): ' . $e->getMessage()); }
 
-        return response()->json(['success' => true, 'message' => 'Semua nomor tank berhasil direset. Data penilaian tetap aman.']);
+        return response()->json(['success' => true, 'message' => 'Semua sub-rentang per kategori/kelas berhasil dihapus. Ikan memakai Rentang Global.']);
     }
 
     if (!$ranges || !is_array($ranges)) {
@@ -2437,6 +2431,28 @@ class AdminDashboardController extends Controller
             'success' => true, 
             'is_open' => (bool)$newVal,
             'message' => $newVal === '1' ? 'Mesin Undian DIBUKA untuk user.' : 'Mesin Undian DITUTUP untuk user.'
+        ]);
+    }
+
+    public function toggleProfilLock()
+    {
+        $current = \DB::table('settings')->where('key', 'profil_locked')->value('value');
+        $newVal = ($current === '1') ? '0' : '1';
+        \DB::table('settings')->updateOrInsert(
+            ['key' => 'profil_locked'],
+            ['value' => $newVal, 'updated_at' => now()]
+        );
+        return response()->json([
+            'success' => true,
+            'locked'  => ($newVal === '1'),
+            'message' => $newVal === '1' ? 'Profil Peserta DIKUNCI untuk user.' : 'Profil Peserta DIBUKA untuk user.'
+        ]);
+    }
+
+    public function getProfilLockStatus()
+    {
+        return response()->json([
+            'locked' => \DB::table('settings')->where('key', 'profil_locked')->value('value') === '1',
         ]);
     }
 

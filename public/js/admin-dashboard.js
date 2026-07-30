@@ -4413,6 +4413,40 @@ function updateUndianToggleUI(isOpen) {
     }
 }
 
+/* ═══ KUNCI PROFIL PESERTA ═══ */
+function loadProfilLockStatus() {
+    fetch('/api/admin/profil-lock-status', {headers:{'Accept':'application/json'}})
+    .then(r => r.json())
+    .then(d => updateProfilLockUI(!!d.locked))
+    .catch(() => updateProfilLockUI(false));
+}
+function toggleProfilLock() {
+    var btn = document.getElementById('btnToggleProfil');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch('/api/admin/toggle-profil-lock', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}})
+    .then(r => r.json())
+    .then(d => {
+        if(d.success) { updateProfilLockUI(d.locked); popupSuccess('Status Profil Peserta Diperbarui', d.message); }
+        else popupError('Gagal', d.message);
+    })
+    .catch(() => popupError('Error', 'Gagal menghubungi server'))
+    .finally(() => { btn.disabled = false; });
+}
+function updateProfilLockUI(locked) {
+    var btn = document.getElementById('btnToggleProfil');
+    var txt = document.getElementById('profilStatusText');
+    if(btn) btn.disabled = false;
+    if(locked) {
+        btn.innerHTML = '<i class="fas fa-lock-open"></i> BUKA PROFIL PESERTA';
+        btn.style.background = 'var(--success)'; btn.style.boxShadow = '0 3px 10px rgba(34,197,94,.2)';
+        txt.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--danger);"></i> Profil Peserta sedang <b style="color:var(--danger);">DIKUNCI</b>. Peserta tidak dapat mengubah profil.';
+    } else {
+        btn.innerHTML = '<i class="fas fa-lock"></i> KUNCI PROFIL PESERTA';
+        btn.style.background = 'var(--danger)'; btn.style.boxShadow = '0 3px 10px rgba(239,68,68,.2)';
+        txt.innerHTML = '<i class="fas fa-circle-check" style="color:var(--success);"></i> Profil Peserta sedang <b style="color:var(--success);">TERBUKA</b>. Peserta dapat mengisi/mengubah profil.';
+    }
+}
+
 var _fotoPageUnlocked = false;
 
 function loadFotoReplaceStatus(){
@@ -6097,7 +6131,7 @@ function saveJuriAssignments(jid,btn){
             if(pageId === 'team_champion'){ loadTeamChampionStatus(); loadTeamChampionPeserta(); loadTeamChampionIkan(); }
             if(pageId === 'results'){ loadResultsStatus(); loadPiagamRecipients(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
-            if(pageId === 'undian'){ loadUndianStatus(); }
+            if(pageId === 'undian'){ loadUndianStatus(); loadProfilLockStatus(); }
             if(pageId === 'jumbo_calc'){ loadJumboCalcFish(); }
             if(pageId === 'kelola_juri'){ loadJuriAssignments(); loadJuriScoringLockStatus(); }
             if(pageId === 'taxonomy'){ loadTaxonomyManage(); }
@@ -6111,7 +6145,7 @@ function saveJuriAssignments(jid,btn){
             if(pageId === 'team_champion'){ loadTeamChampionStatus(); loadTeamChampionPeserta(); loadTeamChampionIkan(); }
             if(pageId === 'results'){ loadResultsStatus(); loadPiagamRecipients(); }
             if(pageId === 'ranking'){ loadAdminPointRanking(); }
-            if(pageId === 'undian'){ loadUndianStatus(); }
+            if(pageId === 'undian'){ loadUndianStatus(); loadProfilLockStatus(); }
             if(pageId === 'galeri'){ loadFotoReplaceStatus(); }
             if(pageId === 'kelola_juri'){ loadJuriScoringLockStatus(); }
             if(pageId === 'penilaian'){ loadRandomFillStatus(); }

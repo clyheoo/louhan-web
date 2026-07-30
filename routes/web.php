@@ -162,6 +162,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/mvp-registration-max', [AdminDashboardController::class, 'setMvpRegistrationMax']);
     Route::post('/api/admin/toggle-undian-registration', [AdminDashboardController::class, 'toggleUndianRegistration']);
     Route::get('/api/admin/undian-status', [AdminDashboardController::class, 'getUndianStatus']);
+    Route::post('/api/admin/toggle-profil-lock', [AdminDashboardController::class, 'toggleProfilLock']);
+    Route::get('/api/admin/profil-lock-status', [AdminDashboardController::class, 'getProfilLockStatus']);
     Route::post('/api/admin/toggle-foto-replace', [AdminDashboardController::class, 'toggleFotoReplace']);
     Route::get('/api/admin/foto-replace-status', [AdminDashboardController::class, 'getFotoReplaceStatus']);
     Route::post('/api/admin/set-tank-manual', [AdminDashboardController::class, 'setTankManual']);

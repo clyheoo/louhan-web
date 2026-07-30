@@ -1967,6 +1967,21 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- ★ KUNCI PROFIL PESERTA --}}
+                <div class="glass-card" style="margin-top:16px;">
+                    <div class="card-head">
+                        <h3><span class="ti"><i class="fas fa-id-card"></i></span>Status Profil Peserta</h3>
+                        <button class="btn-primary" id="btnToggleProfil" onclick="toggleProfilLock()" style="padding:8px 16px; font-size:11px;"><i class="fas fa-spinner fa-spin"></i></button>
+                    </div>
+                    <div class="card-body">
+                        <div style="font-size:13px; color:var(--text);" id="profilStatusText">Memuat status...</div>
+                        <div style="background:rgba(34,211,238,.08);border:1px solid var(--bd-cyan);border-radius:11px;padding:10px 14px;margin-top:12px;display:flex;gap:8px;align-items:flex-start;">
+                            <i class="fas fa-circle-info" style="color:var(--cyan-400);margin-top:2px;"></i>
+                            <span style="font-size:11px;color:var(--cyan-300);line-height:1.5;">Jika dikunci, halaman <b>Profil Peserta</b> di panel user tampil terkunci — peserta tidak bisa mengisi/mengubah profil.</span>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- ═══════════ PAGE: KELOLA KATEGORI & KELAS ═══════════ -->

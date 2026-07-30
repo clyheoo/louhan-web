@@ -2921,7 +2921,16 @@
                 <div class="col-stack">
 
                     <!-- CARD: PROFIL PESERTA -->
-                    <div class="glass-card js-page-profile">
+                    @php
+                        $profilLocked = \DB::table('settings')->where('key', 'profil_locked')->value('value') === '1';
+                    @endphp
+                    <div class="glass-card js-page-profile" style="position:relative;">
+                        <div class="undian-lock-overlay {{ $profilLocked ? 'show' : '' }}" id="lockProfil">
+                            <div class="lock-visual"><i class="fas fa-lock"></i></div>
+                            <div class="lock-title">Profil Peserta Dikunci</div>
+                            <div class="lock-desc">Pengisian & perubahan profil peserta saat ini dikunci oleh panitia. Silakan tunggu hingga dibuka kembali.</div>
+                            <div class="lock-badge"><i class="fas fa-hourglass-half"></i> Menunggu Panitia Membuka</div>
+                        </div>
                         <div class="card-header">
                             <div>
                                 <h2 class="card-title">
@@ -3305,13 +3314,7 @@
                             </div>
                             <select class="fish-filter" id="fishFilterKategori" aria-label="Filter kategori">
                                 <option value="">Semua Kategori</option>
-                                <option value="Cencu">Cencu</option>
-                                <option value="Chingwa">Chingwa</option>
-                                <option value="Freemarking">Freemarking</option>
-                                <option value="Goldenbase">Goldenbase</option>
-                                <option value="Klasik">Klasik</option>
-                                <option value="Bonsai">Bonsai</option>
-                                <option value="Jumbo">Jumbo</option>
+                                @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
                             </select>
 
                             <select class="fish-filter" id="fishFilterKelas" aria-label="Filter kelas">
