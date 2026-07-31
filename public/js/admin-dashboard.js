@@ -5317,21 +5317,25 @@ function openEditAdminFromRanking(ikanId){
 }
 
 /* ============================================================
-   EXPORT PDF — RANK POINT (via cetak asli browser -> Simpan PDF)
-   Dijamin tidak terpotong: browser me-reflow tabel ke lebar
-   halaman & memecah halaman dengan rapi.
+   EXPORT PDF — RANK POINT (cetak browser -> Simpan PDF)
+   Kolom "JUARA" di kiri, sel isi hanya NO TANK, dua logo header.
    ============================================================ */
 function exportRankPointPdf(){
     // ===== TEKS TEMPLATE (ubah bebas) =====
-    var TITLE_MAIN  = 'RANK POINT';
+    var TITLE_MAIN  = 'CHAMPION';
     var TITLE_SUB   = '13th KLANG FLOWERHORN COMPETITION 2026';
-    var TITLE_TAG   = 'RANK POINT \u00B7 PER KATEGORI & KELAS';
+    var TITLE_TAG   = 'JUARA \u00B7 PER KATEGORI & KELAS';
     var FOOT_1      = 'CONGRATULATIONS TO ALL PARTICIPANTS';
     var FOOT_2      = 'KLANG FLOWERHORN COMPETITION 2026';
-    var FOOT_3      = 'OFFICIAL RANK POINT LIST \u00B7 CHECK YOUR CATEGORY & ENTRY NUMBER';
-    var ONLY_LOCKED   = false; // true = hanya peserta final (terkunci)
-    var COLS_PER_PAGE = 7;     // kolom kategori per halaman (turunkan bila mau lebih lega)
+    var FOOT_3      = 'OFFICIAL NUMBER TANK CHAMPION LIST \u00B7 CHECK YOUR NUMBER TANK';
+    // Path logo TRANSPARAN di server Anda (upload dua PNG ke public/img/)
+    var LOGO_LEFT   = '/img/logo_klang.png';   // kiri  : Klang Flowerhorn Center
+    var LOGO_RIGHT  = '/img/logo_lci.png';     // kanan : Louhan Club Indonesia
+    var ONLY_LOCKED   = false;
+    var COLS_PER_PAGE = 7;
     var PALETTE = ['#9B2242','#1F7A72','#B8860B','#6B2D5C','#2C5F8A','#7A5C2E','#4A6B3A','#8A3B2E'];
+
+    var origin = window.location.origin;
 
     var win = window.open('', '_blank');
     if(!win){ _exportToast('Popup diblokir browser. Izinkan popup untuk situs ini lalu ulangi.', false); _exportToastHide(6000); return; }
@@ -5375,26 +5379,27 @@ function exportRankPointPdf(){
         function buildTable(chunk){
             var maxR = 0;
             chunk.forEach(function(c){ if(c.rows.length > maxR) maxR = c.rows.length; });
-            var colgroup = '';
-            var w = (100 / chunk.length).toFixed(4);
-            chunk.forEach(function(){ colgroup += '<col style="width:'+w+'%">'; });
-            var th = '<tr>';
+
+            var colgroup = '<col class="cjuara">';
+            chunk.forEach(function(){ colgroup += '<col>'; });
+
+            var th = '<tr><th class="jhead">JUARA</th>';
             chunk.forEach(function(c){
                 th += '<th style="background:'+catColor[c.kat.toUpperCase()]+';">'
                    +  '<div class="cat">'+esc(c.kat)+'</div>'
                    +  '<div class="cls">KELAS '+esc(c.kelas || '-')+'</div></th>';
             });
             th += '</tr>';
+
             var tb = '';
             for(var r=0; r<maxR; r++){
                 tb += '<tr class="'+(r%2 ? 'alt' : '')+'">';
+                tb += '<td class="jcell">'+(r+1)+'</td>';
                 chunk.forEach(function(c){
                     var d = c.rows[r];
                     if(d){
                         var tank = (d.nomor_tank!=null ? d.nomor_tank : '\u2014');
-                        var rp   = (d.final_rank_point ?? d.rank_point ?? 0);
-                        tb += '<td><div class="l1">No Tank. <b>'+esc(tank)+'</b></div>'
-                           +  '<div class="l2">Rank Point <b>'+esc(rp)+'</b></div></td>';
+                        tb += '<td class="tank">'+esc(tank)+'</td>';
                     } else {
                         tb += '<td class="empty"></td>';
                     }
@@ -5407,7 +5412,12 @@ function exportRankPointPdf(){
         var pages = [];
         for(var i=0; i<cols.length; i+=COLS_PER_PAGE){ pages.push(cols.slice(i, i+COLS_PER_PAGE)); }
 
-        var hdrHtml = '<div class="hdr"><h1>'+esc(TITLE_MAIN)+'</h1><h2>'+esc(TITLE_SUB)+'</h2><div class="rule"></div><div class="tag">'+esc(TITLE_TAG)+'</div></div>';
+        var hdrHtml =
+            '<div class="hdr">'
+          + '<img class="logo" src="'+origin+LOGO_LEFT+'" alt="" onerror="this.style.visibility=\'hidden\'">'
+          + '<div class="htxt"><h1>'+esc(TITLE_MAIN)+'</h1><h2>'+esc(TITLE_SUB)+'</h2><div class="rule"></div><div class="tag">'+esc(TITLE_TAG)+'</div></div>'
+          + '<img class="logo" src="'+origin+LOGO_RIGHT+'" alt="" onerror="this.style.visibility=\'hidden\'">'
+          + '</div>';
         var ftrHtml = '<div class="ftr"><div class="rule"></div><div class="f1">'+esc(FOOT_1)+'</div><div class="f2">'+esc(FOOT_2)+'</div><div class="f3">'+esc(FOOT_3)+'</div></div>';
 
         var pagesHtml = '';
@@ -5424,34 +5434,37 @@ function exportRankPointPdf(){
           + '.sheet{ max-width:1120px; margin:0 auto; padding:14px; }'
           + '.page{ background:#EFE9DC; padding:6px 6px 14px; }'
           + '.page + .page{ page-break-before:always; break-before:page; }'
-          + '.hdr{ background:#0E2A47; background:linear-gradient(135deg,#0E2A47,#13324F); color:#fff; padding:18px 20px 13px; text-align:center; border-radius:10px; margin-bottom:14px; }'
+          + '.hdr{ display:flex; align-items:center; gap:16px; background:linear-gradient(135deg,#0E2A47,#13324F); color:#fff; padding:14px 22px; border-radius:10px; margin-bottom:14px; }'
+          + '.hdr .logo{ height:72px; width:auto; flex:0 0 auto; object-fit:contain; }'
+          + '.hdr .htxt{ flex:1 1 auto; text-align:center; }'
           + '.hdr h1{ margin:0; font-size:26px; letter-spacing:2px; font-weight:800; }'
           + '.hdr h2{ margin:6px 0 0; font-size:13px; font-weight:700; letter-spacing:1px; }'
-          + '.hdr .rule{ width:60%; height:2px; margin:10px auto 7px; background:#C9A24B; }'
+          + '.hdr .rule{ width:55%; height:2px; margin:10px auto 7px; background:#C9A24B; }'
           + '.hdr .tag{ font-size:10px; letter-spacing:4px; color:#C9D4E0; font-weight:700; }'
           + '.tablewrap{ border-radius:10px; overflow:hidden; box-shadow:0 12px 26px rgba(0,0,0,.18); border:1px solid #E4DCCB; }'
           + 'table{ width:100%; border-collapse:collapse; table-layout:fixed; }'
           + 'thead{ display:table-header-group; }'
           + 'tr{ break-inside:avoid; page-break-inside:avoid; }'
+          + 'col.cjuara{ width:70px; }'
           + 'th{ color:#fff; padding:8px 3px; text-align:center; border:1px solid rgba(255,255,255,.28); overflow:hidden; }'
+          + 'th.jhead{ background:#1E293B; color:#F8D77A; font-size:11px; font-weight:800; letter-spacing:1px; }'
           + 'th .cat{ font-size:11.5px; font-weight:800; line-height:1.15; word-wrap:break-word; }'
           + 'th .cls{ font-size:9.5px; font-weight:700; opacity:.9; margin-top:2px; letter-spacing:1px; }'
-          + 'td{ background:#fff; border:1px solid #E7DFCE; text-align:center; padding:6px 3px; line-height:1.15; overflow:hidden; }'
+          + 'td{ background:#fff; border:1px solid #E7DFCE; text-align:center; padding:8px 3px; overflow:hidden; }'
+          + 'td.jcell{ background:#F4ECD8; font-weight:800; color:#7A5C1E; font-size:14px; }'
+          + 'td.tank{ font-size:17px; font-weight:800; color:#243B53; }'
           + 'tr.alt td{ background:#FAF7F0; }'
+          + 'tr.alt td.jcell{ background:#EFE4C9; }'
           + 'td.empty{ background:#F3EEE2; }'
-          + 'td .l1{ font-size:11px; color:#243B53; }'
-          + 'td .l1 b{ font-size:15px; }'
-          + 'td .l2{ font-size:8.5px; color:#B45309; margin-top:2px; font-weight:700; }'
-          + 'td .l2 b{ font-size:10.5px; }'
           + '.ftr{ text-align:center; padding:14px 20px 4px; }'
-          + '.ftr .rule{ width:70%; height:1px; margin:0 auto 11px; background:#C9A24B; }'
+          + '.ftr .rule{ width:70%; height:1px; margin:0 auto 12px; background:#C9A24B; }'
           + '.ftr .f1{ font-size:16px; font-weight:800; letter-spacing:3px; }'
           + '.ftr .f2{ font-size:10.5px; font-weight:800; letter-spacing:3px; color:#B8860B; margin-top:6px; }'
           + '.ftr .f3{ font-size:9px; font-weight:700; letter-spacing:2px; color:#7A8794; margin-top:8px; }'
           + '@media print{ .toolbar{ display:none !important; } .sheet{ max-width:none; margin:0; padding:0; } .page{ padding:0; } .tablewrap{ box-shadow:none; } }';
 
         var runner =
-            'window.addEventListener("load",function(){ setTimeout(function(){ try{ window.focus(); window.print(); }catch(e){} }, 300); });';
+            'window.addEventListener("load",function(){ setTimeout(function(){ try{ window.focus(); window.print(); }catch(e){} }, 400); });';
 
         var doc =
             '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(TITLE_MAIN)+'</title>'
