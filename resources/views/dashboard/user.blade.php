@@ -3793,25 +3793,9 @@
                     wrap.innerHTML = html;
                 }
 
+                // Bagian "Tank Ditolak" disembunyikan sesuai permintaan
                 var rejWrap = document.getElementById('nominasiRejectedWrap');
-                var rejected = d.rejected || [];
-                if(rejected.length === 0){
-                    rejWrap.innerHTML = '';
-                } else {
-                    var rh = '<h3 style="font-size:14px;font-weight:900;color:var(--text-hi);margin-bottom:10px;"><i class="fas fa-circle-xmark" style="color:#FCA5A5;margin-right:6px;"></i>Tank Ditolak ('+rejected.length+')</h3>';
-                    rh += '<div class="nom-rejected-grid">';
-                    rejected.forEach(function(t){
-                        var katLabel = t.kategori || '-';
-                        if(t.kelas) katLabel += ' - Kelas ' + t.kelas;
-                        rh += '<div class="nom-rej-cell">';
-                        rh += '<div class="nom-rej-tank">Tank '+escapeHtml(String(t.nomor_tank != null ? t.nomor_tank : '—'))+'</div>';
-                        rh += '<div class="nom-rej-kat">'+escapeHtml(katLabel)+'</div>';
-                        if(t.catatan) rh += '<div class="nom-rej-note"><i class="fas fa-comment-dots"></i> '+escapeHtml(t.catatan)+'</div>';
-                        rh += '</div>';
-                    });
-                    rh += '</div>';
-                    rejWrap.innerHTML = rh;
-                }
+                if(rejWrap){ rejWrap.innerHTML = ''; }
             })
             .catch(function(){
                 loading.style.display = 'none';
