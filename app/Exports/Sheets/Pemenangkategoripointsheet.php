@@ -128,15 +128,26 @@ class PemenangKategoriPointSheet implements FromArray, WithTitle, WithEvents
             }
             $defectDetails = PointCalculator::getDefectDetails($defectDataForCalc);
 
+            // ★ Ekstrak nama-nama defect unik dari data raw gabungan
+            $defectNames = [];
+            foreach ($combined as $defs) {
+                foreach ($defs as $d) {
+                    if ($d && $d !== '0') {
+                        $defectNames[] = $d;
+                    }
+                }
+            }
+
             $catSubs = [];
             foreach (self::CATS as $catKey => $catLabel) {
                 $catSubs[$catKey] = $breakdown[$catKey]['point'] ?? 0;
             }
 
             $map[$ikan->id] = [
-                'cat_subs'  => $catSubs,
-                'total'     => $breakdown['total'] ?? 0,
-                'deduction' => $defectDetails['total_deduction_percent'] ?? 0,
+                'cat_subs'    => $catSubs,
+                'total'       => $breakdown['total'] ?? 0,
+                'deduction'   => $defectDetails['total_deduction_percent'] ?? 0,
+                'keterangan'  => count($defectNames) ? implode(', ', array_unique($defectNames)) : '-',
             ];
         }
 
@@ -183,7 +194,7 @@ class PemenangKategoriPointSheet implements FromArray, WithTitle, WithEvents
                 $valCol   = $startCol + 1;
                 $titleRow = $rowCursor;
 
-                $cs = $subs[$w['ikan_id']] ?? ['cat_subs' => [], 'total' => $w['total_point'] ?? 0, 'deduction' => 0];
+                $cs = $subs[$w['ikan_id']] ?? ['cat_subs' => [], 'total' => $w['total_point'] ?? 0, 'keterangan' => '-'];
 
                 $grid[$titleRow][$startCol] = $name;
 
@@ -200,7 +211,7 @@ class PemenangKategoriPointSheet implements FromArray, WithTitle, WithEvents
                     $cs['cat_subs']['color'] ?? 0,
                     $cs['cat_subs']['finnage'] ?? 0,
                     $cs['total'] ?? 0,
-                    (($cs['deduction'] ?? 0) > 0 ? $cs['deduction'] . '%' : '-'),
+                    $cs['keterangan'] ?? '-',
                 ];
 
                 $rr = $titleRow + 1;
@@ -313,6 +324,9 @@ class PemenangKategoriPointSheet implements FromArray, WithTitle, WithEvents
                         'font' => ['bold' => true, 'color' => ['rgb' => '92400E']],
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'FEF3C7']],
                     ]);
+
+                    // Baris KETERANGAN (baris terakhir) → rata kiri & wrap text agar nama defect terbaca utuh
+                    $sheet->getStyle("{$LV}{$de}")->getAlignment()->setHorizontal('left')->setWrapText(true);
                 }
             },
         ];
