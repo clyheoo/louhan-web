@@ -245,7 +245,8 @@ class JuriController extends Controller
         }
 
         // ★ Paksa nilai 0 untuk komponen yang terkunci berdasarkan kategori (Keamanan Backend)
-        $noMarking = in_array($ikan->kategori, ['Freemarking', 'Goldenbase']);
+        $katNorm   = strtolower(str_replace(' ', '', (string) $ikan->kategori));
+        $noMarking = in_array($katNorm, ['freemarking', 'goldenbase']);
         $noPearl   = $ikan->kategori === 'Klasik';
 
         if ($noMarking && isset($allScores['marking'])) {
@@ -398,7 +399,8 @@ class JuriController extends Controller
         }
 
         // ★ Paksa 0 untuk komponen terkunci per kategori (keamanan backend)
-        $noMarking = in_array($ikan->kategori, ['Freemarking', 'Goldenbase']);
+        $katNorm   = strtolower(str_replace(' ', '', (string) $ikan->kategori));
+        $noMarking = in_array($katNorm, ['freemarking', 'goldenbase']);
         $noPearl   = $ikan->kategori === 'Klasik';
         if ($noMarking && isset($allScores['marking'])) {
             foreach ($allScores['marking'] as $k => $v) { if ($k !== 'defect') $allScores['marking'][$k] = 0; }

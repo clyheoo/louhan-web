@@ -1039,6 +1039,12 @@
             </div>
             <div class="topbar-right">
                 <div class="tb-pill"><span class="live-dot"></span><span>Live</span></div>
+                <button class="export-btn" onclick="exportRankPointPdf()" title="Export PDF Rank Point"
+                        style="background:linear-gradient(135deg,#B91C1C,#DC2626);color:#fff;border-color:rgba(220,38,38,.5);margin-right:8px;"
+                        onmouseover="this.style.background='linear-gradient(135deg,#DC2626,#EF4444)'"
+                        onmouseout="this.style.background='linear-gradient(135deg,#B91C1C,#DC2626)'">
+                    <i class="fas fa-file-pdf"></i> <span>Export PDF</span>
+                </button>
                 <div class="export-wrap">
                     <button class="export-btn" onclick="document.getElementById('exportDD').classList.toggle('show')">
                         <i class="fas fa-file-excel"></i> <span>Export</span>
@@ -1842,6 +1848,7 @@
                                 @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
                             </select>
                             <select class="filter-select" id="admPointFilterKelas" onchange="loadAdminPointRanking()" style="min-width:120px;">
+                                <option value="">Semua Kelas</option>
                                 @foreach(\App\Helpers\Taxonomy::classNames() as $namaKelas)<option value="{{ $namaKelas }}">Kelas {{ $namaKelas }}</option>@endforeach
                             </select>
                         </div>
