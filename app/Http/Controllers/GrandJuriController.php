@@ -695,6 +695,10 @@ class GrandJuriController extends Controller
                 'all_scorings'          => $allScoringsData,
                 'total_point'           => (float) $totalPointSemua,
                 'bonus_list'            => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                'bonus_names'           => $ikan->bonusPoints->map(function ($b) {
+                    static $m = null; if ($m === null) $m = \App\Models\BonusPointType::pluck('name','slug')->toArray();
+                    return $m[$b->bonus_type] ?? $b->bonus_type;
+                })->values()->toArray(),
                 'total_bonus'           => (int) $ikan->bonusPoints->sum('points'),
                 'final_point'           => (float) $totalPointSemua + (int) $ikan->bonusPoints->sum('points'),
                 'point_breakdown'       => !empty($finalAvgDetail) ? PointCalculator::hitungBreakdown($ikan->kategori, $finalAvgDetail, $mergedDefect) : null,
@@ -1141,6 +1145,10 @@ public function getMvpIkan()
                     'kelas'            => $ikan->kelas,
                     'nomor_tank'       => $ikan->nomor_tank ?? '-',
                     'bonus_list'       => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                    'bonus_names'           => $ikan->bonusPoints->map(function ($b) {
+                        static $m = null; if ($m === null) $m = \App\Models\BonusPointType::pluck('name','slug')->toArray();
+                        return $m[$b->bonus_type] ?? $b->bonus_type;
+                    })->values()->toArray(),
                     'total_bonus'      => $bonus,
                     'rank_point'       => $rankPt,            // ★ dari posisi (tanpa bonus)
                     'final_rank_point' => $final,             // ★ rank + bonus

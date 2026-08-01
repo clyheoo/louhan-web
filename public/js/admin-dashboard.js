@@ -695,15 +695,19 @@ function cancelPrompt(){ hidePopup('popupPrompt'); _promptCallback = null; }
 var currentBonusIkanId = null;
 var mvpIkanDataCache = {};
 
-var bonusTypes = [
-    {key:'best_of_the_best', label:'BEST OF THE BEST', icon:'fa-gem'},
-    {key:'best_of_show',     label:'BEST OF SHOW',     icon:'fa-star'},
-    {key:'grand_champion',   label:'GRAND CHAMPION',   icon:'fa-crown'},
-    {key:'young_champion',   label:'YOUNG CHAMPION',   icon:'fa-medal'},
-    {key:'junior',           label:'JUNIOR CHAMPION',  icon:'fa-award'},
-    {key:'baby_champion',    label:'BABY CHAMPION',    icon:'fa-baby'},
-    {key:'mini_champion',    label:'MINI CHAMPION',    icon:'fa-seedling'},
-];
+var bonusTypes = [];
+function loadGlobalBonusTypes(cb){
+    fetch('/api/admin/bonus-types', {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        bonusTypes = ((d && d.types) || []).map(function(t){
+            return { key:t.slug, label:t.name, icon:t.icon || 'fa-star', adds_point:!!t.adds_point, point_value:(t.point_value|0) };
+        });
+        if(typeof cb === 'function') cb();
+    })
+    .catch(function(){});
+}
+loadGlobalBonusTypes();
 
 function openBonusModal(idx){
     var p = allScoringData[idx];
@@ -752,7 +756,7 @@ function openBonusModal(idx){
     html += '</div>';
 
     html += '<div style="font-size:10px;font-weight:800;color:var(--text-low);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;">';
-    html += '<i class="fas fa-circle-info" style="color:var(--gold-400);"></i> Pilih Bonus Rank Point (+100 per jenis)';
+    html += '<i class="fas fa-circle-info" style="color:var(--gold-400);"></i> Pilih Bonus';
     html += '</div>';
 
     bonusTypes.forEach(function(bt){
@@ -764,7 +768,7 @@ function openBonusModal(idx){
             html += '<i class="fas fa-check-circle" style="color:#6EE7B7;font-size:15px;"></i>';
             html += '<div>';
             html += '<div style="font-size:12px;font-weight:900;color:#6EE7B7;">'+esc(bt.label)+'</div>';
-            html += '<div style="font-size:10px;color:rgba(110,231,183,.78);font-weight:700;">+100 rank point</div>';
+            html += '<div style="font-size:10px;color:rgba(110,231,183,.78);font-weight:700;">'+(bt.adds_point ? ('+'+bt.point_value+' rank point') : 'Nama saja')+'</div>';
             html += '</div>';
             html += '</div>';
             html += '<button class="btn-xs red" onclick="removeBonus(\''+bt.key+'\')" style="padding:5px 10px;"><i class="fas fa-times"></i> Hapus</button>';
@@ -775,7 +779,7 @@ function openBonusModal(idx){
             html += '<i class="fas '+bt.icon+'" style="color:var(--text-low);font-size:15px;"></i>';
             html += '<div>';
             html += '<div style="font-size:12px;font-weight:800;color:var(--text);">'+esc(bt.label)+'</div>';
-            html += '<div style="font-size:10px;color:var(--text-low);font-weight:700;">+100 rank point</div>';
+            html += '<div style="font-size:10px;color:var(--text-low);font-weight:700;">'+(bt.adds_point ? ('+'+bt.point_value+' rank point') : 'Nama saja')+'</div>';
             html += '</div>';
             html += '</div>';
             html += '<i class="fas fa-plus-circle" style="color:var(--text-low);font-size:17px;"></i>';
@@ -6280,6 +6284,7 @@ function saveJuriAssignments(jid,btn){
         registrasi:   { title:'Registrasi & Undian Tank',        sub:'Pendaftaran peserta, undian, dan rentang nomor', icon:'fa-database' },
         nominasi:     { title:'Nominasi',                        sub:'Pilih tank & review nominasi (admin = juri + grand juri)', icon:'fa-award' },
         mvp:          { title:'Kelola MVP',                      sub:'Manajemen pendaftaran ikan MVP', icon:'fa-star' },
+        bonus_manage: { title:'Kelola Bonus Point',             sub:'Kelola jenis bonus & beri bonus ke ikan yang sudah dinilai', icon:'fa-gift' },
         ranking:      { title:'Point Ranking',                   sub:'Peringkat berdasarkan nilai point (hanya ikan yang sudah DIKUNCI Grand Juri)', icon:'fa-trophy' },
         undian:       { title:'Kelola Mesin Undian',             sub:'Membuka dan mengunci mesin undian tank untuk peserta', icon:'fa-dice' },
         taxonomy:     { title:'Kelola Kategori & Kelas',         sub:'Tambah, ubah nama, atur mode kelas, atau hapus kategori & kelas', icon:'fa-layer-group' },
@@ -8180,6 +8185,272 @@ function deleteClass(name){
         function(){ taxPost('/api/admin/class/delete', {name:name}, 'Kelas Dihapus'); });
 }
 
+/* ============================================================
+   KELOLA BONUS POINT (halaman sidebar) — dinamis via DB
+   Endpoint: GET/POST /api/admin/bonus-types, DELETE /api/admin/bonus-types/{id}
+   Pemberian ke ikan pakai /api/admin/add-bonus & /remove-bonus (sudah ada).
+   ============================================================ */
+var bonusManageTypes = [];
+var bonusManageIkan  = [];
+
+function loadBonusManage(){
+    loadBonusTypes();
+    loadBonusIkanList();
+}
+
+function loadBonusTypes(){
+    fetch('/api/admin/bonus-types', {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){ bonusManageTypes = (d && d.types) ? d.types : [];
+        bonusTypes = bonusManageTypes.map(function(t){ return { key:t.slug, label:t.name, icon:t.icon || 'fa-star', adds_point:!!t.adds_point, point_value:(t.point_value|0) }; });
+        renderBonusTypes(); renderBonusIkanList(); })
+    .catch(function(){});
+}
+
+var bonusEditingId = null;
+
+function renderBonusTypes(){
+    var wrap = document.getElementById('bonusTypeList');
+    if(!wrap) return;
+    if(!bonusManageTypes.length){ wrap.innerHTML = '<div style="color:var(--text-low);font-size:12px;padding:10px;">Belum ada jenis bonus.</div>'; return; }
+    var h = '';
+    bonusManageTypes.forEach(function(t){
+        if(t.id === bonusEditingId){
+            h += '<div class="bonus-type-row" style="flex-direction:column;align-items:stretch;gap:10px;">'
+               + '<input type="text" id="bteName" class="filter-select" value="' + esc(t.name) + '" style="width:100%;">'
+               + '<div style="display:flex;gap:6px;align-items:center;">'
+               +   '<span style="color:var(--text-low);font-size:12px;">+</span>'
+               +   '<input type="number" id="btePoint" class="filter-select" value="' + (t.point_value || 100) + '" min="0" style="width:90px;">'
+               +   '<span style="color:var(--text-low);font-size:12px;">rank point</span>'
+               + '</div>'
+               + '<div style="display:flex;gap:8px;">'
+               +   '<button class="btn-primary" style="flex:1;justify-content:center;font-size:12px;padding:9px 14px;" onclick="bonusTypeSaveEdit(' + t.id + ', this)"><i class="fas fa-save"></i> Simpan</button>'
+               +   '<button class="btn-cancel" style="flex:0 0 auto;font-size:12px;padding:9px 14px;" onclick="bonusTypeCancelEdit()">Batal</button>'
+               + '</div>'
+               + '</div>';
+            return;
+        }
+        var badge = '+' + (t.point_value || 0) + ' rank point';
+        h += '<div class="bonus-type-row">'
+           + '<div style="min-width:0;display:flex;align-items:center;gap:8px;">'
+           +   '<i class="fas ' + esc(t.icon || 'fa-gift') + '" style="color:var(--gold-400);font-size:13px;width:16px;text-align:center;"></i>'
+           +   '<b style="font-size:13px;color:var(--text-hi);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(t.name) + '</b>'
+           +   '<span style="color:#6EE7B7;font-size:10px;font-weight:800;margin-left:4px;background:rgba(16,185,129,.12);padding:2px 6px;border-radius:4px;border:1px solid rgba(16,185,129,.2);">' + badge + '</span>'
+           + '</div>'
+           + '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">'
+           +   '<button class="btn-xs gold" title="Edit Bonus" onclick="bonusTypeStartEdit(' + t.id + ')"><i class="fas fa-pen"></i></button>'
+           +   (t.is_system
+                 ? '' // Teks "BAWAAN" dihapus agar tampilan lebih bersih
+                 : '<button class="btn-xs red" title="Hapus Bonus" onclick="bonusTypeDelete(' + t.id + ',&quot;' + esc(t.name) + '&quot;)"><i class="fas fa-trash"></i></button>')
+           + '</div>'
+           + '</div>';
+    });
+    wrap.innerHTML = h;
+}
+
+function bonusEditToggle(){
+    var c = document.querySelector('input[name="bteAdds"]:checked');
+    var w = document.getElementById('btePointWrap');
+    if(w) w.style.display = (c && c.value === '1') ? 'flex' : 'none';
+}
+function bonusTypeStartEdit(id){ bonusEditingId = id; renderBonusTypes(); }
+function bonusTypeCancelEdit(){ bonusEditingId = null; renderBonusTypes(); }
+function bonusTypeSaveEdit(id, btn){
+    var nameEl = document.getElementById('bteName');
+    var name = (nameEl && nameEl.value || '').trim();
+    if(!name){ popupError('Nama Kosong', 'Nama tidak boleh kosong.'); return; }
+    
+    // Set default: selalu menambah point
+    var adds = 1;
+    var pv = parseInt((document.getElementById('btePoint') || {}).value || '100', 10);
+    if(isNaN(pv) || pv < 0) pv = 100;
+// ...
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('name', name);
+    fd.append('adds_point', adds ? '1' : '0');
+    fd.append('point_value', adds ? pv : 0);
+
+    var origHtml = btn ? btn.innerHTML : '';
+    if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...'; }
+
+    fetch('/api/admin/bonus-types/' + id, {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}, body: fd})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d && d.success){ bonusEditingId = null; loadBonusTypes(); loadBonusIkanList(); }
+        else { popupError('Gagal', (d && d.message) || 'Gagal menyimpan.'); }
+    })
+    .catch(function(){ popupError('Kesalahan Jaringan', 'Gagal menghubungi server.'); })
+    .finally(function(){
+        if(btn){ btn.disabled = false; btn.innerHTML = origHtml; }
+    });
+}
+
+function bonusToggleAddsPoint(){
+    var checked = document.querySelector('input[name="bonusAdds"]:checked');
+    var val = checked ? checked.value : '1';
+    var pw = document.getElementById('bonusNewPointWrap');
+    if(pw) pw.style.display = (val === '1') ? 'flex' : 'none';
+}
+
+function bonusTypeAdd(btn){
+    var nameEl = document.getElementById('bonusNewName');
+    var name = (nameEl && nameEl.value || '').trim();
+    if(!name){ popupError('Nama Kosong', 'Isi nama bonus terlebih dahulu.'); return; }
+    
+    // Set default: selalu menambah point 100
+    var adds = 1; 
+    var pv = 100;
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('name', name);
+    fd.append('adds_point', adds ? '1' : '0');
+    fd.append('point_value', adds ? pv : 0);
+
+    var origHtml = btn ? btn.innerHTML : '';
+    if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...'; }
+
+    fetch('/api/admin/bonus-types', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}, body: fd})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d && d.success){ if(nameEl) nameEl.value = ''; loadBonusTypes(); }
+        else { popupError('Gagal', (d && d.message) || 'Gagal menambah jenis bonus.'); }
+    })
+    .catch(function(){ popupError('Kesalahan Jaringan', 'Gagal menghubungi server.'); })
+    .finally(function(){
+        if(btn){ btn.disabled = false; btn.innerHTML = origHtml; }
+    });
+}
+
+function bonusTypeDelete(id, name){
+    openConfirmPopup(
+        'Hapus Jenis Bonus',
+        'Yakin ingin menghapus jenis bonus <strong>'+esc(name)+'</strong>?<br><span style="font-size:11px;color:var(--danger);">Semua pemberian bonus ini ke ikan juga akan dihapus.</span>',
+        'Ya, Hapus',
+        function(){
+            showLoader('Menghapus jenis bonus...');
+            fetch('/api/admin/bonus-types/' + id, {method:'DELETE', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRF-TOKEN':getCsrf()}})
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if(d && d.success){ loadBonusTypes(); loadBonusIkanList(); popupSuccess('Berhasil', d.message || 'Jenis bonus dihapus.'); }
+                else { popupError('Gagal', (d && d.message) || 'Gagal menghapus.'); }
+            })
+            .catch(function(){ popupError('Kesalahan Jaringan', 'Gagal menghubungi server.'); })
+            .finally(function(){ hideLoader(); });
+        }
+    );
+}
+
+function loadBonusIkanList(){
+    var params = new URLSearchParams();
+    var s = document.getElementById('bonusFilterSearch');
+    var k = document.getElementById('bonusFilterKategori');
+    if(s && s.value) params.set('search', s.value);
+    if(k && k.value) params.set('kategori', k.value);
+    params.set('status', 'dinilai'); // hanya yang sudah dinilai (server mengabaikan bila tak dikenal)
+    fetch('/api/admin/scoring-data?' + params.toString(), {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(d){ bonusManageIkan = Array.isArray(d) ? d : []; renderBonusIkanList(); })
+    .catch(function(){});
+}
+
+function renderBonusIkanList(){
+    var wrap = document.getElementById('bonusIkanList');
+    if(!wrap) return;
+    if(!bonusManageIkan.length){ wrap.innerHTML = '<div style="color:var(--text-low);font-size:12px;padding:14px;">Tidak ada ikan yang cocok.</div>'; return; }
+
+    var typeBySlug = {};
+    bonusManageTypes.forEach(function(t){ typeBySlug[t.slug] = t; });
+
+    var kelasSel = document.getElementById('bonusFilterKelas');
+    var kelasVal = kelasSel ? kelasSel.value : '';
+    var list = kelasVal ? bonusManageIkan.filter(function(p){ return String(p.kelas || '') === kelasVal; }) : bonusManageIkan;
+    if(!list.length){ wrap.innerHTML = '<div style="color:var(--text-low);font-size:12px;padding:14px;">Tidak ada ikan pada kelas ini.</div>'; return; }
+
+    var h = '';
+    list.forEach(function(p){
+        var applied = Array.isArray(p.bonus_list) ? p.bonus_list : [];
+        var chips = '';
+        applied.forEach(function(slug){
+            var t = typeBySlug[slug];
+            var nm = t ? t.name : slug;
+            chips += '<span class="bonus-chip">' + esc(nm) + ' <i class="fas fa-times" onclick="bonusUnassign(' + p.id + ',&quot;' + esc(slug) + '&quot;)"></i></span>';
+        });
+        if(!chips) chips = '<span style="color:var(--text-low);font-size:10px;">Belum ada bonus</span>';
+
+        var opts = '<option value="">+ Tambah bonus…</option>';
+        bonusManageTypes.forEach(function(t){
+            if(applied.indexOf(t.slug) === -1){
+                opts += '<option value="' + esc(t.slug) + '">' + esc(t.name) + ' (+' + (t.point_value || 0) + ')</option>';
+            }
+        });
+
+        // ★ Ambil point & rank point
+        var basePt = p.total_point || 0;
+        var finalPt = p.final_rank_point || p.rank_point || 0;
+        var ptHtml = '<div style="font-size:11px;color:var(--text-mid);margin-top:6px;display:flex;gap:8px;align-items:center;">' +
+                     '<span>Point: <b style="color:var(--gold-300);">'+basePt+'</b></span>' +
+                     '<span style="opacity:.4;">|</span>' +
+                     '<span>Rank Point: <b style="color:var(--cyan-300);">'+finalPt+'</b></span>' +
+                     '</div>';
+
+        h += '<div class="bonus-ikan-row">'
+           + '<div class="bi-info"><b>Tank ' + (p.nomor_tank || '—') + '</b> <span>' + esc(p.kategori || '-') + ' - ' + esc(p.kelas || '-') + '</span><div class="bi-name">' + esc(p.nama_peserta || '-') + '</div>' + ptHtml + '</div>'
+           + '<div class="bi-chips">' + chips + '</div>'
+           + '<div class="bi-add"><select class="filter-select" onchange="if(this.value){ bonusAssign(' + p.id + ', this.value); this.value=&quot;&quot;; }">' + opts + '</select></div>'
+           + '</div>';
+    });
+    wrap.innerHTML = h;
+}
+
+function bonusAssign(ikanId, slug){
+    showLoader('Menambahkan bonus...');
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('ikan_id', ikanId);
+    fd.append('bonus_type', slug);
+    fetch('/api/admin/add-bonus', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}, body: fd})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d && d.success){ bonusUpdateLocal(ikanId, d); }
+        else { popupError('Gagal', (d && d.message) || 'Gagal menambah bonus.'); }
+    })
+    .catch(function(){ popupError('Kesalahan Jaringan', 'Gagal menghubungi server.'); })
+    .finally(function(){ hideLoader(); });
+}
+
+function bonusUnassign(ikanId, slug){
+    showLoader('Menghapus bonus...');
+    var fd = new FormData();
+    fd.append('_token', getCsrf());
+    fd.append('ikan_id', ikanId);
+    fd.append('bonus_type', slug);
+    fetch('/api/admin/remove-bonus', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}, body: fd})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d && d.success){ bonusUpdateLocal(ikanId, d); }
+        else { popupError('Gagal', (d && d.message) || 'Gagal menghapus bonus.'); }
+    })
+    .catch(function(){ popupError('Kesalahan Jaringan', 'Gagal menghubungi server.'); })
+    .finally(function(){ hideLoader(); });
+}
+
+function bonusUpdateLocal(ikanId, d){
+    bonusManageIkan.forEach(function(p){
+        if(parseInt(p.id, 10) === parseInt(ikanId, 10)){
+            if(Array.isArray(d.bonus_list)) p.bonus_list = d.bonus_list;
+            if(typeof d.total_bonus !== 'undefined') p.total_bonus = d.total_bonus;
+        }
+    });
+    renderBonusIkanList();
+}
+
+/* Muat data saat halaman "Kelola Bonus Point" dibuka (tanpa mengubah fungsi navigasi lama) */
+document.addEventListener('click', function(e){
+    var item = (e.target && e.target.closest) ? e.target.closest('.sidebar-item[data-page="bonus_manage"]') : null;
+    if(item){ setTimeout(loadBonusManage, 30); }
+});
+
 /* ═══════════════════════════════════════════════
    EXPOSE FUNGSI NOMINASI KE WINDOW
    (agar bisa diakses dari onclick HTML & dari window.activatePage)
@@ -8235,4 +8506,19 @@ window.addClass             = addClass;
 window.renameClassPrompt    = renameClassPrompt;
 window.deleteClass          = deleteClass;
 window.editCategoryFormulaPrompt = editCategoryFormulaPrompt;
+window.loadBonusManage      = loadBonusManage;
+window.loadBonusTypes       = loadBonusTypes;
+window.renderBonusTypes     = renderBonusTypes;
+window.bonusToggleAddsPoint = bonusToggleAddsPoint;
+window.bonusTypeAdd         = bonusTypeAdd;
+window.bonusTypeDelete      = bonusTypeDelete;
+window.bonusTypeStartEdit   = bonusTypeStartEdit;
+window.bonusTypeCancelEdit  = bonusTypeCancelEdit;
+window.bonusTypeSaveEdit    = bonusTypeSaveEdit;
+window.bonusEditToggle      = bonusEditToggle;
+window.loadBonusIkanList    = loadBonusIkanList;
+window.renderBonusIkanList  = renderBonusIkanList;
+window.bonusAssign          = bonusAssign;
+window.bonusUnassign        = bonusUnassign;
+window.bonusUpdateLocal     = bonusUpdateLocal;
 })();

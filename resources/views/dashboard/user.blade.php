@@ -2766,6 +2766,8 @@
             #fotoIkanModal .modal-title { font-size: 17px; }
             #fotoIkanPreview { max-height: 190px; }
         }
+        .result-bonus-badges{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+        .result-bonus-badge{ display:inline-flex; align-items:center; gap:5px; background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.3); color:#059669; font-size:10px; font-weight:800; padding:3px 9px; border-radius:999px; }
     </style>
 </head>
 <body class="user-page-overview @if(!$mvpFeatureEnabled) mvp-feature-off @endif @if(!$teamChampionFeatureEnabled) tc-feature-off @endif">
@@ -4445,6 +4447,12 @@
                                 ' · Tank ' +
                                 escapeHtml(String(result.nomor_tank || '-')) +
                             '</span>' +
+                            ((Array.isArray(result.bonus_names) && result.bonus_names.length) ?
+                                '<span class="result-bonus-badges">' +
+                                    result.bonus_names.map(function(nm){
+                                        return '<span class="result-bonus-badge"><i class="fas fa-gift"></i> ' + escapeHtml(nm) + '</span>';
+                                    }).join('') +
+                                '</span>' : '') +
                         '</div>' +
                         '<div class="result-preview-rank">' +
                             '<small>Juara</small>' +

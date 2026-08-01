@@ -157,6 +157,29 @@
     /* CONTENT */
     .content-wrap{ padding:24px; max-width:1500px; margin:0 auto; width:100%; }
     .page-section{ animation:pageIn .35s cubic-bezier(.16,1,.3,1) both; }
+    .bonus-grid{ display:flex; flex-direction:column; gap:16px; }
+    @media(max-width:900px){ .bonus-grid{ grid-template-columns:1fr; } }
+    .bonus-add-form{ background:rgba(255,255,255,.03); border:1px solid var(--bd-1); border-radius:14px; padding:14px; margin-bottom:14px; }
+    .bonus-type-list{ display:flex; flex-direction:column; gap:8px; max-height:640px; overflow-y:auto; overflow-x:hidden; padding-right:6px; scrollbar-width:thin; scrollbar-color:var(--glass-strong) transparent; }
+    .bonus-type-list::-webkit-scrollbar{ width:7px; }
+    .bonus-type-list::-webkit-scrollbar-track{ background:transparent; }
+    .bonus-type-list::-webkit-scrollbar-thumb{ background:var(--glass-strong); border-radius:10px; }
+    .bonus-type-list::-webkit-scrollbar-thumb:hover{ background:var(--bd-cyan); }
+    .bonus-type-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid var(--bd-1); border-radius:12px; background:rgba(255,255,255,.025); }
+    .bonus-ikan-list{ display:flex; flex-direction:column; gap:8px; max-height:640px; overflow-y:auto; overflow-x:hidden; padding-right:6px; scrollbar-width:thin; scrollbar-color:var(--glass-strong) transparent; }
+    .bonus-ikan-list::-webkit-scrollbar{ width:7px; }
+    .bonus-ikan-list::-webkit-scrollbar-track{ background:transparent; }
+    .bonus-ikan-list::-webkit-scrollbar-thumb{ background:var(--glass-strong); border-radius:10px; }
+    .bonus-ikan-list::-webkit-scrollbar-thumb:hover{ background:var(--bd-cyan); }
+    .bonus-ikan-row{ display:grid; grid-template-columns:1.2fr 1.6fr auto; gap:12px; align-items:center; padding:10px 12px; border:1px solid var(--bd-1); border-radius:12px; background:rgba(255,255,255,.025); }
+    @media(max-width:700px){ .bonus-ikan-row{ grid-template-columns:1fr; } }
+    .bonus-ikan-row .bi-info b{ font-size:13px; color:var(--text-hi); }
+    .bonus-ikan-row .bi-info span{ font-size:11px; color:var(--text-mid); margin-left:6px; }
+    .bonus-ikan-row .bi-name{ font-size:11px; color:var(--text-low); margin-top:2px; }
+    .bonus-ikan-row .bi-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+    .bonus-chip{ display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.3); color:#6EE7B7; font-size:10px; font-weight:800; padding:4px 9px; border-radius:999px; }
+    .bonus-chip i{ cursor:pointer; opacity:.8; }
+    .bonus-chip i:hover{ opacity:1; color:#FCA5A5; }
     @keyframes pageIn{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
 
     /* ===== GLASS CARD ===== */
@@ -994,6 +1017,7 @@
             <a class="sidebar-item" data-page="registrasi"><i class="fas fa-database"></i> Registrasi & Undian</a>
             <a class="sidebar-item" data-page="nominasi"><i class="fas fa-award"></i> Nominasi</a>
             <a class="sidebar-item" data-page="mvp"><i class="fas fa-star"></i> Kelola MVP</a>
+            <a class="sidebar-item" data-page="bonus_manage"><i class="fas fa-gift"></i> Kelola Bonus Point</a>
             <a class="sidebar-item" data-page="team_champion">
                 <span class="title-icon"><i class="fas fa-people-group"></i></span>
                 <span>Team Champion</span>
@@ -1335,6 +1359,36 @@
                         <div id="galeriFotoWrap">
                             <div class="empty-state"><i class="fas fa-images"></i><p>Memuat galeri...</p></div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="page-section" data-page="bonus_manage" style="display:none;">
+                <div class="bonus-grid">
+                    <div class="glass-card">
+                        <div class="card-head"><h3><i class="fas fa-list-check" style="color:var(--cyan-400);"></i> Jenis Bonus Point</h3></div>
+                        <div class="bonus-add-form">
+                            <input type="text" id="bonusNewName" class="filter-select" placeholder="Nama bonus baru (mis. SPECIAL AWARD)" style="width:100%;margin-bottom:10px;">
+                            <input type="hidden" id="bonusNewPoint" value="100">
+                            <button class="btn-primary" id="btnAddBonusType" onclick="bonusTypeAdd(this)" style="width:100%;justify-content:center;"><i class="fas fa-plus"></i> Tambah Jenis Bonus (+100 Rank Point)</button>
+                        </div>
+                        <div id="bonusTypeList" class="bonus-type-list"></div>
+                    </div>
+
+                    <div class="glass-card">
+                        <div class="card-head"><h3><i class="fas fa-fish" style="color:var(--gold-400);"></i> Beri Bonus ke Ikan (sudah dinilai)</h3></div>
+                        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                            <input type="text" id="bonusFilterSearch" class="filter-select" placeholder="Cari nama / tank…" oninput="loadBonusIkanList()" style="flex:1;min-width:160px;">
+                            <select class="filter-select" id="bonusFilterKategori" onchange="loadBonusIkanList()">
+                                <option value="">Semua Kategori</option>
+                                @foreach(\App\Helpers\Taxonomy::categoryNames() as $namaKat)<option value="{{ $namaKat }}">{{ $namaKat }}</option>@endforeach
+                            </select>
+                            <select class="filter-select" id="bonusFilterKelas" onchange="renderBonusIkanList()">
+                                <option value="">Semua Kelas</option>
+                                @foreach(\App\Helpers\Taxonomy::classNames() as $namaKelas)<option value="{{ $namaKelas }}">Kelas {{ $namaKelas }}</option>@endforeach
+                            </select>
+                        </div>
+                        <div id="bonusIkanList" class="bonus-ikan-list"></div>
                     </div>
                 </div>
             </section>

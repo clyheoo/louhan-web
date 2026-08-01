@@ -107,6 +107,10 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/add-bonus', [AdminDashboardController::class, 'addBonus']);
     Route::post('/api/admin/remove-bonus', [AdminDashboardController::class, 'removeBonus']);
+    Route::get('/api/admin/bonus-types',         [AdminDashboardController::class, 'bonusTypeIndex']);
+    Route::post('/api/admin/bonus-types',        [AdminDashboardController::class, 'bonusTypeStore']);
+    Route::delete('/api/admin/bonus-types/{id}', [AdminDashboardController::class, 'bonusTypeDestroy']);
+    Route::post('/api/admin/bonus-types/{id}', [AdminDashboardController::class, 'bonusTypeUpdate']);
 });
 
 /* ═══════════════════════════════════════════

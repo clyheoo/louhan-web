@@ -1284,6 +1284,8 @@ class DashboardController extends Controller
 
                     $userIkanIds = collect($userIkans)->pluck('id')->toArray();
 
+                    $bonusNameMap = \App\Models\BonusPointType::pluck('name', 'slug')->toArray();
+
                     foreach ($ranked as $idx => $r) {
                         if (!in_array($r['ikan_id'], $userIkanIds)) {
                             continue;
@@ -1320,6 +1322,9 @@ class DashboardController extends Controller
                             'total_bonus'         => $bonusTotal,
                             'final_rank_point'    => $rankPoint + $bonusTotal,
                             'bonus_list'          => $ikan->bonusPoints->pluck('bonus_type')->toArray(),
+                            'bonus_names'         => $ikan->bonusPoints->map(function ($b) use ($bonusNameMap) {
+                                return $bonusNameMap[$b->bonus_type] ?? $b->bonus_type;
+                            })->values()->toArray(),
                             'component_subtotals' => $r['component_subtotals'] ?? [
                                 'overall' => ['label' => 'Overall', 'value' => 0],
                                 'head'    => ['label' => 'Head', 'value' => 0],

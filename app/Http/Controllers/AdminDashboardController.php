@@ -1321,8 +1321,11 @@ class AdminDashboardController extends Controller
     {
         $request->validate([
             'ikan_id'    => 'required|exists:ikans,id',
-            'bonus_type' => 'required|in:best_of_the_best,best_of_show,grand_champion,young_champion,junior,baby_champion,mini_champion',
+            'bonus_type' => 'required|string|exists:bonus_point_types,slug',
         ]);
+        $type   = \App\Models\BonusPointType::where('slug', $request->bonus_type)->first();
+        $points = ($type && $type->adds_point) ? (int) $type->point_value : 0;
+        $label  = $type ? $type->name : $request->bonus_type;
 
         $exists = \App\Models\IkanBonusPoint::where('ikan_id', $request->ikan_id)
             ->where('bonus_type', $request->bonus_type)
@@ -1331,7 +1334,7 @@ class AdminDashboardController extends Controller
         if ($exists) {
             return response()->json([
                 'success' => false,
-                'message' => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" sudah diberikan ke ikan ini.',
+                'message' => 'Bonus "' . $label . '" sudah diberikan ke ikan ini.',
             ], 409);
         }
 
@@ -1368,10 +1371,10 @@ class AdminDashboardController extends Controller
 
         return response()->json([
             'success'     => true,
-            'message'     => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" (+100 rank point) berhasil ditambahkan.',
+            'message'     => 'Bonus "' . $label . '" (+100 rank point) berhasil ditambahkan.',
             'ikan_id'     => (int) $request->ikan_id,
             'bonus_type'  => $request->bonus_type,
-            'bonus_label' => self::BONUS_TYPES[$request->bonus_type],
+            'bonus_label' => $label,
             'bonus_list'  => $ikan ? $ikan->bonusPoints->pluck('bonus_type')->toArray() : [],
             'total_bonus' => $ikan ? (int) $ikan->bonusPoints->sum('points') : 0,
         ]);
@@ -1381,8 +1384,11 @@ class AdminDashboardController extends Controller
     {
         $request->validate([
             'ikan_id'    => 'required|exists:ikans,id',
-            'bonus_type' => 'required|in:best_of_the_best,best_of_show,grand_champion,young_champion,junior,baby_champion,mini_champion',
+            'bonus_type' => 'required|string|exists:bonus_point_types,slug',
         ]);
+        $type   = \App\Models\BonusPointType::where('slug', $request->bonus_type)->first();
+        $points = ($type && $type->adds_point) ? (int) $type->point_value : 0;
+        $label  = $type ? $type->name : $request->bonus_type;
 
         $bonus = \App\Models\IkanBonusPoint::where('ikan_id', $request->ikan_id)
             ->where('bonus_type', $request->bonus_type)
@@ -1423,13 +1429,83 @@ class AdminDashboardController extends Controller
 
         return response()->json([
             'success'     => true,
-            'message'     => 'Bonus "' . self::BONUS_TYPES[$request->bonus_type] . '" berhasil dihapus.',
+            'message'     => 'Bonus "' . $label . '" berhasil dihapus.',
             'ikan_id'     => (int) $request->ikan_id,
             'bonus_type'  => $request->bonus_type,
-            'bonus_label' => self::BONUS_TYPES[$request->bonus_type],
+            'bonus_label' => $label,
             'bonus_list'  => $ikan ? $ikan->bonusPoints->pluck('bonus_type')->toArray() : [],
             'total_bonus' => $ikan ? (int) $ikan->bonusPoints->sum('points') : 0,
         ]);
+    }
+
+    public function bonusTypeIndex()
+    {
+        return response()->json([
+            'success' => true,
+            'types'   => \App\Models\BonusPointType::orderBy('sort_order')->orderBy('id')->get()
+                ->map(fn ($t) => [
+                    'id' => $t->id, 'name' => $t->name, 'slug' => $t->slug,
+                    'adds_point' => (bool) $t->adds_point, 'point_value' => (int) $t->point_value,
+                    'is_system' => (bool) $t->is_system, 'icon' => $t->icon ?: 'fa-star',
+                ])->values(),
+        ]);
+    }
+
+    public function bonusTypeStore(Request $request)
+    {
+        $data = $request->validate([
+            'name'        => 'required|string|max:100',
+            'adds_point'  => 'required|boolean',
+            'point_value' => 'nullable|integer|min:0|max:100000',
+        ]);
+        $slug = \Illuminate\Support\Str::slug($data['name'], '_');
+        if ($slug === '') $slug = 'bonus_' . time();
+        if (\App\Models\BonusPointType::where('slug', $slug)->exists()) {
+            return response()->json(['success' => false, 'message' => 'Nama bonus sudah ada.'], 409);
+        }
+        $adds = (bool) $data['adds_point'];
+        $type = \App\Models\BonusPointType::create([
+            'name'        => strtoupper(trim($data['name'])),
+            'slug'        => $slug,
+            'adds_point'  => $adds,
+            'point_value' => $adds ? (int) ($data['point_value'] ?? 100) : 0,
+            'sort_order'  => (int) (\App\Models\BonusPointType::max('sort_order') + 1),
+            'is_system'   => false,
+            'icon'        => 'fa-star',
+        ]);
+        return response()->json(['success' => true, 'type' => $type]);
+    }
+
+    public function bonusTypeDestroy($id)
+    {
+        $type = \App\Models\BonusPointType::find($id);
+        if (!$type) return response()->json(['success' => false, 'message' => 'Jenis bonus tidak ditemukan.'], 404);
+        if ($type->is_system) return response()->json(['success' => false, 'message' => 'Jenis bonus bawaan tidak bisa dihapus.'], 422);
+        \App\Models\IkanBonusPoint::where('bonus_type', $type->slug)->delete(); // hapus pemberian terkait
+        $type->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function bonusTypeUpdate(Request $request, $id)
+    {
+        $type = \App\Models\BonusPointType::find($id);
+        if (!$type) return response()->json(['success' => false, 'message' => 'Jenis bonus tidak ditemukan.'], 404);
+
+        $data = $request->validate([
+            'name'        => 'required|string|max:100',
+            'adds_point'  => 'required|boolean',
+            'point_value' => 'nullable|integer|min:0|max:100000',
+        ]);
+        $adds = (bool) $data['adds_point'];
+        $type->name        = strtoupper(trim($data['name']));
+        $type->adds_point  = $adds;
+        $type->point_value = $adds ? (int) ($data['point_value'] ?? 100) : 0;
+        $type->save(); // slug TIDAK diubah → pemberian bonus lama tetap valid
+
+        // Selaraskan besar point pada pemberian yang sudah ada (mis. diedit dari 100 -> 50, atau jadi nama-saja 0)
+        \App\Models\IkanBonusPoint::where('bonus_type', $type->slug)->update(['points' => $type->point_value]);
+
+        return response()->json(['success' => true, 'type' => $type]);
     }
 
         /* ═══════════════════════════════════════════
