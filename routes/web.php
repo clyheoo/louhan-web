@@ -6,12 +6,14 @@ use App\Http\Controllers\JuriController;
 use App\Http\Controllers\GrandJuriController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\SheetsSyncController;
+use App\Http\Controllers\LandingPageController;
+use App\Http\Controllers\AdminWebsiteController;
+
+// LANDING PAGE ROUTE
+Route::get('/', [LandingPageController::class, 'index'])->name('landing.home');
+Route::get('/api/landing/live-stats', [LandingPageController::class, 'getLiveStats']);
 
 require __DIR__.'/auth.php';
-
-Route::get('/', function () {
-    return redirect()->route('login');
-})->middleware('guest');
 
 /* ═══════════════════════════════════════════
    DASHBOARD UTAMA
@@ -217,6 +219,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/export-async', [AdminDashboardController::class, 'exportAsyncStart']);
     Route::get('/api/admin/export-status/{token}', [AdminDashboardController::class, 'exportAsyncStatus']);
     Route::get('/api/admin/export-download/{token}', [AdminDashboardController::class, 'exportAsyncDownload']);
+
+    // WEBSITE MANAGEMENT ROUTES
+    Route::get('/admin/website', [AdminWebsiteController::class, 'index'])->name('admin.website.index');
+    Route::post('/admin/website/update', [AdminWebsiteController::class, 'update'])->name('admin.website.update');
 });
 
 /* ═══════════════════════════════════════════

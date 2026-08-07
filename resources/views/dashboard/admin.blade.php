@@ -1034,6 +1034,11 @@
         </nav>
 
         <div class="sidebar-foot">
+            {{-- ★ PINDAHKAN TOMBOL KE SINI (AGAR TIDAK DITANGKAP OLEH JS SPA) ★ --}}
+            <a href="{{ route('admin.website.index') }}" class="btn-logout" style="background: linear-gradient(135deg, rgba(34,211,238,.18), rgba(37,99,235,.12)); color: var(--cyan-300); border: 1px solid var(--bd-cyan); margin-bottom: 10px; text-decoration: none; font-weight: 800;">
+                <i class="fas fa-globe"></i> Website Management
+            </a>
+
             <div class="sb-user">
                 <div class="avatar">{{ strtoupper(mb_substr(trim($user->name),0,1)) }}</div>
                 <div class="info">
