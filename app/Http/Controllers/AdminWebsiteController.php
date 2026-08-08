@@ -80,4 +80,17 @@ class AdminWebsiteController extends Controller
 
         return redirect()->back()->with('success', 'Konten website berhasil diperbarui!');
     }
+
+    // Upload foto via AJAX (dipakai editor per-konten di admin). Kembalikan URL.
+    public function uploadMedia(Request $request)
+    {
+        $urls = [];
+        foreach ((array) $request->file('files', []) as $file) {
+            if (!$file) continue;
+            $name = time() . '_' . mt_rand(1000, 9999) . '_' . preg_replace('/[^A-Za-z0-9.\-_]/', '_', $file->getClientOriginalName());
+            $file->move(public_path('uploads/landing'), $name);
+            $urls[] = asset('uploads/landing/' . $name);
+        }
+        return response()->json(['urls' => $urls]);
+    }
 }

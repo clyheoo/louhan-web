@@ -223,6 +223,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     // WEBSITE MANAGEMENT ROUTES
     Route::get('/admin/website', [AdminWebsiteController::class, 'index'])->name('admin.website.index');
     Route::post('/admin/website/update', [AdminWebsiteController::class, 'update'])->name('admin.website.update');
+    Route::post('/admin/website/upload-media', [AdminWebsiteController::class, 'uploadMedia'])->name('admin.website.upload-media');
 });
 
 /* ═══════════════════════════════════════════

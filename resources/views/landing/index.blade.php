@@ -19,17 +19,22 @@
     $aboutTitle   = $contents['about_title']       ?? 'Tentang Kejuaraan';
     $aboutDesc    = $contents['about_description'] ?? 'Louhan Club Indonesia menghadirkan sistem penjurian transparan berbasis skor realtime. Setiap ikan dinilai panel juri bersertifikat dengan standar internasional — dari kualitas mutiara, bentuk kepala, hingga proporsi tubuh.';
 
-    // MAP: terima kode <iframe>, URL embed, URL biasa, ATAU alamat teks — semua dibuat tampil.
+    // MAP: <iframe>, URL embed, URL Maps (@lat,lng / /place/), atau ALAMAT teks.
     $mapRaw   = trim((string) ($contents['about_map_url'] ?? ''));
     $aboutMap = '';
     if ($mapRaw !== '') {
         if (preg_match('/<iframe[^>]*src=["\']([^"\']+)["\']/i', $mapRaw, $mm)) {
-            $aboutMap = $mm[1];                                   // admin paste kode <iframe ...>
+            $aboutMap = $mm[1];                                                                       // kode <iframe ...>
         } elseif (stripos($mapRaw, '/maps/embed') !== false) {
-            $aboutMap = $mapRaw;                                  // sudah URL embed resmi
+            $aboutMap = $mapRaw;                                                                      // URL embed resmi
+        } elseif (preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $mapRaw, $cc)) {
+            $aboutMap = 'https://maps.google.com/maps?q=' . $cc[1] . ',' . $cc[2] . '&z=16&output=embed';   // koordinat dari URL Maps
+        } elseif (preg_match('#/place/([^/@]+)#', $mapRaw, $pl)) {
+            $aboutMap = 'https://maps.google.com/maps?q=' . rawurlencode(str_replace('+', ' ', urldecode($pl[1]))) . '&z=16&output=embed'; // nama tempat dari URL
+        } elseif (!preg_match('#^https?://#i', $mapRaw)) {
+            $aboutMap = 'https://maps.google.com/maps?q=' . rawurlencode($mapRaw) . '&z=16&output=embed';   // ALAMAT teks langsung
         } else {
-            // URL biasa / share link / alamat teks → bungkus jadi embeddable (tanpa API key)
-            $aboutMap = 'https://maps.google.com/maps?q=' . rawurlencode($mapRaw) . '&z=15&output=embed';
+            $aboutMap = $mapRaw;                                                                      // URL lain: tampilkan apa adanya
         }
     }
 
@@ -102,6 +107,14 @@
     $waLink = $waDigits !== '' ? 'https://wa.me/' . $waDigits : 'tel:' . preg_replace('/\s+/', '', (string) $cPhone);
 
     $isVideo = \Illuminate\Support\Str::contains($heroMedia, ['.mp4', '.webm']);
+
+    // Slide hero: pakai daftar foto (hero_images) bila ada; jika kosong & bukan video, pakai hero_media tunggal
+    $heroImages = $lines($contents['hero_images'] ?? '');
+    $heroSlides = $heroImages->count()
+        ? $heroImages
+        : (($isVideo || $heroMedia === '') ? collect() : collect([$heroMedia]));
+    $heroZoom   = $heroSlides->first() ?: $heroMedia;
+
     $logo    = asset('img/logo_lci.png');
 
     $nav = [
@@ -286,21 +299,29 @@
     .cat .idx{ position:absolute; top:22px; right:24px; font-size:2.4rem; font-weight:700; color:rgba(255,255,255,.05); font-family: 'Space Grotesk', sans-serif; }
     .cat h3{ font-size:1.35rem; font-weight:600; color:var(--text-hi); margin-bottom:8px; }
     .cat p{ color:var(--text-mid); font-size:.94rem; }
-    .cat.has-bg{ background-size:cover; background-position:center; border-color:rgba(34,211,238,.22); }
+    .cat.has-bg{ background-size:cover; background-position:center; border-color:rgba(34,211,238,.22); aspect-ratio:1/1; display:flex; flex-direction:column; justify-content:flex-end; }
     /* Hero image: tombol Daftar + gelap lembut saat hover */
     .hero-media::before{ content:''; position:absolute; inset:0; z-index:1; background:rgba(4,7,15,.30); opacity:0; transition:opacity .35s var(--ease); }
     .hero-media:hover::before{ opacity:1; }
-    .hero-media .join-btn{ position:absolute; left:50%; top:50%; transform:translate(-50%,-42%); z-index:4; opacity:0; pointer-events:none; box-shadow:0 14px 30px -12px rgba(6,182,212,.85); transition:opacity .35s var(--ease), transform .35s var(--ease); }
-    .hero-media:hover .join-btn{ opacity:1; transform:translate(-50%,-50%); pointer-events:auto; }
+    .hero-media .join-btn{ position:absolute; left:50%; top:auto; bottom:9%; transform:translate(-50%,10px); z-index:4; opacity:0; pointer-events:none; box-shadow:0 14px 30px -12px rgba(6,182,212,.85); transition:opacity .35s var(--ease), transform .35s var(--ease); }
+    .hero-media:hover .join-btn{ opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+
+    /* Slider hero — geser PENUH ke kiri tiap 5 detik (push, mulus) */
+    .hero-media .hero-slider{ position:absolute; inset:0; z-index:0; overflow:hidden; }
+    .hero-media .hero-slide{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transform:translateX(100%); opacity:0; will-change:transform; }
+    .hero-media .hero-slide.active{ transform:translateX(0); opacity:1; z-index:2; transition:transform 1s var(--ease), opacity 1s var(--ease); }
+    .hero-media .hero-slide.leaving{ transform:translateX(-100%); opacity:1; z-index:1; transition:transform 1s var(--ease), opacity 1s var(--ease); }
 
     /* Kategori: foto bisa diklik */
     .cat.has-bg{ cursor:zoom-in; }
 
     /* Sponsor: foto sebagai background di belakang teks */
     .sp span{ position:relative; z-index:1; }
-    .sp.has-bg{ position:relative; overflow:hidden; color:#fff; border-color:rgba(34,211,238,.25); min-width:150px; min-height:74px; padding:18px 26px; display:flex; align-items:center; justify-content:center; background-size:cover; background-position:center; }
-    .sp.has-bg::before{ content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(4,7,15,.30), rgba(4,7,15,.78)); }
-    .sp.has-bg span{ text-shadow:0 2px 8px rgba(0,0,0,.7); font-weight:700; }
+    .sp.has-bg{ position:relative; overflow:hidden; color:#fff; border-color:rgba(34,211,238,.25); min-width:180px; min-height:96px; padding:18px 26px; display:flex; align-items:center; justify-content:center; background-size:cover; background-position:center; }
+    .sp.has-bg::before{ content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(4,7,15,.35), rgba(4,7,15,.82)); opacity:0; transition:opacity .3s var(--ease); }
+    .sp.has-bg:hover::before{ opacity:1; }
+    .sp.has-bg span{ text-shadow:0 2px 8px rgba(0,0,0,.8); font-weight:700; opacity:0; transition:opacity .3s var(--ease); }
+    .sp.has-bg:hover span{ opacity:1; }
     .cat.has-bg::after{ content:''; position:absolute; inset:0; z-index:0; background:linear-gradient(180deg, rgba(4,7,15,.35), rgba(4,7,15,.86)); }
     .cat.has-bg > *{ position:relative; z-index:1; }
     .cat.has-bg h3, .cat.has-bg p{ color:#fff; text-shadow:0 2px 12px rgba(0,0,0,.6); }
@@ -317,7 +338,7 @@
     .vrow i{ width:38px; height:38px; border-radius:10px; display:grid; place-items:center; background:rgba(34,211,238,.12); color:var(--cyan-400); flex:none; }
     .vrow b{ color:var(--text-hi); font-weight:600; font-size:.96rem; } .vrow p{ color:var(--text-mid); font-size:.85rem; }
     .mapbox{ border-radius:20px; overflow:hidden; border:1px solid var(--bd-1); aspect-ratio:16/11; }
-    .mapbox iframe{ width:100%; height:100%; border:0; filter: grayscale(20%) invert(90%) hue-rotate(180deg) brightness(0.8) contrast(0.9); }
+    .mapbox iframe{ width:100%; height:100%; border:0; filter: saturate(1.05) brightness(1.06); }
 
     /* ===================== RANKING ===================== */
     .podium{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:26px; }
@@ -469,8 +490,14 @@
                 </div>
                 <div class="hero-fig rv">
                     <span class="badge-float">2026</span>
-                    <div class="hero-media lux-border" @if(!$isVideo) data-zoom="{{ $heroMedia }}" @endif>
-                        @if($isVideo)
+                    <div class="hero-media lux-border" @if($heroSlides->count()) data-zoom="{{ $heroZoom }}" data-hero-slider @endif>
+                        @if($heroSlides->count())
+                            <div class="hero-slider">
+                                @foreach($heroSlides as $si => $img)
+                                    <img src="{{ $img }}" class="hero-slide @if($si === 0) active @endif" alt="Louhan championship" @if($si > 0) loading="lazy" @endif>
+                                @endforeach
+                            </div>
+                        @elseif($isVideo)
                             <video autoplay loop muted playsinline><source src="{{ $heroMedia }}" type="video/mp4"></video>
                         @else
                             <img src="{{ $heroMedia }}" alt="Louhan championship">
@@ -594,11 +621,6 @@
                     <div class="socials"><a href="{{ $cIg }}" target="_blank" rel="noopener"><i class="fab fa-instagram"></i></a><a href="{{ $cFb }}" target="_blank" rel="noopener"><i class="fab fa-facebook-f"></i></a><a href="{{ $cYt }}" target="_blank" rel="noopener"><i class="fab fa-youtube"></i></a></div>
                 </div>
             </div>
-            <div class="cta-band rv">
-                <h3>Sudah terdaftar sebagai juri?</h3>
-                <p>Masuk ke panel penjurian untuk mulai menilai.</p>
-                <a href="{{ route('login') }}" class="btn btn-p"><i class="fas fa-gavel"></i> Login Penjurian</a>
-            </div>
         </div>
     </section>
     </main>
@@ -707,20 +729,63 @@
         }
         loadStats(); setInterval(loadStats, 15000);
 
-        /* ---- LIGHTBOX (galeri + hero + kategori) ---- */
-        var imgs = Array.prototype.slice.call(document.querySelectorAll('.gitem'));
-        var lb = document.getElementById('lb'), lbImg = document.getElementById('lb-img'), cur = 0;
+        /* ---- LIGHTBOX + HERO SLIDER ---- */
+        var lb = document.getElementById('lb'), lbImg = document.getElementById('lb-img');
         var lbPrev = document.getElementById('lb-prev'), lbNext = document.getElementById('lb-next');
-        function open(i){ cur=i; lbImg.src = imgs[i].dataset.src; lb.classList.add('show'); document.body.style.overflow='hidden'; lbPrev.style.display=''; lbNext.style.display=''; }
-        function openSingle(src){ if(!src) return; lbImg.src = src; lb.classList.add('show'); document.body.style.overflow='hidden'; lbPrev.style.display='none'; lbNext.style.display='none'; }
+        var lbList = [], cur = 0;
+
+        function lbShow(){ lbImg.src = lbList[cur]; }
+        function openList(list, i){
+            if(!list || !list.length) return;
+            lbList = list; cur = (i || 0);
+            lbShow();
+            var multi = list.length > 1;
+            lbPrev.style.display = multi ? '' : 'none';
+            lbNext.style.display = multi ? '' : 'none';
+            lb.classList.add('show'); document.body.style.overflow='hidden';
+        }
         function close(){ lb.classList.remove('show'); document.body.style.overflow=''; }
-        function step(n){ if(!imgs.length) return; cur=(cur+n+imgs.length)%imgs.length; lbImg.src = imgs[cur].dataset.src; }
-        imgs.forEach(function(el,i){ el.addEventListener('click', function(){ open(i); }); });
-        // Zoom untuk hero & kategori (elemen ber-atribut data-zoom)
+        function step(n){ if(lbList.length < 2) return; cur=(cur+n+lbList.length)%lbList.length; lbShow(); }
+
+        // Galeri
+        var gitems = Array.prototype.slice.call(document.querySelectorAll('.gitem'));
+        var galleryList = gitems.map(function(el){ return el.dataset.src; });
+        gitems.forEach(function(el,i){ el.addEventListener('click', function(){ openList(galleryList, i); }); });
+
+        // Hero: kumpulan foto slider (untuk dibrowse dengan panah)
+        var heroSlides = Array.prototype.slice.call(document.querySelectorAll('.hero-slide'));
+        var heroList = heroSlides.map(function(im){ return im.getAttribute('src'); });
+
+        // Zoom hero & kategori
         document.querySelectorAll('[data-zoom]').forEach(function(el){
             el.style.cursor = 'zoom-in';
-            el.addEventListener('click', function(e){ if(e.target.closest('a,button')) return; openSingle(el.getAttribute('data-zoom')); });
+            el.addEventListener('click', function(e){
+                if(e.target.closest('a,button')) return;
+                if(el.hasAttribute('data-hero-slider') && heroList.length){
+                    var act = el.querySelector('.hero-slide.active');
+                    var idx = act ? heroSlides.indexOf(act) : 0;
+                    openList(heroList, idx < 0 ? 0 : idx);
+                } else {
+                    openList([el.getAttribute('data-zoom')], 0);
+                }
+            });
         });
+
+        // Hero slider: geser ke kanan tiap 5 detik (berhenti saat lightbox dibuka)
+        if(heroSlides.length > 1 && !reduce){
+            var hsi = 0;
+            setInterval(function(){
+                if(lb.classList.contains('show')) return;
+                var prev = heroSlides[hsi];
+                hsi = (hsi + 1) % heroSlides.length;
+                var next = heroSlides[hsi];
+                prev.classList.remove('active');
+                prev.classList.add('leaving');
+                next.classList.add('active');
+                setTimeout(function(){ prev.classList.remove('leaving'); }, 1000);
+            }, 5000);
+        }
+
         document.getElementById('lb-x').addEventListener('click', close);
         lbPrev.addEventListener('click', function(e){ e.stopPropagation(); step(-1); });
         lbNext.addEventListener('click', function(e){ e.stopPropagation(); step(1); });
