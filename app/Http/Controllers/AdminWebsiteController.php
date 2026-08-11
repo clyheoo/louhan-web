@@ -27,7 +27,7 @@ class AdminWebsiteController extends Controller
         // Helper upload → simpan ke public/uploads/landing, kembalikan URL
         $upload = function ($file) {
             $name = time() . '_' . mt_rand(1000, 9999) . '_' . preg_replace('/[^A-Za-z0-9.\-_]/', '_', $file->getClientOriginalName());
-            $file->move(public_path('uploads/landing'), $name);
+            $file->move($this->landingDir(), $name);
             return asset('uploads/landing/' . $name);
         };
 
@@ -88,9 +88,21 @@ class AdminWebsiteController extends Controller
         foreach ((array) $request->file('files', []) as $file) {
             if (!$file) continue;
             $name = time() . '_' . mt_rand(1000, 9999) . '_' . preg_replace('/[^A-Za-z0-9.\-_]/', '_', $file->getClientOriginalName());
-            $file->move(public_path('uploads/landing'), $name);
+            $file->move($this->landingDir(), $name);
             $urls[] = asset('uploads/landing/' . $name);
         }
         return response()->json(['urls' => $urls]);
+    }
+
+    // Folder web-root asli hosting (public_html) tempat file bisa diakses publik.
+    private function landingDir(): string
+    {
+        // Jika deteksi otomatis gagal, hapus komentar baris di bawah & isi path absolut public_html Anda:
+        // $root = '/home/USERNAME/public_html';
+
+        $root = $root ?? ($_SERVER['DOCUMENT_ROOT'] ?? public_path());
+        $dir  = rtrim($root, "/\\") . '/uploads/landing';
+        if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+        return $dir;
     }
 }
