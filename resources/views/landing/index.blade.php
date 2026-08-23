@@ -240,7 +240,8 @@
     .btn-o{ background:var(--glass-2); color:var(--text); border:1px solid var(--bd-2); }
     .btn-o:hover{ border-color:var(--cyan-400); color:var(--cyan-300); transform:translateY(-2px); }
     .navtoggle{ display:none; background:var(--glass-2); border:1px solid var(--bd-2); color:var(--text-hi); width:42px; height:42px; border-radius:11px; cursor:pointer; font-size:16px; }
-
+    .nav-cta-mini{ display:none; }
+     
     /* ===================== PAGE / SPA ===================== */
     main{ padding-top:80px; min-height:100vh; }
     .page{ display:none; }
@@ -423,7 +424,10 @@
         .cats,.highlights,.kgrid{ grid-template-columns:1fr; } .criteria{ grid-template-columns:repeat(2,1fr); }
         .about-grid{ grid-template-columns:1fr; } .grid-g{ columns:2; } .podium{ grid-template-columns:1fr; }
         .menu{ position:fixed; inset:70px 14px auto 14px; flex-direction:column; align-items:stretch; gap:4px; padding:10px; background:rgba(14,23,41,.97); backdrop-filter:blur(16px); border:1px solid var(--bd-1); border-radius:16px; transform:translateY(-12px); opacity:0; pointer-events:none; transition:.3s var(--ease); }
-        .menu.open{ transform:none; opacity:1; pointer-events:auto; } .navtoggle{ display:block; } .nav-cta{ display:none; }
+        .menu.open{ transform:none; opacity:1; pointer-events:auto; } .navtoggle{ display:block; }
+        .nav-cta{ padding:9px 16px; font-size:13px; }
+        .nav-cta i, .nav-cta .nav-cta-txt{ display:none; }
+        .nav-cta .nav-cta-mini{ display:inline; }
     }
     @media (max-width:600px){ .stats{ grid-template-columns:repeat(2,1fr); } .grid-g{ columns:1; } .rank-hide{ display:none; } .criteria{ grid-template-columns:1fr; } }
     @media (prefers-reduced-motion:reduce){ *{ animation-duration:.001ms !important; transition:none !important; } .rv,.gitem{ opacity:1; transform:none; } }
@@ -462,7 +466,7 @@
                 @endforeach
             </nav>
             <div style="display:flex;align-items:center;gap:10px">
-                <a href="{{ route('login') }}" class="btn btn-p nav-cta"><i class="fas fa-gavel"></i> Login Penjurian</a>
+                <a href="{{ route('login') }}" class="btn btn-p nav-cta"><i class="fas fa-gavel"></i> <span class="nav-cta-txt">Login</span><span class="nav-cta-mini">Login</span></a>
                 <button class="navtoggle" id="navtoggle" aria-label="Menu"><i class="fas fa-bars"></i></button>
             </div>
         </div>
